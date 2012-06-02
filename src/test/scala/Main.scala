@@ -35,26 +35,5 @@ object Main {
     try writer.print(parseIntoDot)
     finally writer.close()
   }
-    
-  def testCyclic: (Graphs.type, Graph[String, Nothing], Graph[String, Nothing]) = {
-    val n1 = SimpleNode("node1")
-    val n2 = SimpleNode("node2")
-    val n3 = SimpleNode("node3")
-    val e1 = Seq(EmptyEdge(n1, n2), EmptyEdge(n1, n3))
-    val e2 = Seq(EmptyEdge(n2, n3))
-    val e3 = Seq(EmptyEdge(n3, n1))
-    (Graphs, SimpleGraph[String, Nothing](
-        nodes = Set(n1,n2,n3),
-        _edges = Map(
-          n1 -> e1,
-          n2 -> e2,
-          n3 -> e3
-        )),
-      SimpleGraph[String, Nothing](
-        nodes = Set(n1,n2,n3),
-        _edges = Map(
-          n3 -> e3
-        ))
-     )
-  }
+  
 }

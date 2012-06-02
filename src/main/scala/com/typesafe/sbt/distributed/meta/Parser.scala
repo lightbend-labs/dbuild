@@ -1,4 +1,5 @@
-package com.typesafe.sbt.distributed.meta
+package com.typesafe.sbt.distributed
+package meta
 
 import config._
 import collection.JavaConverters._

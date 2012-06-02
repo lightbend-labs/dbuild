@@ -106,26 +106,37 @@ object Graphs {
     scc.toSet
   }
   
-  def topological[N,E](g: Graph[N,E]): Seq[Node[N]] = {
-    val sequence = collection.mutable.ArrayBuffer.empty[Node[N]]
-    // nodes with no outgoing edges.
-    val bottomNodes = for {
-      n <- g.nodes
-      if g.edges(n).isEmpty
-    } yield n
-    val visited = collection.mutable.HashSet.empty[Node[N]]
-    def visit(n: Node[N]): Unit = {
-      if(!(visited contains n)) {
-        visited += n
-        for {
-          m <- g.nodes
-          if g edges m  exists (_.to == n)
-        } visit(m)
-        sequence += n
-      } else ()
+  def safeTopological[N,E](g: Graph[N,E]): Seq[Node[N]] =
+    if(isCyclic(g)) sys.error("Graph is not acyclic!")
+    else topological(g)
+  
+  /** Returns a topological ordering of a graph, or the
+   * empty set if the graph is cyclical.
+   */
+  def topological[N,E](g: Graph[N,E]): Seq[Node[N]] = 
+    if(g.nodes.isEmpty) Seq.empty 
+    else {
+      val sequence = collection.mutable.ArrayBuffer.empty[Node[N]]
+      // nodes with no outgoing edges.
+      val bottomNodes = for {
+        n <- g.nodes
+        if g.edges(n).isEmpty
+      } yield n
+      // TODO - if bottom nodes is empty, don't error out?
+      if(bottomNodes.isEmpty) sys.error("Cannot sort topologically if we have no bottom nodes!")
+     val visited = collection.mutable.HashSet.empty[Node[N]]
+      def visit(n: Node[N]): Unit = {
+        if(!(visited contains n)) {
+          visited += n
+          for {
+            m <- g.nodes
+            if g edges m  exists (_.to == n)
+          } visit(m)
+          sequence += n
+        } else ()
+      }
+      bottomNodes foreach visit
+      sequence.toSeq
     }
-    bottomNodes foreach visit
-    sequence.toSeq
-  }
 }
 

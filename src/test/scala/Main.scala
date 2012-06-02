@@ -12,11 +12,16 @@ object Main {
   
   def projects = Seq(
       "git://github.com/jsuereth/scala-arm.git",
-      "git://github.com/akka/akka.git"
+      "git://github.com/akka/akka.git",
+      "git://github.com/rickynils/scalacheck.git",
+      //"git://github.com/etorreborre/scalaz.git#scala-2.9.x",
+      "git://github.com/etorreborre/specs2.git",
+      //"git://github.com/djspiewak/anti-xml.git",
+      "git://github.com/scala-incubator/scala-io.git"
   )
   
   def parseMetas: Seq[Build] = {
-      projects map support.sbt.SbtExtractor.extractMetaData
+      projects map { i => support.sbt.SbtExtractor.extractMetaData(i) }
   }
   
   def parseIntoGraph: BuildGraph = 

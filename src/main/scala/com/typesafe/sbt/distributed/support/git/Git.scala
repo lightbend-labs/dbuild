@@ -2,9 +2,11 @@ package com.typesafe.sbt.distributed
 package support
 package git
 
+
 import meta._
 
 import sys.process._
+import _root_.sbt.Path._
 
 /** This class knows how to resolve Git projects and
  * update the build configuration for repeatable checkouts.
@@ -16,11 +18,12 @@ class GitProjectResolver extends ProjectResolver {
   }
   def resolve(config: BuildConfig, dir: java.io.File): BuildConfig = {
     val uri = new java.net.URI(config.uri)
-    
+
+    // First clone into the directory or fetch
+    // TODO - better git checkout detection...
     if(!dir.exists) dir.mkdirs()
-    else ()  // TODO - Ensure we can clone here or we're pointing to an ok area...
-    // First clone into the directory
-    Git.clone(uri, dir)
+    if(!(dir / ".git").exists) Git.clone(uri, dir)
+    else Git.fetch("", dir)
     // TODO - Fetch non-standard references?
     // Then checkout desired branch/commit/etc.
     Option(uri.getFragment()) foreach (ref => Git.checkout(dir, ref))
@@ -42,6 +45,13 @@ object Git {
   def revparse(dir: java.io.File, ref: String): String = 
     this.read(Seq("rev-parse", ref), dir).trim
 
+    
+  def fetch(ref: String, tempDir: java.io.File): Unit = {
+    val args = if(ref.isEmpty) Seq("fetch")
+               else Seq("fetch", ref)
+    this.apply(args, tempDir)
+  }
+    
   /** Clones a project. */
   def clone(base: java.net.URI, tempDir: java.io.File): Unit =
     this.apply(

@@ -5,26 +5,26 @@ import graph._
 object Main {
   
   def sampleMeta =
-    BuildConfig("sbt", "git://github.com/playframework/Play20.git", "framework")
+    BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git", "framework")
   def sampleMeta2 = 
-     BuildConfig("sbt", "git://github.com/playframework/Play20.git#17c750b36c91c59709794c9505e433d7ba5a8f21", "framework")
-  def parseRemote: ExtractedBuildMeta =
+     BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git#17c750b36c91c59709794c9505e433d7ba5a8f21", "framework")
+  def parseRemote =
     (Extractor extract sampleMeta)
   
   
   def projects = Seq(
-      //BuildConfig("sbt", "git://github.com/playframework/Play20.git", "framework"),
-      BuildConfig("sbt", "git://github.com/jsuereth/scala-arm.git", ""),
-      BuildConfig("sbt", "git://github.com/akka/akka.git", ""),
-      BuildConfig("sbt", "git://github.com/rickynils/scalacheck.git", ""),
+      BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git", "framework"),
+      BuildConfig("Scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git", ""),
+      BuildConfig("Akka", "sbt", "git://github.com/akka/akka.git", ""),
+      BuildConfig("Scalacheck", "sbt", "git://github.com/rickynils/scalacheck.git", ""),
       //"git://github.com/etorreborre/scalaz.git#scala-2.9.x",
-      BuildConfig("sbt", "git://github.com/etorreborre/specs2.git", ""),
+      BuildConfig("Specs2", "sbt", "git://github.com/etorreborre/specs2.git", ""),
       //"git://github.com/djspiewak/anti-xml.git",
-      BuildConfig("sbt", "git://github.com/scala-incubator/scala-io.git", "")
+      BuildConfig("Scala-Io", "sbt", "git://github.com/scala-incubator/scala-io.git#2.10.x", "")
   )
   
   def parseMetas: Seq[Build] = {
-      projects map { i => new Build(i, Extractor extract i ) }
+      projects map Extractor.extract
   }
   
   def parseIntoGraph: BuildGraph = 
@@ -36,7 +36,7 @@ object Main {
   
     
   def parseIntoDot: String =
-    Graphs.toDotFile(parseIntoGraph)(_.config.uri)
+    Graphs.toDotFile(parseIntoGraph)(_.config.name)
     
   def writeBuildDot: Unit = {
     val writer = new java.io.PrintWriter(new java.io.FileWriter(new java.io.File("build-deps.dot")))

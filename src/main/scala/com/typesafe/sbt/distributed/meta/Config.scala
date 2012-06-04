@@ -11,7 +11,7 @@ case class Build(config: BuildConfig, extracted: ExtractedBuildMeta)
  * Metadata about a build.  This is extracted from a config file and contains enough information
  * to further extract information about a build.
  */
-case class BuildConfig(system: String, uri: String, directory: String)
+case class BuildConfig(name: String, system: String, uri: String, directory: String)
 
 trait Dependency {
   def name: String

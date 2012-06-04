@@ -16,7 +16,10 @@ trait BuildDependencyExtractor {
 
 // TODO - Plugable?
 object BuildDependencyExtractor {
-  private[this] val extractors = Seq(new support.sbt.SbtDependencyExtractor)
+  private[this] val extractors = Seq(
+      new support.sbt.SbtDependencyExtractor,
+      support.scala.ScalaDependencyExtractor
+    )
   def canHandle(system: String): Boolean = extractors exists (_ canHandle system)
   def extract(config: BuildConfig, dir: java.io.File): ExtractedBuildMeta =
     (extractors 

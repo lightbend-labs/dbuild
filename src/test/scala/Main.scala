@@ -13,6 +13,7 @@ object Main {
   
   
   def projects = Seq(
+      BuildConfig("Scala", "scala", "git://github.com/scala/scala.git", ""),
       BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git", "framework"),
       BuildConfig("Scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git", ""),
       BuildConfig("Akka", "sbt", "git://github.com/akka/akka.git", ""),

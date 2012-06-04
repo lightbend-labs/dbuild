@@ -29,6 +29,13 @@ trait Graph[N,E] {
   def edges(n: Nd): Seq[Ed]
 }
 
+/** A Graph filtered to only contain a subset of the original nodes. */
+case class FilteredByNodesGraph[N,E](g: Graph[N,E], nodes: Set[Node[N]]) extends Graph[N,E] {
+  assert((nodes -- g.nodes).isEmpty)
+  def edges(n: Nd): Seq[Ed] = 
+    g edges n filter { e => (nodes contains e.to) && (nodes contains e.from) }
+}
+
 
 case class SimpleNode[N,E](value: N) extends Node[N]
 case class EmptyEdge[N](from: Node[N], to: Node[N]) extends Edge[N,Nothing] {
@@ -62,6 +69,9 @@ object Graphs {
     sb.toString
   }
   
+  
+  def tarjanSubGraphs[N,E](graph: Graph[N,E]): Set[Graph[N,E]] =
+    tarjan(graph) map { edges => new FilteredByNodesGraph(graph, edges) }
   
     // Note this is used to detect cycles.   Breaks
     // The graph into strongly arrowed graphs, or whatever the
@@ -105,7 +115,7 @@ object Graphs {
     } tarjanImpl(node)
     scc.toSet
   }
-  
+  // TODO - use tarjan directly for nice error messages....
   def safeTopological[N,E](g: Graph[N,E]): Seq[Node[N]] =
     if(isCyclic(g)) sys.error("Graph is not acyclic!")
     else topological(g)

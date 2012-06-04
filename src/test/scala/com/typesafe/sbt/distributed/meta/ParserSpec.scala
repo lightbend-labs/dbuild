@@ -9,7 +9,7 @@ object ParserSpec extends Specification {
     "parse metadata file" in {
       
       
-      Parser.parseMetaString(
+      ExtractedMetaParser.parseMetaString(
 """{
   scm = "foo/bar"  
   projects = [{
@@ -17,7 +17,7 @@ object ParserSpec extends Specification {
           organization = "o1"
           dependencies = []
     }]
-}""") must equalTo(Some(Build("foo/bar", Seq(Project("p1", "o1", Seq.empty)))))
+}""") must equalTo(Some(ExtractedBuildMeta("foo/bar", Seq(Project("p1", "o1", Seq.empty)))))
     }
   }
 }

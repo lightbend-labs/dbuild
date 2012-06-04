@@ -4,24 +4,27 @@ import graph._
 
 object Main {
   
-  
-  def parseRemote: Build = {
-    support.sbt.SbtExtractor.extractMetaData("git://github.com/jsuereth/scala-arm.git")
-  }
+  def sampleMeta =
+    BuildConfig("sbt", "git://github.com/playframework/Play20.git", "framework")
+  def sampleMeta2 = 
+     BuildConfig("sbt", "git://github.com/playframework/Play20.git#17c750b36c91c59709794c9505e433d7ba5a8f21", "framework")
+  def parseRemote: ExtractedBuildMeta =
+    (Extractor extract sampleMeta)
   
   
   def projects = Seq(
-      "git://github.com/jsuereth/scala-arm.git",
-      "git://github.com/akka/akka.git",
-      "git://github.com/rickynils/scalacheck.git",
+      //BuildConfig("sbt", "git://github.com/playframework/Play20.git", "framework"),
+      BuildConfig("sbt", "git://github.com/jsuereth/scala-arm.git", ""),
+      BuildConfig("sbt", "git://github.com/akka/akka.git", ""),
+      BuildConfig("sbt", "git://github.com/rickynils/scalacheck.git", ""),
       //"git://github.com/etorreborre/scalaz.git#scala-2.9.x",
-      "git://github.com/etorreborre/specs2.git",
+      BuildConfig("sbt", "git://github.com/etorreborre/specs2.git", ""),
       //"git://github.com/djspiewak/anti-xml.git",
-      "git://github.com/scala-incubator/scala-io.git"
+      BuildConfig("sbt", "git://github.com/scala-incubator/scala-io.git", "")
   )
   
   def parseMetas: Seq[Build] = {
-      projects map { i => support.sbt.SbtExtractor.extractMetaData(i) }
+      projects map { i => new Build(i, Extractor extract i ) }
   }
   
   def parseIntoGraph: BuildGraph = 
@@ -33,7 +36,7 @@ object Main {
   
     
   def parseIntoDot: String =
-    Graphs.toDotFile(parseIntoGraph)(_.uri)
+    Graphs.toDotFile(parseIntoGraph)(_.config.uri)
     
   def writeBuildDot: Unit = {
     val writer = new java.io.PrintWriter(new java.io.FileWriter(new java.io.File("build-deps.dot")))

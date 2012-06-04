@@ -5,7 +5,7 @@ import config._
 import collection.JavaConverters._
 import config.ConfigValueType
 
-object Parser {
+object ExtractedMetaParser {
   
   def parseMetaFile(f: java.io.File) = {
     val r = new java.io.FileReader(f)
@@ -16,11 +16,11 @@ object Parser {
   def parseMeta(in: java.io.Reader) = parseBase(config.parse(in).resolve.root)
   
   
-  private def parseBase(c: ConfigObject): Option[Build] = {
+  private def parseBase(c: ConfigObject): Option[ExtractedBuildMeta] = {
     for {
       uri   <- ConfigString.unapply(c get "scm")
       projs <- parseProjects(c get "projects")
-    } yield Build(uri, projs)
+    } yield ExtractedBuildMeta(uri, projs)
   }
   
   def parseProjects(c: ConfigValue): Option[Seq[Project]] = c match {

@@ -1,7 +1,9 @@
-package com.typesafe.sbt.distributed
-package meta
+package distributed
+package project
+package model
 
 import graph._
+
 case class BuildNode(value: Build) extends Node[Build] {
   def hasProject(dep: ProjectDep): Boolean = {
     def isDep(p: Project): Boolean =

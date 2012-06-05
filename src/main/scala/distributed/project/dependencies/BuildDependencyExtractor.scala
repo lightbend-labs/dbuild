@@ -1,5 +1,8 @@
-package com.typesafe.sbt.distributed
-package meta
+package distributed
+package project
+package dependencies
+
+import model._
 
 
 /** Interface for extracting project metadata. */
@@ -15,7 +18,7 @@ trait BuildDependencyExtractor {
 }
 
 // TODO - Plugable?
-object BuildDependencyExtractor {
+object BuildDependencyExtractor extends BuildDependencyExtractor {
   private[this] val extractors = Seq(
       new support.sbt.SbtDependencyExtractor,
       support.scala.ScalaDependencyExtractor

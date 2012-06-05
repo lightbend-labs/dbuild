@@ -1,15 +1,16 @@
-package com.typesafe.sbt.distributed
-package meta
+package distributed
+package project
+package dependencies
 
 import org.specs2.mutable.Specification
-
+import model._
 
 object ParserSpec extends Specification {
   "meta.Parser" should {
     "parse metadata file" in {
       
       
-      ExtractedMetaParser.parseMetaString(
+      ExtractedDependencyFileParser.parseMetaString(
 """{
   scm = "foo/bar"  
   projects = [{

@@ -1,11 +1,15 @@
-package com.typesafe.sbt.distributed
-package meta
+package distributed
+package project
+package dependencies
 
+import model._
 import config._
 import collection.JavaConverters._
 import config.ConfigValueType
 
-object ExtractedMetaParser {
+
+
+object ExtractedDependencyFileParser {
   
   def parseMetaFile(f: java.io.File) = {
     val r = new java.io.FileReader(f)

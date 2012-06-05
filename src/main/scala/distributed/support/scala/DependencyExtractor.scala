@@ -1,8 +1,9 @@
-package com.typesafe.sbt.distributed
+package distributed
 package support
 package scala
 
-import meta._
+import project.model._
+import project.dependencies.BuildDependencyExtractor
 
 object ScalaDependencyExtractor extends BuildDependencyExtractor {
   override def extract(config: BuildConfig, dir: java.io.File): ExtractedBuildMeta = {

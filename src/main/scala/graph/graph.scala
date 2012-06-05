@@ -1,4 +1,3 @@
-package com.typesafe.sbt.distributed
 package graph
 
 

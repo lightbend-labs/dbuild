@@ -1,5 +1,7 @@
-import com.typesafe.sbt.distributed._
-import meta._
+import distributed._
+import project._
+import model._
+import dependencies._
 import graph._
 
 object Main {

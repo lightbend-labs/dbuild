@@ -1,5 +1,8 @@
-package com.typesafe.sbt.distributed
-package meta
+package distributed
+package project
+package resolve
+
+import model._
 
 /** Represents an interface that is used
  * to resolve a given project locally so that

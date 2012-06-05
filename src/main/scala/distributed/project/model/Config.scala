@@ -1,5 +1,13 @@
-package com.typesafe.sbt.distributed
-package meta
+package distributed
+package project
+package model
+
+
+/** The initial configuration for a build. */
+case class DistributedBuildConfig(projects: Seq[BuildConfig])
+    
+/** A distributed build containing projects in *build order*/
+case class DistributedBuild(builds: Seq[Build])
 
 
 /** Information on how to build a project.  Consists of both distributed build

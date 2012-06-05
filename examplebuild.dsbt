@@ -1,0 +1,27 @@
+{
+  projects = [
+    {
+      name = "Scala"
+      system = "scala"
+      uri = "git://github.com/scala/scala.git#master"
+    },{
+      name = "Akka"
+      uri = "git://github.com/akka/akka.git"
+    },{
+      name = "Play2"
+      uri = "git://github.com/playframework/Play20.git"
+      directory = "framework"
+    },{
+      name = "scalacheck"
+      uri = "git://github.com/rickynils/scalacheck.git"
+    },{
+      name = "Specs 2.0"
+      uri = "git://github.com/etorreborre/specs2.git"
+    },{
+      name = "scala-arm"
+      uri = "git://github.com/jsuereth/scala-arm.git"
+    },{
+      name = "scala-io"
+      uri = "git://github.com/scala-incubator/sclaa-io.git#2.10.x"
+    }]
+}

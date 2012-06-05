@@ -3,8 +3,22 @@ import project._
 import model._
 import dependencies._
 import graph._
-
+import build._
 object Main {
+  
+  
+  def loadFileIntoDot: Unit = {
+    val file = new java.io.File("examplebuild.dsbt")
+    val build = DistributedBuildParser parseBuildFile file
+    val solved = BuildAnalyzer analyze build
+    
+    val graph = new BuildGraph(solved.builds)
+    val dot = Graphs.toDotFile(parseIntoGraph)(_.config.name)
+    
+    val writer = new java.io.PrintWriter(new java.io.FileWriter(new java.io.File("examplebuild.dot")))
+    try writer.print(parseIntoDot)
+    finally writer.close()
+  }
   
   def sampleMeta =
     BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git", "framework")

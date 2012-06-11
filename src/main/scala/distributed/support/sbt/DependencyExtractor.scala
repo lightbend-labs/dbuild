@@ -55,9 +55,14 @@ object SbtExtractor {
     if(!(dir / "project" / "build.scala").exists) {
       val projectDir = dir / "project"
       projectDir.mkdirs
-      val in = (Option(getClass.getClassLoader.getResourceAsStream("SbtExtractionBuild.scala")) 
-          getOrElse sys.error("Could not find SbtExtractionBuild.scala on the path."))
-      try IO.transfer(in, projectDir / "build.scala")
-      finally in.close
+      transferResource("extraction-project/SbtExtractionBuild.scala", projectDir / "build.scala")
+      transferResource("extraction-project/plugins.sbt", projectDir / "plugins.sbt")
     }
+  
+  private def transferResource(r: String, f: File): Unit = {
+     val in = (Option(getClass.getClassLoader.getResourceAsStream(r)) 
+          getOrElse sys.error("Could not find "+r+" on the path."))
+     try IO.transfer(in, f)
+     finally in.close
+  }
 }

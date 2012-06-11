@@ -18,10 +18,7 @@
       name = "Specs 2.0"
       uri = "git://github.com/etorreborre/specs2.git"
     },{
-      name = "scala-arm"
-      uri = "git://github.com/jsuereth/scala-arm.git"
-    },{
       name = "scala-io"
-      uri = "git://github.com/scala-incubator/sclaa-io.git#2.10.x"
+      uri = "git://github.com/scala-incubator/scala-io.git#2.10.x"
     }]
 }

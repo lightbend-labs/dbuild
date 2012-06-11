@@ -1,59 +1,13 @@
 package graph
 
 
-/** Abstract node in a graph.  A vertix.
- * May store a value for later calculations after graph algorithms are done.
- */
-trait Node[N] {
-  def value: N
-}
-
-/** An edge between two nodes of a graph.  Has a from and a to and
- * a potential value.   Useful for weighted algorithms.
- * 
- * Note: Always directed for this library.
- */
-trait Edge[N,E] {
-  def value: E
-  def from: Node[N]
-  def to: Node[N]
-}
-
-/** A directed graph of nodes. */
-trait Graph[N,E] {
-  type Nd = Node[N]
-  type Ed = Edge[N,E]
-  
-  def nodes: Set[Nd]
-  def edges(n: Nd): Seq[Ed]
-}
-
-/** A Graph filtered to only contain a subset of the original nodes. */
-case class FilteredByNodesGraph[N,E](g: Graph[N,E], nodes: Set[Node[N]]) extends Graph[N,E] {
-  assert((nodes -- g.nodes).isEmpty)
-  def edges(n: Nd): Seq[Ed] = 
-    g edges n filter { e => (nodes contains e.to) && (nodes contains e.from) }
-}
-
-
-case class SimpleNode[N,E](value: N) extends Node[N]
-case class EmptyEdge[N](from: Node[N], to: Node[N]) extends Edge[N,Nothing] {
-  def value: Nothing = sys.error("Empty edges have no data!")
-}
-case class SimpleEdge[N,E](from: Node[N], to: Node[N], value: E) extends Edge[N,E] {
-  override def toString = from + " -> " + to + "(" + value + ")"
-}
-case class SimpleGraph[N,E](nodes: Set[Node[N]], _edges: Map[Node[N], Seq[Edge[N,E]]]) extends Graph[N,E]{
-  def edges(n: Node[N]) = _edges get n getOrElse Seq.empty
-}
-
 object Graphs {
   
   def isCyclic[N,E](graph: Graph[N,E]): Boolean = !isAcyclic(graph)
   def isAcyclic[N,E](graph: Graph[N,E]): Boolean = 
     tarjan(graph) forall (_ drop(1) isEmpty)
     
-    
+  /** Generates a digraph DOT file using a given DAG. */  
   def toDotFile[N](graph: Graph[N,_])(nodeNames: N => String): String = {
     // TODO - Better wrapping
     def makeName(s: N): String = '"' + nodeNames(s) + '"'

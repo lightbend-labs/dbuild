@@ -19,17 +19,12 @@ package object hashing {
   }
   private def convertToHex(data: Array[Byte]): String = {
     val buf = new StringBuffer
+    def byteToHex(b: Int) =
+      if ((0 <= b) && (b <= 9)) ('0' + b).toChar
+      else ('a' + b).toChar
     for (i <- 0 until data.length) {
-      var halfbyte = (data(i) >>> 4) & 0x0F;
-      var two_halfs = 0;
-      while(two_halfs < 2) {
-        if ((0 <= halfbyte) && (halfbyte <= 9))
-          buf.append(('0' + halfbyte).toChar)
-        else
-          buf.append(('a' + (halfbyte - 10)).toChar);
-        halfbyte = data(i) & 0x0F;
-        two_halfs += 1
-      }
+      buf append byteToHex((data(i) >>> 4) & 0x0F)
+      buf append byteToHex(data(i) & 0x0F)
     }
     return buf.toString
   }

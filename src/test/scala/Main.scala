@@ -4,6 +4,7 @@ import model._
 import dependencies._
 import graph._
 import build._
+import distributed.project.resolve.ProjectResolver
 object Main {
   
   
@@ -13,11 +14,29 @@ object Main {
     val solved = BuildAnalyzer analyze build
     
     val graph = new BuildGraph(solved.builds)
-    val dot = Graphs.toDotFile(parseIntoGraph)(_.config.name)
+    val dot = Graphs.toDotFile(graph)(_.config.name)
     
     val writer = new java.io.PrintWriter(new java.io.FileWriter(new java.io.File("examplebuild.dot")))
-    try writer.print(parseIntoDot)
+    try writer.print(dot)
     finally writer.close()
+    
+    import sys.process._
+    Process(Seq("dot", "-Tpng", "-o", "examplebuild.png", "examplebuild.dot")).!
+  }
+  
+  
+  def runBuildFile: Unit = {
+    val file = new java.io.File("examplebuild.dsbt")
+    val build = DistributedBuildParser parseBuildFile file
+    val solved = BuildAnalyzer analyze build
+    
+    val logger = logging.ConsoleLogger()
+    
+    for(build <- solved.builds) local.ProjectDirs.useDirFor(build.config) { dir =>
+      // Resolve the project....
+      ProjectResolver.resolve(build.config, dir)
+      BuildRunner.runBuild(build, dir, logger)
+    }
   }
   
   def sampleMeta =

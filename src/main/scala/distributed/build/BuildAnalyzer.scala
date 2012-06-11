@@ -8,6 +8,10 @@ import graph.Graphs
  * configuration.
  */
 trait BuildAnalyzer {
+  /** Takes a build configuration and returns an executable build configuration.
+   * The returned configuration lists *full* build configuration in 
+   * an appropriate build order.
+   */
   def analyze(config: DistributedBuildConfig): DistributedBuild 
 }
 

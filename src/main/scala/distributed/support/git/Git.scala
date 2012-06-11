@@ -30,7 +30,11 @@ object Git {
     apply(Seq("checkout", "-q", branch), tempDir)	
   
 		
-
+  def clean(dir: java.io.File): Unit =
+    apply(Seq("clean", "-fdx"), dir)
+    
+  def version(dir: java.io.File = new java.io.File(".")): String = 
+    read(Seq("--version"), dir).trim
   
   private def read(args: Seq[String], cwd: java.io.File): String =
     Process(OS.callCmdIfWindows("git") ++ args, cwd).!!

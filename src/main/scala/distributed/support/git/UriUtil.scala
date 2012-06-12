@@ -2,9 +2,10 @@ package distributed
 package support
 package git
 
+import _root_.java.net.URI
 
 object UriUtil {
-  def dropFragment(base: java.net.URI): java.net.URI = 
+  def dropFragment(base: URI): URI = 
     if(base.getFragment eq null) base 
-    else new java.net.URI(base.getScheme, base.getSchemeSpecificPart, null)
+    else new URI(base.getScheme, base.getSchemeSpecificPart, null)
 }

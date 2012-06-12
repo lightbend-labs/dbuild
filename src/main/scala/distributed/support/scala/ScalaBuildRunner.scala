@@ -3,7 +3,7 @@ package support
 package scala
 
 import project.model._
-import java.io.File
+import _root_.java.io.File
 import sys.process._
 import _root_.sbt.Path._
 

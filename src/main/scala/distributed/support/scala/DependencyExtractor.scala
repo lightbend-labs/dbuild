@@ -4,9 +4,10 @@ package scala
 
 import project.model._
 import project.dependencies.BuildDependencyExtractor
+import _root_.java.io.File
 
 object ScalaDependencyExtractor extends BuildDependencyExtractor {
-  override def extract(config: BuildConfig, dir: java.io.File): ExtractedBuildMeta = {
+  override def extract(config: BuildConfig, dir: File): ExtractedBuildMeta = {
     // TODO - don't HardCode
     ExtractedBuildMeta("", 
         Seq(

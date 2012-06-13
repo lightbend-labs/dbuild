@@ -1,41 +1,100 @@
 import sbt._
 import Keys._
 
-
+import Dependencies._
+  
 object DistributedBuilderBuild extends Build with BuildHelper {
 
-  lazy val root = Project("root", file(".")) dependsOn(defaultSupport, dbuild)
-
-  // TODO - Every project should have specs2 tests, just add it everywhere.
-
-  import Dependencies._
+  lazy val root = (
+    Project("root", file(".")) 
+    dependsOn(defaultSupport, dbuild)
+    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend)
+  )
 
   // The component projects...
-  def LProject(name: String) = Project(name, file(name))
-  lazy val graph = LProject("graph") dependsOnRemote(specs2)
-  lazy val hashing = LProject("hashing")
-  lazy val config = LProject("config") dependsOnRemote(typesafeConfig)
+  lazy val graph = (
+      LibProject("graph")
+    )
+  lazy val hashing = (
+      LibProject("hashing")
+    )
+  lazy val config = (
+      LibProject("config") 
+      dependsOnRemote(typesafeConfig)
+    )
 
   // Projects relating to distributed builds.
-  def DProject(name: String) = Project("d-" + name, file("distributed/"+name))
-  lazy val logging = DProject("logging") dependsOnRemote(sbtLogging)
-  lazy val dprojects = DProject("projects") dependsOn(graph, config, hashing, logging) dependsOnRemote(sbtIo, specs2)
-  lazy val dbuild = DProject("build") dependsOn(dprojects) dependsOnRemote(specs2)
-  lazy val dfiles = DProject("files") dependsOn(hashing) dependsOnRemote(akkaActor)
+  lazy val logging = (
+      DmodProject("logging")
+      dependsOnRemote(sbtLogging)
+    )
+  lazy val dprojects = (
+      DmodProject("projects")
+      dependsOn(graph, config, hashing, logging)
+      dependsOnRemote(sbtIo)
+    )
+  lazy val dbuild = (
+      DmodProject("build")
+      dependsOn(dprojects)
+    )
+  lazy val dfiles = (
+      DmodProject("files")
+      dependsOn(hashing)
+      dependsOnRemote(akkaActor)
+    )
 
-  lazy val backend = DProject("backend") dependsOn(dfiles, defaultSupport)
+  lazy val backend = (
+      DmodProject("backend")
+      dependsOn(dfiles, defaultSupport)
+    )
 
   // Projects relating to supprting various tools in distributed builds.
-  def SupportProject(name: String) = Project("support-" + name, file("distributed/support/"+name))
-  lazy val defaultSupport = SupportProject("default") dependsOn(dprojects, dfiles)
+  lazy val defaultSupport = (
+      SupportProject("default") 
+      dependsOn(dprojects, dfiles)
+    )
 
   // Distributed SBT plugin
-  lazy val sbtSupportPlugin = Project("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) settings(sbtPlugin := true)
+  lazy val sbtSupportPlugin = (
+    SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
+    dependsOn(dprojects)
+  )
 }
 
 
 // Additional DSL
 trait BuildHelper extends Build {
+  
+  def defaultDSettings: Seq[Setting[_]] = Seq(
+    organization := "com.typesafe.dsbt",
+    scalaVersion := "2.9.2",
+    libraryDependencies += specs2
+  )
+  
+  // TODO - Aggregate into a single JAR if possible for easier resolution later...
+  def SbtPluginProject(name: String, file: File) = (
+      Project(name, file)
+      settings(sbtPlugin := true)
+      // TODO - Publish maven style, etc.
+      settings(defaultDSettings:_*)
+    )
+  
+  /** Create library projects. */
+  def LibProject(name: String) = (
+      Project(name, file(name)) 
+      settings(defaultDSettings:_*)
+    )
+  /** Create distributed build modules */
+  def DmodProject(name: String) = (
+      Project("d-" + name, file("distributed/"+name))
+      settings(defaultDSettings:_*)
+    )
+  def SupportProject(name: String) = (
+      Project("support-" + name, file("distributed/support/"+name))
+      settings(defaultDSettings:_*)
+    )
+  
+  // DSL for adding remote deps like local deps.
   implicit def p2remote(p: Project): RemoteDepHelper = new RemoteDepHelper(p)
   class RemoteDepHelper(p: Project) {
     def dependsOnRemote(ms: ModuleID*): Project = p.settings(libraryDependencies ++= ms)

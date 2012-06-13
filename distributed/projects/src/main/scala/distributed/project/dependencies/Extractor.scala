@@ -17,9 +17,9 @@ abstract class Extractor(
   def extract(build: BuildConfig): Build = 
     local.ProjectDirs.useDirFor(build) { dir =>
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
-      val config = ProjectResolver.resolve(build, dir)
+      val config = resolver.resolve(build, dir)
       logger.debug("Extracting Dependencies for: " + build.name)
-      val deps = BuildDependencyExtractor.extract(build, dir)
+      val deps = dependencyExtractor.extract(build, dir)
       Build(config,deps)
     }
 }
@@ -30,4 +30,4 @@ abstract class Extractor(
  * Note: This needs huge cleanup and speed fixing.  Right now it just does what the script did.
  * We should probably cache directories and other kinds of niceties.
  */
-object Extractor extends Extractor(ProjectResolver, BuildDependencyExtractor, ConsoleLogger())
+//object Extractor extends Extractor(ProjectResolver, BuildDependencyExtractor, ConsoleLogger())

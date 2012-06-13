@@ -8,7 +8,7 @@ import akka.actor.Actor
  * 
  */
 class LocalFileRepositoryActor extends Actor {
-  var cache: Map[String, File]  
+  var cache: Map[String, File] = Map.empty 
   def receive = {
     case AddFile(name, file) => cache = cache.updated(name, file)
     case GetFile(name) => cache get name match {

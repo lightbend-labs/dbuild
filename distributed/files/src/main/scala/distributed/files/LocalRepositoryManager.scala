@@ -9,7 +9,7 @@ import akka.actor.{Actor,ActorRef,Props}
  * This represents an Actor which stores the URL references for local files.
  */
 class LocalFileRepositoryManagerActor extends Actor {
-  var cache: Map[String, ActorRef]  
+  var cache: Map[String, ActorRef] = Map.empty 
   import LocalFileRepositoryManagerActor._
   def receive = {
     case AddRepository(name: String) =>

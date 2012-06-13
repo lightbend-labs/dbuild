@@ -26,4 +26,4 @@ class SimpleBuildAnalyzer(e: project.dependencies.Extractor) extends BuildAnalyz
   }
 }
 
-object BuildAnalyzer extends SimpleBuildAnalyzer(project.dependencies.Extractor)
+//object BuildAnalyzer extends SimpleBuildAnalyzer(project.dependencies.Extractor)

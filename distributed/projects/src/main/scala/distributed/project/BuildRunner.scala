@@ -10,8 +10,7 @@ trait BuildRunner {
 }
 
 /** Aggregate builder. */
-object BuildRunner extends BuildRunner {
-  private val runners = Seq(support.scala.ScalaBuildRunner)
+class AggregateBuildRunner(runners: Seq[BuildRunner]) extends BuildRunner {
   def system = "all"
   def runBuild(b: Build, dir: java.io.File, log: logging.Logger): Unit = {
     val runner = runners find (_.system == b.config.system) getOrElse sys.error("Could not find build runner for " + b.config.system)

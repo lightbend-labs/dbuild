@@ -6,14 +6,14 @@ import project.dependencies.{BuildDependencyExtractor, ExtractedDependencyFilePa
 import project.model._
 import _root_.sbt.{IO, Path, PathExtra}
 import Path._
-import java.io.File
+import _root_.java.io.File
 import sys.process.Process
 
 /** A helper that knows how to extract SBT build
  * dependencies.
  */
 class SbtDependencyExtractor(base: File = new File(".sbtextraction")) extends BuildDependencyExtractor {
-  override def extract(config: BuildConfig, dir: java.io.File): ExtractedBuildMeta =
+  override def extract(config: BuildConfig, dir: File): ExtractedBuildMeta =
     if(config.directory.isEmpty) SbtExtractor.extractMetaData(dir, base)
     else SbtExtractor.extractMetaData(new File(dir, config.directory), base)
   def canHandle(system: String): Boolean = "sbt" == system

@@ -21,10 +21,7 @@ trait ProjectResolver {
 }
 
 /** Helper that uses all known project resolvers. */
-object ProjectResolver extends ProjectResolver {
-  val resolvers: Seq[ProjectResolver] = Seq(
-    new support.git.GitProjectResolver
-  )
+class AggregateProjectResolver(resolvers: Seq[ProjectResolver]) extends ProjectResolver {
   def canResolve(config: BuildConfig): Boolean = 
     resolvers exists (_ canResolve config)
   def resolve(config: BuildConfig, dir: java.io.File): BuildConfig = {

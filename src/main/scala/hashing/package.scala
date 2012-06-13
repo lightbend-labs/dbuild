@@ -17,7 +17,7 @@ package object hashing {
     addBytes(t)
     convertToHex(md.digest)
   }
-  private def convertToHex(data: Array[Byte]): String = {
+  def convertToHex(data: Array[Byte]): String = {
     val buf = new StringBuffer
     def byteToHex(b: Int) =
       if ((0 <= b) && (b <= 9)) ('0' + b).toChar

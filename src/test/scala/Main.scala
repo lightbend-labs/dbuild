@@ -7,11 +7,20 @@ import build._
 import distributed.project.resolve.ProjectResolver
 object Main {
   
+  val resolver = new resolve.AggregateProjectResolver(
+      Seq(new support.git.GitProjectResolver))
+  val depExtractor = new MultiBuildDependencyExtractor(
+      Seq(new support.sbt.SbtDependencyExtractor(),
+          support.scala.ScalaDependencyExtractor))
+  val extractor = new Extractor(resolver, depExtractor, logging.ConsoleLogger())
+  val buildAnalyzer = new SimpleBuildAnalyzer(extractor)
+  val buildRunner = new AggregateBuildRunner(Seq(
+      support.scala.ScalaBuildRunner))
   
   def loadFileIntoDot: Unit = {
     val file = new java.io.File("examplebuild.dsbt")
     val build = DistributedBuildParser parseBuildFile file
-    val solved = BuildAnalyzer analyze build
+    val solved = buildAnalyzer analyze build
     
     val graph = new BuildGraph(solved.builds)
     val dot = Graphs.toDotFile(graph)(_.config.name)
@@ -28,14 +37,14 @@ object Main {
   def runBuildFile: Unit = {
     val file = new java.io.File("examplebuild.dsbt")
     val build = DistributedBuildParser parseBuildFile file
-    val solved = BuildAnalyzer analyze build
+    val solved = buildAnalyzer analyze build
     
     val logger = logging.ConsoleLogger()
     
     for(build <- solved.builds) local.ProjectDirs.useDirFor(build.config) { dir =>
       // Resolve the project....
-      ProjectResolver.resolve(build.config, dir)
-      BuildRunner.runBuild(build, dir, logger)
+      resolver.resolve(build.config, dir)
+      buildRunner.runBuild(build, dir, logger)
     }
   }
   
@@ -44,7 +53,7 @@ object Main {
   def sampleMeta2 = 
      BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git#17c750b36c91c59709794c9505e433d7ba5a8f21", "framework")
   def parseRemote =
-    (Extractor extract sampleMeta)
+    (extractor extract sampleMeta)
   
   
   def projects = Seq(
@@ -60,7 +69,7 @@ object Main {
   )
   
   def parseMetas: Seq[Build] = {
-      projects map Extractor.extract
+      projects map extractor.extract
   }
   
   def parseIntoGraph: BuildGraph = 

@@ -8,7 +8,7 @@ import resolve.ProjectResolver
 import model.{Build,BuildConfig}
 import logging._
 
-abstract class Extractor(
+class Extractor(
     resolver: ProjectResolver, 
     dependencyExtractor: BuildDependencyExtractor,
     logger: logging.Logger) {

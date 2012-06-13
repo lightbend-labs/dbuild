@@ -11,11 +11,11 @@ import project.resolve.ProjectResolver
  */
 class GitProjectResolver extends ProjectResolver {
   def canResolve(config: BuildConfig): Boolean = {
-    val uri = new java.net.URI(config.uri)    
+    val uri = new _root_.java.net.URI(config.uri)    
     (uri.getScheme == "git") || (uri.getPath endsWith ".git")
   }
-  def resolve(config: BuildConfig, dir: java.io.File): BuildConfig = {
-    val uri = new java.net.URI(config.uri)
+  def resolve(config: BuildConfig, dir: _root_.java.io.File): BuildConfig = {
+    val uri = new _root_.java.net.URI(config.uri)
 
     // First clone into the directory or fetch
     // TODO - better git checkout detection...

@@ -4,7 +4,7 @@ import Keys._
 
 object DistributedBuilderBuild extends Build with BuildHelper {
 
-  lazy val root = Project("root", file("."))
+  lazy val root = Project("root", file(".")) dependsOn(defaultSupport, dbuild)
 
   // TODO - Every project should have specs2 tests, just add it everywhere.
 

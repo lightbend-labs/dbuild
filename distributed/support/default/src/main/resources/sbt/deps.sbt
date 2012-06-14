@@ -1,0 +1,1 @@
+addSbtPlugin("com.typesafe.dsbt" % "distributed-sbt-plugin" % "0.1-SNAPSHOT")

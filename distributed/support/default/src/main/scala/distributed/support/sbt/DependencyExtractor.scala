@@ -34,15 +34,18 @@ object SbtExtractor {
       // TODO - Do we need a temporary directory for this, or can we re-use
       // the same one and stay synchronized?
       val globalBase = base / "sbtbase"      
-      makeTemplateIn(base)    
+      makeGlobalBaseIn(globalBase)    
     // TODO - Better forking process here!
       Process(Seq("sbt", 
         "-Dremote.project.uri=file://" +project.getAbsolutePath(),
         "-Dproject.dependency.metadata.file="+result.getAbsolutePath,
         "-Dsbt.global.base="+globalBase.getAbsolutePath,
         //"-no-global",
+        //"-Dsbt.version=0.12.0-RC1",
+        "-sbt-version",
+        "0.12.0-RC1",
         "-Dsbt.log.noformat=true",
-        "print-deps"), Some(base)).! match {
+        "print-deps"), Some(project)).! match {
           case 0 => ()
           case n => sys.error("Failure to run sbt extraction!  Error code: " + n)
         }
@@ -51,12 +54,11 @@ object SbtExtractor {
   }
   
   /** Creates the template SBT project for extraction... */
-  private def makeTemplateIn(dir: File): Unit = 
-    if(!(dir / "project" / "build.scala").exists) {
-      val projectDir = dir / "project"
-      projectDir.mkdirs
-      transferResource("extraction-project/SbtExtractionBuild.scala", projectDir / "build.scala")
-      transferResource("extraction-project/plugins.sbt", projectDir / "plugins.sbt")
+  private def makeGlobalBaseIn(dir: File): Unit = 
+    if(!(dir / "plugins" / "deps.sbt").exists) {
+      val pluginDir = dir / "plugins"
+      pluginDir.mkdirs
+      transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
     }
   
   private def transferResource(r: String, f: File): Unit = {

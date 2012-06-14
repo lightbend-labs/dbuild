@@ -49,7 +49,8 @@ object Main {
   }
   
   def sampleMeta =
-    BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git", "framework")
+    BuildConfig("Scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git", "")
+    //BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git", "framework")
   def sampleMeta2 = 
      BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git#17c750b36c91c59709794c9505e433d7ba5a8f21", "framework")
   def parseRemote =

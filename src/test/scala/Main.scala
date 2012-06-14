@@ -49,13 +49,22 @@ object Main {
     }
   }
   
-  def sampleMeta =
+  def runArmBuild: BuildResults = {
+    val build = buildAnalyzer analyze DistributedBuildConfig(Seq(scalaArm))
+    val logger = logging.ConsoleLogger()
+    local.ProjectDirs.useDirFor(build.builds.head.config) { dir =>
+      resolver.resolve(build.builds.head.config, dir)
+      buildRunner.runBuild(build.builds.head, dir, logger)
+    }
+  }
+  
+  def scalaArm =
     BuildConfig("Scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#community-build", "")
     //BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git", "framework")
   def sampleMeta2 = 
      BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git#17c750b36c91c59709794c9505e433d7ba5a8f21", "framework")
   def parseRemote =
-    (extractor extract sampleMeta)
+    (extractor extract scalaArm)
   
   
   def projects = Seq(

@@ -7,7 +7,7 @@ import StateHelpers._
 
 object DistributedRunner {
   // TODO - make a task that generates this metadata and just call it!
-  type ArtifactMap = Seq[(Artifact, File)]
+  type ArtifactMap = Seq[model.ArtifactLocation]
 
   /** Actually prints the dependencies to the given file. */
   def addDistributedResolver(state: State): State = {
@@ -35,9 +35,24 @@ object DistributedRunner {
       case ((state, amap), ref) => 
       val (state2,fileMap) = 
         extracted.runTask(Keys.packagedArtifacts in Compile in ref, state)
-      state2 -> (amap ++ fileMap)
+        
+      val org = extracted get (Keys.organization in ref)
+      val artifacts = 
+        for {
+          (artifact, file) <- fileMap
+          // TODO - allow any old artifact....
+          if artifact.classifier.isEmpty
+        } yield model.ArtifactLocation(model.ProjectDep(artifact.name, org), file)
+      
+      state2 -> (amap ++ artifacts)
     }
   }
+  
+  def makeBuildResults(artifacts: ArtifactMap): model.BuildResults = 
+    model.BuildResults(artifacts)
+  
+  def printResults(fileName: String, artifacts: ArtifactMap): Unit = 
+    IO.write(new java.io.File(fileName), PrettyPrint(makeBuildResults(artifacts)))
   
   /** The implementation of the print-deps command. */
   def buildCmd(state: State): State = {
@@ -45,6 +60,8 @@ object DistributedRunner {
     val state2 = addDistributedResolver(state)
     val (state3, artifacts) = buildProject(state2)
     // TODO - Report artifacts....
+    val resultFile = Option(System.getProperty("project.build.results.file"))
+    resultFile foreach (f => printResults(f, artifacts))
     state3
   }
 

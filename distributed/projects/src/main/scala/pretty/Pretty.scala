@@ -17,4 +17,8 @@ object PrettyPrint {
     def apply(t: Seq[T]): String = 
       (t map { i => PrettyPrint(i) }).mkString("[", ",\n","]")
   } 
+  
+  implicit object filePretty extends PrettyPrint[java.io.File] {
+    def apply(f: java.io.File): String = f.getAbsolutePath
+  }
 }

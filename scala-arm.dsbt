@@ -1,0 +1,7 @@
+{
+  projects = [{
+    name = "scala-arm"
+    system = "sbt"
+    uri = "git://github.com/jsuereth/scala-arm.git#community-build"
+  }]
+}

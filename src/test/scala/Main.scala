@@ -15,7 +15,8 @@ object Main {
   val extractor = new Extractor(resolver, depExtractor, logging.ConsoleLogger())
   val buildAnalyzer = new SimpleBuildAnalyzer(extractor)
   val buildRunner = new AggregateBuildRunner(Seq(
-      support.scala.ScalaBuildRunner))
+      support.scala.ScalaBuildRunner,
+      new support.sbt.SbtBuildRunner()))
   
   def loadFileIntoDot: Unit = {
     val file = new java.io.File("examplebuild.dsbt")
@@ -35,7 +36,7 @@ object Main {
   
   
   def runBuildFile: Unit = {
-    val file = new java.io.File("examplebuild.dsbt")
+    val file = new java.io.File("scala-arm.dsbt")
     val build = DistributedBuildParser parseBuildFile file
     val solved = buildAnalyzer analyze build
     

@@ -3,6 +3,7 @@ package com.typesafe.dsbt
 import sbt._
 import distributed.project.model
 import _root_.pretty.PrettyPrint
+import StateHelpers._
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
@@ -26,9 +27,7 @@ object DependencyAnalysis {
   def printDependencies(state: State, uri: String, file: String): Unit = {
     val extracted = Project.extract(state)
     import extracted._
-    val refs = (session.mergeSettings map (_.key.scope) collect {
-      case Scope(Select(p @ ProjectRef(_,_)),_,_,_) => p
-    } toSet)
+    val refs = getProjectRefs(session.mergeSettings)
     val deps = getProjectInfos(extracted, state, refs)    
     val meta = model.ExtractedBuildMeta(uri, deps)
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))

@@ -7,4 +7,5 @@ object DistributedBuildPlugin extends Plugin {
       DependencyAnalysis.printSettings ++ 
       DistributedRunner.buildSettings
     )
+  override def projectSettings = DistributedRunner.projectSettings
 }

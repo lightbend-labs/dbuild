@@ -4,10 +4,10 @@ import sbt._
 import distributed.project.model
 import _root_.pretty.PrettyPrint
 import StateHelpers._
+import DistributedBuildKeys._
+
 
 object DistributedRunner {
-  // TODO - make a task that generates this metadata and just call it!
-  type ArtifactMap = Seq[model.ArtifactLocation]
 
   /** Actually prints the dependencies to the given file. */
   def addDistributedResolver(state: State): State = {
@@ -33,17 +33,8 @@ object DistributedRunner {
     val refs = getProjectRefs(session.mergeSettings)
     refs.foldLeft[(State, ArtifactMap)](state -> Seq.empty) { 
       case ((state, amap), ref) => 
-      val (state2,fileMap) = 
-        extracted.runTask(Keys.packagedArtifacts in Compile in ref, state)
-        
-      val org = extracted get (Keys.organization in ref)
-      val artifacts = 
-        for {
-          (artifact, file) <- fileMap
-          // TODO - allow any old artifact....
-          if artifact.classifier.isEmpty
-        } yield model.ArtifactLocation(model.ProjectDep(artifact.name, org), file)
-      
+      val (state2,artifacts) = 
+        extracted.runTask(extractArtifacts, state)
       state2 -> (amap ++ artifacts)
     }
   }
@@ -71,4 +62,18 @@ object DistributedRunner {
   def buildSettings: Seq[Setting[_]] = Seq(
     Keys.commands += buildIt
   )
+  
+  def extractArtifactLocations(org: String, artifacts: Map[Artifact, File]): Seq[model.ArtifactLocation] =
+    for {
+      (artifact, file) <- artifacts.toSeq
+      // TODO - allow any old artifact....
+      if artifact.classifier.isEmpty
+      if artifact.extension == "jar"
+     } yield model.ArtifactLocation(model.ProjectDep(artifact.name, org), file)
+  
+        
+  
+  def projectSettings: Seq[Setting[_]] = Seq(
+      extractArtifacts <<= (Keys.organization, Keys.packagedArtifacts in Compile) map extractArtifactLocations
+    )
 }

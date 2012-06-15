@@ -9,9 +9,10 @@ import java.io.File
 // Either that or spawn an actor for every local project
 // and send the function to run on the actor?
 object ProjectDirs {
+  // TODO - Pull from config!
   private val dir = new File(".localprojects")
   
-    // TODO - Configure how/where these projects go....
+  // TODO - Check lock file or something...
   def useDirFor[A](build: BuildConfig)(f: File => A) = {
     val dir = new File(".localprojects")
     val projdir = new File(dir, hashing.sha1Sum(build))

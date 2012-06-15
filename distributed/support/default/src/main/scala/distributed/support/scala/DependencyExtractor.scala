@@ -7,7 +7,7 @@ import project.dependencies.BuildDependencyExtractor
 import _root_.java.io.File
 
 object ScalaDependencyExtractor extends BuildDependencyExtractor {
-  override def extract(config: BuildConfig, dir: File): ExtractedBuildMeta = {
+  override def extract(config: BuildConfig, dir: File, log: logging.Logger): ExtractedBuildMeta = {
     // TODO - don't HardCode
     ExtractedBuildMeta("", 
         Seq(

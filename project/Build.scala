@@ -8,7 +8,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild)
-    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend)
+    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, dfiles)
   )
 
   // The component projects...
@@ -26,11 +26,11 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // Projects relating to distributed builds.
   lazy val logging = (
       DmodProject("logging")
-      dependsOnRemote(sbtLogging)
+      dependsOnRemote(sbtLogging, akkaActor, sbtIo)
     )
   lazy val dprojects = (
       DmodProject("projects")
-      dependsOn(graph, config, hashing, logging)
+      dependsOn(graph, config, hashing, logging, dfiles)
       dependsOnRemote(sbtIo)
     )
   lazy val dbuild = (

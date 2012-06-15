@@ -17,16 +17,16 @@ trait ProjectResolver {
    * Returns a new repeatable Scm configuration that can be used
    * to retrieve the *exact* same code retrieved by this resolve call.
    */
-  def resolve(config: BuildConfig, dir: java.io.File): BuildConfig
+  def resolve(config: BuildConfig, dir: java.io.File, log: logging.Logger): BuildConfig
 }
 
 /** Helper that uses all known project resolvers. */
 class AggregateProjectResolver(resolvers: Seq[ProjectResolver]) extends ProjectResolver {
   def canResolve(config: BuildConfig): Boolean = 
     resolvers exists (_ canResolve config)
-  def resolve(config: BuildConfig, dir: java.io.File): BuildConfig = {
+  def resolve(config: BuildConfig, dir: java.io.File, log: logging.Logger): BuildConfig = {
     resolvers find (_ canResolve config) match {
-      case Some(r) => r.resolve(config, dir)
+      case Some(r) => r.resolve(config, dir, log)
       case _       => sys.error("Could not find a resolver for: " + BuildConfig)
     }
   }

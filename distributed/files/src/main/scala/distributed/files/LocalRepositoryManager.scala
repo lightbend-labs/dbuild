@@ -13,16 +13,12 @@ class LocalFileRepositoryManagerActor extends Actor {
   import LocalFileRepositoryManagerActor._
   def receive = {
     case AddRepository(name: String) =>
-      val repo = context.actorOf(Props(new LocalFileRepositoryActor), name="Repo: " + name)
-      cache = cache.updated(name, repo)
       // TODO - Needed?
-      sender ! repo
+      sender ! addRepo(name)
     case AddFile(RepoUri(name, uri), file) =>
       cache get name match {
         case Some(repo) =>  repo ! AddFile(uri, file)
-        case None => 
-          // TODO - Add repository?
-          sender ! RepositoryNotFound(name)
+        case None => addRepo(name) ! AddFile(uri, file)
       }
     case GetFile(RepoUri(name, uri)) =>
       cache get name match {
@@ -33,7 +29,11 @@ class LocalFileRepositoryManagerActor extends Actor {
       }
   }
   
-  
+  def addRepo(name: String): ActorRef = {
+    val repo = context.actorOf(Props(new LocalFileRepositoryActor), name="Repo: " + name)
+    cache = cache.updated(name, repo)
+    repo
+  }
 }
 object LocalFileRepositoryManagerActor {
     

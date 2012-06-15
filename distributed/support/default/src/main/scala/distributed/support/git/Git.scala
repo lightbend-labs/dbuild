@@ -6,6 +6,7 @@ package git
 import sys.process._
 import _root_.java.io.File
 import _root_.java.net.URI
+import logging.Logger
 
 /** A git runner */
 object Git {
@@ -14,34 +15,34 @@ object Git {
     this.read(Seq("rev-parse", ref), dir).trim
 
     
-  def fetch(ref: String, tempDir: File): Unit = {
+  def fetch(ref: String, tempDir: File, log: Logger): Unit = {
     val args = if(ref.isEmpty) Seq("fetch")
                else Seq("fetch", ref)
-    this.apply(args, tempDir)
+    this.apply(args, tempDir, log)
   }
     
   /** Clones a project. */
-  def clone(base: URI, tempDir: File): Unit =
+  def clone(base: URI, tempDir: File, log: Logger): Unit =
     this.apply(
       Seq("clone",
         UriUtil.dropFragment(base).toASCIIString,
          tempDir.getAbsolutePath), 
-      tempDir)
+      tempDir, log)
    
-  def checkout(tempDir: File, branch: String): Unit =
-    apply(Seq("checkout", "-q", branch), tempDir)	
+  def checkout(tempDir: File, branch: String, log: Logger): Unit =
+    apply(Seq("checkout", "-q", branch), tempDir, log)	
   
 		
-  def clean(dir: File): Unit =
-    apply(Seq("clean", "-fdx"), dir)
+  def clean(dir: File, log: Logger): Unit =
+    apply(Seq("clean", "-fdx"), dir, log)
     
   def version(dir: File = new File(".")): String = 
     read(Seq("--version"), dir).trim
   
   private def read(args: Seq[String], cwd: File): String =
     Process(OS.callCmdIfWindows("git") ++ args, cwd).!!
-  def apply(args: Seq[String], cwd: File): Unit =
-    Process(OS.callCmdIfWindows("git") ++ args, cwd).! match {
+  def apply(args: Seq[String], cwd: File, log: Logger): Unit =
+    Process(OS.callCmdIfWindows("git") ++ args, cwd) ! log match {
       case 0 => ()
       case n => sys.error("Nonzero exit code ("+ n + "): git " + (args mkString " "))
     }

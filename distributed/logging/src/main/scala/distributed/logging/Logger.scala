@@ -5,7 +5,9 @@ import sbt.{Logger=> SbtLogger, LogEvent}
 import sys.process.ProcessLogger
 import sbt.Level._
 
-trait Logger extends SbtLogger with ProcessLogger
+trait Logger extends SbtLogger with ProcessLogger {
+  def newNestedLogger(name: String): Logger
+}
 object Logger {}
 
 
@@ -13,6 +15,7 @@ abstract class BasicLogger extends sbt.BasicLogger with Logger
 
 /** Logs to an output stream. */
 class StreamLogger(out: java.io.PrintStream) extends BasicLogger {
+  def newNestedLogger(name: String): Logger = this
   def trace(t: => Throwable): Unit =
     out.synchronized {
       val traceLevel = getTrace
@@ -35,11 +38,11 @@ class StreamLogger(out: java.io.PrintStream) extends BasicLogger {
   private def log(label: String, message: String): Unit =
     out.synchronized {
       for(line <- message.split("""\n""")) {
-		out.print("[")
-		out.print(label)
-		out.print("] ")
-		out.print(line)
-		out.println()
+        out.print("[")
+        out.print(label)
+        out.print("] ")
+        out.print(line)
+        out.println()
       }
     }
 }

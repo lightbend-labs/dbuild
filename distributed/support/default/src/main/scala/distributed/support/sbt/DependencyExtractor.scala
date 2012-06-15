@@ -14,9 +14,9 @@ import SbtHelper._
  * dependencies.
  */
 class SbtDependencyExtractor(base: File = new File(".sbtextraction")) extends BuildDependencyExtractor {
-  override def extract(config: BuildConfig, dir: File): ExtractedBuildMeta =
-    if(config.directory.isEmpty) SbtExtractor.extractMetaData(dir, base)
-    else SbtExtractor.extractMetaData(new File(dir, config.directory), base)
+  override def extract(config: BuildConfig, dir: File, logger: logging.Logger): ExtractedBuildMeta =
+    if(config.directory.isEmpty) SbtExtractor.extractMetaData(dir, base, logger)
+    else SbtExtractor.extractMetaData(new File(dir, config.directory), base, logger)
   def canHandle(system: String): Boolean = "sbt" == system
 }
 
@@ -25,12 +25,12 @@ class SbtDependencyExtractor(base: File = new File(".sbtextraction")) extends Bu
 // script...
 object SbtExtractor {
   
-  def extractMetaData(projectDir: File, base: File): ExtractedBuildMeta = 
-        (ExtractedDependencyFileParser.parseMetaString(runSbtExtractionProject(projectDir, base)) 
+  def extractMetaData(projectDir: File, base: File, log: logging.Logger): ExtractedBuildMeta = 
+        (ExtractedDependencyFileParser.parseMetaString(runSbtExtractionProject(projectDir, base, log)) 
          getOrElse sys.error("Failure to parse build metadata in sbt extractor!"))
 
   // TODO - Beter synchronize!
-  private def runSbtExtractionProject(project: File, base: File): String = {
+  private def runSbtExtractionProject(project: File, base: File, log: logging.Logger): String = {
     IO.withTemporaryFile("result", "sbtmeta") { result =>
       // TODO - Do we need a temporary directory for this, or can we re-use
       // the same one and stay synchronized?
@@ -46,7 +46,7 @@ object SbtExtractor {
         "-sbt-version",
         "0.12.0-RC1",
         "-Dsbt.log.noformat=true",
-        "print-deps"), Some(project)).! match {
+        "print-deps"), Some(project)) ! log match {
           case 0 => ()
           case n => sys.error("Failure to run sbt extraction!  Error code: " + n)
         }

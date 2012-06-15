@@ -12,13 +12,13 @@ trait BuildAnalyzer {
    * The returned configuration lists *full* build configuration in 
    * an appropriate build order.
    */
-  def analyze(config: DistributedBuildConfig): DistributedBuild 
+  def analyze(config: DistributedBuildConfig, log: logging.Logger): DistributedBuild 
 }
 
 /** Simple implementation that delegates to an extractor. */
 class SimpleBuildAnalyzer(e: project.dependencies.Extractor) extends BuildAnalyzer {
-  final def analyze(config: DistributedBuildConfig): DistributedBuild = {
-    val builds = config.projects map e.extract
+  final def analyze(config: DistributedBuildConfig, log: logging.Logger): DistributedBuild = {
+    val builds = config.projects map (p => e.extract(p, log))
     // Now we need them in build ordering...
     val graph = new BuildGraph(builds)
     val ordered = (Graphs safeTopological graph map (_.value)).reverse

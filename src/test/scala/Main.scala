@@ -12,7 +12,8 @@ object Main {
   val depExtractor = new MultiBuildDependencyExtractor(
       Seq(new support.sbt.SbtDependencyExtractor(),
           support.scala.ScalaDependencyExtractor))
-  val extractor = new Extractor(resolver, depExtractor, logging.ConsoleLogger())
+  lazy val logger = logging.ConsoleLogger()
+  val extractor = new Extractor(resolver, depExtractor)
   val buildAnalyzer = new SimpleBuildAnalyzer(extractor)
   val buildRunner = new AggregateBuildRunner(Seq(
       support.scala.ScalaBuildRunner,
@@ -21,7 +22,7 @@ object Main {
   def loadFileIntoDot: Unit = {
     val file = new java.io.File("examplebuild.dsbt")
     val build = DistributedBuildParser parseBuildFile file
-    val solved = buildAnalyzer analyze build
+    val solved = buildAnalyzer.analyze(build, logger)
     
     val graph = new BuildGraph(solved.builds)
     val dot = Graphs.toDotFile(graph)(_.config.name)
@@ -38,13 +39,10 @@ object Main {
   def runBuildFile = {
     val file = new java.io.File("scala-arm.dsbt")
     val build = DistributedBuildParser parseBuildFile file
-    val solved = buildAnalyzer analyze build
-    
-    val logger = logging.ConsoleLogger()
-    
+    val solved = buildAnalyzer.analyze(build, logger)
     def runBuild(deps: BuildArtifacts, build: Build) =
       local.ProjectDirs.useDirFor(build.config) { dir =>
-         resolver.resolve(build.config, dir)
+         resolver.resolve(build.config, dir, logger)
          val results = buildRunner.runBuild(build, dir, model.BuildArtifacts(Seq.empty), logger)
          BuildArtifacts(deps.artifacts ++ results.artifacts)
       }
@@ -52,10 +50,9 @@ object Main {
   }
   
   def runArmBuild: model.BuildArtifacts = {
-    val build = buildAnalyzer analyze DistributedBuildConfig(Seq(scalaArm))
-    val logger = logging.ConsoleLogger()
+    val build = buildAnalyzer.analyze(DistributedBuildConfig(Seq(scalaArm)), logger)
     local.ProjectDirs.useDirFor(build.builds.head.config) { dir =>
-      resolver.resolve(build.builds.head.config, dir)
+      resolver.resolve(build.builds.head.config, dir, logger)
       buildRunner.runBuild(build.builds.head, dir, model.BuildArtifacts(Seq.empty), logger)
     }
   }
@@ -66,7 +63,7 @@ object Main {
   def sampleMeta2 = 
      BuildConfig("Play2", "sbt", "git://github.com/playframework/Play20.git#17c750b36c91c59709794c9505e433d7ba5a8f21", "framework")
   def parseRemote =
-    (extractor extract scalaArm)
+    (extractor.extract(scalaArm, logger))
   
   
   def projects = Seq(
@@ -82,7 +79,7 @@ object Main {
   )
   
   def parseMetas: Seq[Build] = {
-      projects map extractor.extract
+      projects map (p => extractor.extract(p, logger))
   }
   
   def parseIntoGraph: BuildGraph = 

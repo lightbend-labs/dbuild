@@ -40,15 +40,33 @@ object ActorMain {
     
   def dBuildConfig =
     DistributedBuildConfig(Seq(scalaConfig, scalaArm))
-    
+  
+  def parsedDbuildConfig =
+    DistributedBuildParser.parseBuildString(repeatableConfig)
     
   def runBuild = {
     import akka.pattern.ask
     import akka.util.duration._
     import akka.util.Timeout
     implicit val timeout: Timeout = (4).hours
-    fullBuilderActor ? RunDistributedBuild(dBuildConfig, logger)
+    fullBuilderActor ? RunDistributedBuild(parsedDbuildConfig, logger)
   }
     
   def shutdown() = actorSystem.shutdown()
+  
+  
+  def repeatableConfig = """
+    {
+      projects = [{
+         name = "scala"
+         system = "scala"  
+         uri = "git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc"  
+         directory = ""
+      },{
+         name = "scala-arm"
+         system = "sbt"
+         uri = "git://github.com/jsuereth/scala-arm.git#86d3477a7ce91b9046197f9f6f49bf9ff8a137f6"
+         directory = ""
+      }]
+    }"""
 }

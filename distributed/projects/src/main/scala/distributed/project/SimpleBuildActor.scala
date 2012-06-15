@@ -18,9 +18,14 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   def receive = {
     case RunDistributedBuild(build, log) =>
       val listener = sender
+      val logger = log.newNestedLogger(hashing.sha1Sum(build))
       for {
-        fullBuild <- analyze(build, log)
-        results <- runBuild(fullBuild, log)
+        fullBuild <- analyze(build, log.newNestedLogger(hashing.sha1Sum(build)))
+        fullLogger = log.newNestedLogger(hashing.sha1Sum(fullBuild))
+        _ = fullLogger.info("---==   Repeatable Build Config   ===---")
+        _ = fullLogger.info(pretty.PrettyPrint(DistributedBuildConfig(fullBuild.builds map (_.config))))
+        _ = fullLogger.info("---== End Repeatable Build Config ===---")
+        results <- runBuild(fullBuild, fullLogger)
       } listener ! results
   }
   

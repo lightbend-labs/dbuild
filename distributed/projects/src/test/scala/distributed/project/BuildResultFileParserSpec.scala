@@ -9,7 +9,7 @@ object ParserSpec extends Specification {
     
     "parse pretty printed result" in {
       val data = 
-        BuildResults( 
+        BuildArtifacts( 
           Seq(
               ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile),
               ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile)

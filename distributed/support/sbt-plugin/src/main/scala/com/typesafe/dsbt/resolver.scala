@@ -21,15 +21,22 @@ import org.apache.ivy.plugins.resolver.{
 }
 import org.apache.ivy.plugins.resolver.util.ResolvedResource
 
+import distributed.project.model
+import distributed.project.BuildResultFileParser
+
 
 object DistributedDependencyResolver {
-  def apply() = new RawRepository(new DistributedDependencyResolver)
+  def apply() = new RawRepository(new DistributedDependencyResolver(loadConfig))
+  def depFile = Option(System.getProperty("project.build.deps.file")) map (new java.io.File(_))
+  def loadConfig: model.BuildArtifacts =
+    (depFile flatMap BuildResultFileParser.parseMetaFile 
+        getOrElse model.BuildArtifacts(Seq.empty))
 }
 
 /** A dependency resolver that should pull dependencies from recently
  * built distributed projects.
  */
-class DistributedDependencyResolver extends AbstractResolver with DependencyResolver {
+class DistributedDependencyResolver(config: model.BuildArtifacts) extends AbstractResolver with DependencyResolver {
   override def publish(artifact: Artifact, src: java.io.File, overwrite: Boolean): Unit = ()
   
   
@@ -43,11 +50,27 @@ class DistributedDependencyResolver extends AbstractResolver with DependencyReso
   
   private def downloadArtifact(artifact: Artifact, options: DownloadOptions): ArtifactDownloadReport = {
     val report = new ArtifactDownloadReport(artifact)
-    report setDownloadStatus DownloadStatus.FAILED
     report setDownloadTimeMillis 0L
-    report setDownloadDetails "Not yet implemented."
+    findLocalArtifact(artifact) match {
+      case Some(file) =>
+        report setDownloadStatus DownloadStatus.SUCCESSFUL
+        report setLocalFile file
+        report setDownloadDetails "Cached build dependency."
+      case None =>
+      	report setDownloadStatus DownloadStatus.FAILED
+      	report setDownloadDetails "Not found."
+    }
     report
   }
+  
+  def findLocalArtifact(artifact: Artifact): Option[java.io.File] = (
+      for {
+        a <- config.artifacts
+        if artifact.getId.getModuleRevisionId.getOrganisation == a.dep.organization
+        if artifact.getId.getName == a.dep.name
+        if (artifact.getExt == null) || (artifact.getExt == "jar")
+      } yield a.local
+   ).headOption
     
   
   

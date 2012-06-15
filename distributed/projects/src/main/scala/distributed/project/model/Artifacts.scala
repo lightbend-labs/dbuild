@@ -21,10 +21,10 @@ object ArtifactLocation {
 }
 
 
-case class BuildResults(artifacts: Seq[ArtifactLocation])
-object BuildResults {
-  implicit object PrettyPrinter extends PrettyPrint[BuildResults] {
-    def apply(r: BuildResults): String = {
+case class BuildArtifacts(artifacts: Seq[ArtifactLocation])
+object BuildArtifacts {
+  implicit object PrettyPrinter extends PrettyPrint[BuildArtifacts] {
+    def apply(r: BuildArtifacts): String = {
       val sb = new StringBuilder("{\n")
       sb append ("  artifacts = %s\n" format(PrettyPrint(r.artifacts)))
       sb append "}"

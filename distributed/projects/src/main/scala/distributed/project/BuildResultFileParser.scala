@@ -19,10 +19,10 @@ object BuildResultFileParser {
   def parseMeta(in: java.io.Reader) = parseBase(config.parse(in).resolve.root)
   
   
-  private def parseBase(c: ConfigObject): Option[BuildResults] = {
+  private def parseBase(c: ConfigObject): Option[BuildArtifacts] = {
     for {
       artifacts <- parseArtifacts(c get "artifacts")
-    } yield BuildResults(artifacts)
+    } yield BuildArtifacts(artifacts)
   }
   
   def parseArtifacts(c: ConfigValue): Option[Seq[ArtifactLocation]] = c match {

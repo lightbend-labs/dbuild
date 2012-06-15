@@ -35,26 +35,28 @@ object Main {
   }
   
   
-  def runBuildFile: Unit = {
+  def runBuildFile = {
     val file = new java.io.File("scala-arm.dsbt")
     val build = DistributedBuildParser parseBuildFile file
     val solved = buildAnalyzer analyze build
     
     val logger = logging.ConsoleLogger()
     
-    for(build <- solved.builds) local.ProjectDirs.useDirFor(build.config) { dir =>
-      // Resolve the project....
-      resolver.resolve(build.config, dir)
-      buildRunner.runBuild(build, dir, logger)
-    }
+    def runBuild(deps: BuildArtifacts, build: Build) =
+      local.ProjectDirs.useDirFor(build.config) { dir =>
+         resolver.resolve(build.config, dir)
+         val results = buildRunner.runBuild(build, dir, model.BuildArtifacts(Seq.empty), logger)
+         BuildArtifacts(deps.artifacts ++ results.artifacts)
+      }
+    solved.builds.foldLeft(model.BuildArtifacts(Seq.empty))(runBuild)
   }
   
-  def runArmBuild: BuildResults = {
+  def runArmBuild: model.BuildArtifacts = {
     val build = buildAnalyzer analyze DistributedBuildConfig(Seq(scalaArm))
     val logger = logging.ConsoleLogger()
     local.ProjectDirs.useDirFor(build.builds.head.config) { dir =>
       resolver.resolve(build.builds.head.config, dir)
-      buildRunner.runBuild(build.builds.head, dir, logger)
+      buildRunner.runBuild(build.builds.head, dir, model.BuildArtifacts(Seq.empty), logger)
     }
   }
   

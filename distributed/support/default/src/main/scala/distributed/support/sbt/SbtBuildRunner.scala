@@ -15,8 +15,8 @@ import distributed.project.BuildResultFileParser
 class SbtBuildRunner(base: File = new File(".sbtbuild")) extends project.BuildRunner {
   val system: String = "sbt"
   // TODO - Push in and extract dependencies
-  def runBuild(b: Build, dir: File, log: logging.Logger): BuildResults = {
-    SbtBuilder.buildSbtProject(dir, base)
+  def runBuild(b: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
+    SbtBuilder.buildSbtProject(dir, dependencies, base)
   }
 }
 
@@ -24,13 +24,17 @@ class SbtBuildRunner(base: File = new File(".sbtbuild")) extends project.BuildRu
 // script...
 object SbtBuilder {
   
-  def buildSbtProject(project: File, base: File): BuildResults = {
+  def buildSbtProject(project: File, dependencies: BuildArtifacts, base: File): BuildArtifacts = {
     makeGlobalBaseIn(base)
-    IO.withTemporaryFile("dsbt", "builder") { resultFile => 
+    IO.withTemporaryDirectory { tmpDir => 
+      val resultFile = tmpDir / "results.dsbt"
+      val depsFile = tmpDir / "deps.dsbt"
+      IO.write(depsFile, pretty.PrettyPrint(dependencies))
       // TODO - Send in inputs, get back outputs.
       Process(Seq("sbt", 
           "-Dsbt.global.base="+base.getAbsolutePath,
           "-Dproject.build.results.file="+resultFile.getAbsolutePath,
+          "-Dproject.build.deps.file="+depsFile.getAbsolutePath,
           "-Dsbt.version=0.12.0-RC1",
           "-sbt-version",
           "0.12.0-RC1",

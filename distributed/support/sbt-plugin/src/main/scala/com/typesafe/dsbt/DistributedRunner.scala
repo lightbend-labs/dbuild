@@ -39,8 +39,8 @@ object DistributedRunner {
     }
   }
   
-  def makeBuildResults(artifacts: ArtifactMap): model.BuildResults = 
-    model.BuildResults(artifacts)
+  def makeBuildResults(artifacts: ArtifactMap): model.BuildArtifacts = 
+    model.BuildArtifacts(artifacts)
   
   def printResults(fileName: String, artifacts: ArtifactMap): Unit = 
     IO.write(new java.io.File(fileName), PrettyPrint(makeBuildResults(artifacts)))

@@ -52,6 +52,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dprojects, dfiles)
+      dependsOnRemote(sbtLauncher)
     )
 
   // Distributed SBT plugin
@@ -68,7 +69,8 @@ trait BuildHelper extends Build {
   def defaultDSettings: Seq[Setting[_]] = Seq(
     organization := "com.typesafe.dsbt",
     scalaVersion := "2.9.2",
-    libraryDependencies += specs2
+    libraryDependencies += specs2,
+    resolvers += Resolver.typesafeIvyRepo("releases")
   )
   
   // TODO - Aggregate into a single JAR if possible for easier resolution later...

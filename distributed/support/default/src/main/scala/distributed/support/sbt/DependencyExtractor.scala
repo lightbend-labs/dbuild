@@ -36,7 +36,14 @@ object SbtExtractor {
       // the same one and stay synchronized?
       val globalBase = base / "sbtbase"      
       makeGlobalBaseIn(globalBase)    
-    // TODO - Better forking process here!
+      // TODO - Figure out logging!
+      // TODO - Figure out dependencies?
+      /*
+      val runner = new launcher.MySbtRunner(globalBase)
+      System.setProperty("project.dependency.metadata.file", result.getAbsolutePath)
+      System.setProperty("sbt.global.base", globalBase.getAbsolutePath)
+      runner.runCommand(project, "print-deps")
+      */
       Process(Seq("sbt", 
         "-Dremote.project.uri=file://" +project.getAbsolutePath(),
         "-Dproject.dependency.metadata.file="+result.getAbsolutePath,

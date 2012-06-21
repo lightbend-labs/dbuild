@@ -23,9 +23,10 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         fullBuild <- analyze(build, log.newNestedLogger(hashing.sha1Sum(build)))
         fullLogger = log.newNestedLogger(hashing.sha1Sum(fullBuild))
         _ = fullLogger.info("---==   Repeatable Build Config   ===---")
-        _ = fullLogger.info(pretty.ConfigPrint(DistributedBuildConfig(fullBuild.builds map (_.config))))
+        repeatable = DistributedBuildConfig(fullBuild.builds map (_.config))
+        _ = fullLogger.info(pretty.ConfigPrint(repeatable))
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
-        results <- runBuild(fullBuild, fullLogger)
+        results <- runBuild(fullBuild, repeatable, fullLogger)
       } listener ! results
   }
   
@@ -34,20 +35,21 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   implicit val buildTimeout: Timeout = 4 hours 
 
   // Chain together some Asynch to run this build.
-  def runBuild(build: DistributedBuild, log: Logger): Future[BuildArtifacts] = {
+  def runBuild(build: DistributedBuild, repeatable: DistributedBuildConfig, log: Logger): Future[BuildArtifacts] = {
     implicit val ctx = context.system
-    
     def runBuild(builds: List[Build], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
       builds match {
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
             newArts <- buildProject(b, arts, log.newNestedLogger(b.config.name))
-          } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts)
+          } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts, arts.localRepo)
           runBuild(rest, nextArts)
         case _ => fArts
       }
-    runBuild(build.builds.toList, Future(BuildArtifacts(Seq.empty)))
+    local.ProjectDirs.userRepoDirFor(repeatable) { localRepo =>      
+      runBuild(build.builds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
+    }
   }  
   
   // Asynchronously extract information from builds.

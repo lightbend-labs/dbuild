@@ -13,7 +13,8 @@ object ParserSpec extends Specification {
           Seq(
               ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile),
               ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile)
-          )
+          ),
+          new java.io.File("repo").getAbsoluteFile
         )
       val config = pretty.ConfigPrint(data)
       (BuildResultFileParser.parseMetaString(config) 

@@ -24,18 +24,35 @@ class SbtBuildRunner(base: File = new File(".sbtbuild")) extends project.BuildRu
 // script...
 object SbtBuilder {
   
+  def writeRepoFile(config: File, repo: File): Unit = {
+    val sb = new StringBuilder("[repositories]\n")
+    sb append  "  local\n"
+    sb append ("  ivy-build-local file://%s, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext]\n" format (repo.getAbsolutePath))
+    sb append ("  mvn-build-local file://%s" format (repo.getAbsolutePath))
+    sb append  "  maven-central\n"
+    sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
+    // TODO - Typesafe repositories? ... NAH
+    IO.write(config, sb.toString)
+  } 
+    
+  
   def buildSbtProject(project: File, dependencies: BuildArtifacts, base: File, log: logging.Logger): BuildArtifacts = {
     makeGlobalBaseIn(base)
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dsbt"
       val depsFile = tmpDir / "deps.dsbt"
+      val repoFile = tmpDir / "repositories"
+      
       IO.write(depsFile, pretty.ConfigPrint(dependencies))
+      writeRepoFile(repoFile, dependencies.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       // TODO - Send in inputs, get back outputs.
       Process(Seq("sbt", 
           "-Dsbt.global.base="+base.getAbsolutePath,
           "-Dproject.build.results.file="+resultFile.getAbsolutePath,
           "-Dproject.build.deps.file="+depsFile.getAbsolutePath,
+          "-Dsbt.repository.config="+repoFile.getAbsolutePath,
+          "-Dproject.build.results.file="+dependencies.localRepo.getAbsolutePath,
           "-Dsbt.version=0.12.0-RC1",
           "-sbt-version",
           "0.12.0-RC1",

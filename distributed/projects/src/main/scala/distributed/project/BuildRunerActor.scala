@@ -23,6 +23,6 @@ class BuildRunnerActor(builder: BuildRunner, resolver: ProjectResolver) extends 
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       resolver.resolve(build.config, dir, log)
       log.info("Running local build: " + build.config + " in directory: " + dir)
-      builder.runBuild(build, dir, model.BuildArtifacts(Seq.empty), log)
+      builder.runBuild(build, dir, dependencies, log)
     }
 }

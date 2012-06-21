@@ -43,17 +43,23 @@ object Main {
     def runBuild(deps: BuildArtifacts, build: Build) =
       local.ProjectDirs.useDirFor(build.config) { dir =>
          resolver.resolve(build.config, dir, logger)
-         val results = buildRunner.runBuild(build, dir, model.BuildArtifacts(Seq.empty), logger)
-         BuildArtifacts(deps.artifacts ++ results.artifacts)
+         val results = buildRunner.runBuild(build, dir, deps, logger)
+         BuildArtifacts(deps.artifacts ++ results.artifacts, deps.localRepo)
       }
-    solved.builds.foldLeft(model.BuildArtifacts(Seq.empty))(runBuild)
+    val repeatable = DistributedBuildConfig(solved.builds map (_.config))
+    local.ProjectDirs.userRepoDirFor(repeatable) { localRepo =>
+      solved.builds.foldLeft(model.BuildArtifacts(Seq.empty, localRepo))(runBuild)
+    }
   }
   
   def runArmBuild: model.BuildArtifacts = {
     val build = buildAnalyzer.analyze(DistributedBuildConfig(Seq(scalaArm)), logger)
-    local.ProjectDirs.useDirFor(build.builds.head.config) { dir =>
-      resolver.resolve(build.builds.head.config, dir, logger)
-      buildRunner.runBuild(build.builds.head, dir, model.BuildArtifacts(Seq.empty), logger)
+    val repeatable = DistributedBuildConfig(build.builds map (_.config))
+    local.ProjectDirs.userRepoDirFor(repeatable) { repo =>
+      local.ProjectDirs.useDirFor(build.builds.head.config) { dir =>
+        resolver.resolve(build.builds.head.config, dir, logger)
+        buildRunner.runBuild(build.builds.head, dir, model.BuildArtifacts(Seq.empty, repo), logger)
+      }
     }
   }
   

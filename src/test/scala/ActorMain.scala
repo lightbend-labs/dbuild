@@ -28,10 +28,7 @@ object ActorMain {
   //val logger = logging.ConsoleLogger()
   lazy val extractorActor = actorSystem.actorOf(Props(new ExtractorActor(extractor)), "Project-Dependency-Extractor")
   lazy val baseBuildActor = actorSystem.actorOf(Props(new BuildRunnerActor(buildRunner, resolver)), "Project-Builder")
-  lazy val localFiles = actorSystem.actorOf(Props(new LocalFileRepositoryManagerActor), "local-file-repo")
-  lazy val buildCache = actorSystem.actorOf(Props(new BuildCache(localFiles)), "build-cache")
-  lazy val cachedBuildActor = actorSystem.actorOf(Props(new CachedBuildRunnerActor(buildCache, baseBuildActor)), "cached-builder-frontend")
-  lazy val fullBuilderActor = actorSystem.actorOf(Props(new SimpleBuildActor(extractorActor, cachedBuildActor)), "simple-distributed-builder")
+  lazy val fullBuilderActor = actorSystem.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor)), "simple-distributed-builder")
   def scalaArm =
     BuildConfig("Scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#community-build", "")
   

@@ -24,6 +24,7 @@ object ScalaBuildRunner extends project.BuildRunner {
       ArtifactLocation(ProjectDep(scalaOrg, "scala-reflect"), libDir / "scala-reflect.jar"),
       ArtifactLocation(ProjectDep(scalaOrg, "scala-compiler"), libDir / "scala-compiler.jar"),
       ArtifactLocation(ProjectDep(scalaOrg, "scala-actors"), libDir / "scala-actors.jar")
-    ))
+    ) ++ dependencies.artifacts, 
+    dependencies.localRepo)
   }
 }

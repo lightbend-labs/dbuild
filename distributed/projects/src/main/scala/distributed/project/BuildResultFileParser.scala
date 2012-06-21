@@ -22,7 +22,13 @@ object BuildResultFileParser {
   private def parseBase(c: ConfigObject): Option[BuildArtifacts] = {
     for {
       artifacts <- parseArtifacts(c get "artifacts")
-    } yield BuildArtifacts(artifacts)
+      localRepo <- parseRepo(c get "localRepo")
+    } yield BuildArtifacts(artifacts, localRepo)
+  }
+  
+  def parseRepo(c: ConfigValue): Option[java.io.File] = c match {
+    case ConfigString(file) => Some(new java.io.File(file))
+    case _ => None
   }
   
   def parseArtifacts(c: ConfigValue): Option[Seq[ArtifactLocation]] = c match {

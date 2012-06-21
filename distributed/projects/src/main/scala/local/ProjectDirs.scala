@@ -1,6 +1,6 @@
 package local
 
-import distributed.project.model.BuildConfig
+import distributed.project.model.{BuildConfig, DistributedBuildConfig}
 import java.io.File
 
 // TODO - Locally configured area for projects
@@ -18,5 +18,13 @@ object ProjectDirs {
     val projdir = new File(dir, hashing.sha1Sum(build))
     projdir.mkdirs()
     f(projdir)
+  }
+  
+  
+  def userRepoDirFor[A](build:DistributedBuildConfig)(f: File => A) = {
+    val dir = new File(".localrepos")
+    val repodir = new File(dir, hashing.sha1Sum(build))
+    repodir.mkdirs()
+    f(repodir)
   }
 }

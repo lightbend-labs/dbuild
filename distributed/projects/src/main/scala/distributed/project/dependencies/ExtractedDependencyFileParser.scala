@@ -37,17 +37,23 @@ object ExtractedDependencyFileParser {
   // TODO - Auto case-class extraction?
   // TODO - Use validation?
   private def parseProject(c: ConfigObject): Option[Project] = {
-    (c get "name", c get "organization", c get "dependencies") match {
-      case (ConfigString(name), ConfigString(org), ConfigList(deps)) => 
-        Some(Project(name, org, deps flatMap parseDep))
+    (c get "name", c get "organization", c get "artifacts", c get "dependencies") match {
+      case (ConfigString(name), ConfigString(org), ConfigList(arts), ConfigList(deps)) =>
+        val dependencies = deps flatMap parseDep
+        val artifacts = arts flatMap parseDep
+        Some(Project(name, org, artifacts, dependencies))
       case _ => None
     }
   }
   
   private def parseDep(c: ConfigValue): Option[ProjectDep] = c match {
+    // TODO - Handle optional classifier...
     case c: ConfigObject =>
-      (c get "name", c get "organization") match {
-        case (ConfigString(name), ConfigString(org)) => Some(ProjectDep(name,org))
+      (c get "name", c get "organization", c get "ext", c get "classifier") match {
+        case (ConfigString(name), ConfigString(org), ConfigString(ext), ConfigString(classifier)) =>
+          Some(ProjectDep(name, org, ext, Some(classifier)))
+        case (ConfigString(name), ConfigString(org), ConfigString(ext), _) => 
+          Some(ProjectDep(name, org, ext))
         case _ => None
       }
     case _ => None

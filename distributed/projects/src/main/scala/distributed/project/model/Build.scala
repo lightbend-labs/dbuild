@@ -2,17 +2,22 @@ package distributed
 package project
 package model
 
+import pretty._
+import PrettyPrint.makeMember
 /** Information on how to build a project.  Consists of both distributed build
  * configuration and extracted information.
  */
 case class Build(config: BuildConfig, extracted: ExtractedBuildMeta)
 object Build {
-  import pretty._
+  
+  
   implicit object PrettyPrinter extends PrettyPrint[Build] {
     def apply(build: Build): String = {
-      val sb = new StringBuffer("{\n")
-      sb append ("config = %s\n" format (PrettyPrint(build.config)))
-      sb append ("extracted = %s\n" format (PrettyPrint(build.extracted)))
+      import build._
+      val sb = new StringBuffer("{")
+      sb append makeMember("config", config)
+      sb append ","
+      sb append makeMember("extracted", extracted)
       sb append "}"
       sb.toString
     }    
@@ -23,11 +28,10 @@ object Build {
 /** A distributed build containing projects in *build order*/
 case class DistributedBuild(builds: Seq[Build])
 object DistributedBuild {
-  import pretty._
   implicit object DistributedBuildPretty extends PrettyPrint[DistributedBuild] {
     def apply(build: DistributedBuild): String = {
-      val sb = new StringBuffer("{\n")
-      sb append ("projects = %s\n" format (PrettyPrint(build.builds)))
+      val sb = new StringBuffer("{")
+      sb append makeMember("projects", build.builds)
       sb append "}"
       sb.toString
     }

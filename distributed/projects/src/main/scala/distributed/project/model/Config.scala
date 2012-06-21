@@ -13,14 +13,18 @@ case class BuildConfig(name: String,
     
 object BuildConfig {
   import pretty._
+  import PrettyPrint.makeMember
   
   implicit object PrettyPrinter extends PrettyPrint[BuildConfig] {
     def apply(c: BuildConfig): String = {
-      val sb = new StringBuffer("{\n")
-      sb append ("  name = \"%s\"\n" format (c.name))
-      sb append ("  system = \"%s\"\n" format (c.system))
-      sb append ("  uri = \"%s\"\n" format (c.uri))
-      sb append ("  directory = \"%s\"\n" format (c.directory))
+      val sb = new StringBuffer("{")
+      sb append makeMember("name", c.name)
+      sb append ","
+      sb append makeMember("system", c.system)
+      sb append ","
+      sb append makeMember("uri", c.uri)
+      sb append ","
+      sb append makeMember("directory", c.directory)
       sb append "}"
       sb.toString
     }
@@ -31,10 +35,11 @@ object BuildConfig {
 case class DistributedBuildConfig(projects: Seq[BuildConfig])
 object DistributedBuildConfig {
   import pretty._
+  import PrettyPrint.makeMember
   implicit object PrettyPrinter extends PrettyPrint[DistributedBuildConfig] {
      def apply(build: DistributedBuildConfig): String = {
-      val sb = new StringBuffer("{\n")
-      sb append ("projects = %s\n" format (PrettyPrint(build.projects)))
+      val sb = new StringBuffer("{")
+      sb append makeMember("projects", build.projects)
       sb append "}"
       sb.toString
     }

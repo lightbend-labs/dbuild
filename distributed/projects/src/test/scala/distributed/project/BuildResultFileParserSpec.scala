@@ -15,7 +15,7 @@ object ParserSpec extends Specification {
               ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile)
           )
         )
-      val config = pretty.PrettyPrint(data)
+      val config = pretty.ConfigPrint(data)
       (BuildResultFileParser.parseMetaString(config) 
           must 
           equalTo(Some(data)))

@@ -2,7 +2,7 @@ package com.typesafe.dsbt
 
 import sbt._
 import distributed.project.model
-import _root_.pretty.PrettyPrint
+import _root_.pretty.ConfigPrint
 import StateHelpers._
 
 object DependencyAnalysis {
@@ -45,7 +45,7 @@ object DependencyAnalysis {
     val deps = getProjectInfos(extracted, state, refs)    
     val meta = model.ExtractedBuildMeta(uri, deps)
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
-    try output println PrettyPrint(meta)
+    try output println ConfigPrint(meta)
     finally output.close()
   }
   

@@ -29,7 +29,7 @@ object SbtBuilder {
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dsbt"
       val depsFile = tmpDir / "deps.dsbt"
-      IO.write(depsFile, pretty.PrettyPrint(dependencies))
+      IO.write(depsFile, pretty.ConfigPrint(dependencies))
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       // TODO - Send in inputs, get back outputs.
       Process(Seq("sbt", 

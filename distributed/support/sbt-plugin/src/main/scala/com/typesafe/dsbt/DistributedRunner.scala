@@ -2,7 +2,7 @@ package com.typesafe.dsbt
 
 import sbt._
 import distributed.project.model
-import _root_.pretty.PrettyPrint
+import _root_.pretty.ConfigPrint
 import StateHelpers._
 import DistributedBuildKeys._
 
@@ -43,7 +43,7 @@ object DistributedRunner {
     model.BuildArtifacts(artifacts)
   
   def printResults(fileName: String, artifacts: ArtifactMap): Unit = 
-    IO.write(new java.io.File(fileName), PrettyPrint(makeBuildResults(artifacts)))
+    IO.write(new java.io.File(fileName), ConfigPrint(makeBuildResults(artifacts)))
   
   /** The implementation of the print-deps command. */
   def buildCmd(state: State): State = {

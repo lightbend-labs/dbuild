@@ -13,9 +13,9 @@ case class BuildConfig(name: String,
     
 object BuildConfig {
   import pretty._
-  import PrettyPrint.makeMember
+  import ConfigPrint.makeMember
   
-  implicit object PrettyPrinter extends PrettyPrint[BuildConfig] {
+  implicit object PrettyPrinter extends ConfigPrint[BuildConfig] {
     def apply(c: BuildConfig): String = {
       val sb = new StringBuffer("{")
       sb append makeMember("name", c.name)
@@ -35,8 +35,8 @@ object BuildConfig {
 case class DistributedBuildConfig(projects: Seq[BuildConfig])
 object DistributedBuildConfig {
   import pretty._
-  import PrettyPrint.makeMember
-  implicit object PrettyPrinter extends PrettyPrint[DistributedBuildConfig] {
+  import ConfigPrint.makeMember
+  implicit object PrettyPrinter extends ConfigPrint[DistributedBuildConfig] {
      def apply(build: DistributedBuildConfig): String = {
       val sb = new StringBuffer("{")
       sb append makeMember("projects", build.projects)

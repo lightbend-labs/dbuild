@@ -23,7 +23,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         fullBuild <- analyze(build, log.newNestedLogger(hashing.sha1Sum(build)))
         fullLogger = log.newNestedLogger(hashing.sha1Sum(fullBuild))
         _ = fullLogger.info("---==   Repeatable Build Config   ===---")
-        _ = fullLogger.info(pretty.PrettyPrint(DistributedBuildConfig(fullBuild.builds map (_.config))))
+        _ = fullLogger.info(pretty.ConfigPrint(DistributedBuildConfig(fullBuild.builds map (_.config))))
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
         results <- runBuild(fullBuild, fullLogger)
       } listener ! results

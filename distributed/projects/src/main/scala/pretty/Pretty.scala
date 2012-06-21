@@ -7,28 +7,28 @@ package pretty
  * Note: This is specifically used to take case class configuration and
  *  return it into its parsed format...
  */
-trait PrettyPrint[T] {
+trait ConfigPrint[T] {
   def apply(t: T): String
 }
 
-object PrettyPrint {
-  def apply[T](t: T)(implicit ev: PrettyPrint[T]) = ev(t)
+object ConfigPrint {
+  def apply[T](t: T)(implicit ev: ConfigPrint[T]) = ev(t)
 
   /** Support for sequences of settings. */
-  implicit def seqPretty[T : PrettyPrint]: PrettyPrint[Seq[T]] = new PrettyPrint[Seq[T]] {
+  implicit def seqPretty[T : ConfigPrint]: ConfigPrint[Seq[T]] = new ConfigPrint[Seq[T]] {
     def apply(t: Seq[T]): String = 
-      (t map { i => PrettyPrint(i) }).mkString("[", ",","]")
+      (t map { i => ConfigPrint(i) }).mkString("[", ",","]")
   } 
   
-  implicit object stringPretty extends PrettyPrint[String] {
+  implicit object stringConfig extends ConfigPrint[String] {
     def apply(in: String): String =
       '"' + in.replaceAll("\"", "\\\"") + '"'
   }
   
-  implicit object filePretty extends PrettyPrint[java.io.File] {
+  implicit object fileConfig extends ConfigPrint[java.io.File] {
     def apply(f: java.io.File): String = f.getAbsolutePath
   }
   
-  def makeMember[A: PrettyPrint](name: String, value: A): String =
-    "%s:%s" format (stringPretty(name), PrettyPrint(value))
+  def makeMember[A: ConfigPrint](name: String, value: A): String =
+    "%s:%s" format (stringConfig(name), ConfigPrint(value))
 }

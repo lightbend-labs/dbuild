@@ -37,7 +37,7 @@ object ExtractedDependencyFileParserSpec extends Specification {
                     ProjectDep("p3", "o2"),
                     ProjectDep("p4", "o3")
                   ))))
-      val config = pretty.PrettyPrint(data)
+      val config = pretty.ConfigPrint(data)
       (ExtractedDependencyFileParser.parseMetaString(config) 
           must 
           equalTo(Option(data)))

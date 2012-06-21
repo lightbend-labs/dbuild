@@ -3,7 +3,7 @@ package project
 package model
 
 import pretty._
-import PrettyPrint.makeMember
+import ConfigPrint.makeMember
 
 /** A project dep is an extracted *external* build dependency.  I.e. this is a
  * maven/ivy artifact that exists and is built external to a local build.
@@ -14,7 +14,7 @@ case class ProjectDep(
     extension: String = "jar", 
     classifier: Option[String] = None)
 object ProjectDep {
-  implicit object ProjectDepPrettyPrint extends PrettyPrint[ProjectDep] {
+  implicit object ProjectDepPrettyPrint extends ConfigPrint[ProjectDep] {
     def apply(t: ProjectDep): String = {
       import t._
       val sb = new StringBuilder("{")
@@ -42,7 +42,7 @@ case class Project(
     artifacts: Seq[ProjectDep],
     dependencies: Seq[ProjectDep])
 object Project {
-  implicit object ProjectPrettyPrint extends PrettyPrint[Project] {
+  implicit object ProjectPrettyPrint extends ConfigPrint[Project] {
     def apply(t: Project): String = {
       import t._
       val sb = new StringBuilder("{")
@@ -65,7 +65,7 @@ case class ExtractedBuildMeta(uri: String, projects: Seq[Project]) {
   override def toString = "Build(%s, %s)" format (uri, projects.mkString("\n\t", "\n\t", "\n"))
 }
 object ExtractedBuildMeta {
-  implicit object  BuildPretty extends PrettyPrint[ExtractedBuildMeta] {
+  implicit object  BuildPretty extends ConfigPrint[ExtractedBuildMeta] {
     def apply(b: ExtractedBuildMeta): String = {
       import b._
       val sb = new StringBuilder("{")

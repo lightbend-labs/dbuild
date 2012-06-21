@@ -9,11 +9,11 @@ import pretty._
 // - Is the version even right to assume?
 case class ArtifactLocation(dep: ProjectDep, local: File)
 object ArtifactLocation {
-  implicit object PrettyArtLoc extends PrettyPrint[ArtifactLocation] {
+  implicit object PrettyArtLoc extends ConfigPrint[ArtifactLocation] {
     def apply(l: ArtifactLocation): String = {
       val sb = new StringBuilder("{\n")
-      sb append ("  location = \"%s\"\n" format(PrettyPrint(l.local)))
-      sb append ("  info = %s\n" format(PrettyPrint(l.dep)))
+      sb append ("  location = \"%s\"\n" format(ConfigPrint(l.local)))
+      sb append ("  info = %s\n" format(ConfigPrint(l.dep)))
       sb append "}"
       sb.toString
     }
@@ -23,10 +23,10 @@ object ArtifactLocation {
 
 case class BuildArtifacts(artifacts: Seq[ArtifactLocation])
 object BuildArtifacts {
-  implicit object PrettyPrinter extends PrettyPrint[BuildArtifacts] {
+  implicit object PrettyPrinter extends ConfigPrint[BuildArtifacts] {
     def apply(r: BuildArtifacts): String = {
       val sb = new StringBuilder("{\n")
-      sb append ("  artifacts = %s\n" format(PrettyPrint(r.artifacts)))
+      sb append ("  artifacts = %s\n" format(ConfigPrint(r.artifacts)))
       sb append "}"
       sb.toString
     }

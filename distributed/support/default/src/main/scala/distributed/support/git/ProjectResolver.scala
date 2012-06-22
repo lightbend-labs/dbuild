@@ -21,10 +21,12 @@ class GitProjectResolver extends ProjectResolver {
     // TODO - better git checkout detection...
     if(!dir.exists) dir.mkdirs()
     if(!(dir / ".git").exists) Git.clone(uri, dir, log)
-    else Git.fetch("", dir, log)
+    
+    // Make sure we pull down all the refs from origin for our repeatable builds...
+    Git.fetch("origin", dir, log)
     
     // Now clean the directory so only desired artifacts are there...
-    Git.clean(dir, log)
+    //Git.clean(dir, log)
     // TODO - Fetch non-standard references?
     // Then checkout desired branch/commit/etc.
     Option(uri.getFragment()) foreach (ref => Git.checkout(dir, ref, log))

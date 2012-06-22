@@ -27,8 +27,8 @@ object SbtBuilder {
   def writeRepoFile(config: File, repo: File): Unit = {
     val sb = new StringBuilder("[repositories]\n")
     sb append  "  local\n"
-    sb append ("  ivy-build-local file://%s, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext]\n" format (repo.getAbsolutePath))
-    sb append ("  mvn-build-local file://%s" format (repo.getAbsolutePath))
+    sb append ("  ivy-build-local: file://%s, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext]\n" format (repo.getAbsolutePath))
+    sb append ("  mvn-build-local: file://%s\n" format (repo.getAbsolutePath))
     sb append  "  maven-central\n"
     sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
     // TODO - Typesafe repositories? ... NAH

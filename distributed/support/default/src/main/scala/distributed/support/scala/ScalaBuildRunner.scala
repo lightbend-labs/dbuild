@@ -13,10 +13,22 @@ object ScalaBuildRunner extends project.BuildRunner {
   val scalaOrg = "org.scala-lang"
   // TODO - Publish to an ok repository for others to find the artifacts...
   def runBuild(b: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
-    Process(Seq("ant", "-Dscalac.optimise=-optimise", "pack.done"), Some(dir)) ! log match {
+    Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
+
+    // Now deliver scala to the remote repo.
+    // TODO - VERSIONING!!!!!!!!!!!!!!!!!!
+    val localRepo = dependencies.localRepo.getAbsolutePath
+    Process(Seq("ant", "deploy.local",
+        "-Dlocal.snapshot.repository="+localRepo,
+        "-Dlocal.release.repository="+localRepo
+    ), Some(dir / "dists" / "maven" / "latest")) ! log match {
+      case 0 => ()
+      case n => sys.error("Could not run scala ant build, error code: " + n)
+    }
+    
     // Now, return hardcoded results.
     val libDir = dir / "build" / "pack" / "lib"
     BuildArtifacts(Seq(

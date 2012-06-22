@@ -11,8 +11,8 @@ object ParserSpec extends Specification {
       val data = 
         BuildArtifacts( 
           Seq(
-              ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile),
-              ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile)
+              ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile, "1.0"),
+              ArtifactLocation(ProjectDep("p3", "o2"), new java.io.File("p1").getAbsoluteFile, "2.0")
           ),
           new java.io.File("repo").getAbsoluteFile
         )

@@ -41,9 +41,9 @@ object BuildResultFileParser {
   // TODO - Auto case-class extraction?
   // TODO - Use validation?
   private def parseArtifact(c: ConfigObject): Option[ArtifactLocation] = {
-    (c get "location", c get "info") match {
-      case (ConfigString(file), ParsedProjectDep(dep)) => 
-        Some(ArtifactLocation(dep, new java.io.File(file)))
+    (c get "location", c get "info", c get "version") match {
+      case (ConfigString(file), ParsedProjectDep(dep), ConfigString(version)) => 
+        Some(ArtifactLocation(dep, new java.io.File(file), version))
       case _ => None
     }
   }

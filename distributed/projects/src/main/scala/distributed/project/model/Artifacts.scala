@@ -8,7 +8,7 @@ import ConfigPrint.makeMember
 
 // TODO - Do we have enough information here?
 // - Is the version even right to assume?
-case class ArtifactLocation(dep: ProjectDep, local: File)
+case class ArtifactLocation(dep: ProjectDep, local: File, version: String)
 object ArtifactLocation {
   implicit object PrettyArtLoc extends ConfigPrint[ArtifactLocation] {
     def apply(l: ArtifactLocation): String = {
@@ -16,6 +16,8 @@ object ArtifactLocation {
       sb append makeMember("location", l.local)
       sb append ","
       sb append makeMember("info", l.dep)
+      sb append ","
+      sb append makeMember("version", l.version)
       sb append "}"
       sb.toString
     }

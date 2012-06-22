@@ -52,16 +52,18 @@ object SbtBuilder {
           "-Dproject.build.results.file="+resultFile.getAbsolutePath,
           "-Dproject.build.deps.file="+depsFile.getAbsolutePath,
           "-Dsbt.repository.config="+repoFile.getAbsolutePath,
-          "-Dproject.build.results.file="+dependencies.localRepo.getAbsolutePath,
-          "-Dsbt.version=0.12.0-RC1",
+          "-Dproject.build.publish.repo="+dependencies.localRepo.getAbsolutePath,
+          "-Dsbt.override.build.repos=true",
+          // TODO - Fix this...
+          "-Dsbt.version=0.12.0-RC2",
           "-sbt-version",
-          "0.12.0-RC1",
+          "0.12.0-RC2",
           "-Dsbt.log.noformat=true",
           "dsbt-build"), Some(project)) ! log match {
         case 0 => log.success("Build succesful")
         case n => 
-          log.err("Failure to run sbt extraction!  Error code: " + n)
-          sys.error("Failure to run sbt extraction!  Error code: " + n)
+          log.err("Failure to run sbt build ("+project.getAbsolutePath+")!  Error code: " + n)
+          sys.error("Failure to run sbt build("+project.getAbsolutePath+")!  Error code: " + n)
       }
       
       (BuildResultFileParser parseMetaFile resultFile getOrElse

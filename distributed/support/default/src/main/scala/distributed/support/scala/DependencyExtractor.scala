@@ -34,5 +34,6 @@ object ScalaDependencyExtractor extends BuildDependencyExtractor {
   private[this] def comp = ProjectDep("scala-compiler", group)
   private[this] def scalap = ProjectDep("scalap", group)
   private[this] def partest = ProjectDep("partest", group)
+  private[this] def continuations = ProjectDep("continuations", group+".plugins")
 }
 

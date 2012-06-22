@@ -4,6 +4,7 @@ import sbt._
 import distributed.project.model
 import _root_.pretty.ConfigPrint
 import StateHelpers._
+import NameFixer.fixName
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
@@ -63,11 +64,4 @@ object DependencyAnalysis {
   def printSettings: Seq[Setting[_]] = Seq(
     Keys.commands += print
   )
-  
-  // Remove scala version from names so we can do cross-compile magikz.
-  val ScalaVersioned = new util.matching.Regex("(.+)_((\\d+)\\.(\\d+)(.+))")
-  def fixName(name: String): String = name match {
-    case ScalaVersioned(name, _*) => name
-    case name => name
-  }
 }

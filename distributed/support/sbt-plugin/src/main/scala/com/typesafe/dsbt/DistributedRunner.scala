@@ -45,9 +45,10 @@ object DistributedRunner {
           if artifact.dep.organization == m.organization
           if artifact.dep.name == fixName(m.name)
         } yield artifact).headOption
-      findArt map (_.version) map { v => 
-        println("Updating: " + m + " for version: " + v)
-        m.copy(revision=v)
+      findArt map { art => 
+        println("Updating: " + m + " to: " + art)
+        // TODO - Update our publishing so we don't have a cross versions too.....
+        m.copy(name = art.dep.name, revision=art.version, crossVersion = CrossVersion.Disabled)
       } getOrElse m
   }
     
@@ -82,6 +83,8 @@ object DistributedRunner {
       fixLibraryDependencies(arts)(s)
     case Keys.publishTo.key =>
       fixPublishTo(Resolver.file("deploy-to-local-repo", arts.localRepo.getAbsoluteFile))(s)
+    case Keys.crossVersion.key =>
+      s.asInstanceOf[Setting[CrossVersion]] mapInit { (_,_) => CrossVersion.Disabled }
     case _ => s
   } 
   

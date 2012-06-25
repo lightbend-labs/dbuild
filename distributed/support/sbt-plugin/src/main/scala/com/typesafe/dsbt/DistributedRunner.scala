@@ -10,22 +10,6 @@ import NameFixer.fixName
 
 
 object DistributedRunner {
-
-  /** Actually prints the dependencies to the given file. */
-  def addDistributedResolver(state: State, localRepo: File): State = {
-    println("Adding distributed resolver...")
-    val extracted = Project.extract(state)
-    import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
-
-    // TODO - Alter publishTo to be local repo...
-    
-    val transformedSettings = 
-      (session.mergeSettings)
-    
-    val newStructure2 = Load.reapply(transformedSettings, structure)
-    Project.setProject(session, newStructure2, state)
-  }
   // TODO - Use a specific key that allows posting other kinds of artifacts.
   // Maybe also use a platform-specific task such that we can expose
   // windows artifacts on windows, etc.
@@ -86,6 +70,9 @@ object DistributedRunner {
     } 
     newSetting getOrElse s
   }
+  
+  def fixPublishTo(repo: Resolver)(s: Setting[_]): Setting[_] =
+    s.asInstanceOf[Setting[Option[Resolver]]] mapInit { (_,_) => Some(repo) }
 
   def fixSetting(arts: model.BuildArtifacts)(s: Setting[_]): Setting[_] = s.key.key match {
     case Keys.scalaVersion.key        => 
@@ -93,6 +80,8 @@ object DistributedRunner {
       fixScalaVersion(arts)(s) 
     case Keys.libraryDependencies.key => 
       fixLibraryDependencies(arts)(s)
+    case Keys.publishTo.key =>
+      fixPublishTo(Resolver.file("deploy-to-local-repo", arts.localRepo.getAbsoluteFile))(s)
     case _ => s
   } 
   
@@ -100,17 +89,31 @@ object DistributedRunner {
     println("Updating dependencies.")
     val extracted = Project.extract(state)
     import extracted._
+    val refs = getProjectRefs(session.mergeSettings)
+    //val localRepoResolver: Option[Resolver] = Some("deploy-to-local-repo" at arts.localRepo.getAbsoluteFile.toURI.toASCIIString) 
     val newSettings = session.mergeSettings map fixSetting(arts)
     import Load._      
     val newStructure2 = Load.reapply(newSettings, structure)
     Project.setProject(session, newStructure2, state)
   }
+  
+  def publishProjects(state: State): State = {
+    println("Publishing artifacts")
+    val extracted = Project.extract(state)
+    import extracted._
+    val refs = getProjectRefs(session.mergeSettings)
+    refs.foldLeft[State](state) { case (state, ref) => 
+      val (state2,_) = 
+        extracted.runTask(Keys.publish in ref, state)
+      state2
+    }
+  }
     
   def buildStuff(state: State, resultFile: String, arts: model.BuildArtifacts): State = {
-    val state2 = addDistributedResolver(state, arts.localRepo)
-    val state3 = fixDependencies(arts, state2)
+    val state3 = fixDependencies(arts, state)
     val (state4, artifacts) = buildProject(state3)
     // TODO - Publish artifacts...
+    publishProjects(state4)
     printResults(resultFile, artifacts, arts.localRepo)
     state4
   }

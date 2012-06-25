@@ -55,9 +55,9 @@ object SbtBuilder {
           "-Dproject.build.publish.repo="+dependencies.localRepo.getAbsolutePath,
           "-Dsbt.override.build.repos=true",
           // TODO - Fix this...
-          "-Dsbt.version=0.12.0-RC2",
+          "-Dsbt.version=0.12.0-RC3",
           "-sbt-version",
-          "0.12.0-RC2",
+          "0.12.0-RC3",
           "-Dsbt.log.noformat=true",
           "dsbt-build"), Some(project)) ! log match {
         case 0 => log.success("Build succesful")

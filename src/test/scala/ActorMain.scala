@@ -30,13 +30,19 @@ object ActorMain {
   lazy val baseBuildActor = actorSystem.actorOf(Props(new BuildRunnerActor(buildRunner, resolver)), "Project-Builder")
   lazy val fullBuilderActor = actorSystem.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor)), "simple-distributed-builder")
   def scalaArm =
-    BuildConfig("Scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#86d3477a7ce91b9046197f9f6f49bf9ff8a137f6", "")
+    BuildConfig("scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#community-build", "")
+    
+  def scalaIo =
+    BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#community", "")
   
   def scalaConfig =
-    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#ff016002738580a7de11977c91e0061dbcf270ad", "")
+    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc", "")
+    
+  def sperformance =
+    BuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#community", "")
     
   def dBuildConfig =
-    DistributedBuildConfig(Seq(scalaConfig, scalaArm))
+    DistributedBuildConfig(Seq(scalaIo, scalaConfig, scalaArm, sperformance))
   
   def parsedDbuildConfig =
     DistributedBuildParser.parseBuildString(repeatableConfig)
@@ -46,14 +52,15 @@ object ActorMain {
     import akka.util.duration._
     import akka.util.Timeout
     implicit val timeout: Timeout = (4).hours
-    fullBuilderActor ? RunDistributedBuild(parsedDbuildConfig, logger)
+    fullBuilderActor ? RunDistributedBuild(dBuildConfig, logger)
   }
     
   def shutdown() = actorSystem.shutdown()
   
   
-  def repeatableConfig = """{ "projects":[
-     {"name":"scala","system":"scala","uri":"git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc","directory":""},
-     {"name":"scala-arm","system":"sbt","uri":"git://github.com/jsuereth/scala-arm.git#86d3477a7ce91b9046197f9f6f49bf9ff8a137f6","directory":""}
-    ]}"""
+  def repeatableConfig = """{"projects":[
+    {"name":"scala","system":"scala","uri":"git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc","directory":""},
+    {"name":"sperformance","system":"sbt","uri":"git://github.com/jsuereth/sperformance.git#8c472f2a1ae8da817c43c873e3126c486aa79446","directory":""},
+    {"name":"scala-arm","system":"sbt","uri":"git://github.com/jsuereth/scala-arm.git#86d3477a7ce91b9046197f9f6f49bf9ff8a137f6","directory":""}]
+  }"""
 }

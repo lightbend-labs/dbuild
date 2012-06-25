@@ -51,7 +51,7 @@ object SbtExtractor {
         //"-no-global",
         //"-Dsbt.version=0.12.0-RC1",
         "-sbt-version",
-        "0.12.0-RC1",
+        "0.12.0-RC2",
         "-Dsbt.log.noformat=true",
         "print-deps"), Some(project)) ! log match {
           case 0 => ()

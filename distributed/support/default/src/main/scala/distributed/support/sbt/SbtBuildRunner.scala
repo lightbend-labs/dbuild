@@ -31,6 +31,7 @@ object SbtBuilder {
     sb append ("  mvn-build-local: file://%s\n" format (repo.getAbsolutePath))
     sb append  "  maven-central\n"
     sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
+    sb append  "  java-annoying-cla-shtuff: http://download.java.net/maven/2/\n"
     // TODO - Typesafe repositories? ... NAH
     IO.write(config, sb.toString)
   } 
@@ -54,10 +55,9 @@ object SbtBuilder {
           "-Dsbt.repository.config="+repoFile.getAbsolutePath,
           "-Dproject.build.publish.repo="+dependencies.localRepo.getAbsolutePath,
           "-Dsbt.override.build.repos=true",
-          // TODO - Fix this...
-          "-Dsbt.version=0.12.0-RC3",
+          "-Dsbt.version="+SbtConfig.sbtVersion,
           "-sbt-version",
-          "0.12.0-RC3",
+          SbtConfig.sbtVersion,
           "-Dsbt.log.noformat=true",
           "dsbt-build"), Some(project)) ! log match {
         case 0 => log.success("Build succesful")

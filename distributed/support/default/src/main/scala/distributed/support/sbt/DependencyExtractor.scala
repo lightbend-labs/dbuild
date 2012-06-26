@@ -48,10 +48,8 @@ object SbtExtractor {
         "-Dremote.project.uri=file://" +project.getAbsolutePath(),
         "-Dproject.dependency.metadata.file="+result.getAbsolutePath,
         "-Dsbt.global.base="+globalBase.getAbsolutePath,
-        //"-no-global",
-        //"-Dsbt.version=0.12.0-RC1",
         "-sbt-version",
-        "0.12.0-RC2",
+        SbtConfig.sbtVersion,
         "-Dsbt.log.noformat=true",
         "print-deps"), Some(project)) ! log match {
           case 0 => ()

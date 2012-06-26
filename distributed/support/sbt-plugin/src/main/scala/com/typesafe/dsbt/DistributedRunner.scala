@@ -111,8 +111,21 @@ object DistributedRunner {
       state2
     }
   }
+  
+  def printResolvers(state: State): Unit = {
+    println("Using resolvers:")
+    val extracted = Project.extract(state)
+    import extracted._
+    val refs = getProjectRefs(session.mergeSettings)
+    for {
+      ref <- refs
+      (_,resolvers) = extracted.runTask(Keys.fullResolvers in ref, state)
+      r <- resolvers
+    } println("\t(%s) - %s" format (r.name, r.toString))
+  }
     
   def buildStuff(state: State, resultFile: String, arts: model.BuildArtifacts): State = {
+    printResolvers(state)
     val state3 = fixDependencies(arts, state)
     val (state4, artifacts) = buildProject(state3)
     // TODO - Publish artifacts...

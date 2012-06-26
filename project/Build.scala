@@ -70,7 +70,8 @@ trait BuildHelper extends Build {
     organization := "com.typesafe.dsbt",
     scalaVersion := "2.9.2",
     libraryDependencies += specs2,
-    resolvers += Resolver.typesafeIvyRepo("releases")
+    resolvers += Resolver.typesafeIvyRepo("releases"),
+    resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"    
   )
   
   // TODO - Aggregate into a single JAR if possible for easier resolution later...

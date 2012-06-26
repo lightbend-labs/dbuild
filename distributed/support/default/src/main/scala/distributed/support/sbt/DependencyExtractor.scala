@@ -2,7 +2,6 @@ package distributed
 package support
 package sbt
 
-import project.dependencies.{BuildDependencyExtractor, ExtractedDependencyFileParser}
 import project.model._
 import _root_.sbt.{IO, Path, PathExtra}
 import Path._
@@ -10,15 +9,7 @@ import _root_.java.io.File
 import sys.process.Process
 import SbtHelper._
 
-/** A helper that knows how to extract SBT build
- * dependencies.
- */
-class SbtDependencyExtractor(base: File = new File(".sbtextraction")) extends BuildDependencyExtractor {
-  override def extract(config: BuildConfig, dir: File, logger: logging.Logger): ExtractedBuildMeta =
-    if(config.directory.isEmpty) SbtExtractor.extractMetaData(dir, base, logger)
-    else SbtExtractor.extractMetaData(new File(dir, config.directory), base, logger)
-  def canHandle(system: String): Boolean = "sbt" == system
-}
+
 
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
@@ -26,7 +17,7 @@ class SbtDependencyExtractor(base: File = new File(".sbtextraction")) extends Bu
 object SbtExtractor {
   
   def extractMetaData(projectDir: File, base: File, log: logging.Logger): ExtractedBuildMeta = 
-        (ExtractedDependencyFileParser.parseMetaString(runSbtExtractionProject(projectDir, base, log)) 
+        (ExtractedBuildMetaParser.parseMetaString(runSbtExtractionProject(projectDir, base, log)) 
          getOrElse sys.error("Failure to parse build metadata in sbt extractor!"))
 
   // TODO - Beter synchronize!

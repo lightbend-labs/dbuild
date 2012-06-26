@@ -1,5 +1,6 @@
 package distributed
 package project
+package build
 
 import model._
 import dependencies.ExtractBuildDependencies

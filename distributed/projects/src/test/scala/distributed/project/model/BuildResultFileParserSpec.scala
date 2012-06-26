@@ -1,11 +1,11 @@
 package distributed
 package project
+package model
 
 import org.specs2.mutable.Specification
-import model._
 
-object ParserSpec extends Specification {
-  "BuildResultFileParser" should {
+object BuildArtifactsParserSpec extends Specification {
+  "BuildArtifactsParser" should {
     
     "parse pretty printed result" in {
       val data = 
@@ -17,7 +17,7 @@ object ParserSpec extends Specification {
           new java.io.File("repo").getAbsoluteFile
         )
       val config = pretty.ConfigPrint(data)
-      (BuildResultFileParser.parseMetaString(config) 
+      (BuildArtifactsParser.parseMetaString(config) 
           must 
           equalTo(Some(data)))
     }

@@ -1,14 +1,14 @@
 package distributed
 package project
+package model
 
-import model._
 import config._
 import collection.JavaConverters._
 import config.ConfigValueType
 
 
 
-object BuildResultFileParser {
+object BuildArtifactsParser {
   
   def parseMetaFile(f: java.io.File) = {
     val r = new java.io.FileReader(f)

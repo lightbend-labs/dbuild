@@ -1,15 +1,14 @@
 package distributed
 package project
-package dependencies
+package model
 
-import model._
 import config._
 import collection.JavaConverters._
 import config.ConfigValueType
 
 
 
-object ExtractedDependencyFileParser {
+object ExtractedBuildMetaParser {
   
   def parseMetaFile(f: java.io.File) = {
     val r = new java.io.FileReader(f)

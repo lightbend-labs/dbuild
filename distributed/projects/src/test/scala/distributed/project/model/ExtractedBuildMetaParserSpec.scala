@@ -1,16 +1,16 @@
 package distributed
 package project
-package dependencies
+package model
 
 import org.specs2.mutable.Specification
 import model._
 
-object ExtractedDependencyFileParserSpec extends Specification {
+object ExtractedBuildMetaParserSpec extends Specification {
   "ExtractedDependencyFileParser" should {
     "parse metadata file" in {
       
       
-      ExtractedDependencyFileParser.parseMetaString(
+      ExtractedBuildMetaParser.parseMetaString(
 """{
   scm = "foo/bar"  
   projects = [{
@@ -38,7 +38,7 @@ object ExtractedDependencyFileParserSpec extends Specification {
                     ProjectDep("p4", "o3")
                   ))))
       val config = pretty.ConfigPrint(data)
-      (ExtractedDependencyFileParser.parseMetaString(config) 
+      (ExtractedBuildMetaParser.parseMetaString(config) 
           must 
           equalTo(Option(data)))
     }

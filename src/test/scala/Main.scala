@@ -1,23 +1,21 @@
 import distributed._
+import distributed.build._
+import project.build._
 import project._
 import model._
 import dependencies._
 import graph._
-import build._
 import distributed.project.resolve.ProjectResolver
 object Main {
   
   val resolver = new resolve.AggregateProjectResolver(
       Seq(new support.git.GitProjectResolver))
-  val depExtractor = new MultiBuildDependencyExtractor(
-      Seq(new support.sbt.SbtDependencyExtractor(),
-          support.scala.ScalaDependencyExtractor))
-  lazy val logger = logging.ConsoleLogger()
+  val buildSystems: Seq[BuildSystem] = Seq(new support.sbt.SbtBuildSystem, support.scala.ScalaBuildSystem)
+  val depExtractor = new MultiBuildDependencyExtractor(buildSystems)
   val extractor = new Extractor(resolver, depExtractor)
+  lazy val logger = logging.ConsoleLogger()
   val buildAnalyzer = new SimpleBuildAnalyzer(extractor)
-  val buildRunner = new AggregateBuildRunner(Seq(
-      support.scala.ScalaBuildRunner,
-      new support.sbt.SbtBuildRunner()))
+  val buildRunner = new AggregateBuildRunner(buildSystems)
   
   def loadFileIntoDot: Unit = {
     val file = new java.io.File("examplebuild.dsbt")

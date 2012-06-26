@@ -17,12 +17,12 @@ trait BuildDependencyExtractor {
   def canHandle(system: String): Boolean
 }
 
-class MultiBuildDependencyExtractor(extractors: Seq[BuildDependencyExtractor]) extends BuildDependencyExtractor {
-  def canHandle(system: String): Boolean = extractors exists (_ canHandle system)
+class MultiBuildDependencyExtractor(buildSystems: Seq[BuildSystem]) extends BuildDependencyExtractor {
+  def canHandle(system: String): Boolean = buildSystems exists (_.name == system)
   def extract(config: BuildConfig, dir: java.io.File, log: logging.Logger): ExtractedBuildMeta =
-    (extractors 
-      find (_ canHandle config.system) 
-      map (_.extract(config, dir, log)) 
+    (buildSystems 
+      find (_.name == config.system) 
+      map (_.extractDependencies(config, dir, log)) 
       getOrElse sys.error("No extractor found for: " + config))
 }
 

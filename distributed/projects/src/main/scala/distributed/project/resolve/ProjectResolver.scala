@@ -7,6 +7,8 @@ import model._
 /** Represents an interface that is used
  * to resolve a given project locally so that
  * we can run its build system.
+ * 
+ * This is an abstraction for a given SCM system where we can obtain projects.
  */
 trait ProjectResolver {
   /** returns whether or not a resolver can resolve a particular

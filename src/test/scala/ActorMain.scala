@@ -1,10 +1,10 @@
 import distributed._
+import distributed.build._
+import project.build._
 import project._
 import model._
 import dependencies._
 import graph._
-import build._
-import files._
 import distributed.project.resolve.ProjectResolver
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
@@ -13,13 +13,11 @@ object ActorMain {
   // Pluggable components.
   val resolver = new resolve.AggregateProjectResolver(
       Seq(new support.git.GitProjectResolver))
-  val depExtractor = new MultiBuildDependencyExtractor(
-      Seq(new support.sbt.SbtDependencyExtractor(),
-          support.scala.ScalaDependencyExtractor))
+  
+  val buildSystems: Seq[BuildSystem] = Seq(new support.sbt.SbtBuildSystem, support.scala.ScalaBuildSystem)
+  val depExtractor = new MultiBuildDependencyExtractor(buildSystems)
   val extractor = new Extractor(resolver, depExtractor)
-  val buildRunner = new AggregateBuildRunner(Seq(
-      support.scala.ScalaBuildRunner,
-      new support.sbt.SbtBuildRunner()))
+  val buildRunner = new AggregateBuildRunner(buildSystems)
   
   // Actor systems!
   lazy val actorSystem = ActorSystem()  
@@ -32,7 +30,13 @@ object ActorMain {
   
   def scalacheck =
     BuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/community", "")
+
+  def specs2scalaz =
+    BuildConfig("specs2-scalaz", "sbt", "git://github.com/jsuereth/specs2-scalaz.git#origin/community", "")
   
+  def specs2 =
+    BuildConfig("specs2", "sbt", "git://github.com/jsuereth/specs2.git#origin/community", "")
+    
   def scalaArm =
     BuildConfig("scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#origin/community-build", "")
     
@@ -46,7 +50,7 @@ object ActorMain {
     BuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community", "")
     
   def dBuildConfig =
-    DistributedBuildConfig(Seq(scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance))
+    DistributedBuildConfig(Seq(specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz))
   
   def parsedDbuildConfig =
     DistributedBuildParser.parseBuildString(repeatableConfig)

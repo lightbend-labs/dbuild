@@ -3,22 +3,11 @@ package support
 package sbt
 
 import SbtHelper._
-import project.dependencies.{BuildDependencyExtractor, ExtractedDependencyFileParser}
 import project.model._
 import _root_.sbt.{IO, Path, PathExtra}
 import Path._
 import _root_.java.io.File
 import sys.process.Process
-import distributed.project.BuildResultFileParser
-
-
-class SbtBuildRunner(base: File = new File(".sbtbuild")) extends project.BuildRunner {
-  val system: String = "sbt"
-  // TODO - Push in and extract dependencies
-  def runBuild(b: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
-    SbtBuilder.buildSbtProject(dir, dependencies, base, log)
-  }
-}
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
 // script...
@@ -66,7 +55,7 @@ object SbtBuilder {
           sys.error("Failure to run sbt build("+project.getAbsolutePath+")!  Error code: " + n)
       }
       
-      (BuildResultFileParser parseMetaFile resultFile getOrElse
+      (BuildArtifactsParser parseMetaFile resultFile getOrElse
         sys.error("Failed to generate or load build results!"))
     }
   }

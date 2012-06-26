@@ -2,7 +2,7 @@ package distributed
 package project
 package model
 
-import pretty._
+import config.ConfigPrint
 import ConfigPrint.makeMember
 /** Information on how to build a project.  Consists of both distributed build
  * configuration and extracted information.

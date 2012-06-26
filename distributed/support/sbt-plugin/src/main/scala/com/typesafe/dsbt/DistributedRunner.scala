@@ -3,7 +3,7 @@ package com.typesafe.dsbt
 import sbt._
 import distributed.project.model
 import distributed.project.model.BuildArtifactsParser
-import _root_.pretty.ConfigPrint
+import _root_.config.makeConfigString
 import StateHelpers._
 import DistributedBuildKeys._
 import NameFixer.fixName
@@ -30,7 +30,7 @@ object DistributedRunner {
     model.BuildArtifacts(artifacts, localRepo)
   
   def printResults(fileName: String, artifacts: ArtifactMap, localRepo: File): Unit = 
-    IO.write(new java.io.File(fileName), ConfigPrint(makeBuildResults(artifacts, localRepo)))
+    IO.write(new java.io.File(fileName), makeConfigString(makeBuildResults(artifacts, localRepo)))
   
   def loadBuildArtifacts: Option[model.BuildArtifacts] =
     for {

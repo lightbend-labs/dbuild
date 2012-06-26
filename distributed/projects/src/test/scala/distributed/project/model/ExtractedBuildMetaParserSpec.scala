@@ -4,6 +4,7 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
+import config.makeConfigString
 
 object ExtractedBuildMetaParserSpec extends Specification {
   "ExtractedDependencyFileParser" should {
@@ -37,7 +38,7 @@ object ExtractedBuildMetaParserSpec extends Specification {
                     ProjectDep("p3", "o2"),
                     ProjectDep("p4", "o3")
                   ))))
-      val config = pretty.ConfigPrint(data)
+      val config = makeConfigString(data)
       (ExtractedBuildMetaParser.parseMetaString(config) 
           must 
           equalTo(Option(data)))

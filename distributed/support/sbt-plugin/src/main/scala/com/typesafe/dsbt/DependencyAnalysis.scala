@@ -2,7 +2,7 @@ package com.typesafe.dsbt
 
 import sbt._
 import distributed.project.model
-import _root_.pretty.ConfigPrint
+import _root_.config.makeConfigString
 import StateHelpers._
 import NameFixer.fixName
 
@@ -46,7 +46,7 @@ object DependencyAnalysis {
     val deps = getProjectInfos(extracted, state, refs)    
     val meta = model.ExtractedBuildMeta(uri, deps)
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
-    try output println ConfigPrint(meta)
+    try output println makeConfigString(meta)
     finally output.close()
   }
   

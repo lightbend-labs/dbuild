@@ -3,7 +3,7 @@ package project
 package model
 
 import _root_.java.io.File
-import pretty._
+import config.ConfigPrint
 import ConfigPrint.makeMember
 
 // TODO - Do we have enough information here?

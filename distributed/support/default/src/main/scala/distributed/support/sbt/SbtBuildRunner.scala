@@ -8,6 +8,7 @@ import _root_.sbt.{IO, Path, PathExtra}
 import Path._
 import _root_.java.io.File
 import sys.process.Process
+import config.makeConfigString
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
 // script...
@@ -33,7 +34,7 @@ object SbtBuilder {
       val depsFile = tmpDir / "deps.dsbt"
       val repoFile = tmpDir / "repositories"
       
-      IO.write(depsFile, pretty.ConfigPrint(dependencies))
+      IO.write(depsFile, makeConfigString(dependencies))
       writeRepoFile(repoFile, dependencies.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       // TODO - Send in inputs, get back outputs.

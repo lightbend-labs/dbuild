@@ -1,8 +1,8 @@
-package pretty
+package config
 
-// TODO - Rename config print....
 
-/** Pretty print a value into a String.
+
+/** Pretty print a value into a configuration string..
  * 
  * Note: This is specifically used to take case class configuration and
  *  return it into its parsed format...

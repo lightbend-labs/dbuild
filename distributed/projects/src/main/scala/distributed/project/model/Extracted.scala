@@ -2,7 +2,7 @@ package distributed
 package project
 package model
 
-import pretty._
+import config.ConfigPrint
 import ConfigPrint.makeMember
 
 /** A project dep is an extracted *external* build dependency.  I.e. this is a

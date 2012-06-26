@@ -2,6 +2,8 @@ package distributed
 package project
 package model
 
+import config.ConfigPrint
+import ConfigPrint.makeMember
 /**
  * Metadata about a build.  This is extracted from a config file and contains enough information
  * to further extract information about a build.
@@ -12,8 +14,6 @@ case class BuildConfig(name: String,
     directory: String)
     
 object BuildConfig {
-  import pretty._
-  import ConfigPrint.makeMember
   
   implicit object PrettyPrinter extends ConfigPrint[BuildConfig] {
     def apply(c: BuildConfig): String = {
@@ -34,8 +34,6 @@ object BuildConfig {
 /** The initial configuration for a build. */
 case class DistributedBuildConfig(projects: Seq[BuildConfig])
 object DistributedBuildConfig {
-  import pretty._
-  import ConfigPrint.makeMember
   implicit object PrettyPrinter extends ConfigPrint[DistributedBuildConfig] {
      def apply(build: DistributedBuildConfig): String = {
       val sb = new StringBuffer("{")

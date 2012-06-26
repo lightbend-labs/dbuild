@@ -26,4 +26,6 @@ package object config {
     j.ConfigFactory.load(cl, fallback, options)
     
   // TODO - parseMap
+  /** Makes the configuration for a given object that has a ConfigPrint typeclass. */
+  def makeConfigString[A](obj: A)(implicit p: ConfigPrint[A]): String = p(obj)
 }

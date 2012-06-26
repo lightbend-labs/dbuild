@@ -35,7 +35,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val dbuild = (
       DmodProject("build")
-      dependsOn(dprojects)
+      dependsOn(dprojects, defaultSupport)
     )
 
   lazy val backend = (

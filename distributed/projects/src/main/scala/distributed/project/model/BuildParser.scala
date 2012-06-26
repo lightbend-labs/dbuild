@@ -1,7 +1,7 @@
 package distributed
-package build
+package project
+package model
 
-import project.model._
 import config._
 import com.typesafe.config.ConfigObject
 

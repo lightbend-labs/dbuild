@@ -1,10 +1,11 @@
 package distributed
-package build
+package project
+package model
 
 import org.specs2.mutable.Specification
 import project.model._
 
-object ParserSpec extends Specification {
+object BuildParserSpec extends Specification {
   "DistributedBuildParser" should {
     "parse project with defaults" in {
       

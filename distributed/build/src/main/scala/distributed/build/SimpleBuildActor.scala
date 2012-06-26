@@ -1,9 +1,9 @@
 package distributed
-package project
 package build
 
-import model._
-import dependencies.ExtractBuildDependencies
+import project.model._
+import project.build._
+import project.dependencies.ExtractBuildDependencies
 import logging.Logger
 import akka.actor.{Actor,ActorRef,Props}
 import akka.pattern.ask

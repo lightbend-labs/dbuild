@@ -11,13 +11,14 @@ import akka.dispatch.{Future,Futures}
 import akka.util.duration._
 import akka.util.Timeout
 import graph.Graphs
+import actorpaterns.forwardingErrorsToFutures
 
 case class RunDistributedBuild(build: DistributedBuildConfig, logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   def receive = {
-    case RunDistributedBuild(build, log) =>
+    case RunDistributedBuild(build, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       val logger = log.newNestedLogger(hashing.sha1Sum(build))
       for {
@@ -29,6 +30,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
         results <- runBuild(fullBuild, repeatable, fullLogger)
       } listener ! results
+    }
   }
   
   

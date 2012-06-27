@@ -31,6 +31,6 @@ class LocalBuilderActor(
 
   def receive = {
     case config: DistributedBuildConfig => 
-      fullBuilderActor.!(RunDistributedBuild(config, log))(sender)
+      fullBuilderActor forward RunDistributedBuild(config, log)
   }
 }

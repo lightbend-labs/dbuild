@@ -2,21 +2,24 @@ package distributed
 package logging
 
 import akka.actor.{ActorRef, Actor, Props}
-import sbt.{Level}
-import sbt.ControlEvent
-import sbt.StackTrace
-
-sealed trait LogCmd {
-  def path: String
+import sbt.{ 
+  Level, 
+  LogEvent,
+  Success,
+  Log,
+  Trace,
+  SetLevel,
+  SetTrace,
+  SetSuccess,
+  ControlEvent,
+  StackTrace
 }
-case class Log(path: String, level: Level.Value, msg: Function0[String]) extends LogCmd
-case class Trace(path: String, trace: Function0[Throwable]) extends LogCmd
 
-/** An ordered sequence of loggign commands to perform. */
-case class LogCommands(cmds: Seq[LogCmd])
+/** A command to the logging system to log a given event into a particular path. */
+case class LogCmd(path: String, evt: LogEvent)
 
 
-// TODO - Use SBT paths more often....
+/** A logger that sends LogCmds to an actor rather than doing anything directly. */
 class ActorLogger(nested: ActorRef, path: String = "root") extends Logger {
   import Level._
   // TODO - Keep a reference of what's enabled locally...
@@ -24,7 +27,7 @@ class ActorLogger(nested: ActorRef, path: String = "root") extends Logger {
     new ActorLogger(nested, path + "/" + name)
   }
   def trace(t: => Throwable): Unit = 
-    nested ! Trace(path, () => t)
+    sendLogEvent(new Trace(t))
   def success(msg: => String): Unit =
     sendLog(Level.Info, msg)
   def buffer[T](t: => T): T = t  // TODO - buffer actor messages....
@@ -32,14 +35,17 @@ class ActorLogger(nested: ActorRef, path: String = "root") extends Logger {
     sendLog(Error, s)
   def out(s: => String): Unit =
     sendLog(Info, s)  
-  def control(event: sbt.ControlEvent.Value, msg: => String): Unit = ()
+  def control(event: sbt.ControlEvent.Value, msg: => String): Unit =
+    sendLogEvent(new ControlEvent(event, msg))
   def logAll(events: Seq[sbt.LogEvent]): Unit = {
-    // TODO - convert into our actor logging messages....
+    events foreach sendLogEvent
   }
   def log(level: sbt.Level.Value, msg: => String): Unit =
     sendLog(level, msg)
   private def sendLog(level: Level.Value, msg: => String): Unit = 
-    nested ! Log(path, level, () => msg)
+    sendLogEvent(new Log(level, msg))
+  private def sendLogEvent(event: LogEvent): Unit =
+    nested ! LogCmd(path, event)
 }
 
 object ActorLogHelper {
@@ -64,8 +70,28 @@ class LogDirManagerActor(logDir: java.io.File) extends Actor {
     }
 }
 
-// TODO - More class in this logger...
-class LoggerFileWriteActor(logDir: java.io.File, path: String) extends Actor {
+/** Helper for logger implementations to write out LogCmds. */
+trait LogToOutput {
+  def log(l: LogCmd): Unit = l.evt match {
+    case t: Trace =>
+      // TODO - Real trace levels...
+      writeLog(sbt.StackTrace.trimmed(t.exception, 1))
+    case l: Log if l.level >= level =>
+      val sb = new StringBuffer()
+      for(line <- l.msg.split("""\n"""")) {
+        sb append ("[") append (l.level.toString) append("] ")
+        sb append line append "\n"
+      }
+      writeLog(sb.toString)
+    case _ => ()  // Ignore all else...
+  } 
+  
+  def writeLog(in: String): Unit
+  def level: sbt.Level.Value
+}
+
+/** An actor that takes LogCmd messages and writes them to a file. */
+class LoggerFileWriteActor(logDir: java.io.File, path: String) extends Actor with LogToOutput {
   import sbt.Path._
   def logFile = logDir / (ActorLogHelper.cleanPath(path) + ".log")
   def newWriter = {
@@ -78,13 +104,17 @@ class LoggerFileWriteActor(logDir: java.io.File, path: String) extends Actor {
   
   override def postStop() = output.close()
   
+  override def preStart() = {
+    output.write("------ "+path+" --------")
+  }
+  
   override def preRestart(r: Throwable, msg: Option[Any]): Unit = {
     // TODO - just check for IO exception that's not closing
     try output.close catch { case _: java.io.IOException => () }
     output = newWriter
     output.write("Restarting log after " + msg + "!\n")
     output.write(r.getMessage)
-    output.write("------ START LOGGING --------")
+    output.write("------ "+path+" --------")
   } 
   
   def receive = {
@@ -94,24 +124,39 @@ class LoggerFileWriteActor(logDir: java.io.File, path: String) extends Actor {
       // TODO - Check paths...
       log(l)
   }
-  
-  
-  def log(l: LogCmd): Unit = l match {
-    case Trace(path, err) =>
-      // TODO - Real trace levels...
-      writeLog(sbt.StackTrace.trimmed(err(), 1))
-    case Log(path, l, msg) if l >= level =>
-      val sb = new StringBuffer()
-      for(line <- msg().split("""\n"""")) {
-        sb append ("[") append (l.toString) append("] ")
-        sb append line append "\n"
-      }
-      writeLog(sb.toString)
-    case _ => ()
-  } 
     
    def writeLog(msg: String): Unit = {
      output write msg
      output.flush()
    }
+}
+
+
+
+/** An actor that takes LogCmd messages and writes them to a file. */
+class SystemOutLoggerActor extends Actor with LogToOutput {
+  import sbt.Path._
+  val output = System.out  
+  val level = Level.Info
+  
+  def receive = {
+    case l : LogCmd => log(l)
+  }
+    
+   def writeLog(msg: String): Unit = output synchronized {
+     output print msg
+     output.flush()
+   }
+}
+
+/** An actor that chains to other loggers. */
+class ChainedLoggerSupervisorActor extends Actor {
+  var loggers: Seq[ActorRef] = List.empty
+  def receive = {
+    case p: Props => 
+      val logger = context actorOf p
+      loggers = logger +: loggers
+      sender ! logger
+    case l: LogCmd => loggers foreach (_ forward l)
+  }
 }

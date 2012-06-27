@@ -6,6 +6,7 @@ import model._
 import logging.Logger
 import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
+import actorpaterns.forwardingErrorsToFutures
 
 case class RunBuild(build: Build, dependencies: BuildArtifacts, log: Logger)
 
@@ -13,7 +14,9 @@ case class RunBuild(build: Build, dependencies: BuildArtifacts, log: Logger)
 class BuildRunnerActor(builder: BuildRunner, resolver: ProjectResolver) extends Actor {
   def receive = {
     case RunBuild(build, deps, log) => 
-      sender ! runLocalBuild(build, deps, log)
+      forwardingErrorsToFutures(sender) {
+        sender ! runLocalBuild(build, deps, log)
+      }
       
   }
   /** Runs the build locally in its hashed directory.

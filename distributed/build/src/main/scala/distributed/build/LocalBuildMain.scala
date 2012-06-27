@@ -16,8 +16,13 @@ class LocalBuildMain(workingDir: File = new File(".").getAbsoluteFile) {
     Seq(new support.sbt.SbtBuildSystem(workingDir), support.scala.ScalaBuildSystem)
     
   val system = ActorSystem()
-  val logDirManager = system.actorOf(Props(new logging.LogDirManagerActor(new java.io.File(".dlogs"))))
-  val logger = new logging.ActorLogger(logDirManager)
+  val logMgr = {
+    val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor))
+    mgr ! Props(new logging.LogDirManagerActor(new java.io.File(".dlogs")))
+    mgr ! Props(new logging.SystemOutLoggerActor)
+    mgr
+  }
+  val logger = new logging.ActorLogger(logMgr)
   val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, logger)))
   
   def build(build: DistributedBuildConfig): BuildArtifacts = {

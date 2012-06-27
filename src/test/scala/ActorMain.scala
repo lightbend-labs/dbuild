@@ -26,23 +26,20 @@ object ActorMain {
     BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community", "")
   
   def scalaConfig =
-    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc", "")
+    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#master", "")
+    //BuildConfig("scala", "scala", "git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc", "")
     
   def sperformance =
     BuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community", "")
     
   def dBuildConfig =
-    DistributedBuildConfig(Seq(specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz))
+    DistributedBuildConfig(Seq(/*specs2,*/ scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz))
   
   def parsedDbuildConfig =
     DistributedBuildParser.parseBuildString(repeatableConfig)
     
   def runBuild =
-    LocalBuildMain build dBuildConfig
+    LocalBuildMain build parsedDbuildConfig
     
-  def repeatableConfig = """{"projects":[
-    {"name":"scala","system":"scala","uri":"git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc","directory":""},
-    {"name":"sperformance","system":"sbt","uri":"git://github.com/jsuereth/sperformance.git#8c472f2a1ae8da817c43c873e3126c486aa79446","directory":""},
-    {"name":"scala-arm","system":"sbt","uri":"git://github.com/jsuereth/scala-arm.git#86d3477a7ce91b9046197f9f6f49bf9ff8a137f6","directory":""},
-    {"name":"scalacheck","system":"sbt","uri":"git://github.com/jsuereth/scalacheck.git#5b74b901460920dace3feb82549157976b26fe3f","directory":""}]}"""
+  def repeatableConfig = """{"projects":[{"name":"scala","system":"scala","uri":"git://github.com/scala/scala.git#d1687d7418598b56269edbaa70a3b3ce820fdf64","directory":""},{"name":"sperformance","system":"sbt","uri":"git://github.com/jsuereth/sperformance.git#8c472f2a1ae8da817c43c873e3126c486aa79446","directory":""},{"name":"scala-arm","system":"sbt","uri":"git://github.com/jsuereth/scala-arm.git#8c324815e0f33873068a5c53e44b77eabba0a42b","directory":""},{"name":"scalacheck","system":"sbt","uri":"git://github.com/jsuereth/scalacheck.git#aa2b864673ce0f87cce43a7ff55a941cbc973b9f","directory":""},{"name":"specs2-scalaz","system":"sbt","uri":"git://github.com/jsuereth/specs2-scalaz.git#b27dc46434a53ed7c1676057ec672dac5e79d1b7","directory":""}]}"""
 }

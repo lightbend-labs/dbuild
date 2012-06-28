@@ -6,7 +6,7 @@ import project.build._
 import project.dependencies.ExtractBuildDependencies
 import logging.Logger
 import akka.actor.{Actor,ActorRef,Props}
-import akka.pattern.ask
+import akka.pattern.{ask,pipe}
 import akka.dispatch.{Future,Futures}
 import akka.util.duration._
 import akka.util.Timeout
@@ -21,15 +21,16 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
     case RunDistributedBuild(build, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       val logger = log.newNestedLogger(hashing.sha1Sum(build))
-      for {
+      val result = for {
         fullBuild <- analyze(build, log.newNestedLogger(hashing.sha1Sum(build)))
         fullLogger = log.newNestedLogger(hashing.sha1Sum(fullBuild))
         _ = fullLogger.info("---==   Repeatable Build Config   ===---")
         repeatable = DistributedBuildConfig(fullBuild.builds map (_.config))
         _ = fullLogger.info(config makeConfigString repeatable)
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
-        results <- runBuild(fullBuild, repeatable, fullLogger)
-      } listener ! results
+        arts <- runBuild(fullBuild, repeatable, fullLogger)
+      } yield arts
+      result pipeTo listener
     }
   }
   

@@ -8,19 +8,20 @@ import akka.util.Timeout
 import akka.util.duration._
 import distributed.project.model.{DistributedBuildParser,BuildArtifacts,DistributedBuildConfig}
 
-class LocalBuildMain(workingDir: File = new File(".").getAbsoluteFile) {
+class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
   // TODO - Pull these via plugins or something...
+  val targetDir = new File(workingDir, "target")
   // Maybe even read global config for each module...
   val resolvers = Seq(new support.git.GitProjectResolver)
   val buildSystems: Seq[project.BuildSystem] = 
-    Seq(new support.sbt.SbtBuildSystem(workingDir), support.scala.ScalaBuildSystem)
+    Seq(new support.sbt.SbtBuildSystem(targetDir), support.scala.ScalaBuildSystem)
   
   // Gymnastics for classloader madness
 
   val system = ClassLoaderMadness.withContextLoader(getClass.getClassLoader)(ActorSystem.create)
   val logMgr = {
     val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor))
-    mgr ! Props(new logging.LogDirManagerActor(new java.io.File(".dlogs")))
+    mgr ! Props(new logging.LogDirManagerActor(new File(targetDir, "logs")))
     mgr ! Props(new logging.SystemOutLoggerActor)
     mgr
   }

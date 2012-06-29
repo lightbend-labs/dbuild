@@ -9,10 +9,10 @@ import _root_.sbt.Path._
 import logging.Logger
 
 /** Implementation of the SBT build system. */
-class SbtBuildSystem(workingDir: File = new File(".")) extends BuildSystem {
+class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends BuildSystem {
   val name: String = "sbt"  
-  val buildBase = workingDir / ".sbtbuild"
-  val extractbase = workingDir / ".sbtextraction"
+  val buildBase = workingDir / "sbt-build-root"
+  val extractbase = workingDir / "sbt-extract-root"
   
   def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta =
     if(config.directory.isEmpty) SbtExtractor.extractMetaData(dir, extractbase, log)

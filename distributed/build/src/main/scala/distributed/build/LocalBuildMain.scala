@@ -14,8 +14,10 @@ class LocalBuildMain(workingDir: File = new File(".").getAbsoluteFile) {
   val resolvers = Seq(new support.git.GitProjectResolver)
   val buildSystems: Seq[project.BuildSystem] = 
     Seq(new support.sbt.SbtBuildSystem(workingDir), support.scala.ScalaBuildSystem)
-    
-  val system = ActorSystem()
+  
+  // Gymnastics for classloader madness
+
+  val system = ClassLoaderMadness.withContextLoader(getClass.getClassLoader)(ActorSystem.create)
   val logMgr = {
     val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor))
     mgr ! Props(new logging.LogDirManagerActor(new java.io.File(".dlogs")))

@@ -13,7 +13,7 @@ object Dependencies {
 
   val sbtIo          = "org.scala-sbt" % "io" % sbtVersion
   val sbtLogging     = "org.scala-sbt" % "logging" % sbtVersion
-  val sbtLaunchInt   = "org.scala-sbt" % "launcher-interface" % sbtVersion
-  val sbtLauncher    = "org.scala-sbt" % "launcher" % sbtVersion
+  val sbtLaunchInt   = "org.scala-sbt" % "launcher-interface" % sbtVersion % "provided"
+  //val sbtLauncher    = "org.scala-sbt" % "launcher" % sbtVersion
 
 }

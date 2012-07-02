@@ -48,7 +48,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dprojects)
-    )
+      settings(SbtSupport.settings:_*)
+    ) 
 
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (

@@ -143,7 +143,7 @@ class SystemOutLoggerActor extends Actor with LogToOutput {
     case l : LogCmd => log(l)
   }
     
-   def writeLog(msg: String): Unit = output synchronized {
+   def writeLog(msg: String): Unit = {
      output print msg
      output.flush()
    }

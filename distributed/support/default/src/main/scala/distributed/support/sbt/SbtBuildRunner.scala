@@ -2,7 +2,6 @@ package distributed
 package support
 package sbt
 
-import SbtHelper._
 import project.model._
 import _root_.sbt.{IO, Path, PathExtra}
 import Path._
@@ -27,35 +26,23 @@ object SbtBuilder {
   } 
     
   
-  def buildSbtProject(project: File, dependencies: BuildArtifacts, base: File, log: logging.Logger): BuildArtifacts = {
-    makeGlobalBaseIn(base)
+  def buildSbtProject(runner: SbtRunner)(project: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {    
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dsbt"
       val depsFile = tmpDir / "deps.dsbt"
       val repoFile = tmpDir / "repositories"
-      
       IO.write(depsFile, makeConfigString(dependencies))
       writeRepoFile(repoFile, dependencies.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
-      // TODO - Send in inputs, get back outputs.
-      Process(Seq("sbt", 
-          "-Dsbt.global.base="+base.getAbsolutePath,
-          "-Dproject.build.results.file="+resultFile.getAbsolutePath,
-          "-Dproject.build.deps.file="+depsFile.getAbsolutePath,
-          "-Dsbt.repository.config="+repoFile.getAbsolutePath,
-          "-Dproject.build.publish.repo="+dependencies.localRepo.getAbsolutePath,
-          "-Dsbt.override.build.repos=true",
-          "-Dsbt.version="+SbtConfig.sbtVersion,
-          "-sbt-version",
-          SbtConfig.sbtVersion,
-          "-Dsbt.log.noformat=true",
-          "dsbt-build"), Some(project)) ! log match {
-        case 0 => log.success("Build succesful")
-        case n => 
-          log.err("Failure to run sbt build ("+project.getAbsolutePath+")!  Error code: " + n)
-          sys.error("Failure to run sbt build("+project.getAbsolutePath+")!  Error code: " + n)
-      }
-      
+      runner.run(
+        projectDir = project,
+        log = log,
+        javaProps = Map(
+            "sbt.repository.config" -> repoFile.getAbsolutePath,
+            "project.build.results.file" -> resultFile.getAbsolutePath,
+            "project.build.deps.file" -> depsFile.getAbsolutePath,
+            "sbt.override.build.repos" -> "true")
+      )("dsbt-build")      
       (BuildArtifactsParser parseMetaFile resultFile getOrElse
         sys.error("Failed to generate or load build results!"))
     }

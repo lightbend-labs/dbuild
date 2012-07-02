@@ -17,7 +17,8 @@ class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
       new support.svn.SvnProjectResolver)
   val buildSystems: Seq[project.BuildSystem] = 
     Seq(new support.sbt.SbtBuildSystem(targetDir),
-        support.scala.ScalaBuildSystem)
+        support.scala.ScalaBuildSystem,
+        support.scalatest.ScalatestBuildSystem)
   
   // Gymnastics for classloader madness
 

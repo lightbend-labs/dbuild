@@ -8,6 +8,7 @@ import java.io.File
 import resolve.ProjectResolver
 import model.{Build,BuildConfig}
 import logging._
+import config.makeConfigString
 
 
 /** This is used to extract dependencies from projects. */
@@ -20,8 +21,10 @@ class Extractor(
     local.ProjectDirs.useDirFor(build) { dir =>
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
       val config = resolver.resolve(build, dir, logger)
+      logger.debug("Repeatable Config: " + makeConfigString(config))
       logger.debug("Extracting Dependencies for: " + build.name)
       val deps = dependencyExtractor.extract(build, dir, logger)
+      logger.debug("Dependencies = " + makeConfigString(deps))
       Build(config,deps)
     }
 }

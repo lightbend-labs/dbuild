@@ -12,9 +12,12 @@ class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
   // TODO - Pull these via plugins or something...
   val targetDir = new File(workingDir, "target")
   // Maybe even read global config for each module...
-  val resolvers = Seq(new support.git.GitProjectResolver)
+  val resolvers = Seq(
+      new support.git.GitProjectResolver, 
+      new support.svn.SvnProjectResolver)
   val buildSystems: Seq[project.BuildSystem] = 
-    Seq(new support.sbt.SbtBuildSystem(targetDir), support.scala.ScalaBuildSystem)
+    Seq(new support.sbt.SbtBuildSystem(targetDir),
+        support.scala.ScalaBuildSystem)
   
   // Gymnastics for classloader madness
 

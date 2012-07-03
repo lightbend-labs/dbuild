@@ -14,7 +14,7 @@ object ActorMain {
     BuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/community", "")
 
   def scalatest =
-    BuildConfig("scalatest", "scalatest", "http://scalatest.googlecode.com/svn/trunk", "")
+    BuildConfig("scalatest", "scalatest", "http://scalatest.googlecode.com/svn/branches/r18for210M4", "")
 
     
   def specs2scalaz =

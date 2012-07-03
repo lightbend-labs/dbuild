@@ -26,6 +26,7 @@ class SvnProjectResolver extends ProjectResolver {
     // TODO - better git checkout detection...
     if(!dir.getParentFile.exists) dir.getParentFile.mkdirs()
     if(!(dir / ".svn" ).exists) Svn.checkout(uri, dir, log)
+    else Svn.revert(dir, log)
 
     // TODO - Fetch non-standard references?
     // Then checkout desired branch/commit/etc.

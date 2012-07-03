@@ -40,6 +40,9 @@ object Svn {
   def update(revision: String, cwd: File, log: Logger): Unit = 
     if(revision.isEmpty) apply(Seq("update"), cwd, log)
     else apply(Seq("update", "-r", revision), cwd, log)
+    
+  def revert(cwd: File, log: Logger): Unit =
+    apply(Seq("revert", "-R", "."), cwd, log)
   
   def checkout(base: URI, tempDir: File, log: Logger): Unit = {
     // TODO - Parent file ok?

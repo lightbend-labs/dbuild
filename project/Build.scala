@@ -33,6 +33,11 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       dependsOn(graph, config, hashing, logging)
       dependsOnRemote(sbtIo)
     )
+  lazy val drepo = (
+    DmodProject("repo")
+    dependsOn(dprojects)
+    dependsOnRemote(mvnAether, aetherWagon)
+  )
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport)
@@ -47,7 +52,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // Projects relating to supprting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
-      dependsOn(dprojects)
+      dependsOn(dprojects, drepo)
       settings(SbtSupport.settings:_*)
     ) 
 

@@ -16,4 +16,7 @@ object Dependencies {
   val sbtLaunchInt   = "org.scala-sbt" % "launcher-interface" % sbtVersion % "provided"
   //val sbtLauncher    = "org.scala-sbt" % "launcher" % sbtVersion
 
+  //val aether         = "org.sonatype.aether" % "aether" % "1.13.1"
+  val mvnAether      = "org.apache.maven" % "maven-aether-provider" % "3.0.4"
+  val aetherWagon    = "org.sonatype.aether" % "aether-connector-wagon" % "1.13.1"
 }

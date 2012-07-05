@@ -42,19 +42,10 @@ object BuildArtifactsParser {
   // TODO - Use validation?
   private def parseArtifact(c: ConfigObject): Option[ArtifactLocation] = {
     (c get "location", c get "info", c get "version") match {
-      case (ConfigString(file), ParsedProjectDep(dep), ConfigString(version)) => 
+      case (ConfigString(file), ProjectRef.Configured(dep), ConfigString(version)) => 
         Some(ArtifactLocation(dep, new java.io.File(file), version))
       case _ => None
     }
-  }
-  
-  // TODO - This is in two places now....
-  object ParsedProjectDep {
-    def unapply(c: ConfigObject): Option[ProjectDep] = 
-      (c get "name", c get "organization") match {
-        case (ConfigString(name), ConfigString(org)) => Some(ProjectDep(name,org))
-        case _ => None
-      }
   }
  
 }

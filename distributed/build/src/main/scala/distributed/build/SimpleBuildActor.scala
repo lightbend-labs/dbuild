@@ -29,12 +29,22 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         _ = fullLogger.info(config makeConfigString repeatable)
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
         arts <- runBuild(fullBuild, repeatable, fullLogger)
+        _ = logPoms(fullBuild, arts, fullLogger)
       } yield arts
       result pipeTo listener
     }
   }
   
-  
+  def logPoms(build: DistributedBuild, arts: BuildArtifacts, log: Logger): Unit = 
+    try {
+      log info "Printing Poms!"
+      val poms = repo.PomHelper.makePomStrings(build, arts)
+      log info (poms mkString "----------")
+    } catch {
+      case e => 
+        log trace e
+        throw e
+    }
   
   implicit val buildTimeout: Timeout = 4 hours 
 

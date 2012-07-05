@@ -89,14 +89,14 @@ object ScalaBuildSystem extends BuildSystem {
   } 
     
   private[this] def group = "org.scala-lang"
-  private[this] def lib = ProjectDep("scala-library", group)
-  private[this] def reflect = ProjectDep("scala-reflect", group)
-  private[this] def actorsMigration = ProjectDep("scala-actors-migration", group)
-  private[this] def actors = ProjectDep("scala-actors", group)
-  private[this] def swing= ProjectDep("scala-swing", group)
-  private[this] def jline = ProjectDep("jline", group)
-  private[this] def comp = ProjectDep("scala-compiler", group)
-  private[this] def scalap = ProjectDep("scalap", group)
-  private[this] def partest = ProjectDep("partest", group)
-  private[this] def continuations = ProjectDep("continuations", group+".plugins")
+  private[this] def lib = ProjectRef("scala-library", group)
+  private[this] def reflect = ProjectRef("scala-reflect", group)
+  private[this] def actorsMigration = ProjectRef("scala-actors-migration", group)
+  private[this] def actors = ProjectRef("scala-actors", group)
+  private[this] def swing= ProjectRef("scala-swing", group)
+  private[this] def jline = ProjectRef("jline", group)
+  private[this] def comp = ProjectRef("scala-compiler", group)
+  private[this] def scalap = ProjectRef("scalap", group)
+  private[this] def partest = ProjectRef("partest", group)
+  private[this] def continuations = ProjectRef("continuations", group+".plugins")
 }

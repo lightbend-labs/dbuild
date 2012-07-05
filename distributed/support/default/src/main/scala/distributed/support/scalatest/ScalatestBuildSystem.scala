@@ -11,7 +11,7 @@ import logging.Logger
 import sys.process._
 
 
-case class MavenDep(dep: ProjectDep, version: String, optional: Boolean = false, scope: String = "compile")
+case class MavenDep(dep: ProjectRef, version: String, optional: Boolean = false, scope: String = "compile")
 
 /** Implementation of the Scala  build system. */
 object ScalatestBuildSystem extends BuildSystem {
@@ -69,23 +69,23 @@ object ScalatestBuildSystem extends BuildSystem {
   } 
     
   private[this] def group = "org.scalatest"
-  private[this] def scalatest = ProjectDep("scalatest", group)
+  private[this] def scalatest = ProjectRef("scalatest", group)
   private[this] def scalaOrg = "org.scala-lang"
-  private[this] def scalaLibrary = ProjectDep("scala-library", scalaOrg)
-  private[this] def scalaActors = ProjectDep("scala-actors", scalaOrg)
-  private[this] def scalaReflect = ProjectDep("scala-reflect", scalaOrg)
-  private[this] def scalaCompiler = ProjectDep("scala-compiler", scalaOrg)
-  private[this] def testInterface = ProjectDep("test-interface", "org.scala-tools.testing")
-  private[this] def antlrStringTemplate = ProjectDep("stringtemplate", "org.antlr")
-  private[this] def scalacheck = ProjectDep("scalacheck", "org.scalacheck")
-  private[this] def easymockclassext = ProjectDep("easymockclassextension", "org.easymock")
-  private[this] def jmock = ProjectDep("jmock-legacy", "org.jmock")
-  private[this] def mockito = ProjectDep("mockito-all", "org.mockito")
-  private[this] def testng = ProjectDep("testng", "org.testng")
-  private[this] def guice = ProjectDep("guice", "com.google.inject")
-  private[this] def junit = ProjectDep("junit", "junit")
-  private[this] def cobertura = ProjectDep("cobertura", "net.sourceforge.cobertura")
-  private[this] def commonsIo = ProjectDep("commons-io", "org.apache.commons")
+  private[this] def scalaLibrary = ProjectRef("scala-library", scalaOrg)
+  private[this] def scalaActors = ProjectRef("scala-actors", scalaOrg)
+  private[this] def scalaReflect = ProjectRef("scala-reflect", scalaOrg)
+  private[this] def scalaCompiler = ProjectRef("scala-compiler", scalaOrg)
+  private[this] def testInterface = ProjectRef("test-interface", "org.scala-tools.testing")
+  private[this] def antlrStringTemplate = ProjectRef("stringtemplate", "org.antlr")
+  private[this] def scalacheck = ProjectRef("scalacheck", "org.scalacheck")
+  private[this] def easymockclassext = ProjectRef("easymockclassextension", "org.easymock")
+  private[this] def jmock = ProjectRef("jmock-legacy", "org.jmock")
+  private[this] def mockito = ProjectRef("mockito-all", "org.mockito")
+  private[this] def testng = ProjectRef("testng", "org.testng")
+  private[this] def guice = ProjectRef("guice", "com.google.inject")
+  private[this] def junit = ProjectRef("junit", "junit")
+  private[this] def cobertura = ProjectRef("cobertura", "net.sourceforge.cobertura")
+  private[this] def commonsIo = ProjectRef("commons-io", "org.apache.commons")
   
   private[this] def defaultArtifacts = Seq(
     MavenDep(scalaLibrary, ""),
@@ -119,7 +119,7 @@ object ScalatestBuildSystem extends BuildSystem {
   
   def makeDependencySection(arts: BuildArtifacts): String = {
     val depStrings = for {
-      MavenDep(ProjectDep(name, org, ext, classifier), version, optional, scope) <- fixArtifacts(arts)      
+      MavenDep(ProjectRef(name, org, ext, classifier), version, optional, scope) <- fixArtifacts(arts)      
     } yield """
     <dependency>
       <groupId>%s</groupId>

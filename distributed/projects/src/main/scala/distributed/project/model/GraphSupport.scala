@@ -5,7 +5,7 @@ package model
 import graph._
 
 case class BuildNode(value: Build) extends Node[Build] {
-  def hasProject(dep: ProjectDep): Boolean = {   
+  def hasProject(dep: ProjectRef): Boolean = {   
     def hasArtifact(p: Project): Boolean =
       p.artifacts exists (dep == _)
     value.extracted.projects exists hasArtifact

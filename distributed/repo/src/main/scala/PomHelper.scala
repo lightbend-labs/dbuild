@@ -3,7 +3,13 @@ package repo
 
 import org.apache.maven.model._
 import org.apache.maven.model.io.xpp3.{MavenXpp3Reader, MavenXpp3Writer}
-import project.model.{Project=>DProject, BuildArtifacts, ProjectDep, ArtifactLocation, DistributedBuild}
+import project.model.{
+  Project => DProject,
+  BuildArtifacts,
+  ProjectRef,
+  ArtifactLocation,
+  DistributedBuild
+}
 import collection.JavaConverters._
 
 /** A utility to create pom files. */
@@ -34,7 +40,7 @@ object PomHelper {
 }
 /** A helper to generate pom files. */
 class PomHelper private (arts: BuildArtifacts) {
-  val depVersions: Map[ProjectDep, String] =
+  val depVersions: Map[ProjectRef, String] =
     arts.artifacts.map(a => a.dep -> a.version)(collection.breakOut)
   
   def artLocOf(p: DProject): ArtifactLocation =
@@ -48,7 +54,7 @@ class PomHelper private (arts: BuildArtifacts) {
   def versionOf(p: DProject): String =
     artLocOf(p).version
   
-  def depOf(p: DProject): ProjectDep =
+  def depOf(p: DProject): ProjectRef =
     artLocOf(p).dep
     
   def makePom(p: DProject): Model = {

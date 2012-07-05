@@ -8,14 +8,14 @@ import ConfigPrint.makeMember
 /** A project dep is an extracted *external* build dependency.  I.e. this is a
  * maven/ivy artifact that exists and is built external to a local build.
  */
-case class ProjectDep(
+case class ProjectRef(
     name: String, 
     organization: String, 
     extension: String = "jar", 
     classifier: Option[String] = None)
-object ProjectDep {
-  implicit object ProjectDepPrettyPrint extends ConfigPrint[ProjectDep] {
-    def apply(t: ProjectDep): String = {
+object ProjectRef {
+  implicit object ProjectDepPrettyPrint extends ConfigPrint[ProjectRef] {
+    def apply(t: ProjectRef): String = {
       import t._
       val sb = new StringBuilder("{")
       sb append makeMember("name", name)
@@ -31,6 +31,22 @@ object ProjectDep {
       sb.toString
     }   
   }  
+  
+  object Configured {
+    import config._
+    def unapply(c: ConfigValue): Option[ProjectRef] = c match {
+      // TODO - Handle optional classifier...
+      case c: ConfigObject =>
+        (c get "name", c get "organization", c get "ext", c get "classifier") match {
+          case (ConfigString(name), ConfigString(org), ConfigString(ext), ConfigString(classifier)) =>
+            Some(ProjectRef(name, org, ext, Some(classifier)))
+          case (ConfigString(name), ConfigString(org), ConfigString(ext), _) => 
+            Some(ProjectRef(name, org, ext))
+          case _ => None
+        }
+    case _ => None
+  }
+  }
 }
 
 /** Represents extracted Project information in a build.  A project is akin to a
@@ -39,8 +55,8 @@ object ProjectDep {
 case class Project(
     name: String,
     organization: String,
-    artifacts: Seq[ProjectDep],
-    dependencies: Seq[ProjectDep])
+    artifacts: Seq[ProjectRef],
+    dependencies: Seq[ProjectRef])
 object Project {
   implicit object ProjectPrettyPrint extends ConfigPrint[Project] {
     def apply(t: Project): String = {

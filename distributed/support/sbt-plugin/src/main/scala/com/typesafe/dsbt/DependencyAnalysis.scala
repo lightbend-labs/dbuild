@@ -24,12 +24,12 @@ object DependencyAnalysis {
       val deps = for {
         d <- (pdeps ++ ldeps)
         a <- artifactsNoEmpty(d.name, d.explicitArtifacts)
-      } yield model.ProjectDep(fixName(a.name), d.organization, a.extension, a.classifier)
+      } yield model.ProjectRef(fixName(a.name), d.organization, a.extension, a.classifier)
       
       // Project Artifacts
       val artifacts = for {
-        a <- extracted get (Keys.artifacts in ref) 
-      } yield model.ProjectDep(fixName(a.name), organization, a.extension, a.classifier)
+        a <- extracted get (Keys.artifacts in ref)
+      } yield model.ProjectRef(fixName(a.name), organization, a.extension, a.classifier)
       
       // Append ourselves to the list of projects...
       dependencies :+ model.Project(

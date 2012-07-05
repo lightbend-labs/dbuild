@@ -155,7 +155,7 @@ object DistributedRunner {
     for {
       (artifact, file) <- artifacts.toSeq
      } yield model.ArtifactLocation(
-         model.ProjectDep(artifact.name, org, artifact.extension, artifact.classifier), 
+         model.ProjectRef(artifact.name, org, artifact.extension, artifact.classifier), 
          file,
          version
        )

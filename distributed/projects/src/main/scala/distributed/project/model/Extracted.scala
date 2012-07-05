@@ -73,9 +73,25 @@ object Project {
       sb.toString
     }    
   }
+  object Configured {
+    import config._
+    def unapply(c: ConfigValue): Option[Project] = c match {
+      case c: ConfigObject =>
+        (c get "name", c get "organization", c get "artifacts", c get "dependencies") match {
+          case (ConfigString(name), ConfigString(org), ConfigList(arts), ConfigList(deps)) =>
+            val dependencies = deps flatMap ProjectRef.Configured.unapply
+            val artifacts = arts flatMap ProjectRef.Configured.unapply
+            Some(Project(name, org, artifacts, dependencies))
+          case _ => None
+        }
+      case _ => None
+    }
+  }
 }
 
 /** Represents the *Extracted* metadata of a build.
+ * 
+ * This includes things like dependencies.   Actually nothing else currently.
  */
 case class ExtractedBuildMeta(uri: String, projects: Seq[Project]) {
   override def toString = "Build(%s, %s)" format (uri, projects.mkString("\n\t", "\n\t", "\n"))
@@ -90,6 +106,24 @@ object ExtractedBuildMeta {
       sb append makeMember("projects", projects)
       sb append ("}")
       sb.toString
+    }
+  }
+  object Configured {
+    import config._
+    def unapply(c: ConfigValue): Option[ExtractedBuildMeta] = c match {
+      case c: ConfigObject =>
+        for {
+          uri   <- ConfigString.unapply(c get "scm")
+          projs <- parseProjects(c get "projects")
+        } yield ExtractedBuildMeta(uri, projs)
+      case _ => None
+    }
+    private def parseProjects(c: ConfigValue): Option[Seq[Project]] = c match {
+      case ConfigList(projects) =>
+        Some(projects collect {          
+          case Project.Configured(project) => project 
+        })
+      case _ => None
     }
   }
 }

@@ -22,6 +22,21 @@ object ArtifactLocation {
       sb.toString
     }
   }
+  /** Extractor from a ConfigValue. */
+  object Configured {
+    import config._
+    def unapply(c: ConfigValue): Option[ArtifactLocation] = {
+      c match {
+        case c: ConfigObject =>
+          (c get "location", c get "info", c get "version") match {
+            case (ConfigString(file), ProjectRef.Configured(dep), ConfigString(version)) => 
+              Some(ArtifactLocation(dep, new java.io.File(file), version))
+            case _ => None
+          }
+        case _ => None
+      }
+    }
+  }  
 }
 
 // TODO - Is this a good idea?
@@ -35,6 +50,28 @@ object BuildArtifacts {
       sb append makeMember("localRepo", r.localRepo)
       sb append "}"
       sb.toString
+    }
+  }
+  object Configured {
+    import config._
+    def unapply(in: ConfigValue): Option[BuildArtifacts] = in match {
+      case c: ConfigObject =>
+        for {
+          artifacts <- parseArtifacts(c get "artifacts")
+          localRepo <- parseRepo(c get "localRepo")
+        } yield BuildArtifacts(artifacts, localRepo)
+      case _ => None
+    }
+    private def parseRepo(c: ConfigValue): Option[java.io.File] = c match {
+      case ConfigString(file) => Some(new java.io.File(file))
+      case _ => None
+    }
+    private def parseArtifacts(c: ConfigValue): Option[Seq[ArtifactLocation]] = c match {
+      case ConfigList(configs) =>
+        Some(configs collect {          
+          case ArtifactLocation.Configured(loc) => loc
+        })
+      case _ => None
     }
   }
 }

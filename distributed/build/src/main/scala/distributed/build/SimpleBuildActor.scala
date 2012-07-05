@@ -29,7 +29,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         _ = fullLogger.info(config makeConfigString repeatable)
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
         arts <- runBuild(fullBuild, repeatable, fullLogger)
-        _ = logPoms(fullBuild, arts, fullLogger)
+        //_ = logPoms(fullBuild, arts, fullLogger)
       } yield arts
       result pipeTo listener
     }

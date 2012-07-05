@@ -10,14 +10,15 @@ import java.io.File
 // and send the function to run on the actor?
 object ProjectDirs {
   // TODO - Pull from config!
-  val builddir = new File("target")
+  val builddir = new File(".")
+  val targetDir = new File(builddir, "target")
   
   
-  def logDir = new File(builddir, "logs")
+  def logDir = new File(targetDir, "logs")
   
   // TODO - Check lock file or something...
   def useDirFor[A](build: BuildConfig)(f: File => A) = {
-    val dir = new File( builddir, "projects")
+    val dir = new File(targetDir, "projects")
     val projdir = new File(dir, hashing.sha1Sum(build))
     projdir.mkdirs()
     f(projdir)
@@ -25,7 +26,7 @@ object ProjectDirs {
   
   
   def userRepoDirFor[A](build:DistributedBuildConfig)(f: File => A) = {
-    val dir = new File(builddir, "repositories")
+    val dir = new File(targetDir, "repositories")
     val repodir = new File(dir, hashing.sha1Sum(build))
     repodir.mkdirs()
     f(repodir)

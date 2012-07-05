@@ -11,7 +11,7 @@ import _root_.config.parseFileInto
 
 class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
   // TODO - Pull these via plugins or something...
-  val targetDir = new File(workingDir, "target")
+  val targetDir = local.ProjectDirs.targetDir
   // Maybe even read global config for each module...
   val resolvers = Seq(
       new support.git.GitProjectResolver, 

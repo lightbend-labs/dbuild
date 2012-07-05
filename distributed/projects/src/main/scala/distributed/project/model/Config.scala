@@ -2,8 +2,12 @@ package distributed
 package project
 package model
 
-import config.ConfigPrint
+import config.{ConfigPrint,ConfigRead}
 import ConfigPrint.makeMember
+import ConfigRead.readMember
+import sbt.Types.:+:
+import sbt.HNil
+
 /**
  * Metadata about a build.  This is extracted from a config file and contains enough information
  * to further extract information about a build.
@@ -30,18 +34,20 @@ object BuildConfig {
     }
   }
   
-  object Configured {
+  implicit object Configured extends ConfigRead[BuildConfig] {
     import config._
-    def unapply(c: ConfigValue): Option[BuildConfig] = c match {
-      case c: ConfigObject =>
-        val p = c.withFallback(defaultProject)
-        (p get "name", p get "system", p get "uri", p get "directory") match {
-          case (ConfigString(n), ConfigString(s), ConfigString(u), ConfigString(d)) =>
-            Some(BuildConfig(n,s,u,d))
-          case _ => None
-        }
-      case _ => None
-    }
+    val Members = (
+        readMember[String]("name") :^:
+        readMember[String]("system") :^:
+        readMember[String]("uri") :^:
+        readMember[String]("directory")
+    )
+    def unapply(c: ConfigValue): Option[BuildConfig] = 
+      (c withFallback defaultProject) match {
+        case Members(name :+: system :+: uri :+: directory :+: HNil) =>
+          Some(BuildConfig(name,system,uri,directory))
+        case _ => None
+      }
     val defaultProject: ConfigObject = 
       config.parseString("""{
         system = "sbt"
@@ -61,18 +67,12 @@ object DistributedBuildConfig {
       sb.toString
     }
   }
-  object Configured {
+  implicit object Configured extends ConfigRead[DistributedBuildConfig] {
     import config._
+    val Members = readMember[Seq[BuildConfig]]("projects")
     def unapply(c: ConfigValue): Option[DistributedBuildConfig] = c match {
-      case obj: ConfigObject =>
-        (obj get "projects") match {
-          case ConfigList(list) =>
-            Some(DistributedBuildConfig((for {
-              BuildConfig.Configured(build) <- list
-            } yield build)))
-          case _ => None
-        }
-      case _ => None
+      case Members(list) => Some(DistributedBuildConfig(list))
+      case _                 => None
     }
   }
 }

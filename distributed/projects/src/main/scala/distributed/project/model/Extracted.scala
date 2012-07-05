@@ -2,8 +2,11 @@ package distributed
 package project
 package model
 
-import config.ConfigPrint
+import config.{ConfigPrint,ConfigRead}
 import ConfigPrint.makeMember
+import ConfigRead.readMember
+import sbt.Types.:+:
+import sbt.HNil
 
 /** A project dep is an extracted *external* build dependency.  I.e. this is a
  * maven/ivy artifact that exists and is built external to a local build.
@@ -32,20 +35,21 @@ object ProjectRef {
     }   
   }  
   
-  object Configured {
+  implicit object Configured extends ConfigRead[ProjectRef] {
     import config._
+    val Members = (
+      readMember[String]("name") :^:
+      readMember[String]("organization") :^:
+      readMember[String]("ext") :^:
+      readMember[Option[String]]("classifier")
+    )
+    
     def unapply(c: ConfigValue): Option[ProjectRef] = c match {
+      case Members(name :+: org :+: ext :+: classifier :+: HNil) =>
+        Some(ProjectRef(name,org,ext,classifier))
       // TODO - Handle optional classifier...
-      case c: ConfigObject =>
-        (c get "name", c get "organization", c get "ext", c get "classifier") match {
-          case (ConfigString(name), ConfigString(org), ConfigString(ext), ConfigString(classifier)) =>
-            Some(ProjectRef(name, org, ext, Some(classifier)))
-          case (ConfigString(name), ConfigString(org), ConfigString(ext), _) => 
-            Some(ProjectRef(name, org, ext))
-          case _ => None
-        }
-    case _ => None
-  }
+      case _ => None
+    }
   }
 }
 
@@ -73,17 +77,18 @@ object Project {
       sb.toString
     }    
   }
-  object Configured {
+  implicit object Configured extends ConfigRead[Project] {
     import config._
+    val Members = (
+      readMember[String]("name") :^:
+      readMember[String]("organization") :^:
+      readMember[Seq[ProjectRef]]("artifacts") :^:
+      readMember[Seq[ProjectRef]]("dependencies")
+    )
+    val ProjectRefList = implicitly[ConfigRead[Seq[ProjectRef]]]
     def unapply(c: ConfigValue): Option[Project] = c match {
-      case c: ConfigObject =>
-        (c get "name", c get "organization", c get "artifacts", c get "dependencies") match {
-          case (ConfigString(name), ConfigString(org), ConfigList(arts), ConfigList(deps)) =>
-            val dependencies = deps flatMap ProjectRef.Configured.unapply
-            val artifacts = arts flatMap ProjectRef.Configured.unapply
-            Some(Project(name, org, artifacts, dependencies))
-          case _ => None
-        }
+      case Members(name :+: org :+: artifacts :+: deps :+: HNil) =>
+        Some(Project(name, org, artifacts, deps))
       case _ => None
     }
   }
@@ -108,21 +113,16 @@ object ExtractedBuildMeta {
       sb.toString
     }
   }
-  object Configured {
+  implicit object Configured extends ConfigRead[ExtractedBuildMeta] {
     import config._
+     val Members = (
+      readMember[String]("scm") :^:
+      readMember[Seq[Project]]("projects")
+    )
+    val ProjectList = implicitly[ConfigRead[Seq[Project]]]
     def unapply(c: ConfigValue): Option[ExtractedBuildMeta] = c match {
-      case c: ConfigObject =>
-        for {
-          uri   <- ConfigString.unapply(c get "scm")
-          projs <- parseProjects(c get "projects")
-        } yield ExtractedBuildMeta(uri, projs)
-      case _ => None
-    }
-    private def parseProjects(c: ConfigValue): Option[Seq[Project]] = c match {
-      case ConfigList(projects) =>
-        Some(projects collect {          
-          case Project.Configured(project) => project 
-        })
+      case Members(scm :+: projects :+: HNil) => 
+        Some(ExtractedBuildMeta(scm, projects))
       case _ => None
     }
   }

@@ -5,8 +5,8 @@ import java.util.{Map=> JMap}
 import java.lang.Number
 
 
-object ConfigString {
-  def unapply(obj: Any): Option[String] = 
+object ConfigString extends ConfigRead[String] {
+  def unapply(obj: ConfigValue): Option[String] = 
     obj match {
       case t: ConfigValue if t.valueType == ConfigValueType.STRING => 
         Some(t.unwrapped.asInstanceOf[String])

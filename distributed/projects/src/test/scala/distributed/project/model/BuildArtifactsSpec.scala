@@ -3,9 +3,9 @@ package project
 package model
 
 import org.specs2.mutable.Specification
-import config.makeConfigString
+import config._
 
-object BuildArtifactsParserSpec extends Specification {
+object BuildArtifactsSpec extends Specification {
   "BuildArtifactsParser" should {
     
     "parse pretty printed result" in {
@@ -18,7 +18,7 @@ object BuildArtifactsParserSpec extends Specification {
           new java.io.File("repo").getAbsoluteFile
         )
       val config = makeConfigString(data)
-      (BuildArtifactsParser.parseMetaString(config) 
+      (parseStringInto[BuildArtifacts](config) 
           must 
           equalTo(Some(data)))
     }

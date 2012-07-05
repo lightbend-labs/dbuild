@@ -2,8 +2,8 @@ package com.typesafe.dsbt
 
 import sbt._
 import distributed.project.model
-import distributed.project.model.BuildArtifactsParser
 import _root_.config.makeConfigString
+import _root_.config.parseFileInto
 import StateHelpers._
 import DistributedBuildKeys._
 import NameFixer.fixName
@@ -35,7 +35,7 @@ object DistributedRunner {
   def loadBuildArtifacts: Option[model.BuildArtifacts] =
     for {
       f <- Option(System getProperty "project.build.deps.file") map (new File(_))
-      deps <- BuildArtifactsParser parseMetaFile f
+      deps <- parseFileInto[model.BuildArtifacts](f)
     } yield deps
     
   def fixModule(arts: model.BuildArtifacts)(m: ModuleID): ModuleID = {

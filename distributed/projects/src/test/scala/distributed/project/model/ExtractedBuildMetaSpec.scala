@@ -4,14 +4,14 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
-import config.makeConfigString
+import config._
 
-object ExtractedBuildMetaParserSpec extends Specification {
-  "ExtractedDependencyFileParser" should {
+object ExtractedBuildMetaSpec extends Specification {
+  "ExtractedBuildMeta" should {
     "parse metadata file" in {
       
       
-      ExtractedBuildMetaParser.parseMetaString(
+      parseStringInto[ExtractedBuildMeta](
 """{
   scm = "foo/bar"  
   projects = [{
@@ -39,7 +39,7 @@ object ExtractedBuildMetaParserSpec extends Specification {
                     ProjectRef("p4", "o3")
                   ))))
       val config = makeConfigString(data)
-      (ExtractedBuildMetaParser.parseMetaString(config) 
+      (parseStringInto[ExtractedBuildMeta](config) 
           must 
           equalTo(Option(data)))
     }

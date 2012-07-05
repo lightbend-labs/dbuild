@@ -6,6 +6,7 @@ import model._
 import dependencies._
 import graph._
 import distributed.project.resolve.ProjectResolver
+import config._
 object Main {
   
   val resolver = new resolve.AggregateProjectResolver(
@@ -19,7 +20,7 @@ object Main {
   
   def loadFileIntoDot: Unit = {
     val file = new java.io.File("examplebuild.dsbt")
-    val build = DistributedBuildParser parseBuildFile file
+    val build = parseFileInto[DistributedBuildConfig](file) getOrElse sys.error("O NOES")
     val solved = buildAnalyzer.analyze(build, logger)
     
     val graph = new BuildGraph(solved.builds)
@@ -36,7 +37,7 @@ object Main {
   
   def runBuildFile = {
     val file = new java.io.File("scala-arm.dsbt")
-    val build = DistributedBuildParser parseBuildFile file
+    val build = parseFileInto[DistributedBuildConfig](file) getOrElse sys.error("O NOES")
     val solved = buildAnalyzer.analyze(build, logger)
     def runBuild(deps: BuildArtifacts, build: Build) =
       local.ProjectDirs.useDirFor(build.config) { dir =>

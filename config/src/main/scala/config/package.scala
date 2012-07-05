@@ -14,7 +14,13 @@ package object config {
   type ConfigValueType = j.ConfigValueType
   type Config = j.Config
   
-  
+  def parseInto[T](r: java.io.Reader, options: ConfigParseOptions = j.ConfigParseOptions.defaults)(implicit Reader: ConfigRead[T]): Option[T] =
+    Reader unapply parse(r, options).resolve.root
+  def parseFileInto[T](f: java.io.File, options: ConfigParseOptions = j.ConfigParseOptions.defaults)(implicit Reader: ConfigRead[T]): Option[T] =
+    Reader unapply parseFile(f, options).resolve.root
+  def parseStringInto[T](in: String, options: ConfigParseOptions = j.ConfigParseOptions.defaults)(implicit Reader: ConfigRead[T]): Option[T] =
+    Reader unapply parseString(in, options).resolve.root
+    
   def parseFile(f: java.io.File, options: ConfigParseOptions = j.ConfigParseOptions.defaults) = j.ConfigFactory.parseFile(f)
   def parse(r: java.io.Reader, options: ConfigParseOptions = j.ConfigParseOptions.defaults) = j.ConfigFactory.parseReader(r, options)
   def parseString(in: String, options: ConfigParseOptions = j.ConfigParseOptions.defaults) = j.ConfigFactory.parseString(in, options)

@@ -7,7 +7,7 @@ import _root_.sbt.{IO, Path, PathExtra}
 import Path._
 import _root_.java.io.File
 import sys.process.Process
-import config.makeConfigString
+import config.{makeConfigString, parseFileInto}
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
 // script...
@@ -43,7 +43,7 @@ object SbtBuilder {
             "project.build.deps.file" -> depsFile.getAbsolutePath,
             "sbt.override.build.repos" -> "true")
       )("dsbt-build")      
-      (BuildArtifactsParser parseMetaFile resultFile getOrElse
+      (parseFileInto[BuildArtifacts](resultFile) getOrElse
         sys.error("Failed to generate or load build results!"))
     }
   }

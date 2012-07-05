@@ -3,8 +3,11 @@ package project
 package model
 
 import _root_.java.io.File
-import config.ConfigPrint
+import config.{ConfigPrint, ConfigRead}
 import ConfigPrint.makeMember
+import ConfigRead.readMember
+import sbt.Types.:+:
+import sbt.HNil
 
 // TODO - Do we have enough information here?
 // - Is the version even right to assume?
@@ -23,16 +26,17 @@ object ArtifactLocation {
     }
   }
   /** Extractor from a ConfigValue. */
-  object Configured {
+  implicit object Configured extends ConfigRead[ArtifactLocation] {
     import config._
+    val Members = (
+      readMember[File]("location") :^:
+      readMember[ProjectRef]("info") :^:
+      readMember[String]("version")
+    )
     def unapply(c: ConfigValue): Option[ArtifactLocation] = {
       c match {
-        case c: ConfigObject =>
-          (c get "location", c get "info", c get "version") match {
-            case (ConfigString(file), ProjectRef.Configured(dep), ConfigString(version)) => 
-              Some(ArtifactLocation(dep, new java.io.File(file), version))
-            case _ => None
-          }
+        case Members(file :+: dep :+: version :+: HNil) =>
+          Some(ArtifactLocation(dep, file, version))
         case _ => None
       }
     }
@@ -52,25 +56,15 @@ object BuildArtifacts {
       sb.toString
     }
   }
-  object Configured {
+  implicit object Configured extends ConfigRead[BuildArtifacts] {
     import config._
+    val Members = (
+      readMember[Seq[ArtifactLocation]]("artifacts") :^:
+      readMember[java.io.File]("localRepo")
+    )
     def unapply(in: ConfigValue): Option[BuildArtifacts] = in match {
-      case c: ConfigObject =>
-        for {
-          artifacts <- parseArtifacts(c get "artifacts")
-          localRepo <- parseRepo(c get "localRepo")
-        } yield BuildArtifacts(artifacts, localRepo)
-      case _ => None
-    }
-    private def parseRepo(c: ConfigValue): Option[java.io.File] = c match {
-      case ConfigString(file) => Some(new java.io.File(file))
-      case _ => None
-    }
-    private def parseArtifacts(c: ConfigValue): Option[Seq[ArtifactLocation]] = c match {
-      case ConfigList(configs) =>
-        Some(configs collect {          
-          case ArtifactLocation.Configured(loc) => loc
-        })
+      case Members(artifacts :+: repo :+: HNil) =>
+        Some(BuildArtifacts(artifacts, repo))
       case _ => None
     }
   }

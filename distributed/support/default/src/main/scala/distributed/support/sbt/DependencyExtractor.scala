@@ -3,6 +3,7 @@ package support
 package sbt
 
 import project.model._
+import config.parseStringInto
 import _root_.sbt.{IO, Path, PathExtra}
 import Path._
 import _root_.java.io.File
@@ -16,7 +17,7 @@ import sys.process.Process
 object SbtExtractor {
   
   def extractMetaData(runner: SbtRunner)(projectDir: File, log: logging.Logger): ExtractedBuildMeta = 
-        (ExtractedBuildMetaParser.parseMetaString(runSbtExtractionProject(runner)(projectDir, log)) 
+        (parseStringInto[ExtractedBuildMeta](runSbtExtractionProject(runner)(projectDir, log)) 
          getOrElse sys.error("Failure to parse build metadata in sbt extractor!"))
 
   // TODO - Better synchronize?

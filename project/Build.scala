@@ -20,7 +20,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val config = (
       LibProject("config") 
-      dependsOnRemote(typesafeConfig)
+      dependsOnRemote(typesafeConfig, sbtCollections)
     )
 
   // Projects relating to distributed builds.

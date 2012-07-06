@@ -18,9 +18,20 @@ object DependencyExtractor {
   
   def extract(pom: File): ExtractedBuildMeta = 
     extract(readFile(pom))
+    
+  def extract(pom: String): ExtractedBuildMeta = 
+    extract(readString(pom))
   
   def extract(model: MavenModel): ExtractedBuildMeta =
     ExtractedBuildMeta(model.getUrl, extractProjects(model))
+  
+    
+  private def readString(in: String): MavenModel = {
+    val reader = new MavenXpp3Reader
+    val input = new _root_.java.io.StringReader(in)
+    try reader read input
+    finally input.close() 
+  }
   
   private def readFile(f: File): MavenModel = {
     val reader = new MavenXpp3Reader

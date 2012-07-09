@@ -30,4 +30,8 @@ package object repo {
     session setLocalRepositoryManager (system newLocalRepositoryManager localRepo)
     session
   }
+  
+  
+  def effectivePom(localRepo: File, pom: File) = 
+    MvnPomResolver(localRepo).loadEffectivePom(pom, Seq.empty)
 }

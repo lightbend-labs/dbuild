@@ -16,6 +16,8 @@ import _root_.java.io.{File, FileReader}
 // to read these darn things?
 object DependencyExtractor {
   
+  val localRepo = new File(".", ".m2repo")
+  
   def extract(pom: File): ExtractedBuildMeta = 
     extract(readFile(pom))
     
@@ -33,12 +35,8 @@ object DependencyExtractor {
     finally input.close() 
   }
   
-  private def readFile(f: File): MavenModel = {
-    val reader = new MavenXpp3Reader
-    val in = new FileReader(f)
-    try reader read in
-    finally in.close()
-  }
+  private def readFile(f: File): MavenModel =
+    repo.effectivePom(localRepo, f)
     
   private def extractProjects(model: MavenModel): Seq[Project] = {
     val thisProj = extractProject(model)
@@ -47,9 +45,9 @@ object DependencyExtractor {
   }
   
   private def extractModule(model: MavenModel, moduleName: String): Seq[Project] = {
-    val dir = model.getBuild.getDirectory
+    val dir = model.getProjectDirectory
     val modulePom = new File(dir, moduleName + File.separator +  "pom.xml")
-    if(!modulePom.exists) sys.error("Problem finding module: " + moduleName + " from " + model)
+    if(!modulePom.exists) sys.error("Problem finding module: " + moduleName + " at " + modulePom.getAbsolutePath + "  from " + model)
     extractProjects(readFile(modulePom))
   }
   

@@ -15,6 +15,7 @@ class BuildRunnerActor(builder: BuildRunner, resolver: ProjectResolver) extends 
   def receive = {
     case RunBuild(build, deps, log) => 
       forwardingErrorsToFutures(sender) {
+        log info ("--== Building %s ==--" format(build.config.name))
         sender ! runLocalBuild(build, deps, log)
       }
       

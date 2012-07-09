@@ -105,7 +105,7 @@ class LoggerFileWriteActor(logDir: java.io.File, path: String) extends Actor wit
   override def postStop() = output.close()
   
   override def preStart() = {
-    output.write("------ "+path+" --------")
+    output.write("------ LOG - "+path+" --------\n")
   }
   
   override def preRestart(r: Throwable, msg: Option[Any]): Unit = {
@@ -114,7 +114,7 @@ class LoggerFileWriteActor(logDir: java.io.File, path: String) extends Actor wit
     output = newWriter
     output.write("Restarting log after " + msg + "!\n")
     output.write(r.getMessage)
-    output.write("------ "+path+" --------")
+    output.write("\n------ "+path+" --------\n")
   } 
   
   def receive = {

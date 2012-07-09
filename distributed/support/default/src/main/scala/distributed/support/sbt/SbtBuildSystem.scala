@@ -13,11 +13,12 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
   val name: String = "sbt"  
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"
-  final val runner = new SbtRunner(buildBase)
+  final val runner = new SbtRunner(buildBase / "runner")
+  final val extractor = new SbtRunner(buildBase / "extractor")
   
   def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta =
-    if(config.directory.isEmpty) SbtExtractor.extractMetaData(runner)(dir, log)
-    else SbtExtractor.extractMetaData(runner)(new File(dir, config.directory), log)
+    if(config.directory.isEmpty) SbtExtractor.extractMetaData(extractor)(dir, log)
+    else SbtExtractor.extractMetaData(extractor)(new File(dir, config.directory), log)
 
   def runBuild(project: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts =
     SbtBuilder.buildSbtProject(runner)(dir, dependencies, log)

@@ -29,8 +29,11 @@ object SbtBuilder {
   def buildSbtProject(runner: SbtRunner)(project: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {    
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dsbt"
-      val depsFile = tmpDir / "deps.dsbt"
-      val repoFile = tmpDir / "repositories"
+      // TODO - Where should depsfile + repo file be?  
+      // For debugging/reproducing issues, we're putting them in a local directory for now.
+      val dsbtDir = project / ".dsbt"
+      val depsFile = dsbtDir / "deps.dsbt"
+      val repoFile = dsbtDir / "repositories"
       IO.write(depsFile, makeConfigString(dependencies))
       writeRepoFile(repoFile, dependencies.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)

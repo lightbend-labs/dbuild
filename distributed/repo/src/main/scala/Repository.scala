@@ -9,6 +9,7 @@ import org.sonatype.aether.util.artifact.DefaultArtifact
 class Repository {
   val system = newRepositorySystemImpl
   
+  
   def install(artifacts: BuildArtifacts): Unit = {    
     val session = newSessionImpl(system, artifacts.localRepo)
     val request = {

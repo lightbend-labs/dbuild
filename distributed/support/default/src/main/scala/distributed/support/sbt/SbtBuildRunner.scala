@@ -21,6 +21,9 @@ object SbtBuilder {
     sb append  "  maven-central\n"
     sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
     sb append  "  java-annoying-cla-shtuff: http://download.java.net/maven/2/\n"
+    sb append  "  sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]\n"
+    // This is because the git plugin is too prevalent...
+    sb append  "  jgit-repo: http://download.eclipse.org/jgit/maven\n"
     // TODO - Typesafe repositories? ... NAH
     IO.write(config, sb.toString)
   } 

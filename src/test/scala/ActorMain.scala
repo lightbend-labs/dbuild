@@ -12,7 +12,8 @@ import config._
 object ActorMain {
   
   def scalacheck =
-    BuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/community", "")
+    //BuildConfig("scalacheck", "sbt", "git://github.com/rickynils/scalacheck.git#master", "")
+    BuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/master", "")
 
   def scalatest =
     BuildConfig("scalatest", "sbt", "https://scalatest.googlecode.com/svn/branches/cmty2.10", "")

@@ -63,7 +63,6 @@ object DistributedRunner {
       dep = artifact.dep
       if dep.organization == "org.scala-lang"
       if dep.name == "scala-library"
-      _ = println("Detected scala vesion = " + artifact.version)
     } yield artifact.version).headOption
     val newSetting: Option[Setting[_]] = scalaV map { v =>
       println("Rewiring scala dependency to: " + v)
@@ -77,7 +76,6 @@ object DistributedRunner {
 
   def fixSetting(arts: model.BuildArtifacts)(s: Setting[_]): Setting[_] = s.key.key match {
     case Keys.scalaVersion.key        => 
-      println("Found scala versoin setting!")
       fixScalaVersion(arts)(s) 
     case Keys.libraryDependencies.key => 
       fixLibraryDependencies(arts)(s)
@@ -85,6 +83,14 @@ object DistributedRunner {
       fixPublishTo(Resolver.file("deploy-to-local-repo", arts.localRepo.getAbsoluteFile))(s)
     case Keys.crossVersion.key =>
       s.asInstanceOf[Setting[CrossVersion]] mapInit { (_,_) => CrossVersion.Disabled }
+    // Here's our hack to *disable* PGP signing in builds we pull in.
+    // TOO many global projects enable the PGP plugin by default...
+    case Keys.skip.key =>
+      s.key.scope.task.toOption match {
+        case Some(scope) if scope.label.toString == "pgp-signer" => 
+          s.asInstanceOf[Setting[Task[Boolean]]].mapInit((_,old) => old map (_ => true))
+        case _ => s
+      }
     case _ => s
   } 
   
@@ -143,12 +149,17 @@ object DistributedRunner {
     } yield buildStuff(state, f, arts)
     results getOrElse state
   }
+  
+  def setupCmd(state: State): State =
+    loadBuildArtifacts map (arts => fixDependencies(arts, state)) getOrElse state
 
   private def buildIt = Command.command("dsbt-build")(buildCmd)
+  private def setItUp = Command.command("dsbt-setup")(setupCmd)
 
   /** Settings you can add your build to print dependencies. */
   def buildSettings: Seq[Setting[_]] = Seq(
-    Keys.commands += buildIt
+    Keys.commands += buildIt,
+    Keys.commands += setItUp
   )
   
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File]): Seq[model.ArtifactLocation] =

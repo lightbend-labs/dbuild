@@ -68,11 +68,14 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 trait BuildHelper extends Build {
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
+    version := "0.1-SNAPSHOT",
     organization := "com.typesafe.dsbt",
     scalaVersion := "2.9.2",
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
-    resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"    
+    resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+    publishMavenStyle := false,
+    publishTo := Some(Resolver.url("typesafe-dsbt-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns))
   )
   
   // TODO - Aggregate into a single JAR if possible for easier resolution later...

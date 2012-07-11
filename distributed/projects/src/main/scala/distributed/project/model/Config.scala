@@ -2,7 +2,7 @@ package distributed
 package project
 package model
 
-import config.{ConfigPrint,ConfigRead}
+import config.{ConfigPrint,ConfigRead, ConfigObject}
 import ConfigPrint.makeMember
 import ConfigRead.readMember
 import sbt.Types.:+:
@@ -15,9 +15,11 @@ import sbt.HNil
 case class BuildConfig(name: String, 
     system: String, 
     uri: String, 
-    directory: String)
+    extra: ConfigObject = BuildConfig.emptyConfigObject)
     
 object BuildConfig {
+  
+  val emptyConfigObject = config.parseString("""{}""").resolve.root
   
   implicit object PrettyPrinter extends ConfigPrint[BuildConfig] {
     def apply(c: BuildConfig): String = {
@@ -28,7 +30,7 @@ object BuildConfig {
       sb append ","
       sb append makeMember("uri", c.uri)
       sb append ","
-      sb append makeMember("directory", c.directory)
+      sb append makeMember("extra", c.extra)
       sb append "}"
       sb.toString
     }
@@ -40,18 +42,18 @@ object BuildConfig {
         readMember[String]("name") :^:
         readMember[String]("system") :^:
         readMember[String]("uri") :^:
-        readMember[String]("directory")
+        readMember[ConfigObject]("extra")
     )
     def unapply(c: ConfigValue): Option[BuildConfig] = 
       (c withFallback defaultProject) match {
-        case Members(name :+: system :+: uri :+: directory :+: HNil) =>
-          Some(BuildConfig(name,system,uri,directory))
+        case Members(name :+: system :+: uri :+: extra :+: HNil) =>
+          Some(BuildConfig(name,system,uri,extra))
         case _ => None
       }
     val defaultProject: ConfigObject = 
       config.parseString("""{
         system = "sbt"
-        directory = ""
+        extra = {}
       }""").resolve.root
   }
 }

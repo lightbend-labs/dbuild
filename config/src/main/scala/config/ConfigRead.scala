@@ -18,6 +18,15 @@ object ConfigRead {
   def readMember[T](name: String)(implicit r: ConfigRead[T]): ConfigMember[T] =
     new ConfigMember(name, r)
   
+  
+  implicit object configObjRead extends ConfigRead[ConfigObject] {
+    def unapply(t: ConfigValue): Option[ConfigObject] = t match {
+      case obj: ConfigObject => Some(obj)
+      case _ => None
+    }
+      
+  }
+  
   implicit def optRead[T](implicit Element: ConfigRead[T]): ConfigRead[Option[T]] =
     new ConfigRead[Option[T]] {
       def unapply(t: ConfigValue): Option[Option[T]] =

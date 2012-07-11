@@ -13,37 +13,40 @@ object ActorMain {
   
   def scalacheck =
     //BuildConfig("scalacheck", "sbt", "git://github.com/rickynils/scalacheck.git#master", "")
-    BuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/master", "")
+    BuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/master")
 
   def scalatest =
-    BuildConfig("scalatest", "sbt", "https://scalatest.googlecode.com/svn/branches/cmty2.10", "")
+    BuildConfig("scalatest", "sbt", "https://scalatest.googlecode.com/svn/branches/cmty2.10")
     //BuildConfig("scalatest", "scalatest", "http://scalatest.googlecode.com/svn/branches/r18for210M4", "")
 
     
   def specs2scalaz =
-    BuildConfig("specs2-scalaz", "sbt", "git://github.com/jsuereth/specs2-scalaz.git#origin/community", "")
+    BuildConfig("specs2-scalaz", "sbt", "git://github.com/jsuereth/specs2-scalaz.git#origin/community")
   
   def specs2 =
-    BuildConfig("specs2", "sbt", "git://github.com/jsuereth/specs2.git#origin/community", "")
+    BuildConfig("specs2", "sbt", "git://github.com/jsuereth/specs2.git#origin/community")
     
   def scalaArm =
-    BuildConfig("scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#origin/community-build", "")
+    BuildConfig("scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#origin/community-build")
     
   def scalaIo =
-    BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community", "")
+    BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community")
   
   def scalaConfig =
-    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#master", "")
+    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#v2.10.0-M5")
     //BuildConfig("scala", "scala", "git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc", "")
     
   def sperformance =
-    BuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community", "")
+    BuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community")
     
   def scalaStm =
-    BuildConfig("scala-stm", "sbt", "git://github.com/nbronson/scala-stm.git#master", "")
+    BuildConfig("scala-stm", "sbt", "git://github.com/nbronson/scala-stm.git#master")
+  
+  def scalariform = 
+    BuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master")
     
   def dBuildConfig =
-    DistributedBuildConfig(Seq(scalaStm, scalatest, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz))
+    DistributedBuildConfig(Seq(scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest))
   
   def parsedDbuildConfig =
     parseStringInto[DistributedBuildConfig](repeatableConfig) getOrElse sys.error("Failure to parse: " + repeatableConfig)

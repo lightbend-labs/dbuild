@@ -22,7 +22,7 @@ object DistributedBuildConfigSpec extends Specification {
           name = "p1",
           uri = "uri",
           system = "sbt",
-          directory = ""
+          extra = config.parseString("{}").resolve.root
       ))
     )))
     }
@@ -35,14 +35,14 @@ object DistributedBuildConfigSpec extends Specification {
           name = "p1"
           uri = "uri"
           system = "humpty"
-          directory = "ZOMG"
+          extra = { directory = "ZOMG" }
     }]
 }""") must equalTo(Some(DistributedBuildConfig(
       Seq(BuildConfig(
           name = "p1",
           uri = "uri",
           system = "humpty",
-          directory = "ZOMG"
+          extra = config.parseString("{directory = ZOMG}").resolve.root
       ))
     )))
     }

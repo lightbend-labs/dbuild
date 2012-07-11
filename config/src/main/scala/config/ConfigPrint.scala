@@ -1,6 +1,6 @@
 package config
 
-
+import com.typesafe.config.ConfigRenderOptions
 
 /** Pretty print a value into a configuration string..
  * 
@@ -27,6 +27,11 @@ object ConfigPrint {
   
   implicit object fileConfig extends ConfigPrint[java.io.File] {
     def apply(f: java.io.File): String = f.getAbsolutePath
+  }
+  
+  implicit object configObj extends ConfigPrint[ConfigObject] {
+    def apply(obj: ConfigObject): String =
+      obj render ConfigRenderOptions.concise
   }
   
   def makeMember[A: ConfigPrint](name: String, value: A): String =

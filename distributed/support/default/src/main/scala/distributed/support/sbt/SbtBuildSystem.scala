@@ -16,10 +16,24 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
   final val runner = new SbtRunner(buildBase / "runner")
   final val extractor = new SbtRunner(buildBase / "extractor")
   
-  def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta =
-    if(config.directory.isEmpty) SbtExtractor.extractMetaData(extractor)(dir, log)
-    else SbtExtractor.extractMetaData(extractor)(new File(dir, config.directory), log)
+  
+  def sbtConfig(config: BuildConfig): SbtConfig = {
+    config.extra match {
+      case SbtConfig.Configured(sc) => sc
+      case _ => sys.error("SBT is misconfigured: " + config)
+    }
+  }
+  
+  def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+    val sc = sbtConfig(config)
+    if(sc.directory.isEmpty) SbtExtractor.extractMetaData(extractor)(dir, log)
+    else SbtExtractor.extractMetaData(extractor)(new File(dir, sc.directory), log)
+  }
 
-  def runBuild(project: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts =
-    SbtBuilder.buildSbtProject(runner)(dir, dependencies, log)
+  def runBuild(project: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
+    val sc = sbtConfig(project.config)
+    // TODO - Does this work correctly?
+    val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
+    SbtBuilder.buildSbtProject(runner)(pdir, dependencies, log)
+  }
 }

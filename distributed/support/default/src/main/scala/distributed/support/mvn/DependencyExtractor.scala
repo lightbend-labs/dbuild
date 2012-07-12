@@ -25,7 +25,7 @@ object DependencyExtractor {
     extract(readString(pom))
   
   def extract(model: MavenModel): ExtractedBuildMeta =
-    ExtractedBuildMeta(model.getUrl, extractProjects(model))
+    ExtractedBuildMeta(Option(model.getUrl) getOrElse "", extractProjects(model))
   
     
   private def readString(in: String): MavenModel = {

@@ -46,7 +46,8 @@ object ActorMain {
     BuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master")
     
   def dBuildConfig =
-    DistributedBuildConfig(Seq(scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest))
+     DistributedBuildConfig(Seq(scalariform))
+    //DistributedBuildConfig(Seq(scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest))
   
   def parsedDbuildConfig =
     parseStringInto[DistributedBuildConfig](repeatableConfig) getOrElse sys.error("Failure to parse: " + repeatableConfig)

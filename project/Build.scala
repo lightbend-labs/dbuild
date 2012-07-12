@@ -17,6 +17,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val hashing = (
       LibProject("hashing")
+      dependsOnRemote(typesafeConfig)
     )
   lazy val config = (
       LibProject("config") 
@@ -53,6 +54,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dprojects, drepo)
+      dependsOnRemote(mvnEmbedder, mvnWagon)
       settings(SbtSupport.settings:_*)
     ) 
 

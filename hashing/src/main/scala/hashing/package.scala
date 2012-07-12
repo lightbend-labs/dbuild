@@ -1,3 +1,5 @@
+import com.typesafe.config.ConfigValue
+
 package object hashing {
 
   def sha1Sum(t: Any): String =
@@ -19,6 +21,9 @@ package object hashing {
         // First add a traversable marker..
         md update 1.toByte
         s foreach addBytes
+      case c: ConfigValue =>
+        addBytes(c.render)
+        
     }
     addBytes(t)
     convertToHex(md.digest)

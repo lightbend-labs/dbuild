@@ -73,7 +73,8 @@ object SbtRunner {
     if(!(dir / "plugins" / "deps.sbt").exists) {
       val pluginDir = dir / "plugins"
       pluginDir.mkdirs
-      transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
+      writeDeps(pluginDir / "deps.sbt")
+      //transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
     }
     val launcherDir = dir / "launcher"
     val launcherJar = launcherDir / "sbt-launch.jar"
@@ -94,6 +95,9 @@ object SbtRunner {
      try IO.transfer(in, f)
      finally in.close
   }
+  
+  def writeDeps(file: File): Unit =
+    IO.write(file, """addSbtPlugin("com.typesafe.dsbt" % "distributed-sbt-plugin" % """+ Defaults.version + "\")")
   
   def writeRepoFile(config: File): Unit = {
     val ivyPattern = "[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"

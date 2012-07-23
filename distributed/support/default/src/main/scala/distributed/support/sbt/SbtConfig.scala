@@ -13,7 +13,7 @@ case class SbtConfig(
 
 // TODO - Autogenerate SBT versions!
 object SbtConfig {
-  def sbtVersion = "0.12.0-RC3"
+  def sbtVersion = Defaults.sbtVersion
     
   implicit object Configured extends ConfigRead[SbtConfig] with ConfigPrint[SbtConfig] {
     import config._

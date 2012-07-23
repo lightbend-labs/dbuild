@@ -11,6 +11,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
     aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo)
+    settings(publish := ())
   )
 
   lazy val dist = (
@@ -62,6 +63,20 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       dependsOn(dprojects, drepo)
       dependsOnRemote(mvnEmbedder, mvnWagon)
       settings(SbtSupport.settings:_*)
+      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
+        val file = dir / "Defaults.scala"
+        if(!dir.isDirectory) dir.mkdirs()
+        IO.write(file, """
+package distributed.support.sbt
+
+object Defaults {
+  val sbtVersion = "%s"
+  val version = "%s"
+  val org = "%s"
+}
+""" format (Dependencies.sbtVersion, version, org))
+        Seq(file)
+      })
     ) 
 
   // Distributed SBT plugin
@@ -76,7 +91,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 trait BuildHelper extends Build {
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
-    version := "0.1-SNAPSHOT",
+    version := "0.1",
     organization := "com.typesafe.dsbt",
     scalaVersion := "2.9.2",
     libraryDependencies += specs2,

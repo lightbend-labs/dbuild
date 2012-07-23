@@ -19,6 +19,7 @@ object SbtBuilder {
     sb append  "  local\n"
     sb append ("  ivy-build-local: file://%s, %s\n" format (repo.getAbsolutePath, ivyPattern))
     sb append ("  mvn-build-local: file://%s\n" format (repo.getAbsolutePath))
+    sb append ("  machine-local: file://%s, %s\n" format (new File("/home/jsuereth/.ivy2/local").getAbsolutePath, ivyPattern))
     sb append  "  maven-central\n"
     sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
     sb append  "  java-annoying-cla-shtuff: http://download.java.net/maven/2/\n"
@@ -53,7 +54,6 @@ object SbtBuilder {
             "sbt.repository.config" -> repoFile.getAbsolutePath,
             "project.build.results.file" -> resultFile.getAbsolutePath,
             "project.build.deps.file" -> depsFile.getAbsolutePath,
-            "sbt.override.build.repos" -> "true",
             "sbt.ivy.home" -> ivyCache.getAbsolutePath)
       )("dsbt-build")      
       (parseFileInto[BuildArtifacts](resultFile) getOrElse

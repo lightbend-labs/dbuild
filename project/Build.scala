@@ -5,10 +5,16 @@ import Dependencies._
   
 object DistributedBuilderBuild extends Build with BuildHelper {
 
+  override def settings = super.settings ++ SbtSupport.buildSettings
+
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
     aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo)
+  )
+
+  lazy val dist = (
+    Project("dist", file("dist")/*, eclipse plugin bombs if we do this: settings = Packaging.settings */) settings(Packaging.settings:_*)
   )
 
   // The component projects...
@@ -41,7 +47,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   )
   lazy val dbuild = (
       DmodProject("build")
-      dependsOn(dprojects, defaultSupport, drepo)
+      dependsOn(dprojects, defaultSupport, drepo, config)
       dependsOnRemote(sbtLaunchInt)
     )
 

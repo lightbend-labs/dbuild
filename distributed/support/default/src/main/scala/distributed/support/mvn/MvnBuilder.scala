@@ -32,10 +32,29 @@ import org.apache.maven.cli.CLIReportingUtils
 import org.apache.maven.cli.MavenCli
 import org.codehaus.plexus.PlexusContainer
 import collection.JavaConverters._
+import org.apache.maven.artifact.repository.ArtifactRepository
+import org.apache.maven.artifact.repository.MavenArtifactRepository
+import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy
+import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout
+import org.apache.maven.repository.RepositorySystem
+import org.apache.maven.model.Repository
 
 object MvnBuilder {
   val classWorld = new ClassWorld("plexus.core", classOf[ClassWorld].getClassLoader)
   
+  def makeRepo(container: PlexusContainer, id: String, url: String): ArtifactRepository = {
+    val r = new Repository
+    r setId id
+    r setUrl url
+    r setLayout "default"
+    val sys = container lookup classOf[RepositorySystem]
+    sys buildArtifactRepository r
+  }
+  
+  def defaultRepositories(container: PlexusContainer) = Seq[ArtifactRepository](
+     makeRepo(container, "central", "http://repo1.maven.org/maven2/"),
+     makeRepo(container, "typesafe", "http://repo.typesafe.com/releases")
+  ).asJava
   
   def runBuild(pom: File, localRepo: File, log: DLogger): MavenExecutionResult = {
 	val container = makeContainer(log)
@@ -56,11 +75,19 @@ object MvnBuilder {
   
   
   def makeRequest(pom: File, localRepo: File, log: DLogger, container: PlexusContainer) = {
+    // TODO - Local repo and community repo should probably be *different* so we don't contaminate.
     val req = new DefaultMavenExecutionRequest
     container lookup classOf[MavenExecutionRequestPopulator] populateDefaults req
     
+    val lrepo = makeRepo(container, "dbuild", "file://" +localRepo.getAbsolutePath)
+    
     req setPom pom
     req setLocalRepositoryPath localRepo
+    req setLocalRepository lrepo
+    // Add remote repositories.
+    req setRemoteRepositories (
+        defaultRepositories(container).asScala
+    ).asJava
     // TODO - Set local repo
     req setOffline false
     // TODO - Set proxies
@@ -160,6 +187,7 @@ class TransferLoggerListener(log: DLogger) extends TransferListener {
     sb append (if(e.getRequestType == TransferEvent.RequestType.GET) "GET "
                else "PUT ")
     sb append e.getResource.getRepositoryUrl
+    sb append e.getResource.getResourceName
     sb append "] "
     sb append msg
     log.log(level, sb.toString)

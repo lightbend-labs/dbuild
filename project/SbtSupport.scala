@@ -28,11 +28,13 @@ object SbtSupport {
     file
   }
 
+  val buildSettings: Seq[Setting[_]] = Seq(
+    sbtLaunchJarUrl <<= sbtVersion apply downloadUrlForVersion,
+    sbtLaunchJarLocation <<= baseDirectory (_ / "target" / "sbt" / "sbt-launch.jar"),
+    sbtLaunchJar <<= (sbtLaunchJarUrl, sbtLaunchJarLocation) map downloadFile
+  )
 
   val settings: Seq[Setting[_]] = Seq(
-    sbtLaunchJarUrl <<= sbtVersion apply downloadUrlForVersion,
-    sbtLaunchJarLocation <<= resourceManaged in Compile apply (_ / "sbt" / "sbt-launch.jar"),
-    sbtLaunchJar <<= (sbtLaunchJarUrl, sbtLaunchJarLocation) map downloadFile,
     resourceGenerators in Compile <+= (sbtLaunchJar.task map (Seq apply _))
   )
 }

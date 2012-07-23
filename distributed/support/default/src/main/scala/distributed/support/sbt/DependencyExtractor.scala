@@ -29,7 +29,7 @@ object SbtExtractor {
           log = log,
           javaProps = Map(
               "project.dependency.metadata.file" -> result.getAbsolutePath,
-              "remote.project.uri" -> project.getAbsolutePath)
+              "remote.project.uri" -> project.getAbsolutePath) ++ runner.localIvyProps
       )("print-deps")
       IO read result
     }

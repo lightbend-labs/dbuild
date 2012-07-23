@@ -15,15 +15,21 @@ class SbtRunner(globalBase: File) {
   private val defaultProps = 
     Map("sbt.global.base" -> globalBase.getAbsolutePath,
         "sbt.version" -> SbtConfig.sbtVersion,
+        "sbt.override.build.repos" -> "true",
         "sbt.log.noformat" -> "true")
         
   private def makeArgsFromProps(props: Map[String,String]): Seq[String] =
     props.map { case (k,v) => "-D%s=%s" format (k,v) } {collection.breakOut}
   
+  def localIvyProps: Map[String,String] =
+    Map("sbt.ivy.home" -> (globalBase / ".ivy2").getAbsolutePath)
+    
   def run(projectDir: File, 
           log: Logger,
           javaProps: Map[String,String] = Map.empty,
           javaArgs: Seq[String] = SbtRunner.defaultJavaArgs)(args: String*): Unit = {
+    removeProjectBuild(projectDir, log)
+    
     val cmd = (
       Seq("java") ++
       makeArgsFromProps(javaProps ++ defaultProps) ++ 
@@ -38,6 +44,16 @@ class SbtRunner(globalBase: File) {
       case n => sys.error("Failure to run sbt!  Error code: " + n)
     }
   }
+  
+  private def removeProjectBuild(projectDir: File, log: Logger): Unit = {
+    // TODO - Just overwrite sbt.version if necessary....
+    val buildProps = projectDir / "project" / "build.properties"
+    if(buildProps.exists) {
+      log.info("Removing " + buildProps.getAbsolutePath)
+      IO.delete(buildProps)
+    }
+  }
+    
   
   override def toString = "Sbt(@%s)" format (globalBase.getAbsolutePath)
 }
@@ -63,8 +79,12 @@ object SbtRunner {
     val launcherJar = launcherDir / "sbt-launch.jar"
     if(!launcherJar.exists) {
       launcherDir.mkdirs
-      transferResource("sbt/sbt-launch.jar", launcherJar)
-    }    
+      transferResource("sbt-launch.jar", launcherJar)
+    }
+    val repoFile = dir / "repositories" 
+    if(!repoFile.exists) {
+      writeRepoFile(repoFile)
+    }
     launcherJar
   }
   
@@ -74,4 +94,23 @@ object SbtRunner {
      try IO.transfer(in, f)
      finally in.close
   }
+  
+  def writeRepoFile(config: File): Unit = {
+    val ivyPattern = "[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"
+    val sb = new StringBuilder("[repositories]\n")
+    sb append  "  local\n"
+    sb append ("  machine-local: file://%s, %s\n" format (new File("/home/jsuereth/.ivy2/local").getAbsolutePath, ivyPattern))
+    sb append  "  maven-central\n"
+    sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
+    sb append  "  java-annoying-cla-shtuff: http://download.java.net/maven/2/\n"
+    sb append ("  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases\n")
+    sb append ("  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, %s\n" format (ivyPattern))
+    sb append ("  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, %s\n" format (ivyPattern))
+    sb append ("  sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, %s\n" format (ivyPattern))
+    sb append  "  coda: http://repo.codahale.com\n"
+    // This is because the git plugin is too prevalent...
+    sb append  "  jgit-repo: http://download.eclipse.org/jgit/maven\n"
+    // TODO - Typesafe repositories? ... NAH
+    IO.write(config, sb.toString)
+  } 
 }

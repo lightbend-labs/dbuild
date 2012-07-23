@@ -10,6 +10,46 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import config._
 
 object ActorMain {
+  // SBT plugins
+  def sbtCommunityPluginProjectNames = Seq(
+    "sbt-git-plugin",
+    "sbt-release",
+    "sbt-native-packager",
+    "sbt-protobuf",
+    "sbt-xjc",
+    "sbt-onejar",
+    "sbt-assembly",
+    "sbt-yui-compressor",
+    //"sbt-appengine",
+    "sbt-appbundle",
+    "sbt-ghpages-plugin",
+    "sbt-site-plugin",
+    "xsbt-gpg-plugin",
+    "sbt-unique-version",
+    "sbt-buildinfo",
+    "sbt-sclaashim",
+    "sbt-man",
+    "sbt-twt",
+    "sbt-dirty-money",
+    "sbt-lify"
+  )
+  def sbtCommunityPlugins: Seq[BuildConfig] = 
+    for(name <- sbtCommunityPluginProjectNames)
+    yield BuildConfig(name, "sbt", "git://github.com/sbt/%s.git" format (name))
+  
+  
+  def sbtTypesafeProjectNames = Seq(
+      "sbt-multi-jvm" -> "master", 
+      "sbteclipse" -> "master", 
+      "sbtscalariform" -> "sbt-0.12", 
+      //"xsbt-start-script-plugin" -> "master", 
+      "sbt-idea" -> "master")
+  def sbtTypesafePlugins: Seq[BuildConfig] = 
+    for((name, branch) <- sbtTypesafeProjectNames)
+    yield BuildConfig(name, "sbt", "git://github.com/typesafehub/%s.git#%s" format (name, branch))
+  
+  
+  def sbtPlugins = sbtTypesafePlugins ++ sbtCommunityPlugins
   
   def scalacheck =
     //BuildConfig("scalacheck", "sbt", "git://github.com/rickynils/scalacheck.git#master", "")
@@ -17,7 +57,7 @@ object ActorMain {
 
   def scalatest =
     BuildConfig("scalatest", "sbt", "https://scalatest.googlecode.com/svn/branches/cmty2.10")
-    //BuildConfig("scalatest", "scalatest", "http://scalatest.googlecode.com/svn/branches/r18for210M4", "")
+    //BuildConfig("scalatest", "scalatest", "http://scalatest.googlecode.com/svn/branches/r18for210M4")
 
     
   def specs2scalaz =
@@ -33,7 +73,7 @@ object ActorMain {
     BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community")
   
   def scalaConfig =
-    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#v2.10.0-M5")
+    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
     //BuildConfig("scala", "scala", "git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc", "")
     
   def sperformance =
@@ -45,9 +85,16 @@ object ActorMain {
   def scalariform = 
     BuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master")
     
+  def akka =
+    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#wip-scala210M5-√")
+    
+  def communityProjects = 
+    Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest)
+    
+    
   def dBuildConfig =
-     DistributedBuildConfig(Seq(scalariform))
-    //DistributedBuildConfig(Seq(scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest))
+    //DistributedBuildConfig(Seq(scalariform))
+    DistributedBuildConfig(/*sbtPlugins ++*/ communityProjects)
   
   def parsedDbuildConfig =
     parseStringInto[DistributedBuildConfig](repeatableConfig) getOrElse sys.error("Failure to parse: " + repeatableConfig)

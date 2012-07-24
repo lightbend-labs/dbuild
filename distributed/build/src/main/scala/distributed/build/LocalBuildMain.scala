@@ -32,12 +32,13 @@ class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
   }
   val logger = new logging.ActorLogger(logMgr)
   val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, logger)))
+  // TODO - Look up target elsewhere...
   
   def build(build: DistributedBuildConfig): BuildArtifacts = {
     import akka.pattern.ask
     implicit val timeout: Timeout = (4).hours
-    val result = builder ? build
-    Await.result(result.mapTo[BuildArtifacts], (4).hours)
+    val result = builder ? RunLocalBuild(build, targetDir)
+    Await.result(result.mapTo[BuildArtifacts], akka.util.Duration.Inf)
   }
   def dispose(): Unit = system.shutdown()
 }

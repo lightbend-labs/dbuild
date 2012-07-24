@@ -26,7 +26,9 @@ object Build {
 
 
 /** A distributed build containing projects in *build order*/
-case class DistributedBuild(builds: Seq[Build])
+case class DistributedBuild(builds: Seq[Build]) {
+  def config = DistributedBuildConfig(builds map (_.config))
+}
 object DistributedBuild {
   implicit object DistributedBuildPretty extends ConfigPrint[DistributedBuild] {
     def apply(build: DistributedBuild): String = {

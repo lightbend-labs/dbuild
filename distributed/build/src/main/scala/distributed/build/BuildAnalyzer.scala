@@ -3,6 +3,8 @@ package build
 
 import project.model._
 import graph.Graphs
+import java.io.File
+import sbt.Path._
 
 /** Takes a given build configuration and returns a *repeatable* full realizes build
  * configuration.
@@ -12,13 +14,15 @@ trait BuildAnalyzer {
    * The returned configuration lists *full* build configuration in 
    * an appropriate build order.
    */
-  def analyze(config: DistributedBuildConfig, log: logging.Logger): DistributedBuild 
+  def analyze(target: File, config: DistributedBuildConfig, log: logging.Logger): DistributedBuild 
 }
 
 /** Simple implementation that delegates to an extractor. */
 class SimpleBuildAnalyzer(e: project.dependencies.Extractor) extends BuildAnalyzer {
-  final def analyze(config: DistributedBuildConfig, log: logging.Logger): DistributedBuild = {
-    val builds = config.projects map (p => e.extract(p, log))
+  final def analyze(target: File, config: DistributedBuildConfig, log: logging.Logger): DistributedBuild = {
+    val scratchDir = local.ProjectDirs.makeDirForBuild(config, target / "extraction")
+    
+    val builds = config.projects map (p => e.extract(scratchDir, p, log))
     // Now we need them in build ordering...
     val graph = new BuildGraph(builds)
     val ordered = (Graphs safeTopological graph map (_.value)).reverse

@@ -8,7 +8,10 @@ import project.build.BuildRunnerActor
 import project.model._
 import logging.Logger
 import akka.actor.{Actor,Props}
+import java.io.File
 
+
+case class RunLocalBuild(config: DistributedBuildConfig, targetDir: File)
 /** This is an actor which executes builds locally given a
  * set of resolvers and build systems.
  * 
@@ -30,7 +33,7 @@ class LocalBuilderActor(
   val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor)), "simple-distributed-builder")
 
   def receive = {
-    case config: DistributedBuildConfig => 
-      fullBuilderActor forward RunDistributedBuild(config, log)
+    case RunLocalBuild(config, target) => 
+      fullBuilderActor forward RunDistributedBuild(config, target, log)
   }
 }

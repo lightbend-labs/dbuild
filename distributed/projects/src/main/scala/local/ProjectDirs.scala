@@ -17,11 +17,18 @@ object ProjectDirs {
   def logDir = new File(targetDir, "logs")
   
   // TODO - Check lock file or something...
-  def useDirFor[A](build: BuildConfig)(f: File => A) = {
-    val dir = new File(targetDir, "projects")
-    val projdir = new File(dir, hashing.sha1Sum(build))
+  def useDirFor[A](build: BuildConfig, tdir: File = targetDir)(f: File => A) = {
+    val dir = new File(tdir, "projects")
+    // TODO - just build name?
+    val projdir = new File(dir, build.name + "-" + hashing.sha1Sum(build))
     projdir.mkdirs()
     f(projdir)
+  }
+  
+  def makeDirForBuild(build: DistributedBuildConfig, tdir: File = targetDir): File = {
+    val file = new File(tdir, hashing.sha1Sum(build))
+    file.mkdirs()
+    file
   }
   
   

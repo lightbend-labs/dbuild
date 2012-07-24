@@ -3,9 +3,10 @@ package project
 package dependencies
 
 import sbt.IO
+import sbt.Path._
 import java.io.File
 
-import resolve.ProjectResolver
+import project.resolve.ProjectResolver
 import model.{Build,BuildConfig}
 import logging._
 import config.makeConfigString
@@ -17,8 +18,8 @@ class Extractor(
     dependencyExtractor: BuildDependencyExtractor) {
   
   /** Given an initial build configuraiton, extract *ALL* information needed for a full build. */
-  def extract(build: BuildConfig, logger: logging.Logger): Build = 
-    local.ProjectDirs.useDirFor(build) { dir =>
+  def extract(tdir: File, build: BuildConfig, logger: logging.Logger): Build = 
+    local.ProjectDirs.useDirFor(build, tdir) { dir =>
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
       val config = resolver.resolve(build, dir, logger)
       logger.debug("Repeatable Config: " + makeConfigString(config))

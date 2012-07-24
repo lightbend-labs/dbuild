@@ -12,23 +12,24 @@ import akka.util.duration._
 import akka.util.Timeout
 import graph.Graphs
 import actorpaterns.forwardingErrorsToFutures
+import sbt.Path._
+import java.io.File
 
-case class RunDistributedBuild(build: DistributedBuildConfig, logger: Logger)
+case class RunDistributedBuild(build: DistributedBuildConfig, target: File, logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   def receive = {
-    case RunDistributedBuild(build, log) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(build, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       val logger = log.newNestedLogger(hashing.sha1Sum(build))
       val result = for {
-        fullBuild <- analyze(build, log.newNestedLogger(hashing.sha1Sum(build)))
+        fullBuild <- analyze(build, target, log.newNestedLogger(hashing.sha1Sum(build)))
         fullLogger = log.newNestedLogger(hashing.sha1Sum(fullBuild))
         _ = fullLogger.info("---==   Repeatable Build Config   ===---")
-        repeatable = DistributedBuildConfig(fullBuild.builds map (_.config))
-        _ = fullLogger.info(config makeConfigString repeatable)
+        _ = fullLogger.info(config makeConfigString fullBuild.config)
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
-        arts <- runBuild(fullBuild, repeatable, fullLogger)
+        arts <- runBuild(target, fullBuild, fullLogger)
         //_ = logPoms(fullBuild, arts, fullLogger)
       } yield arts
       result pipeTo listener
@@ -49,14 +50,16 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   implicit val buildTimeout: Timeout = 4 hours 
 
   // Chain together some Asynch to run this build.
-  def runBuild(build: DistributedBuild, repeatable: DistributedBuildConfig, log: Logger): Future[BuildArtifacts] = {
+  def runBuild(target: File, build: DistributedBuild, log: Logger): Future[BuildArtifacts] = {
     implicit val ctx = context.system
+    val repeatable = build.config
+    val tdir = local.ProjectDirs.makeDirForBuild(build.config, target / "build")
     def runBuild(builds: List[Build], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
       builds match {
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
-            newArts <- buildProject(b, arts, log.newNestedLogger(b.config.name))
+            newArts <- buildProject(tdir, b, arts, log.newNestedLogger(b.config.name))
           } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts, arts.localRepo)
           runBuild(rest, nextArts)
         case _ => fArts
@@ -67,10 +70,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   }  
   
   // Asynchronously extract information from builds.
-  def analyze(config: DistributedBuildConfig, log: Logger): Future[DistributedBuild] = {
+  def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[DistributedBuild] = {
     implicit val ctx = context.system
+    val tdir = local.ProjectDirs.makeDirForBuild(config, target / "extraction")
     val builds: Future[Seq[Build]] = 
-      Future.traverse(config.projects)(extract(log))
+      Future.traverse(config.projects)(extract(tdir, log))
     // Now determine build ordering.  
     val ordered = builds map { seq =>
       val graph = new BuildGraph(seq)
@@ -81,8 +85,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   } 
   
   // Our Asynchronous API.
-  def extract(logger: Logger)(config: BuildConfig): Future[Build] =
-    (extractor ? ExtractBuildDependencies(config, logger.newNestedLogger(config.name))).mapTo[Build]
-  def buildProject(build: Build, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
-    (builder ? RunBuild(build, deps, logger)).mapTo[BuildArtifacts]
+  def extract(target: File, logger: Logger)(config: BuildConfig): Future[Build] =
+    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[Build]
+  def buildProject(target: File, build: Build, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
+    (builder ? RunBuild(target, build, deps, logger)).mapTo[BuildArtifacts]
 }

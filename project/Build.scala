@@ -95,7 +95,7 @@ object Defaults {
 trait BuildHelper extends Build {
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
-    version := "0.1",
+    version := "0.2-SNAPSHOT",
     organization := "com.typesafe.dsbt",
     scalaVersion := "2.9.2",
     libraryDependencies += specs2,

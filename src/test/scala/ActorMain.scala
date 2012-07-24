@@ -86,7 +86,7 @@ object ActorMain {
     BuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master")
     
   def akka =
-    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#wip-scala210M5-√")
+    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#master")
     
   def communityProjects = 
     Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest)

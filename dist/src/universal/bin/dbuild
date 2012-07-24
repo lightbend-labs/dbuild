@@ -1,0 +1,8 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(dirname $0)
+
+java \
+  -Dsbt.boot.properties=$SCRIPT_DIR/dsbt.properties \
+  -jar $SCRIPT_DIR/sbt-launch.jar \
+  $@

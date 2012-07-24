@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 import Dependencies._
-  
+import com.typesafe.packager.PackagerPlugin.Universal  
 object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
@@ -15,7 +15,11 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   )
 
   lazy val dist = (
-    Project("dist", file("dist")/*, eclipse plugin bombs if we do this: settings = Packaging.settings */) settings(Packaging.settings:_*)
+    Project("dist", file("dist")/*, eclipse plugin bombs if we do this: settings = Packaging.settings */) 
+    settings(Packaging.settings:_*)
+    settings(
+      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDsbtProps
+    )
   )
 
   // The component projects...

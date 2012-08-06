@@ -99,22 +99,6 @@ object SbtRunner {
   def writeDeps(file: File): Unit =
     IO.write(file, """addSbtPlugin("com.typesafe.dsbt" % "distributed-sbt-plugin" % """+'"'+ Defaults.version + "\")")
   
-  def writeRepoFile(config: File): Unit = {
-    val ivyPattern = "[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"
-    val sb = new StringBuilder("[repositories]\n")
-    sb append  "  local\n"
-    sb append ("  machine-local: file://%s, %s\n" format (new File("/home/jsuereth/.ivy2/local").getAbsolutePath, ivyPattern))
-    sb append  "  maven-central\n"
-    sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
-    sb append  "  java-annoying-cla-shtuff: http://download.java.net/maven/2/\n"
-    sb append ("  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases\n")
-    sb append ("  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, %s\n" format (ivyPattern))
-    sb append ("  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, %s\n" format (ivyPattern))
-    sb append ("  sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, %s\n" format (ivyPattern))
-    sb append  "  coda: http://repo.codahale.com\n"
-    // This is because the git plugin is too prevalent...
-    sb append  "  jgit-repo: http://download.eclipse.org/jgit/maven\n"
-    // TODO - Typesafe repositories? ... NAH
-    IO.write(config, sb.toString)
-  } 
+  def writeRepoFile(config: File): Unit =
+    Repositories.writeRepoFile(config)
 }

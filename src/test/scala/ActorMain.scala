@@ -73,6 +73,8 @@ object ActorMain {
     BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community")
   
   def scalaConfig =
+    //BuildConfig("scala", "scala", "git://github.com/scala/scala.git#d0623dc766")
+    //BuildConfig("scala", "scala", "git://github.com/scala/scala.git#5c5e8d4dcd")  BORKED
     BuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
     //BuildConfig("scala", "scala", "git://github.com/scala/scala.git#4c6522bab70ce8588f5688c9b4c01fe3ff8d24fc", "")
     
@@ -88,13 +90,17 @@ object ActorMain {
   def akka =
     BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#master")
     
+  def scalaGraph =
+    BuildConfig("scala-graph", "sbt", "http://subversion.assembla.com/svn/scala-graph/trunk")
+    
   def communityProjects = 
-    Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest)
+    Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest, scalaGraph)
     
     
   def dBuildConfig =
     //DistributedBuildConfig(Seq(scalariform))
-    DistributedBuildConfig(/*sbtPlugins ++*/ communityProjects)
+    DistributedBuildConfig(Seq(scalaConfig, scalaGraph))
+    //DistributedBuildConfig(/*sbtPlugins ++*/ communityProjects)
   
   def parsedDbuildConfig =
     parseStringInto[DistributedBuildConfig](repeatableConfig) getOrElse sys.error("Failure to parse: " + repeatableConfig)

@@ -26,7 +26,7 @@ class GitProjectResolver extends ProjectResolver {
     Git.fetch("origin", dir, log)
     
     // Now clean the directory so only desired artifacts are there...
-    if(!(config.uri startsWith "git://github.com/scala/scala.git")) Git.clean(dir, log)
+    Git.clean(dir, log)
     // TODO - Fetch non-standard references?
     // Then checkout desired branch/commit/etc.
     Option(uri.getFragment()) foreach (ref => Git.checkout(dir, ref, log))

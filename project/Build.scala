@@ -7,18 +7,21 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
+  def MyVersion: String = "0.2"
+  
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
     aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo)
-    settings(publish := ())
+    settings(publish := (), version := MyVersion)
   )
 
   lazy val dist = (
     Project("dist", file("dist")/*, eclipse plugin bombs if we do this: settings = Packaging.settings */) 
     settings(Packaging.settings:_*)
     settings(
-      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDsbtProps
+      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDsbtProps,
+      version := MyVersion
     )
   )
 
@@ -94,8 +97,10 @@ object Defaults {
 // Additional DSL
 trait BuildHelper extends Build {
   
+  def MyVersion: String
+  
   def defaultDSettings: Seq[Setting[_]] = Seq(
-    version := "0.2-SNAPSHOT",
+    version := MyVersion,
     organization := "com.typesafe.dsbt",
     scalaVersion := "2.9.2",
     libraryDependencies += specs2,

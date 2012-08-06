@@ -1,6 +1,6 @@
 package config
 
-import com.typesafe.config.ConfigRenderOptions
+//import com.typesafe.config.ConfigRenderOptions
 
 /** Pretty print a value into a configuration string..
  * 
@@ -31,7 +31,8 @@ object ConfigPrint {
   
   implicit object configObj extends ConfigPrint[ConfigObject] {
     def apply(obj: ConfigObject): String =
-      obj render ConfigRenderOptions.concise
+      obj render ()
+      //obj render ConfigRenderOptions.concise
   }
   
   def makeMember[A: ConfigPrint](name: String, value: A): String =

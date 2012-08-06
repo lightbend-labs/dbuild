@@ -5,7 +5,7 @@ import com.typesafe.{config => j}
 
 object Config {
 
-    def defaultRenderOptions = j.ConfigRenderOptions.defaults
+    //def defaultRenderOptions = j.ConfigRenderOptions.defaults
 
     def defaultParseOptions = j.ConfigParseOptions.defaults
 

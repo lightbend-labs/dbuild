@@ -4,7 +4,7 @@ package object config {
   import config._
   
   type ConfigOrigin = j.ConfigOrigin
-  type ConfigRenderOptions = j.ConfigRenderOptions
+  //type ConfigRenderOptions = j.ConfigRenderOptions
   type ConfigParseOptions = j.ConfigParseOptions
   type ConfigResolveOptions = j.ConfigResolveOptions
   type ConfigException = j.ConfigException

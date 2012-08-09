@@ -97,9 +97,37 @@ object ActorMain {
     Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest, scalaGraph)
     
     
+  def sbinary =
+    BuildConfig("sbinary", "sbt", "git://github.com/scala-ide/sbinary.git#plugin_version")
+    
+  def sbt13 =
+    BuildConfig("sbt", "sbt", "git://github.com/harrah/xsbt.git#0.13",
+        config.parseString("""{
+          projects = [ 
+            "classpath", 
+            "logging", 
+            "io", 
+            "control", 
+            "classfile", 
+            "process", 
+            "relation", 
+            "interface", 
+            "persist", 
+            "api",
+            "compiler-integration", 
+            "incremental-compiler", 
+            "compile", 
+            "compiler-interface"]    
+          crossPaths = true
+          publishMavenStyle = true
+        }""").resolve.root)
+    
+    
+    
   def dBuildConfig =
     //DistributedBuildConfig(Seq(scalariform))
-    DistributedBuildConfig(Seq(scalaConfig, scalaGraph))
+    //DistributedBuildConfig(Seq(scalaConfig, scalaGraph))
+    DistributedBuildConfig(Seq(scalaConfig, sbinary, sbt13))
     //DistributedBuildConfig(/*sbtPlugins ++*/ communityProjects)
   
   def parsedDbuildConfig =

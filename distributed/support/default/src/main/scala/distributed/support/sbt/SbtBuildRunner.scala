@@ -17,7 +17,7 @@ object SbtBuilder {
     Repositories.writeRepoFile(config, "build-local" -> repo.toURI)
     
   
-  def buildSbtProject(runner: SbtRunner)(project: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {    
+  def buildSbtProject(runner: SbtRunner)(project: File, config: SbtBuildConfig, log: logging.Logger): BuildArtifacts = {    
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dsbt"
       // TODO - Where should depsfile + repo file be?  
@@ -27,8 +27,8 @@ object SbtBuilder {
       val repoFile = dsbtDir / "repositories"
       // We need a new ivy cache to ensure no corruption of minors (or projects)
       val ivyCache = dsbtDir / "ivy2"
-      IO.write(depsFile, makeConfigString(dependencies))
-      writeRepoFile(repoFile, dependencies.localRepo)
+      IO.write(depsFile, makeConfigString(config))
+      writeRepoFile(repoFile, config.artifacts.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       runner.run(
         projectDir = project,

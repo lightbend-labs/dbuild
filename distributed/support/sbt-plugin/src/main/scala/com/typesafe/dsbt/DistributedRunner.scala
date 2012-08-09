@@ -2,6 +2,7 @@ package com.typesafe.dsbt
 
 import sbt._
 import distributed.project.model
+import distributed.support.sbt.SbtBuildConfig
 import _root_.config.makeConfigString
 import _root_.config.parseFileInto
 import StateHelpers._
@@ -10,19 +11,27 @@ import NameFixer.fixName
 
 
 object DistributedRunner {
+  
+  // TODO - Config helper!
+  def isValidProject(config: SbtBuildConfig, ref: ProjectRef): Boolean =
+    config.config.projects.isEmpty || (config.config.projects contains ref.project) 
+  
   // TODO - Use a specific key that allows posting other kinds of artifacts.
   // Maybe also use a platform-specific task such that we can expose
   // windows artifacts on windows, etc.
-  def buildProject(state: State): (State, ArtifactMap) = {
+  def buildProject(state: State, config: SbtBuildConfig): (State, ArtifactMap) = {
     println("Building project")
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
+    // TODO - Clean this up!
     refs.foldLeft[(State, ArtifactMap)](state -> Seq.empty) { 
       case ((state, amap), ref) => 
-      val (state2,artifacts) = 
-        extracted.runTask(extractArtifacts, state)
-      state2 -> (amap ++ artifacts)
+        if(isValidProject(config, ref)) {
+          val (state2,artifacts) = 
+            extracted.runTask(extractArtifacts in ref, state)
+          state2 -> (amap ++ artifacts)
+        } else state -> amap
     }
   }
   
@@ -32,11 +41,14 @@ object DistributedRunner {
   def printResults(fileName: String, artifacts: ArtifactMap, localRepo: File): Unit = 
     IO.write(new java.io.File(fileName), makeConfigString(makeBuildResults(artifacts, localRepo)))
   
-  def loadBuildArtifacts: Option[model.BuildArtifacts] =
+  def loadBuildConfig: Option[SbtBuildConfig] =
     for {
       f <- Option(System getProperty "project.build.deps.file") map (new File(_))
-      deps <- parseFileInto[model.BuildArtifacts](f)
+      deps <- parseFileInto[SbtBuildConfig](f)
     } yield deps
+    
+  def loadBuildArtifacts: Option[model.BuildArtifacts] =
+    loadBuildConfig map (_.artifacts)
     
   def fixModule(arts: model.BuildArtifacts)(m: ModuleID): ModuleID = {
       def findArt: Option[model.ArtifactLocation] =
@@ -106,15 +118,17 @@ object DistributedRunner {
     Project.setProject(session, newStructure2, state)
   }
   
-  def publishProjects(state: State): State = {
+  def publishProjects(state: State, config: SbtBuildConfig): State = {
     println("Publishing artifacts")
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
     refs.foldLeft[State](state) { case (state, ref) => 
-      val (state2,_) = 
-        extracted.runTask(Keys.publish in ref, state)
-      state2
+      if(isValidProject(config, ref)) { 
+        val (state2,_) = 
+          extracted.runTask(Keys.publish in ref, state)
+        state2
+      } else state
     }
   }
   
@@ -130,13 +144,13 @@ object DistributedRunner {
     } println("\t(%s) - %s" format (r.name, r.toString))
   }
     
-  def buildStuff(state: State, resultFile: String, arts: model.BuildArtifacts): State = {
+  def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
     printResolvers(state)
-    val state3 = fixDependencies(arts, state)
-    val (state4, artifacts) = buildProject(state3)
-    // TODO - Publish artifacts...
-    publishProjects(state4)
-    printResults(resultFile, artifacts, arts.localRepo)
+    val state3 = fixDependencies(config.artifacts, state)
+    val (state4, artifacts) = buildProject(state3, config)
+    // TODO - Use artifacts extracted to deploy!
+    publishProjects(state4, config)
+    printResults(resultFile, artifacts, config.artifacts.localRepo)
     state4
   }
     
@@ -145,8 +159,8 @@ object DistributedRunner {
     val resultFile = Option(System.getProperty("project.build.results.file"))
     val results = for {
       f <- resultFile
-      arts <- loadBuildArtifacts
-    } yield buildStuff(state, f, arts)
+      config <- loadBuildConfig
+    } yield buildStuff(state, f, config)
     results getOrElse state
   }
   

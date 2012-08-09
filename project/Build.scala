@@ -89,7 +89,7 @@ object Defaults {
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
-    dependsOn(dprojects)
+    dependsOn(dprojects, defaultSupport)
   )
 }
 

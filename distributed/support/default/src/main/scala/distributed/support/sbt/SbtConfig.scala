@@ -2,6 +2,7 @@ package distributed
 package support
 package sbt
 
+import project.model._
 import config.{ConfigRead, ConfigPrint}
 
 /** Configuration used for SBT builds. */
@@ -49,4 +50,34 @@ object SbtConfig {
         case _ => None
       }
   } 
+}
+
+
+case class SbtBuildConfig(config: SbtConfig, artifacts: BuildArtifacts)
+object SbtBuildConfig {
+  implicit object Configured extends ConfigPrint[SbtBuildConfig] with ConfigRead[SbtBuildConfig] {
+    import config._
+    import ConfigPrint.makeMember
+    import ConfigRead.readMember
+    import _root_.sbt.Types.:+:
+    import _root_.sbt.HNil
+    private val Members = (
+      readMember[SbtConfig]("config") :^:
+      readMember[BuildArtifacts]("artifacts")
+    )
+    def apply(c: SbtBuildConfig): String = {
+      val sb = new StringBuffer("{")
+      sb append makeMember("config", c.config)
+      sb append ","
+      sb append makeMember("artifacts", c.artifacts)
+      sb append "}"
+      sb.toString
+    }
+    def unapply(c: ConfigValue): Option[SbtBuildConfig] = 
+      c match {
+        case Members(config :+: artifacts :+: HNil) =>
+          Some(SbtBuildConfig(config, artifacts))
+        case _ => None
+      }    
+  }
 }

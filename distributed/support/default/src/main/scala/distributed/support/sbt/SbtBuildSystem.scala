@@ -34,6 +34,6 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
     val sc = sbtConfig(project.config)
     // TODO - Does this work correctly?
     val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
-    SbtBuilder.buildSbtProject(runner)(pdir, dependencies, log)
+    SbtBuilder.buildSbtProject(runner)(pdir, SbtBuildConfig(sc, dependencies), log)
   }
 }

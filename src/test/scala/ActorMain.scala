@@ -88,7 +88,7 @@ object ActorMain {
     BuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master")
     
   def akka =
-    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#master")
+    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#wip-210-SNAPSHOT-√")
     
   def scalaGraph =
     BuildConfig("scala-graph", "sbt", "http://subversion.assembla.com/svn/scala-graph/trunk")
@@ -121,14 +121,21 @@ object ActorMain {
           crossPaths = true
           publishMavenStyle = true
         }""").resolve.root)
+        
+  def sbtRepublish =
+    BuildConfig("sbt-republish", "sbt", "git://github.com/typesafehub/sbt-republish#sbt-0.12")
+        
+  def scalaIdeToolChain =
+    BuildConfig("scala-ide-toolchain", "maven", "git://github.com/scala-ide/scala-ide.git#master",
+        config.parseString("""{ directory = "org.scala-ide.build-toolchain" }""").resolve.root)
     
     
     
   def dBuildConfig =
-    //DistributedBuildConfig(Seq(scalariform))
+    //DistributedBuildConfig(Seq(scalaIdeToolChain))
     //DistributedBuildConfig(Seq(scalaConfig, scalaGraph))
-    DistributedBuildConfig(Seq(scalaConfig, sbinary, sbt13))
-    //DistributedBuildConfig(/*sbtPlugins ++*/ communityProjects)
+    //DistributedBuildConfig(Seq(scalaConfig, sbinary, sbt13, sbtRepublish))
+    DistributedBuildConfig(/*sbtPlugins ++*/ communityProjects)
   
   def parsedDbuildConfig =
     parseStringInto[DistributedBuildConfig](repeatableConfig) getOrElse sys.error("Failure to parse: " + repeatableConfig)

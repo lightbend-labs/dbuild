@@ -63,7 +63,8 @@ object SbtRunner {
   val defaultJavaArgs = Seq(
    "-XX:+CMSClassUnloadingEnabled",
    "-Xms1536m",
-   "-Xmx1536m", 
+   "-Xmx1536m",
+   "-Xss2m",
    "-XX:MaxPermSize=384m",
    "-XX:ReservedCodeCacheSize=192m"    
   )

@@ -17,12 +17,11 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
   final val extractor = new SbtRunner(buildBase / "extractor")
   
   
-  def sbtConfig(config: BuildConfig): SbtConfig = {
+  def sbtConfig(config: BuildConfig): SbtConfig =
     config.extra match {
       case SbtConfig.Configured(sc) => sc
       case _ => sys.error("SBT is misconfigured: " + config)
     }
-  }
   
   def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
     val sc = sbtConfig(config)

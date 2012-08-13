@@ -10,13 +10,30 @@ import _root_.sbt.Path._
 import collection.JavaConverters._
 object MvnBuildSystem extends BuildSystem {
   val name = "maven"
-  def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta =
-    // TODO - allow directory specification for Mvn.
-    DependencyExtractor extract (dir / "pom.xml")
+  def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+    val mc = mvnConfig(config)
+    val pom = 
+      if(mc.directory.isEmpty) dir / "pom.xml"
+      else  dir / mc.directory / "pom.xml"
+    DependencyExtractor extract pom
+  }
+  
+  
+  def mvnConfig(config: BuildConfig): MvnConfig =
+    config.extra match {
+      case MvnConfig.Configured(c) => c
+      case _ => sys.error("Maven build is misconfigured: " + config)
+    }
+  
   def runBuild(project: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
     log.info("Running maven...")
+    val mc = mvnConfig(project.config)
+    val pom = 
+      if(mc.directory.isEmpty) dir / "pom.xml"
+      else  dir / mc.directory / "pom.xml"
+    // TODO - Fix up project poms.
     // TODO - Allow directory/pom specification for Mvn.
-    val result = MvnBuilder.runBuild(dir / "pom.xml", dependencies.localRepo, log)
+    val result = MvnBuilder.runBuild(pom, dependencies.localRepo, log)
     if(result.hasExceptions()) {
       result.getExceptions.asScala foreach (t => log.trace(t))
     } else log.info("DONE!")

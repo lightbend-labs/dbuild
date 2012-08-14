@@ -9,11 +9,11 @@ import _root_.sbt.IO
 
 object Repositories {
   val ivyPattern = "[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"  
-  def writeRepoFile(config: File, repositories: (String, URI)*): Unit = {
+  def writeRepoFile(config: File, repositories: (String, String)*): Unit = {
     val sb = new StringBuilder("[repositories]\n")
     for((name, uri) <- repositories) {
-      sb append (" ivy-%s: %s, %s\n" format(name, uri.toASCIIString, ivyPattern))
-      sb append (" mvn-%s: %s\n" format(name, uri.toASCIIString))
+      sb append (" ivy-%s: %s, %s\n" format(name, uri, ivyPattern))
+      sb append (" mvn-%s: %s\n" format(name, uri))
     }
     // TODO - move these into default config or something....
     sb append  "  maven-central\n"

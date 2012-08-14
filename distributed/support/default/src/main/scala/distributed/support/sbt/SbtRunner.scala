@@ -18,25 +18,23 @@ class SbtRunner(globalBase: File) {
         "sbt.override.build.repos" -> "true",
         "sbt.log.noformat" -> "true")
         
-  private def makeArgsFromProps(props: Map[String,String]): Seq[String] =
-    props.map { case (k,v) => "-D%s=%s" format (k,v) } {collection.breakOut}
+
   
   def localIvyProps: Map[String,String] =
     Map("sbt.ivy.home" -> (globalBase / ".ivy2").getAbsolutePath)
-    
+  
   def run(projectDir: File, 
           log: Logger,
           javaProps: Map[String,String] = Map.empty,
           javaArgs: Seq[String] = SbtRunner.defaultJavaArgs)(args: String*): Unit = {
     removeProjectBuild(projectDir, log)
     
-    val cmd = (
-      Seq("java") ++
-      makeArgsFromProps(javaProps ++ defaultProps) ++ 
-      javaArgs ++ 
-      Seq("-jar", launcherJar.getAbsolutePath) ++
-      args
-    )
+    val cmd = SbtRunner.makeShell(
+        launcherJar.getAbsolutePath,
+        defaultProps,
+        javaProps, 
+        javaArgs)(args:_*)
+      
     log.debug("Running: " + cmd.mkString("[", ",", "]"))
     Process(cmd, Some(projectDir)) ! log match {
       case 0 => ()
@@ -90,7 +88,24 @@ object SbtRunner {
     launcherJar
   }
   
-  private def transferResource(r: String, f: File): Unit = {
+  private def makeArgsFromProps(props: Map[String,String]): Seq[String] =
+    props.map { case (k,v) => "-D%s=%s" format (k,v) } {collection.breakOut}
+    
+    
+  def makeShell(launcherJar: String,
+          defaultProps: Map[String,String],
+          javaProps: Map[String,String] = Map.empty,
+          javaArgs: Seq[String] = SbtRunner.defaultJavaArgs)(args: String*): Seq[String] = {
+    (
+      Seq("java") ++
+      makeArgsFromProps(javaProps ++ defaultProps) ++ 
+      javaArgs ++ 
+      Seq("-jar", launcherJar) ++
+      args
+    )
+  }
+  
+  def transferResource(r: String, f: File): Unit = {
      val in = (Option(getClass.getClassLoader.getResourceAsStream(r)) 
           getOrElse sys.error("Could not find "+r+" on the path."))
      try IO.transfer(in, f)

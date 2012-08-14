@@ -31,8 +31,11 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
 
   def runBuild(project: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
     val sc = sbtConfig(project.config)
+    val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
-    SbtBuilder.buildSbtProject(runner)(pdir, SbtBuildConfig(sc, dependencies), log)
+    val config = SbtBuildConfig(sc, dependencies)
+    try SbtBuilder.buildSbtProject(runner)(pdir, config, log)
+    finally SbtBuilder.makeDebugPak(pdir, project.config.name, config, log)
   }
 }

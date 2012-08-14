@@ -91,6 +91,7 @@ object DistributedRunner {
       fixScalaVersion(arts)(s) 
     case Keys.libraryDependencies.key => 
       fixLibraryDependencies(arts)(s)
+    // TODO - Fix this for remote debugging.
     case Keys.publishTo.key =>
       fixPublishTo(Resolver.file("deploy-to-local-repo", arts.localRepo.getAbsoluteFile))(s)
     case Keys.crossVersion.key =>

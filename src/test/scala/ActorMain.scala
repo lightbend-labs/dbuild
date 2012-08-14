@@ -94,7 +94,7 @@ object ActorMain {
     BuildConfig("scala-graph", "sbt", "http://subversion.assembla.com/svn/scala-graph/trunk")
     
   def communityProjects = 
-    Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest, scalaGraph)
+    Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest/*, scalaGraph*/)
     
     
   def sbinary =

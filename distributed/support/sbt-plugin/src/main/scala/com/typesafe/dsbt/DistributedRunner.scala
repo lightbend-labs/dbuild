@@ -16,6 +16,33 @@ object DistributedRunner {
   def isValidProject(config: SbtBuildConfig, ref: ProjectRef): Boolean =
     config.config.projects.isEmpty || (config.config.projects contains ref.project) 
   
+  def timed[A](f: => Stated[A]): Stated[Long] = {
+    val start = java.lang.System.currentTimeMillis
+    val result = f
+    val end = java.lang.System.currentTimeMillis
+    result map (_ => (end - start))
+  }
+  
+  def averageOf[A](n: Int)(state: Stated[A])(f: Stated[Long] => Stated[Long]): (Stated[Double]) = {
+    val result = (state.of(0L) /: (0 to n).toSeq) { (state, _) =>
+      val prev = state.value
+      timed(f(state)) map (_ + prev)
+    }
+    result map (_ / n.toDouble)
+  }
+    
+  def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+     val x = Stated(state)
+     def cleanBuild(state: Stated[_]) = {
+       val cleaned = state runTask Keys.clean
+       timed(cleaned runTask (Keys.compile in Compile))
+     }
+     val perf = averageOf(10)(x)(cleanBuild)
+     val y = perf.runTask(extractArtifacts in ref)
+     val arts = y.value map (_.copy(buildTime = perf.value))
+    (y.state, arts)
+  } 
+    
   // TODO - Use a specific key that allows posting other kinds of artifacts.
   // Maybe also use a platform-specific task such that we can expose
   // windows artifacts on windows, etc.
@@ -29,7 +56,7 @@ object DistributedRunner {
       case ((state, amap), ref) => 
         if(isValidProject(config, ref)) {
           val (state2,artifacts) = 
-            extracted.runTask(extractArtifacts in ref, state)
+            timedBuildProject(ref, state)
           state2 -> (amap ++ artifacts)
         } else state -> amap
     }

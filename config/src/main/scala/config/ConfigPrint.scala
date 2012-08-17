@@ -25,6 +25,11 @@ object ConfigPrint {
       '"' + in.replaceAll("\"", "\\\"") + '"'
   }
   
+  implicit object doubleConfig extends ConfigPrint[Double] {
+    def apply(in: Double): String =
+      '"' + in.toString + '"'
+  }
+  
   implicit object fileConfig extends ConfigPrint[java.io.File] {
     def apply(f: java.io.File): String = f.getAbsolutePath
   }

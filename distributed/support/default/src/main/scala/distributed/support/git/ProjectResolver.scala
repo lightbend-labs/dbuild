@@ -26,7 +26,7 @@ class GitProjectResolver extends ProjectResolver {
     Git.fetch("origin", dir, log)
     
     // Now clean the directory so only desired artifacts are there...
-    Git.clean(dir, log)
+    if(config.name != "scala") Git.clean(dir, log)
     // TODO - Fetch non-standard references?
     // Then checkout desired branch/commit/etc.
     Option(uri.getFragment()) foreach (ref => Git.checkout(dir, ref, log))

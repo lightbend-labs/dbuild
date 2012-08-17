@@ -11,7 +11,7 @@ import sbt.HNil
 
 // TODO - Do we have enough information here?
 // - Is the version even right to assume?
-case class ArtifactLocation(dep: ProjectRef, local: File, version: String)
+case class ArtifactLocation(dep: ProjectRef, local: File, version: String, buildTime: Double = 0.0)
 object ArtifactLocation {
   implicit object PrettyArtLoc extends ConfigPrint[ArtifactLocation] {
     def apply(l: ArtifactLocation): String = {
@@ -21,6 +21,8 @@ object ArtifactLocation {
       sb append makeMember("info", l.dep)
       sb append ","
       sb append makeMember("version", l.version)
+      sb append ","
+      sb append makeMember("buildTime", l.buildTime)
       sb append "}"
       sb.toString
     }
@@ -31,12 +33,13 @@ object ArtifactLocation {
     val Members = (
       readMember[File]("location") :^:
       readMember[ProjectRef]("info") :^:
-      readMember[String]("version")
+      readMember[String]("version") :^:
+      readMember[Double]("buildTime")
     )
     def unapply(c: ConfigValue): Option[ArtifactLocation] = {
       c match {
-        case Members(file :+: dep :+: version :+: HNil) =>
-          Some(ArtifactLocation(dep, file, version))
+        case Members(file :+: dep :+: version :+: time :+: HNil) =>
+          Some(ArtifactLocation(dep, file, version, time))
         case _ => None
       }
     }

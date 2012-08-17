@@ -56,6 +56,14 @@ object ConfigRead {
       case _                      => None
     }
   }
+  implicit object doubleRead extends ConfigRead[Double] {
+    import util.control.Exception.catching
+    def unapply(t: ConfigValue) = t match {
+      case ConfigString(value) =>
+        catching(classOf[NumberFormatException]) opt value.toDouble
+      case _ => None
+    }
+  }
 }
 
 

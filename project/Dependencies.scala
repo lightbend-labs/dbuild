@@ -3,11 +3,11 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion = "2.0.2"
+  val akkaVersion = "2.0.3"
   val sbtVersion = "0.12.0"
   val mvnVersion = "3.0.4"
 
-  val typesafeConfig = "com.typesafe" % "config" % "0.4.0"
+  val typesafeConfig = "com.typesafe" % "config" % "0.3.1"
   val akkaActor      = "com.typesafe.akka" % "akka-actor" % akkaVersion
 
   val specs2         = "org.specs2" %% "specs2" % "1.10" % "test"

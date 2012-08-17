@@ -7,7 +7,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.3"
+  def MyVersion: String = "0.4-SNAPSHOT"
   
   lazy val root = (
     Project("root", file(".")) 
@@ -35,7 +35,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val config = (
       LibProject("config") 
-      dependsOnRemote(akkaActor, sbtCollections)
+      dependsOnRemote(typesafeConfig, sbtCollections)
     )
 
   // Projects relating to distributed builds.

@@ -64,6 +64,15 @@ object ConfigRead {
       case _ => None
     }
   }
+  
+  implicit object booleanRead extends ConfigRead[Boolean] {
+    import util.control.Exception.catching
+    def unapply(t: ConfigValue) = t match {
+      case ConfigString(value) =>
+        catching(classOf[IllegalArgumentException]) opt value.toBoolean
+      case _ => None
+    }
+  }  
 }
 
 

@@ -30,6 +30,11 @@ object ConfigPrint {
       '"' + in.toString + '"'
   }
   
+  implicit object booleanConfig extends ConfigPrint[Boolean] {
+    def apply(in: Boolean): String =
+      '"' + (if(in) "true" else "false") + '"'
+  }
+  
   implicit object fileConfig extends ConfigPrint[java.io.File] {
     def apply(f: java.io.File): String = f.getAbsolutePath
   }

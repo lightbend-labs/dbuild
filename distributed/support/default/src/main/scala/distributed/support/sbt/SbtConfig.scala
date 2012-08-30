@@ -9,6 +9,7 @@ import config.{ConfigRead, ConfigPrint}
 case class SbtConfig(
     sbtVersion: String,
     directory: String,
+    measurePerformance: Boolean = false,
     projects: Seq[String] = Seq.empty)
 
 
@@ -26,11 +27,13 @@ object SbtConfig {
       config.parseString("""{
         sbt-version = "%s"
         directory = ""
+        measure-performance = "false"
         projects = []
       }""" format (sbtVersion)).resolve.root
     private val Members = (
         readMember[String]("sbt-version") :^:
         readMember[String]("directory") :^:
+        readMember[Boolean]("measure-performance") :^:
         readMember[Seq[String]]("projects")
     )
     def apply(c: SbtConfig): String = {
@@ -39,14 +42,16 @@ object SbtConfig {
       sb append ","
       sb append makeMember("directory", c.directory)
       sb append ","
+      sb append makeMember("measure-performance", c.measurePerformance)
+      sb append ","
       sb append makeMember("projects", c.projects)
       sb append "}"
       sb.toString
     }
     def unapply(c: ConfigValue): Option[SbtConfig] = 
       (c withFallback defaultObj) match {
-        case Members(sbtV :+: dir :+: projs :+: HNil) =>
-          Some(SbtConfig(sbtV, dir, projs))
+        case Members(sbtV :+: dir :+: perf :+: projs :+: HNil) =>
+          Some(SbtConfig(sbtV, dir, perf, projs))
         case _ => None
       }
   } 

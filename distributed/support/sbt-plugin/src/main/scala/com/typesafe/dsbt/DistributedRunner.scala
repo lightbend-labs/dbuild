@@ -42,6 +42,12 @@ object DistributedRunner {
      val arts = y.value map (_.copy(buildTime = perf.value))
     (y.state, arts)
   } 
+  
+  def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+     val y = Stated(state).runTask(extractArtifacts in ref)
+    (y.state, y.value)
+  } 
+  
     
   // TODO - Use a specific key that allows posting other kinds of artifacts.
   // Maybe also use a platform-specific task such that we can expose
@@ -51,15 +57,18 @@ object DistributedRunner {
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
-    // TODO - Clean this up!
-    refs.foldLeft[(State, ArtifactMap)](state -> Seq.empty) { 
-      case ((state, amap), ref) => 
-        if(isValidProject(config, ref)) {
-          val (state2,artifacts) = 
-            timedBuildProject(ref, state)
-          state2 -> (amap ++ artifacts)
-        } else state -> amap
-    }
+    
+    def buildAggregate(f: (ProjectRef, State) => (State, ArtifactMap)): (State,ArtifactMap) =
+      refs.foldLeft[(State, ArtifactMap)](state -> Seq.empty) { 
+	    case ((state, amap), ref) => 
+	      if(isValidProject(config, ref)) {
+	    	val (state2,artifacts) = 
+	    	  f(ref, state)
+	    	state2 -> (amap ++ artifacts)
+	      } else state -> amap    
+      }
+    if(config.config.measurePerformance) buildAggregate(timedBuildProject)
+    else buildAggregate(untimedBuildProject)
   }
   
   def makeBuildResults(artifacts: ArtifactMap, localRepo: File): model.BuildArtifacts = 

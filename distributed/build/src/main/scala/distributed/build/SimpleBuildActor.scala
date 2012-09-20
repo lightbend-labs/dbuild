@@ -52,13 +52,14 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifacts] = {
     implicit val ctx = context.system
     val repeatable = build.config
-    val tdir = local.ProjectDirs.makeDirForBuild(build.config, target / "build")
+    val tdir = local.ProjectDirs.targetDir
     def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
       builds match {
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
-            newArts <- buildProject(tdir, b, arts, log.newNestedLogger(b.config.name))
+            uuid = build.projectUUID(b.config.name) getOrElse sys.error("No UUID found for: " + b.config.name)
+            newArts <- buildProject(tdir, uuid, b, arts, log.newNestedLogger(b.config.name))
           } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts, arts.localRepo)
           runBuild(rest, nextArts)
         case _ => fArts
@@ -71,7 +72,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   // Asynchronously extract information from builds.
   def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[RepeatableDistributedBuild] = {
     implicit val ctx = context.system
-    val tdir = local.ProjectDirs.makeDirForBuild(config, target / "extraction")
+    val uuid = hashing sha1Sum config
+    val tdir = target / "extraction" / uuid
     val builds: Future[Seq[RepeatableProjectBuild]] = 
       Future.traverse(config.projects)(extract(tdir, log))
     // We don't have to do ordering here anymore.
@@ -81,6 +83,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   // Our Asynchronous API.
   def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[RepeatableProjectBuild] =
     (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[RepeatableProjectBuild]
-  def buildProject(target: File, build: RepeatableProjectBuild, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
-    (builder ? RunBuild(target, build, deps, logger)).mapTo[BuildArtifacts]
+  def buildProject(target: File, uuid: String, build: RepeatableProjectBuild, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
+    (builder ? RunBuild(target, uuid, build, deps, logger)).mapTo[BuildArtifacts]
 }

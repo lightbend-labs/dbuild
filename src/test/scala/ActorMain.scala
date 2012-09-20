@@ -75,8 +75,8 @@ object ActorMain {
     ProjectBuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community", sbtWithPerformance)
   
   def scalaConfig =
-    //ProjectBuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
-    ProjectBuildConfig("scala", "scala", "git://github.com/paulp/scala.git#origin/topic/anyval")
+    ProjectBuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
+    //ProjectBuildConfig("scala", "scala", "git://github.com/paulp/scala.git#origin/topic/anyval")
     
   def sperformance =
     ProjectBuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community", sbtWithPerformance)

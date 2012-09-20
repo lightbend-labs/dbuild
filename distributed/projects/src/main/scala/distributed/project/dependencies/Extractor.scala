@@ -19,7 +19,7 @@ class Extractor(
   
   /** Given an initial build configuraiton, extract *ALL* information needed for a full build. */
   def extract(tdir: File, build: ProjectBuildConfig, logger: logging.Logger): RepeatableProjectBuild = 
-    local.ProjectDirs.useDirFor(build, tdir) { dir =>
+    local.ProjectDirs.useProjectExtractionDirectory(build, tdir) { dir =>
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
       val config = resolver.resolve(build, dir, logger)
       logger.debug("Repeatable Config: " + makeConfigString(config))

@@ -111,5 +111,10 @@ object RepeatableDistributedBuildSpec extends Specification {
       sample.projectUUID("c") == sample2.projectUUID("c") must beTrue
     }
     
+    "Must make build UUIDs" in {
+      sample.uuid must not(equalTo(sample2.uuid))
+      sample.uuid must not(equalTo(hashing sha1Sum ""))
+    }
+    
   }
 }

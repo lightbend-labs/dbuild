@@ -82,7 +82,7 @@ case class RepeatableDistributedBuild(builds: Seq[RepeatableProjectBuild]) {
     projectMeta get name map hashing.sha1Sum
     
   /** The unique SHA for this build. */
-  def uuid: String = ""
+  def uuid: String = hashing sha1Sum orderedBuilds
   
 }
 object RepeatableDistributedBuild {

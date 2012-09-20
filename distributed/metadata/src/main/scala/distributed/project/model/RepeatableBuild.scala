@@ -12,12 +12,12 @@ import sbt.HNil
 /** Information on how to build a project.  Consists of both distributed build
  * configuration and extracted information.
  */
-case class RepeatableProjectBuild(config: ProjectBuildConfig, extracted: ExtractedBuildMeta)
-object RepeatableProjectBuild {
+case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: ExtractedBuildMeta)
+object ProjectConfigAndExtracted {
   
   
-  implicit object PrettyPrinter extends ConfigPrint[RepeatableProjectBuild] {
-    def apply(build: RepeatableProjectBuild): String = {
+  implicit object PrettyPrinter extends ConfigPrint[ProjectConfigAndExtracted] {
+    def apply(build: ProjectConfigAndExtracted): String = {
       import build._
       val sb = new StringBuffer("{")
       sb append makeMember("config", config)
@@ -28,40 +28,42 @@ object RepeatableProjectBuild {
     }    
   } 
   
-  implicit object Configured extends ConfigRead[RepeatableProjectBuild] {
+  implicit object Configured extends ConfigRead[ProjectConfigAndExtracted] {
     import config._
     val Members = (
         readMember[ProjectBuildConfig]("config") :^:
         readMember[ExtractedBuildMeta]("extracted")
     )
-    def unapply(c: ConfigValue): Option[RepeatableProjectBuild] = 
+    def unapply(c: ConfigValue): Option[ProjectConfigAndExtracted] = 
       c match {
         case Members(config :+: extracted :+: HNil) =>
-          Some(RepeatableProjectBuild(config, extracted))
+          Some(ProjectConfigAndExtracted(config, extracted))
         case _ => None
       }
   }
 }
 
 /** Metadata for a project, used when generating unique SHA. */
-case class ProjectMeta(config: ProjectBuildConfig,
-                       dependencies: Seq[ProjectMeta])
+case class RepeatableProjectBuild(config: ProjectBuildConfig,
+                       dependencies: Seq[RepeatableProjectBuild]) {
+  /** UUID for this project. */
+  def uuid = hashing sha1Sum this
+}
 
 /** A distributed build containing projects in *build order*
  *  Also known as the repeatable config. 
  */
-case class RepeatableDistributedBuild(builds: Seq[RepeatableProjectBuild]) {
+case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
   def config = DistributedBuildConfig(builds map (_.config))
   
   /** Our own graph helper for interacting with the build meta information. */
   private[this] lazy val graph = new BuildGraph(builds)
-  /** All of our builds in order. */
-  lazy val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse
-  
-  /** A map from project name -> unique project metadata. */
-  lazy val projectMeta: Map[String, ProjectMeta] = {
-    def makeMeta(remaining: Seq[RepeatableProjectBuild], current: Map[String, ProjectMeta]): Map[String,ProjectMeta] =
-      if(remaining.isEmpty) current
+  /** All of our repeatable build configuration in build order. */
+  lazy val repeatableBuilds: Seq[RepeatableProjectBuild] = {
+    def makeMeta(remaining: Seq[ProjectConfigAndExtracted], 
+                 current: Map[String, RepeatableProjectBuild],
+                 ordered: Seq[RepeatableProjectBuild]): Seq[RepeatableProjectBuild] =
+      if(remaining.isEmpty) ordered
       else {
         // Pull out current repeatable config for a project.
         val head = remaining.head
@@ -72,17 +74,17 @@ case class RepeatableDistributedBuild(builds: Seq[RepeatableProjectBuild]) {
             dep <- (subgraph - head)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
-        val headMeta = ProjectMeta(head.config, sortedDeps)
-        makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta))
+        val headMeta = RepeatableProjectBuild(head.config, sortedDeps)
+        makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
-    makeMeta(orderedBuilds, Map.empty)
+    val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse
+    makeMeta(orderedBuilds, Map.empty, Seq.empty)
   }
-  /** Machine readable UUID for a project. */
-  def projectUUID(name: String): Option[String] = 
-    projectMeta get name map hashing.sha1Sum
+  
+  
     
   /** The unique SHA for this build. */
-  def uuid: String = hashing sha1Sum orderedBuilds
+  def uuid: String = hashing sha1Sum (repeatableBuilds map (_.uuid))
   
 }
 object RepeatableDistributedBuild {
@@ -99,7 +101,7 @@ object RepeatableDistributedBuild {
   implicit object Configured extends ConfigRead[RepeatableDistributedBuild] {
     import config._
     val Members = (
-        readMember[Seq[RepeatableProjectBuild]]("projects")
+        readMember[Seq[ProjectConfigAndExtracted]]("projects")
     )
     def unapply(c: ConfigValue): Option[RepeatableDistributedBuild] = 
       c match {

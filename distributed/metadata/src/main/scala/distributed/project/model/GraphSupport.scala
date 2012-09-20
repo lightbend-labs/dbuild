@@ -4,7 +4,7 @@ package model
 
 import graph._
 
-case class BuildNode(value: RepeatableProjectBuild) extends Node[RepeatableProjectBuild] {
+case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfigAndExtracted] {
   def hasProject(dep: ProjectRef): Boolean = {   
     def hasArtifact(p: Project): Boolean =
       p.artifacts exists (dep == _)
@@ -12,11 +12,11 @@ case class BuildNode(value: RepeatableProjectBuild) extends Node[RepeatableProje
   }
 }
 
-class BuildGraph(builds: Seq[RepeatableProjectBuild]) extends Graph[RepeatableProjectBuild, Nothing] {
+class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectConfigAndExtracted, Nothing] {
   private val buildNodes = builds.map(b => new BuildNode(b))(collection.breakOut)
   override val nodes: Set[Nd] = buildNodes.toSet
   
-  def nodeFor(build: RepeatableProjectBuild): Option[Nd] =
+  def nodeFor(build: ProjectConfigAndExtracted): Option[Nd] =
     (for {
       node <- nodes
       if node.value == build

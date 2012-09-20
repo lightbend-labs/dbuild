@@ -10,7 +10,7 @@ object RepeatableDistributedBuildSpec extends Specification {
   "RepeatableDistributedBuild" should {
     
     val sample = RepeatableDistributedBuild(Seq(
-          RepeatableProjectBuild(
+          ProjectConfigAndExtracted(
               ProjectBuildConfig("a", "system", "uri"),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
@@ -19,7 +19,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("a", "a")),
                     dependencies = Seq.empty)
                   ))),
-          RepeatableProjectBuild(
+          ProjectConfigAndExtracted(
               ProjectBuildConfig("b", "system", "uri2"),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
@@ -28,7 +28,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("b", "b")),
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
-         RepeatableProjectBuild(
+         ProjectConfigAndExtracted(
               ProjectBuildConfig("c", "system", "uri3"),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
@@ -37,7 +37,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("c", "c")),
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
-         RepeatableProjectBuild(
+         ProjectConfigAndExtracted(
               ProjectBuildConfig("d", "system", "uri4"),
               ExtractedBuildMeta("uri4", 
                   Seq(Project(
@@ -46,7 +46,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("d", "d")),
                     dependencies = Seq(ProjectRef("c", "c"), ProjectRef("b", "b"))
                   )))),
-        RepeatableProjectBuild(
+        ProjectConfigAndExtracted(
               ProjectBuildConfig("e", "system", "uri5"),
               ExtractedBuildMeta("uri5", 
                   Seq(Project(
@@ -58,7 +58,7 @@ object RepeatableDistributedBuildSpec extends Specification {
     ))
     
     val sample2 = RepeatableDistributedBuild(Seq(
-          RepeatableProjectBuild(
+          ProjectConfigAndExtracted(
               ProjectBuildConfig("a", "system", "uri"),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
@@ -67,7 +67,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("a", "a")),
                     dependencies = Seq.empty)
                   ))),
-          RepeatableProjectBuild(
+          ProjectConfigAndExtracted(
               ProjectBuildConfig("b", "system", "uri2"),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
@@ -76,7 +76,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("b", "b")),
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
-         RepeatableProjectBuild(
+         ProjectConfigAndExtracted(
               ProjectBuildConfig("c", "system", "uri3"),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
@@ -93,22 +93,14 @@ object RepeatableDistributedBuildSpec extends Specification {
       result must equalTo(sample)
     }
     "Make unique project build UUID" in {
-      sample.projectUUID("a").isEmpty must beFalse
-      sample.projectUUID("b").isEmpty must beFalse
-      sample.projectUUID("c").isEmpty must beFalse
-      sample.projectUUID("d").isEmpty must beFalse
-      sample.projectUUID("e").isEmpty must beFalse
+      val uuids: Set[String] = (sample.repeatableBuilds map (_.uuid))(collection.breakOut)
+      uuids.size must equalTo(5)
     }
     "Must make repeatable UUIDs" in {
-      val duplicate = parseStringInto[RepeatableDistributedBuild](makeConfigString(sample)) getOrElse sys.error("Failure to parse")
-      sample.projectUUID("a") == duplicate.projectUUID("a") must beTrue
-      sample.projectUUID("b") == duplicate.projectUUID("b") must beTrue
-      sample.projectUUID("c") == duplicate.projectUUID("c") must beTrue
-      sample.projectUUID("d") == duplicate.projectUUID("d") must beTrue
-      sample.projectUUID("e") == duplicate.projectUUID("e") must beTrue
-      sample.projectUUID("a") == sample2.projectUUID("a") must beTrue
-      sample.projectUUID("b") == sample2.projectUUID("b") must beTrue
-      sample.projectUUID("c") == sample2.projectUUID("c") must beTrue
+      val uuids: Set[String] = (sample.repeatableBuilds map (_.uuid))(collection.breakOut)
+      val uuids2: Set[String] = (sample2.repeatableBuilds map (_.uuid))(collection.breakOut)
+      val union = uuids & uuids2
+      union.size must equalTo(3)
     }
     
     "Must make build UUIDs" in {

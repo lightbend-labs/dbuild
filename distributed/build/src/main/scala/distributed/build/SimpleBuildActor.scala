@@ -58,14 +58,13 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
-            uuid = build.projectUUID(b.config.name) getOrElse sys.error("No UUID found for: " + b.config.name)
-            newArts <- buildProject(tdir, uuid, b, arts, log.newNestedLogger(b.config.name))
+            newArts <- buildProject(tdir, b, arts, log.newNestedLogger(b.config.name))
           } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts, arts.localRepo)
           runBuild(rest, nextArts)
         case _ => fArts
       }
     local.ProjectDirs.userRepoDirFor(repeatable) { localRepo =>      
-      runBuild(build.orderedBuilds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
+      runBuild(build.repeatableBuilds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
     }
   }  
   
@@ -74,15 +73,15 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
     implicit val ctx = context.system
     val uuid = hashing sha1Sum config
     val tdir = target / "extraction" / uuid
-    val builds: Future[Seq[RepeatableProjectBuild]] = 
+    val builds: Future[Seq[ProjectConfigAndExtracted]] = 
       Future.traverse(config.projects)(extract(tdir, log))
     // We don't have to do ordering here anymore.
     builds map RepeatableDistributedBuild.apply 
   } 
   
   // Our Asynchronous API.
-  def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[RepeatableProjectBuild] =
-    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[RepeatableProjectBuild]
-  def buildProject(target: File, uuid: String, build: RepeatableProjectBuild, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
-    (builder ? RunBuild(target, uuid, build, deps, logger)).mapTo[BuildArtifacts]
+  def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ProjectConfigAndExtracted] =
+    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[ProjectConfigAndExtracted]
+  def buildProject(target: File, build: RepeatableProjectBuild, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
+    (builder ? RunBuild(target, build, deps, logger)).mapTo[BuildArtifacts]
 }

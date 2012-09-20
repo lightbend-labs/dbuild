@@ -9,7 +9,7 @@ import distributed.project.resolve.ProjectResolver
 import actorpaterns.forwardingErrorsToFutures
 import java.io.File
 
-case class RunBuild(target: File, build: Build, dependencies: BuildArtifacts, log: Logger)
+case class RunBuild(target: File, build: RepeatableProjectBuild, dependencies: BuildArtifacts, log: Logger)
 
 /** This actor can run builds locally and return the generated artifacts. */
 class BuildRunnerActor(builder: BuildRunner, resolver: ProjectResolver) extends Actor {
@@ -24,7 +24,7 @@ class BuildRunnerActor(builder: BuildRunner, resolver: ProjectResolver) extends 
   /** Runs the build locally in its hashed directory.
    * TODO - Conflicts? Locking? good code?
    */
-  def runLocalBuild(target: File, build: Build, dependencies: BuildArtifacts, log: Logger): BuildArtifacts =
+  def runLocalBuild(target: File, build: RepeatableProjectBuild, dependencies: BuildArtifacts, log: Logger): BuildArtifacts =
     local.ProjectDirs.useDirFor(build.config, target) { dir =>
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       resolver.resolve(build.config, dir, log)

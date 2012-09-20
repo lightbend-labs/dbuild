@@ -12,17 +12,17 @@ import sbt.HNil
  * Metadata about a build.  This is extracted from a config file and contains enough information
  * to further extract information about a build.
  */
-case class BuildConfig(name: String, 
+case class ProjectBuildConfig(name: String, 
     system: String, 
     uri: String, 
-    extra: ConfigObject = BuildConfig.emptyConfigObject)
+    extra: ConfigObject = ProjectBuildConfig.emptyConfigObject)
     
-object BuildConfig {
+object ProjectBuildConfig {
   
   val emptyConfigObject = config.parseString("""{}""").resolve.root
   
-  implicit object PrettyPrinter extends ConfigPrint[BuildConfig] {
-    def apply(c: BuildConfig): String = {
+  implicit object PrettyPrinter extends ConfigPrint[ProjectBuildConfig] {
+    def apply(c: ProjectBuildConfig): String = {
       val sb = new StringBuffer("{")
       sb append makeMember("name", c.name)
       sb append ","
@@ -36,7 +36,7 @@ object BuildConfig {
     }
   }
   
-  implicit object Configured extends ConfigRead[BuildConfig] {
+  implicit object Configured extends ConfigRead[ProjectBuildConfig] {
     import config._
     val Members = (
         readMember[String]("name") :^:
@@ -44,10 +44,10 @@ object BuildConfig {
         readMember[String]("uri") :^:
         readMember[ConfigObject]("extra")
     )
-    def unapply(c: ConfigValue): Option[BuildConfig] = 
+    def unapply(c: ConfigValue): Option[ProjectBuildConfig] = 
       (c withFallback defaultProject) match {
         case Members(name :+: system :+: uri :+: extra :+: HNil) =>
-          Some(BuildConfig(name,system,uri,extra))
+          Some(ProjectBuildConfig(name, system, uri, extra))
         case _ => None
       }
     val defaultProject: ConfigObject = 
@@ -59,7 +59,7 @@ object BuildConfig {
 }
 
 /** The initial configuration for a build. */
-case class DistributedBuildConfig(projects: Seq[BuildConfig])
+case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig])
 object DistributedBuildConfig {
   implicit object PrettyPrinter extends ConfigPrint[DistributedBuildConfig] {
      def apply(build: DistributedBuildConfig): String = {
@@ -71,7 +71,7 @@ object DistributedBuildConfig {
   }
   implicit object Configured extends ConfigRead[DistributedBuildConfig] {
     import config._
-    val Members = readMember[Seq[BuildConfig]]("projects")
+    val Members = readMember[Seq[ProjectBuildConfig]]("projects")
     def unapply(c: ConfigValue): Option[DistributedBuildConfig] = c match {
       case Members(list) => Some(DistributedBuildConfig(list))
       case _                 => None

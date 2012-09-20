@@ -14,7 +14,7 @@ import sys.process._
 object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
   
-  def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
     // TODO - don't HardCode
     ExtractedBuildMeta("", 
         Seq(
@@ -30,7 +30,7 @@ object ScalaBuildSystem extends BuildSystem {
         ))
   }
 
-  def runBuild(project: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
     Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)

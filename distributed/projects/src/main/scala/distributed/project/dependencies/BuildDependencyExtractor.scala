@@ -10,7 +10,7 @@ trait BuildDependencyExtractor {
   /** Extract project metadata from a local
    * project.
    */
-  def extract(config: BuildConfig, dir: java.io.File, log: logging.Logger): ExtractedBuildMeta
+  def extract(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ExtractedBuildMeta
   /** Returns true or false, depending on whether or not this extractor can handle
    * a given build system.
    */
@@ -19,7 +19,7 @@ trait BuildDependencyExtractor {
 
 class MultiBuildDependencyExtractor(buildSystems: Seq[BuildSystem]) extends BuildDependencyExtractor {
   def canHandle(system: String): Boolean = buildSystems exists (_.name == system)
-  def extract(config: BuildConfig, dir: java.io.File, log: logging.Logger): ExtractedBuildMeta =
+  def extract(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ExtractedBuildMeta =
     (buildSystems 
       find (_.name == config.system) 
       map (_.extractDependencies(config, dir, log)) 

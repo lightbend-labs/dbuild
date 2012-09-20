@@ -36,7 +36,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
     }
   }
   
-  def logPoms(build: DistributedBuild, arts: BuildArtifacts, log: Logger): Unit = 
+  def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifacts, log: Logger): Unit = 
     try {
       log info "Printing Poms!"
       val poms = repo.PomHelper.makePomStrings(build, arts)
@@ -50,11 +50,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   implicit val buildTimeout: Timeout = 4 hours 
 
   // Chain together some Asynch to run this build.
-  def runBuild(target: File, build: DistributedBuild, log: Logger): Future[BuildArtifacts] = {
+  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifacts] = {
     implicit val ctx = context.system
     val repeatable = build.config
     val tdir = local.ProjectDirs.makeDirForBuild(build.config, target / "build")
-    def runBuild(builds: List[Build], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
+    def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
       builds match {
         case b :: rest =>
           val nextArts = for {
@@ -70,23 +70,23 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   }  
   
   // Asynchronously extract information from builds.
-  def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[DistributedBuild] = {
+  def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[RepeatableDistributedBuild] = {
     implicit val ctx = context.system
     val tdir = local.ProjectDirs.makeDirForBuild(config, target / "extraction")
-    val builds: Future[Seq[Build]] = 
+    val builds: Future[Seq[RepeatableProjectBuild]] = 
       Future.traverse(config.projects)(extract(tdir, log))
-    // Now determine build ordering.  
+    // We don't have to do ordering here anymore.
     val ordered = builds map { seq =>
       val graph = new BuildGraph(seq)
       (Graphs safeTopological graph map (_.value)).reverse
     }
     // Now we need them in build ordering...
-    ordered map DistributedBuild.apply 
+    ordered map RepeatableDistributedBuild.apply 
   } 
   
   // Our Asynchronous API.
-  def extract(target: File, logger: Logger)(config: BuildConfig): Future[Build] =
-    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[Build]
-  def buildProject(target: File, build: Build, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
+  def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[RepeatableProjectBuild] =
+    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[RepeatableProjectBuild]
+  def buildProject(target: File, build: RepeatableProjectBuild, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
     (builder ? RunBuild(target, build, deps, logger)).mapTo[BuildArtifacts]
 }

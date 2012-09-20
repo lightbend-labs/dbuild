@@ -8,10 +8,10 @@ import java.io.File
 
 object PomHelperSpec extends Specification {
   
-  def makeBuildArts: (DistributedBuild, BuildArtifacts) = {
-    val build = DistributedBuild(
-            Seq(Build(
-                config = BuildConfig("", "", "" ),
+  def makeBuildArts: (RepeatableDistributedBuild, BuildArtifacts) = {
+    val build = RepeatableDistributedBuild(
+            Seq(RepeatableProjectBuild(
+                config = ProjectBuildConfig("", "", "" ),
                 extracted = ExtractedBuildMeta(
                   uri = "",
                   projects = Seq(

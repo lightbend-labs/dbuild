@@ -11,7 +11,7 @@ import git.UriUtil
  * update the build configuration for repeatable checkouts.
  */
 class SvnProjectResolver extends ProjectResolver {
-  def canResolve(config: BuildConfig): Boolean = {
+  def canResolve(config: ProjectBuildConfig): Boolean = {
     val uri = new _root_.java.net.URI(config.uri)
     ((uri.getScheme == "svn") || 
      (uri.getScheme == "http") ||
@@ -19,7 +19,7 @@ class SvnProjectResolver extends ProjectResolver {
     ) && Svn.isSvnRepo(uri)
   }
     
-  def resolve(config: BuildConfig, dir: _root_.java.io.File, log: logging.Logger): BuildConfig = {
+  def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
     val uri = new _root_.java.net.URI(config.uri)
 
     // First clone into the directory or fetch

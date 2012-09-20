@@ -1,6 +1,6 @@
 package local
 
-import distributed.project.model.{BuildConfig, DistributedBuildConfig}
+import distributed.project.model.{ProjectBuildConfig, DistributedBuildConfig}
 import java.io.File
 
 // TODO - Locally configured area for projects
@@ -17,7 +17,7 @@ object ProjectDirs {
   def logDir = new File(targetDir, "logs")
   
   // TODO - Check lock file or something...
-  def useDirFor[A](build: BuildConfig, tdir: File = targetDir)(f: File => A) = {
+  def useDirFor[A](build: ProjectBuildConfig, tdir: File = targetDir)(f: File => A) = {
     val dir = new File(tdir, "projects")
     // TODO - just build name?
     val projdir = new File(dir, build.name + "-" + hashing.sha1Sum(build))

@@ -1,6 +1,6 @@
 package local
 
-import distributed.project.model.{ProjectBuildConfig, DistributedBuildConfig}
+import distributed.project.model._
 import java.io.File
 
 // TODO - Locally configured area for projects
@@ -33,15 +33,14 @@ object ProjectDirs {
   }
   @deprecated
   def makeDirForBuild(build: DistributedBuildConfig, tdir: File = targetDir): File = {
-    val file = new File(tdir, hashing.sha1Sum(build))
+    val file = new File(tdir, hashing sha1Sum build)
     file.mkdirs()
     file
   }
   
-  
-  def userRepoDirFor[A](build:DistributedBuildConfig)(f: File => A) = {
+  def userRepoDirFor[A](build: RepeatableDistributedBuild)(f: File => A) = {
     val dir = new File(targetDir, "repositories")
-    val repodir = new File(dir, hashing.sha1Sum(build))
+    val repodir = new File(dir, build.uuid)
     repodir.mkdirs()
     f(repodir)
   }

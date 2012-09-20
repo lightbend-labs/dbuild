@@ -23,10 +23,10 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
       val listener = sender
       val logger = log.newNestedLogger(hashing.sha1Sum(build))
       val result = for {
-        fullBuild <- analyze(build, target, log.newNestedLogger(hashing.sha1Sum(build)))
-        fullLogger = log.newNestedLogger(hashing.sha1Sum(fullBuild))
+        fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1Sum build))
+        fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = fullLogger.info("---==   Repeatable Build Config   ===---")
-        _ = fullLogger.info(config makeConfigString fullBuild.config)
+        _ = fullLogger.info(fullBuild.repeatableBuildString)
         _ = fullLogger.info("---== End Repeatable Build Config ===---")
         arts <- runBuild(target, fullBuild, fullLogger)
         //_ = logPoms(fullBuild, arts, fullLogger)
@@ -51,7 +51,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   // Chain together some Asynch to run this build.
   def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifacts] = {
     implicit val ctx = context.system
-    val repeatable = build.config
     val tdir = local.ProjectDirs.targetDir
     def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
       builds match {
@@ -63,7 +62,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
           runBuild(rest, nextArts)
         case _ => fArts
       }
-    local.ProjectDirs.userRepoDirFor(repeatable) { localRepo =>      
+    
+    // TODO - REpository management here!!!!
+    local.ProjectDirs.userRepoDirFor(build) { localRepo =>      
       runBuild(build.repeatableBuilds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
     }
   }  
@@ -82,6 +83,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   // Our Asynchronous API.
   def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ProjectConfigAndExtracted] =
     (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[ProjectConfigAndExtracted]
+  
+  
+  // TODO - Repository Knowledge here
   def buildProject(target: File, build: RepeatableProjectBuild, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
     (builder ? RunBuild(target, build, deps, logger)).mapTo[BuildArtifacts]
 }

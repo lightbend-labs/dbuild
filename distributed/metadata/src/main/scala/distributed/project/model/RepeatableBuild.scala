@@ -54,7 +54,8 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
  *  Also known as the repeatable config. 
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
-  def config = DistributedBuildConfig(builds map (_.config))
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config))
+  def repeatableBuildString = _root_.config.ConfigPrint(repeatableBuildConfig)
   
   /** Our own graph helper for interacting with the build meta information. */
   private[this] lazy val graph = new BuildGraph(builds)

@@ -10,7 +10,6 @@ import akka.pattern.{ask,pipe}
 import akka.dispatch.{Future,Futures}
 import akka.util.duration._
 import akka.util.Timeout
-import graph.Graphs
 import actorpaterns.forwardingErrorsToFutures
 import sbt.Path._
 import java.io.File
@@ -42,7 +41,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
       val poms = repo.PomHelper.makePomStrings(build, arts)
       log info (poms mkString "----------")
     } catch {
-      case e => 
+      case e: Throwable => 
         log trace e
         throw e
     }
@@ -65,7 +64,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         case _ => fArts
       }
     local.ProjectDirs.userRepoDirFor(repeatable) { localRepo =>      
-      runBuild(build.builds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
+      runBuild(build.orderedBuilds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
     }
   }  
   
@@ -76,12 +75,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
     val builds: Future[Seq[RepeatableProjectBuild]] = 
       Future.traverse(config.projects)(extract(tdir, log))
     // We don't have to do ordering here anymore.
-    val ordered = builds map { seq =>
-      val graph = new BuildGraph(seq)
-      (Graphs safeTopological graph map (_.value)).reverse
-    }
-    // Now we need them in build ordering...
-    ordered map RepeatableDistributedBuild.apply 
+    builds map RepeatableDistributedBuild.apply 
   } 
   
   // Our Asynchronous API.

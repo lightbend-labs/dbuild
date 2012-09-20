@@ -2,7 +2,6 @@ package distributed
 package build
 
 import project.model._
-import graph.Graphs
 import java.io.File
 import sbt.Path._
 
@@ -23,10 +22,7 @@ class SimpleBuildAnalyzer(e: project.dependencies.Extractor) extends BuildAnalyz
     val scratchDir = local.ProjectDirs.makeDirForBuild(config, target / "extraction")
     
     val builds = config.projects map (p => e.extract(scratchDir, p, log))
-    // TODO - No need to order them now, if we fix later usage.
-    val graph = new BuildGraph(builds)
-    val ordered = (Graphs safeTopological graph map (_.value)).reverse
-    RepeatableDistributedBuild(ordered)
+    RepeatableDistributedBuild(builds)
   }
 }
 

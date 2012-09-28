@@ -21,9 +21,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   def receive = {
     case RunDistributedBuild(build, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
-      val logger = log.newNestedLogger(hashing.sha1Sum(build))
+      val logger = log.newNestedLogger(hashing sha1 build)
       val result = for {
-        fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1Sum build))
+        fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = fullLogger.info("---==   Repeatable Build Config   ===---")
         _ = fullLogger.info(fullBuild.repeatableBuildString)
@@ -72,7 +72,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   // Asynchronously extract information from builds.
   def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[RepeatableDistributedBuild] = {
     implicit val ctx = context.system
-    val uuid = hashing sha1Sum config
+    val uuid = hashing sha1 config
     val tdir = target / "extraction" / uuid
     val builds: Future[Seq[ProjectConfigAndExtracted]] = 
       Future.traverse(config.projects)(extract(tdir, log))

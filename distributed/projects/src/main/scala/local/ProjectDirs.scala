@@ -33,7 +33,7 @@ object ProjectDirs {
   }
   @deprecated
   def makeDirForBuild(build: DistributedBuildConfig, tdir: File = targetDir): File = {
-    val file = new File(tdir, hashing sha1Sum build)
+    val file = new File(tdir, hashing sha1 build)
     file.mkdirs()
     file
   }

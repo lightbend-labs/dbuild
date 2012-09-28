@@ -47,7 +47,31 @@ object ProjectConfigAndExtracted {
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
                        dependencies: Seq[RepeatableProjectBuild]) {
   /** UUID for this project. */
-  def uuid = hashing sha1Sum this
+  def uuid = hashing sha1 this
+}
+object RepeatableProjectBuild {
+  implicit object Configured extends ConfigRead[RepeatableProjectBuild] with ConfigPrint[RepeatableProjectBuild] {
+    def apply(build: RepeatableProjectBuild): String = {
+      import build._
+      val sb = new StringBuffer("{")
+      sb append makeMember("config", config)
+      sb append ","
+      sb append makeMember("dependencies", build.dependencies)
+      sb append "}"
+      sb.toString
+    }    
+    import config._
+    val Members = (
+        readMember[ProjectBuildConfig]("config") :^:
+        readMember[Seq[RepeatableProjectBuild]]("dependencies")
+    )
+    def unapply(c: ConfigValue): Option[RepeatableProjectBuild] = 
+      c match {
+        case Members(config :+: dependencies :+: HNil) =>
+          Some(RepeatableProjectBuild(config, dependencies))
+        case _ => None
+      }
+  }
 }
 
 /** A distributed build containing projects in *build order*
@@ -68,7 +92,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
       else {
         // Pull out current repeatable config for a project.
         val head = remaining.head
-        val node = graph.nodeFor(head) getOrElse sys.error("O NOES -- TODO better grpah related puke message")
+        val node = graph.nodeFor(head) getOrElse sys.error("O NOES -- TODO better graph related puke message")
         val subgraph = Graphs.subGraphFrom(graph)(node) map (_.value)
         val dependencies = 
           for {
@@ -85,7 +109,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
   
     
   /** The unique SHA for this build. */
-  def uuid: String = hashing sha1Sum (repeatableBuilds map (_.uuid))
+  def uuid: String = hashing sha1 (repeatableBuilds map (_.uuid))
   
 }
 object RepeatableDistributedBuild {

@@ -218,7 +218,6 @@ object DistributedRunner {
       (artifact, file) <- artifacts.toSeq
      } yield model.ArtifactLocation(
          model.ProjectRef(artifact.name, org, artifact.extension, artifact.classifier), 
-         file,
          version
        )
   

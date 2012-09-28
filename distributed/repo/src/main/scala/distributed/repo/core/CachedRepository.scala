@@ -27,9 +27,12 @@ final class CachedRemoteRepository(cacheDir: File, uri: String, credentials: Cre
     with Repository {
   def put(key: String, file: File): Unit = {
     val cacheFile = new File(cacheDir, key)
-    // TODO - immutability restrictions?
-    Remote push (makeUrl(uri, key), file, credentials)
-    IO.copyFile(file, cacheFile)
+    // IF the cache file exists, we assume this file has already been pushed...
+    if(!cacheFile.exists) {
+      // TODO - immutability restrictions?
+      Remote push (makeUrl(uri, key), file, credentials)
+      IO.copyFile(file, cacheFile)
+    }
   }
 }
 

@@ -10,7 +10,9 @@ import sbt.Types.:+:
 import sbt.HNil
 
 /** Information on how to build a project.  Consists of both distributed build
- * configuration and extracted information.
+ * configuration and extracted information.  Note: That the config in this case
+ * should be the "repeatable" SCM uris and full information such that we can
+ * generate repeatable builds from this information.
  */
 case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: ExtractedBuildMeta)
 object ProjectConfigAndExtracted {
@@ -43,11 +45,26 @@ object ProjectConfigAndExtracted {
   }
 }
 
-/** Metadata for a project, used when generating unique SHA. */
+/** This class represents *ALL* IMMUTABLE information about a project such
+ * that we can generate a unique and recreatable UUID in which to store
+ * the totally unique meta-data information for this project.  This
+ * also includes all transitive dependencies so all artifacts can be
+ * resolved appropriately.
+ */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
                        dependencies: Seq[RepeatableProjectBuild]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
+  
+  def transitiveDependencyUUIDs: Set[String] = {
+    def loop(current: Seq[RepeatableProjectBuild], seen: Set[String]): Set[String] = current match {
+      case Seq(head, tail @ _*) =>
+        if(seen contains head.uuid) loop(tail, seen)
+        else loop(tail ++ head.dependencies, seen + head.uuid)
+      case _ => seen
+    }
+    loop(dependencies, Set(uuid))
+  }
 }
 object RepeatableProjectBuild {
   implicit object Configured extends ConfigRead[RepeatableProjectBuild] with ConfigPrint[RepeatableProjectBuild] {

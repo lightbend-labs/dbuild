@@ -9,8 +9,13 @@ import ConfigRead.readMember
 import sbt.Types.:+:
 import sbt.HNil
 
-// TODO - Do we have enough information here?
-// - Is the version even right to assume?
+
+/**
+ * This currently represents a "coordinate" of an artifact, the version you must
+ * rewire to depend on, and the amount of time it took to build such an artifact.
+ * 
+ * NOTE: Build time is only in here so we could hack some performance quickly.
+ */
 case class ArtifactLocation(dep: ProjectRef, version: String, buildTime: Double = 0.0)
 object ArtifactLocation {
   implicit object PrettyArtLoc extends ConfigPrint[ArtifactLocation] {
@@ -75,7 +80,9 @@ object ArtifactSha {
 }
 
 /** This is the metadata a project generates after building.  We can deploy this to our repository as
- * as an immutable piece of data that is used to retreive artifacts after the build.
+ * as an immutable piece of data that is used to retrieve artifacts after the build.
+ * 
+ * Note: As of now this can only be created after running a build and inspecting the deployed artifact files for SHA/relative paths.
  */
 case class ProjectArtifactInfo(
     project: RepeatableProjectBuild,
@@ -111,7 +118,16 @@ object ProjectArtifactInfo {
 }
     
     
-// TODO - Is this a good idea?
+/**
+ * This represents two pieces of data:
+ * 
+ * (1) The artifacts that we need to rewire dependencies for
+ * (2) The repository in which those artifacts are stored.
+ * 
+ * Unfortunately, It's currently used to represent both incoming and outgoing
+ * artifacts in builds.   We must edit this so that we have explicit
+ * "incoming artifacts to rewire" and "outgoing artifacts for publicaton".
+ */
 case class BuildArtifacts(artifacts: Seq[ArtifactLocation], localRepo: File)
 object BuildArtifacts {
   implicit object PrettyPrinter extends ConfigPrint[BuildArtifacts] {

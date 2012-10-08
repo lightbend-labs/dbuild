@@ -8,6 +8,7 @@ import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
 import actorpaterns.forwardingErrorsToFutures
 import java.io.File
+import repo.core.Helper
 
 case class RunBuild(target: File,
     build: RepeatableProjectBuild, 
@@ -21,7 +22,6 @@ class BuildRunnerActor(builder: BuildRunner, resolver: ProjectResolver) extends 
         log info ("--== Building %s ==--" format(build.config.name))
         sender ! runLocalBuild(target, build, deps, log)
       }
-      
   }
   /** Runs the build locally in its hashed directory.
    * TODO - Conflicts? Locking? good code?

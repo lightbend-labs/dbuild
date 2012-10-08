@@ -6,7 +6,6 @@ package core
 import project.model._
 import java.io.File
 import sbt.{RichFile, IO}
-import distributed.project.model.RepeatableProjectBuild$
 
 object LocalRepoHelper {
   

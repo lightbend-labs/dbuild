@@ -50,13 +50,13 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val dprojects = (
       DmodProject("projects")
-      dependsOn(dmeta, graph, config, hashing, logging)
+      dependsOn(dmeta, graph, config, hashing, logging, drepo)
       dependsOnRemote(sbtIo)
     )
   lazy val drepo = (
     DmodProject("repo")
-    dependsOn(dprojects)
-    dependsOnRemote(mvnAether, aetherWagon, dispatch)
+    dependsOn(dmeta)
+    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo)
   )
   lazy val dbuild = (
       DmodProject("build")

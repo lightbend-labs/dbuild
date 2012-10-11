@@ -8,7 +8,7 @@ import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
 import actorpaterns.forwardingErrorsToFutures
 import java.io.File
-import repo.core.Helper
+import distributed.repo.core.LocalRepoHelper
 
 case class RunBuild(target: File,
     build: RepeatableProjectBuild, 

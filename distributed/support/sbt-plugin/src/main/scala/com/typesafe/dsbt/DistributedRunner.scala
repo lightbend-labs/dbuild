@@ -54,22 +54,37 @@ object DistributedRunner {
   // windows artifacts on windows, etc.
   def buildProject(state: State, config: SbtBuildConfig): (State, ArtifactMap) = {
     println("Building project")
-    val extracted = Project.extract(state)
-    import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
-    
-    def buildAggregate(f: (ProjectRef, State) => (State, ArtifactMap)): (State,ArtifactMap) =
-      refs.foldLeft[(State, ArtifactMap)](state -> Seq.empty) { 
-	    case ((state, amap), ref) => 
-	      if(isValidProject(config, ref)) {
-	    	val (state2,artifacts) = 
-	    	  f(ref, state)
-	    	state2 -> (amap ++ artifacts)
-	      } else state -> amap    
-      }
+    // Stage half the computation, including what we're churning through.
+    val buildAggregate = runAggregate[ArtifactMap](state,config, Seq.empty)(_ ++ _) _
+    // If we're measuring, run the build several times.
     if(config.config.measurePerformance) buildAggregate(timedBuildProject)
     else buildAggregate(untimedBuildProject)
   }
+  
+  /** Runs a serious of commands across projects, aggregating results. */
+  private def runAggregate[T](state: State, config: SbtBuildConfig, init: T)(merge: (T,T) => T)(f: (ProjectRef, State) => (State, T)): (State, T) = {
+    val extracted = Project.extract(state)
+    import extracted._
+    val refs = getProjectRefs(session.mergeSettings)
+    refs.foldLeft[(State, T)](state -> init) { 
+	    case ((state, current), ref) => 
+	      if(isValidProject(config, ref)) {
+	    	val (state2, next) = 
+	    	  f(ref, state)
+	    	state2 -> merge(current, next)
+	      } else state -> current    
+      }
+  }
+  
+  def testProject(state: State, config: SbtBuildConfig): State = 
+    if(config.config.runTests) {
+      println("Testing project")
+      val (state2, _) = runAggregate(state, config, List.empty)(_++_) { (proj, state) =>
+        val y = Stated(state).runTask(Keys.test in Test)
+        (y.state, List.empty)
+      }
+      state2
+    } else state
   
   def makeBuildResults(artifacts: ArtifactMap, localRepo: File): model.BuildArtifacts = 
     model.BuildArtifacts(artifacts, localRepo)
@@ -184,6 +199,8 @@ object DistributedRunner {
     printResolvers(state)
     val state3 = fixSettings(config, state)
     val (state4, artifacts) = buildProject(state3, config)
+    // TODO - TEST Projects, only if flag enabled.
+    testProject(state4, config)
     // TODO - Use artifacts extracted to deploy!
     publishProjects(state4, config)
     printResults(resultFile, artifacts, config.info.outRepo)

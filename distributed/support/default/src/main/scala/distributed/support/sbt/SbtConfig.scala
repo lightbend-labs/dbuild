@@ -10,6 +10,7 @@ case class SbtConfig(
     sbtVersion: String,
     directory: String,
     measurePerformance: Boolean = false,
+    runTests: Boolean = true,
     projects: Seq[String] = Seq.empty)
 
 
@@ -28,12 +29,14 @@ object SbtConfig {
         sbt-version = "%s"
         directory = ""
         measure-performance = "false"
+        run-tests = "true"
         projects = []
       }""" format (sbtVersion)).resolve.root
     private val Members = (
         readMember[String]("sbt-version") :^:
         readMember[String]("directory") :^:
         readMember[Boolean]("measure-performance") :^:
+        readMember[Boolean]("run-tests") :^:
         readMember[Seq[String]]("projects")
     )
     def apply(c: SbtConfig): String = {
@@ -44,14 +47,16 @@ object SbtConfig {
       sb append ","
       sb append makeMember("measure-performance", c.measurePerformance)
       sb append ","
+      sb append makeMember("run-tests", c.runTests)
+      sb append ","
       sb append makeMember("projects", c.projects)
       sb append "}"
       sb.toString
     }
     def unapply(c: ConfigValue): Option[SbtConfig] = 
       (c withFallback defaultObj) match {
-        case Members(sbtV :+: dir :+: perf :+: projs :+: HNil) =>
-          Some(SbtConfig(sbtV, dir, perf, projs))
+        case Members(sbtV :+: dir :+: perf :+: tests :+: projs :+: HNil) =>
+          Some(SbtConfig(sbtV, dir, perf, tests, projs))
         case _ => None
       }
   } 

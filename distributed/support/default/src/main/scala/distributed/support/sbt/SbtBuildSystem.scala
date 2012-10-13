@@ -29,13 +29,12 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
     else SbtExtractor.extractMetaData(extractor)(new File(dir, sc.directory), log)
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifacts = {
     val sc = sbtConfig(project.config)
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
-    val config = SbtBuildConfig(sc, dependencies)
-    try SbtBuilder.buildSbtProject(runner)(pdir, config, log)
-    finally SbtBuilder.makeDebugPak(pdir, project.config.name, config, log)
+    val config = SbtBuildConfig(sc, info)
+    SbtBuilder.buildSbtProject(runner)(pdir, config, log)
   }
 }

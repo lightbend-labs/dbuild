@@ -83,13 +83,11 @@ object DistributedRunner {
       deps <- parseFileInto[SbtBuildConfig](f)
     } yield deps
     
-  def loadBuildArtifacts: Option[model.BuildArtifacts] =
-    loadBuildConfig map (_.artifacts)
     
-  def fixModule(arts: model.BuildArtifacts)(m: ModuleID): ModuleID = {
+  def fixModule(arts: Seq[model.ArtifactLocation])(m: ModuleID): ModuleID = {
       def findArt: Option[model.ArtifactLocation] =
         (for {
-          artifact <- arts.artifacts.view
+          artifact <- arts.view
           if artifact.dep.organization == m.organization
           if artifact.dep.name == fixName(m.name)
         } yield artifact).headOption
@@ -100,14 +98,14 @@ object DistributedRunner {
       } getOrElse m
   }
     
-  def fixLibraryDependencies(arts: model.BuildArtifacts)(s: Setting[_]): Setting[_] = 
+  def fixLibraryDependencies(arts: Seq[model.ArtifactLocation])(s: Setting[_]): Setting[_] = 
     s.asInstanceOf[Setting[Seq[ModuleID]]] mapInit { (_, old) =>        
       old map fixModule(arts)
     }
   
-  def fixScalaVersion(arts: model.BuildArtifacts)(s: Setting[_]): Setting[_] = {
+  def fixScalaVersion(arts: Seq[model.ArtifactLocation])(s: Setting[_]): Setting[_] = {
     val scalaV = (for {
-      artifact <- arts.artifacts.view
+      artifact <- arts.view
       dep = artifact.dep
       if dep.organization == "org.scala-lang"
       if dep.name == "scala-library"
@@ -122,16 +120,17 @@ object DistributedRunner {
   def fixPublishTo(repo: Resolver)(s: Setting[_]): Setting[_] =
     s.asInstanceOf[Setting[Option[Resolver]]] mapInit { (_,_) => Some(repo) }
 
-  def fixSetting(arts: model.BuildArtifacts)(s: Setting[_]): Setting[_] = s.key.key match {
-    case Keys.scalaVersion.key        => 
-      fixScalaVersion(arts)(s) 
-    case Keys.libraryDependencies.key => 
-      fixLibraryDependencies(arts)(s)
-    // TODO - Fix this for remote debugging.
+  def fixDependencies(locs: Seq[model.ArtifactLocation])(s: Setting[_]): Setting[_] = s.key.key match {
+     case Keys.scalaVersion.key => fixScalaVersion(locs)(s)
+     case Keys.libraryDependencies.key => fixLibraryDependencies(locs)(s)
+     case Keys.crossVersion.key =>
+       s.asInstanceOf[Setting[CrossVersion]] mapInit { (_,_) => CrossVersion.Disabled }
+     case _ => s
+  }
+  
+  def fixSetting(config: SbtBuildConfig)(s: Setting[_]): Setting[_] = s.key.key match {
     case Keys.publishTo.key =>
-      fixPublishTo(Resolver.file("deploy-to-local-repo", arts.localRepo.getAbsoluteFile))(s)
-    case Keys.crossVersion.key =>
-      s.asInstanceOf[Setting[CrossVersion]] mapInit { (_,_) => CrossVersion.Disabled }
+      fixPublishTo(Resolver.file("deploy-to-local-repo", config.info.outRepo.getAbsoluteFile))(s)
     // Here's our hack to *disable* PGP signing in builds we pull in.
     // TOO many global projects enable the PGP plugin by default...
     case Keys.skip.key =>
@@ -140,16 +139,16 @@ object DistributedRunner {
           s.asInstanceOf[Setting[Task[Boolean]]].mapInit((_,old) => old map (_ => true))
         case _ => s
       }
-    case _ => s
+    case _ => fixDependencies(config.info.arts.artifacts)(s)
   } 
   
-  def fixDependencies(arts: model.BuildArtifacts, state: State): State = {
+  def fixSettings(config: SbtBuildConfig, state: State): State = {
     println("Updating dependencies.")
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
     //val localRepoResolver: Option[Resolver] = Some("deploy-to-local-repo" at arts.localRepo.getAbsoluteFile.toURI.toASCIIString) 
-    val newSettings = session.mergeSettings map fixSetting(arts)
+    val newSettings = session.mergeSettings map fixSetting(config)
     import Load._      
     val newStructure2 = Load.reapply(newSettings, structure)
     Project.setProject(session, newStructure2, state)
@@ -183,11 +182,11 @@ object DistributedRunner {
     
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
     printResolvers(state)
-    val state3 = fixDependencies(config.artifacts, state)
+    val state3 = fixSettings(config, state)
     val (state4, artifacts) = buildProject(state3, config)
     // TODO - Use artifacts extracted to deploy!
     publishProjects(state4, config)
-    printResults(resultFile, artifacts, config.artifacts.localRepo)
+    printResults(resultFile, artifacts, config.info.outRepo)
     state4
   }
     
@@ -202,7 +201,8 @@ object DistributedRunner {
   }
   
   def setupCmd(state: State): State =
-    loadBuildArtifacts map (arts => fixDependencies(arts, state)) getOrElse state
+    state
+    //loadBuildArtifacts map (arts => fixSettings(config, state)) getOrElse state
 
   private def buildIt = Command.command("dsbt-build")(buildCmd)
   private def setItUp = Command.command("dsbt-setup")(setupCmd)

@@ -15,7 +15,9 @@ import sbt.HNil
 case class ProjectBuildConfig(name: String, 
     system: String, 
     uri: String, 
-    extra: ConfigObject = ProjectBuildConfig.emptyConfigObject)
+    extra: ConfigObject = ProjectBuildConfig.emptyConfigObject) {
+  def uuid = hashing sha1 this
+}
     
 object ProjectBuildConfig {
   

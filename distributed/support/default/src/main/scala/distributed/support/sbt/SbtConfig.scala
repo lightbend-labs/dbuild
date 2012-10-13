@@ -58,7 +58,7 @@ object SbtConfig {
 }
 
 
-case class SbtBuildConfig(config: SbtConfig, artifacts: BuildArtifacts)
+case class SbtBuildConfig(config: SbtConfig, info: BuildInput)
 object SbtBuildConfig {
   implicit object Configured extends ConfigPrint[SbtBuildConfig] with ConfigRead[SbtBuildConfig] {
     import config._
@@ -68,13 +68,13 @@ object SbtBuildConfig {
     import _root_.sbt.HNil
     private val Members = (
       readMember[SbtConfig]("config") :^:
-      readMember[BuildArtifacts]("artifacts")
+      readMember[BuildInput]("info")
     )
     def apply(c: SbtBuildConfig): String = {
       val sb = new StringBuffer("{")
       sb append makeMember("config", c.config)
       sb append ","
-      sb append makeMember("artifacts", c.artifacts)
+      sb append makeMember("info", c.info)
       sb append "}"
       sb.toString
     }

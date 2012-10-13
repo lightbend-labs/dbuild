@@ -57,7 +57,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
-            newArts <- buildProject(tdir, b, arts, log.newNestedLogger(b.config.name))
+            newArts <- buildProject(tdir, b, log.newNestedLogger(b.config.name))
           } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts, arts.localRepo)
           runBuild(rest, nextArts)
         case _ => fArts
@@ -86,6 +86,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
   
   
   // TODO - Repository Knowledge here
-  def buildProject(target: File, build: RepeatableProjectBuild, deps: BuildArtifacts, logger: Logger): Future[BuildArtifacts] =
-    (builder ? RunBuild(target, build, deps, logger)).mapTo[BuildArtifacts]
+  def buildProject(target: File, build: RepeatableProjectBuild, logger: Logger): Future[BuildArtifacts] =
+    (builder ? RunBuild(target, build, logger)).mapTo[BuildArtifacts]
 }

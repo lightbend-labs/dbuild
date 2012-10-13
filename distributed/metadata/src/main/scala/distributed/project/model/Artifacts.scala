@@ -86,8 +86,8 @@ object ArtifactSha {
  */
 case class ProjectArtifactInfo(
     project: RepeatableProjectBuild,
-    version: String,
     //Relative locations
+    versions: Seq[ArtifactLocation],
     artifacts: Seq[ArtifactSha])
 object ProjectArtifactInfo {
   implicit object Configured extends ConfigPrint[ProjectArtifactInfo] with ConfigRead[ProjectArtifactInfo] {
@@ -95,7 +95,7 @@ object ProjectArtifactInfo {
       val sb = new StringBuilder("{")
       sb append makeMember("project", l.project)
       sb append ","
-      sb append makeMember("version", l.version)
+      sb append makeMember("versions", l.versions)
       sb append ","
       sb append makeMember("artifactLocations", l.artifacts)
       sb append "}"
@@ -104,20 +104,21 @@ object ProjectArtifactInfo {
     import config._
     val Members = (
       readMember[RepeatableProjectBuild]("project") :^:
-      readMember[String]("version") :^:
+      readMember[Seq[ArtifactLocation]]("versions") :^:
       readMember[Seq[ArtifactSha]]("artifactLocations")
     )
     def unapply(c: ConfigValue): Option[ProjectArtifactInfo] = {
       c match {
-        case Members(project :+: version :+: artifacts :+: HNil) =>
-          Some(ProjectArtifactInfo(project, version, artifacts))
+        case Members(project :+: versions :+: artifacts :+: HNil) =>
+          Some(ProjectArtifactInfo(project, versions, artifacts))
         case _ => None
       }
     }
   }  
 }
-    
-    
+
+
+  
 /**
  * This represents two pieces of data:
  * 
@@ -153,3 +154,35 @@ object BuildArtifacts {
     }
   }
 }
+
+
+
+/** This represents general information every dbuild must know:
+ * What artifacts are coming in (from metadta) and where to
+ * write new artifacts (so we can save them for later).
+ */
+case class BuildInput(arts: BuildArtifacts, outRepo: File)
+object BuildInput {
+  implicit object PrettyPrinter extends ConfigPrint[BuildInput] {
+    def apply(r: BuildInput): String = {
+      val sb = new StringBuilder("{")
+      sb append makeMember("artifacts", r.arts)
+      sb append ","
+      sb append makeMember("outRepo", r.outRepo)
+      sb append "}"
+      sb.toString
+    }
+  }
+  implicit object Configured extends ConfigRead[BuildInput] {
+    import config._
+    val Members = (
+      readMember[BuildArtifacts]("artifacts") :^:
+      readMember[java.io.File]("outRepo")
+    )
+    def unapply(in: ConfigValue): Option[BuildInput] = in match {
+      case Members(artifacts :+: repo :+: HNil) =>
+        Some(BuildInput(artifacts, repo))
+      case _ => None
+    }
+  }
+}  

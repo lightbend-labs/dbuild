@@ -30,7 +30,7 @@ object ScalaBuildSystem extends BuildSystem {
         ))
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifacts = {
     Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
@@ -40,10 +40,10 @@ object ScalaBuildSystem extends BuildSystem {
     
     // Now deliver scala to the remote repo.
     // TODO - VERSIONING!!!!!!!!!!!!!!!!!!
-    val localRepo = dependencies.localRepo.getAbsolutePath
+    val localRepo = input.outRepo
     Process(Seq("ant", "deploy.local",
-        "-Dlocal.snapshot.repository="+localRepo,
-        "-Dlocal.release.repository="+localRepo,
+        "-Dlocal.snapshot.repository="+localRepo.getAbsolutePath,
+        "-Dlocal.release.repository="+localRepo.getAbsolutePath,
         "-Dmaven.version.number="+version
     ), Some(dir / "dists" / "maven" / "latest")) ! log match {
       case 0 => ()
@@ -61,8 +61,7 @@ object ScalaBuildSystem extends BuildSystem {
       ArtifactLocation(jline, version),
       ArtifactLocation(partest, version),
       ArtifactLocation(continuations, version)
-    ) ++ dependencies.artifacts, 
-    dependencies.localRepo)
+    ), localRepo)
   }
 
     

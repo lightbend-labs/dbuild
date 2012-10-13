@@ -12,6 +12,8 @@ object ProjectDirs {
   // TODO - Pull from config!
   val builddir = new File(".")
   val targetDir = new File(builddir, "target")
+  val userhome = new File(sys.props("user.home"))
+  val userCache = new File(userhome, ".dsbt/cache")
   
   
   def logDir = new File(targetDir, "logs")

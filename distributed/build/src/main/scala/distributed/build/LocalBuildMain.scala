@@ -8,6 +8,7 @@ import akka.util.Timeout
 import akka.util.duration._
 import project.model._
 import _root_.config.parseFileInto
+import distributed.repo.core._
 
 class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
   // TODO - Pull these via plugins or something...
@@ -30,8 +31,9 @@ class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
     mgr ! Props(new logging.SystemOutLoggerActor)
     mgr
   }
+  val repository = new LocalRepository(local.ProjectDirs.userCache)
   val logger = new logging.ActorLogger(logMgr)
-  val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, logger)))
+  val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, logger)))
   // TODO - Look up target elsewhere...
   
   def build(build: DistributedBuildConfig): BuildArtifacts = {

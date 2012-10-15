@@ -63,7 +63,7 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
         else loop(tail ++ head.dependencies, seen + head.uuid)
       case _ => seen
     }
-    loop(dependencies, Set(uuid))
+    loop(dependencies, Set.empty)
   }
 }
 object RepeatableProjectBuild {

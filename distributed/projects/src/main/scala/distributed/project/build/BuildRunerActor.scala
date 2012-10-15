@@ -39,7 +39,7 @@ class LocalBuildRunner(builder: BuildRunner,
       val deps = LocalRepoHelper.materializeProjectRepository(build.uuid, repository, dir)
       BuildArtifacts(deps, dir)
     } catch {
-      case e: Exception => runLocalBuild(target, build, log)
+      case e: RuntimeException => runLocalBuild(target, build, log)
     }
   
   def runLocalBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifacts =
@@ -51,8 +51,8 @@ class LocalBuildRunner(builder: BuildRunner,
       val writeRepo = new File(dir, ".dsbt/local-publish-repo")
       if(!writeRepo.exists()) writeRepo.mkdirs()
       val artifactLocations = for {
-        dep <- build.dependencies
-        art <- LocalRepoHelper.materializeProjectRepository(dep.uuid, repository, readRepo)
+        uuid <- build.transitiveDependencyUUIDs.toSeq
+        art <- LocalRepoHelper.materializeProjectRepository(uuid, repository, readRepo)
       } yield art
       // TODO - Load this while resolving!
       val dependencies: BuildArtifacts = BuildArtifacts(artifactLocations, readRepo)

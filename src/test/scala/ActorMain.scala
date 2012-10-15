@@ -51,7 +51,10 @@ object ActorMain {
   
   def sbtPlugins = sbtTypesafePlugins ++ sbtCommunityPlugins
   
-  lazy val sbtWithPerformance = config.parseString("""{ measure-performance = "true" }""").resolve.root
+  lazy val sbtWithPerformance = config.parseString("""{ 
+      measure-performance = false 
+      run-tests = false
+  }""").resolve.root
   
   def scalacheck =
     //ProjectBuildConfig("scalacheck", "sbt", "git://github.com/rickynils/scalacheck.git#master", "")

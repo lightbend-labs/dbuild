@@ -59,8 +59,19 @@ object ConfigRead {
   implicit object doubleRead extends ConfigRead[Double] {
     import util.control.Exception.catching
     def unapply(t: ConfigValue) = t match {
+      case ConfigNumber(value) => Some(value.doubleValue)
       case ConfigString(value) =>
         catching(classOf[NumberFormatException]) opt value.toDouble
+      case _ => None
+    }
+  }
+  
+  implicit object longRead extends ConfigRead[Long] {
+    import util.control.Exception.catching
+    def unapply(t: ConfigValue) = t match {
+      case ConfigNumber(value) => Some(value.longValue)
+      case ConfigString(value) =>
+        catching(classOf[NumberFormatException]) opt value.toLong
       case _ => None
     }
   }
@@ -68,6 +79,7 @@ object ConfigRead {
   implicit object booleanRead extends ConfigRead[Boolean] {
     import util.control.Exception.catching
     def unapply(t: ConfigValue) = t match {
+      case ConfigBoolean(value) => Some(value)
       case ConfigString(value) =>
         catching(classOf[IllegalArgumentException]) opt value.toBoolean
       case _ => None

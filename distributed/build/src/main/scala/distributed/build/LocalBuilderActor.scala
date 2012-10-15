@@ -33,7 +33,7 @@ class LocalBuilderActor(
   
   val extractorActor = context.actorOf(Props(new ExtractorActor(extractor)), "Project-Dependency-Extractor")
   val baseBuildActor = context.actorOf(Props(new BuildRunnerActor(locaBuildRuner)), "Project-Builder")
-  val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor)), "simple-distributed-builder")
+  val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository)), "simple-distributed-builder")
 
   def receive = {
     case RunLocalBuild(config, target) => 

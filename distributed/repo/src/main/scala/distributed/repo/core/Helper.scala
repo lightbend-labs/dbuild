@@ -13,9 +13,19 @@ object LocalRepoHelper {
   protected def makeRawFileKey(sha: String): String =
     "raw/"+sha
     
-  protected def makeMetaKey(sha: String): String =
+  protected def makeProjectMetaKey(sha: String): String =
     "meta/project/" + sha 
-  
+
+  protected def makeBuildMetaKey(sha: String): String =
+    "meta/build/" + sha
+    
+  /** Publishes the given repeatable build configuration to the repository. */
+  def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository): Unit =
+    IO.withTemporaryFile("repeatable-build", build.uuid) { file =>
+      val key = makeBuildMetaKey(build.uuid)
+      IO.write(file, config makeConfigString build)
+      remote put (key, file)
+    }
   /**
    * Creates a new ArtifactSha sequence for each item found
    * in the locally deployment repository directory.  
@@ -45,7 +55,7 @@ object LocalRepoHelper {
     
     
   protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository): Unit = {
-    val key = makeMetaKey(meta.project.uuid)
+    val key = makeProjectMetaKey(meta.project.uuid)
     IO.withTemporaryFile(meta.project.config.name, meta.project.uuid) { file =>
       IO.write(file, config makeConfigString meta)
       remote put (key, file)
@@ -60,7 +70,6 @@ object LocalRepoHelper {
    * @param remote  The repository to publish into.
    */
   def publishProjectArtiactInfo(project: RepeatableProjectBuild, extracted: Seq[ArtifactLocation], localRepo: File, remote: Repository): ProjectArtifactInfo = {
-    println("Publishing artifacts from: " + localRepo.getAbsolutePath)
     val arts = publishRawArtifacts(localRepo, remote)
     val info = ProjectArtifactInfo(project, extracted, arts)
     publishProjectMetadata(info, remote)
@@ -69,22 +78,30 @@ object LocalRepoHelper {
     
     
   protected def materializeProjectMetadata(uuid: String, remote: ReadableRepository): Option[ProjectArtifactInfo] = {
-    val key = makeMetaKey(uuid)
+    val key = makeProjectMetaKey(uuid)
     val file = remote get key
-    config.parseStringInto[ProjectArtifactInfo](IO read file)
+    try config.parseStringInto[ProjectArtifactInfo](IO read file)
+    catch {
+      case t: Throwable => throw new MalformedMetadata(key, "Unable to parse ProjectArtifactInfo metadata from: " + file.getAbsolutePath)
+    }
   }
     
-  
-  /** Grabs a set of raw artifacts and materializes them into a local
-   * repository.
+  /**
+   * This method takes in a project UUID, a repository and a function that operates on every
+   * Artifact that project has in the repository.  It returns the projet metadata and a sequence of
+   * results of the operation run against eah artifact in the repository.
    */
-  protected def materializeRawArtifacts(remoteRepo: ReadableRepository, artifacts: Seq[ArtifactSha], localRepo: File): Unit = 
-    for {
-      artifact <- artifacts
-      file = new File(localRepo, artifact.location)
+  protected def resolveArtifacts[T](uuid: String, remote: ReadableRepository)(f: (File, ArtifactSha) => T): (ProjectArtifactInfo, Seq[T]) = {
+    val metadata =
+      materializeProjectMetadata(uuid, remote) getOrElse (throw new ResolveException(makeProjectMetaKey(uuid), "Could not resolve metadata for " + uuid))
+    val results = for {
+      artifact <- metadata.artifacts
       key = makeRawFileKey(artifact.sha)
-      resolved = remoteRepo get key
-    } IO.copyFile(resolved, file, false)
+      resolved = remote get key
+    } yield f(resolved, artifact)
+    
+    (metadata, results)
+  }
     
     
   /**
@@ -97,13 +114,18 @@ object LocalRepoHelper {
    *   @return The list of *versioned* artifacts that are now in the local repo.
    */
   def materializeProjectRepository(uuid: String, remote: ReadableRepository, localRepo: File): Seq[ArtifactLocation] = {
-    def resovleMetaData(uuid: String) =
-      materializeProjectMetadata(uuid, remote) getOrElse sys.error("could not read metadata for: " + uuid)
-    def resolveProject(uuid: String) = {
-      val metadata = resovleMetaData(uuid)
-      materializeRawArtifacts(remote, metadata.artifacts, localRepo)
-      metadata
-    } 
-    resolveProject(uuid).versions
+    val (meta, _) = resolveArtifacts(uuid, remote) { (resolved, artifact) =>
+      val file = new File(localRepo, artifact.location)
+      IO.copyFile(resolved, file, false)
+    }
+    meta.versions
   }
+    
+  /** Checks whether or not a given project (by UUID) is published. */
+  def getPublishedDeps(uuid: String, remote: ReadableRepository): Seq[ArtifactLocation] = {
+    // We run this to ensure all artifacts are resolved correctly.
+    val (meta, results) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
+    meta.versions
+  }
+  
 }

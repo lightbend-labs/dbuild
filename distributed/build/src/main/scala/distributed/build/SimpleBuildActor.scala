@@ -3,6 +3,7 @@ package build
 
 import project.model._
 import project.build._
+import repo.core.{Repository,LocalRepoHelper}
 import project.dependencies.ExtractBuildDependencies
 import logging.Logger
 import akka.actor.{Actor,ActorRef,Props}
@@ -17,7 +18,7 @@ import java.io.File
 case class RunDistributedBuild(build: DistributedBuildConfig, target: File, logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
-class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
+class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository) extends Actor {
   def receive = {
     case RunDistributedBuild(build, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
@@ -25,14 +26,23 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef) extends Actor {
       val result = for {
         fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
-        _ = fullLogger.info("---==   Repeatable Build Config   ===---")
-        _ = fullLogger.info(fullBuild.repeatableBuildString)
-        _ = fullLogger.info("---== End Repeatable Build Config ===---")
+        _ = publishFullBuild(fullBuild, fullLogger)
         arts <- runBuild(target, fullBuild, fullLogger)
-        //_ = logPoms(fullBuild, arts, fullLogger)
       } yield arts
       result pipeTo listener
     }
+  }
+  
+  /** Publishing the full build to the repository and logs the output for
+   * re-use.
+   */
+  def publishFullBuild(build: RepeatableDistributedBuild, log: Logger): Unit = {
+    log.info("---==  RepeatableBuild ==---")
+    log.info(" uuid = " + build.uuid)
+    log.info("---==   Repeatable Build Config   ===---")
+    log.info(build.repeatableBuildString)
+    log.info("---== End Repeatable Build Config ===---")
+    LocalRepoHelper.publishBuildMeta(build, repository)
   }
   
   def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifacts, log: Logger): Unit = 

@@ -13,7 +13,7 @@ class OfflineLocalCacheRepository(cacheDir: File) extends ReadableRepository {
     // `raw` vs `meta` keys here?
     // For now, let's assume immutable repos.
     if(!cacheFile.exists)
-      sys.error(cacheFile.getAbsolutePath + " does not exist!")
+      throw new ResolveException(key, "Key ["+key+"] does not exist!")
     cacheFile
   }
 }

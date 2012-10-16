@@ -23,18 +23,20 @@ class SbtRunner(globalBase: File) {
   def localIvyProps: Map[String,String] =
     Map("sbt.ivy.home" -> (globalBase / ".ivy2").getAbsolutePath)
   
-  def run(projectDir: File, 
+  def run(projectDir: File,
           log: Logger,
           javaProps: Map[String,String] = Map.empty,
-          javaArgs: Seq[String] = SbtRunner.defaultJavaArgs)(args: String*): Unit = {
+          javaArgs: Seq[String] = SbtRunner.defaultJavaArgs,
+          extraArgs: Seq[String] = Seq.empty)(args: String*): Unit = {
     removeProjectBuild(projectDir, log)
-    
+
     val cmd = SbtRunner.makeShell(
         launcherJar.getAbsolutePath,
         defaultProps,
-        javaProps, 
-        javaArgs)(args:_*)
-      
+        javaProps,
+        javaArgs,
+        extraArgs)(args:_*)
+
     log.debug("Running: " + cmd.mkString("[", ",", "]"))
     Process(cmd, Some(projectDir)) ! log match {
       case 0 => ()
@@ -95,11 +97,13 @@ object SbtRunner {
   def makeShell(launcherJar: String,
           defaultProps: Map[String,String],
           javaProps: Map[String,String] = Map.empty,
-          javaArgs: Seq[String] = SbtRunner.defaultJavaArgs)(args: String*): Seq[String] = {
+          javaArgs: Seq[String] = SbtRunner.defaultJavaArgs,
+          extraArgs: Seq[String] = Seq.empty)(args: String*): Seq[String] = {
     (
       Seq("java") ++
-      makeArgsFromProps(javaProps ++ defaultProps) ++ 
-      javaArgs ++ 
+      makeArgsFromProps(javaProps ++ defaultProps) ++
+      javaArgs ++
+      extraArgs ++
       Seq("-jar", launcherJar) ++
       args
     )

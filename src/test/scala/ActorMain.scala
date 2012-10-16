@@ -73,7 +73,7 @@ object ActorMain {
     BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community")
   
   def scalaConfig =
-    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
+    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.0-wip")
     //BuildConfig("scala", "scala", "git://github.com/paulp/scala.git#2.10.x")
     
   def sperformance =
@@ -86,15 +86,25 @@ object ActorMain {
     BuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master")
     
   def akka =
-    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#master")
+    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#wip-210-SNAPSHOT-RK",
+      config.parseString("""{
+        projects = [ "akka-actor", "akka-slf4j"]
+        }""").resolve.root)
     
   def scalaGraph =
     BuildConfig("scala-graph", "sbt", "http://subversion.assembla.com/svn/scala-graph/trunk")
-    
-  def communityProjects = 
-    Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest/*, scalaGraph*/)
-    
-    
+
+  def play =
+    BuildConfig("play", "sbt", "git://github.com/playframework/Play20#master",
+        config.parseString("""{
+          options = [ "-Dplay.version=2.1-SNAPSHOT", "-Dfile.encoding=UTF-8" ]
+          projects = [ "Play-Test", "Anorm", "SBT-link", "Templates", "Play", "Root" ]
+        }""").resolve.root)
+
+  def communityProjects =
+    Seq(play, akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest/*, scalaGraph*/)
+
+
   def sbinary =
     BuildConfig("sbinary", "sbt", "git://github.com/scala-ide/sbinary.git#plugin_version")
     
@@ -126,9 +136,7 @@ object ActorMain {
   def scalaIdeToolChain =
     BuildConfig("scala-ide-toolchain", "maven", "git://github.com/scala-ide/scala-ide.git#master",
         config.parseString("""{ directory = "org.scala-ide.build-toolchain" }""").resolve.root)
-    
-    
-    
+
   def dBuildConfig =
     //DistributedBuildConfig(Seq(scalaIdeToolChain))
     //DistributedBuildConfig(Seq(scalaConfig, scalaGraph))

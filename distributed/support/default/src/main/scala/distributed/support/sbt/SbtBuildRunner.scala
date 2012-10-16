@@ -99,8 +99,9 @@ This software is designed to make debugging a community/aggregate build simpler.
             "sbt.repository.config" -> repoFile.getAbsolutePath,
             "project.build.results.file" -> resultFile.getAbsolutePath,
             "project.build.deps.file" -> depsFile.getAbsolutePath,
-            "sbt.ivy.home" -> ivyCache.getAbsolutePath)
-      )("dsbt-build")      
+            "sbt.ivy.home" -> ivyCache.getAbsolutePath),
+        extraArgs = config.config.options
+      )("dsbt-build")
       (parseFileInto[BuildArtifacts](resultFile) getOrElse
         sys.error("Failed to generate or load build results!"))
     }

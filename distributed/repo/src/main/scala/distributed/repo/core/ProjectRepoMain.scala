@@ -11,12 +11,13 @@ import Path._
 
 object ProjectRepoMain {
   def main(args: Array[String]): Unit = {
-    val repo = new ReadableProjectRepository(Repository.localCache())
+    val cache = Repository.localCache()
+    val projectRepo = new ReadableProjectRepository(cache)
     args.toSeq match {
-      case Seq("read", uuid) =>
+      case Seq("project", uuid) =>
         // TODO - Pretty print stuff.
         println("--- Project Build: " + uuid)
-        val (meta, arts) = repo.getProjectInfo(uuid)
+        val (meta, arts) = projectRepo.getProjectInfo(uuid)
         println("-- Artifacts -- ")
         for(artifact <- meta.versions) {
           println(artifact.dep + ":" + artifact.version + "\t " + artifact.buildTime)
@@ -25,6 +26,13 @@ object ProjectRepoMain {
         for((file, sha) <- arts) {
           println(sha.sha + "  " + file.length + "\t" + sha.location)
         }
+      case Seq("build", uuid) =>
+        println("--- RepetableBuild: " + uuid)
+        for {
+          build <- LocalRepoHelper.readBuildMeta(uuid, cache)
+          project <- build.repeatableBuilds
+          name = project.config.name
+        } println(" " + project.uuid + " " + name)
       case _ =>  println("TODO - Usage")
     }
   }

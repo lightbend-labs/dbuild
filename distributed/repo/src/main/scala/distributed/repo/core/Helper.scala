@@ -26,6 +26,12 @@ object LocalRepoHelper {
       IO.write(file, config makeConfigString build)
       remote put (key, file)
     }
+  
+  def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {
+    val file = remote get makeBuildMetaKey(uuid)
+    config.parseFileInto[RepeatableDistributedBuild](file)
+  }
+    
   /**
    * Creates a new ArtifactSha sequence for each item found
    * in the locally deployment repository directory.  

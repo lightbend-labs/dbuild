@@ -24,6 +24,12 @@ object Repository {
   def remote(uri: String, cred: Credentials, cacheDir: File = defaultCacheDir): Repository =
     new CachedRemoteRepository(cacheDir, uri, cred)
   
+  def localCache(cacheDir: File = defaultCacheDir): ReadableRepository =
+    new OfflineLocalCacheRepository(cacheDir)
+  
+  def local(cacheDir: File = defaultCacheDir): Repository = 
+    new LocalRepository(cacheDir)
+  
   def defaultCacheDir =
     (sys.props get "user.home" 
        map (new File(_, ".dsbt/cache"))

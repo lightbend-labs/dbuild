@@ -30,6 +30,9 @@ class ReadableProjectRepository(remote: ReadableRepository) {
    */
   def getPublishedArtifacts(uuid: String): Seq[ArtifactLocation] = 
     LocalRepoHelper.getPublishedDeps(uuid, remote)
+    
+    
+  def getProjectInfo(uuid: String) = LocalRepoHelper.getProjectInfo(uuid, remote)
 }
 
 /** this class provides utilities for reading/publishing to a project repository.

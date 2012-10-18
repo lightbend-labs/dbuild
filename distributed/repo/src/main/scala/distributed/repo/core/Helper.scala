@@ -120,6 +120,9 @@ object LocalRepoHelper {
     }
     meta.versions
   }
+  
+  def getProjectInfo(uuid: String, remote: ReadableRepository) =
+    resolveArtifacts(uuid, remote)((x,y) => x -> y)
     
   /** Checks whether or not a given project (by UUID) is published. */
   def getPublishedDeps(uuid: String, remote: ReadableRepository): Seq[ArtifactLocation] = {

@@ -33,6 +33,11 @@ object ProjectRepoMain {
           project <- build.repeatableBuilds
           name = project.config.name
         } println(" " + project.uuid + " " + name)
+        println(" =config=")
+        LocalRepoHelper.readBuildMeta(uuid, cache) foreach { build =>
+           println(config makeConfigString build.repeatableBuildConfig)
+        }
+        
       case _ =>  println("TODO - Usage")
     }
   }

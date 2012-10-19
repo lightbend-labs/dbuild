@@ -8,27 +8,20 @@ import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
 import actorpaterns.forwardingErrorsToFutures
 import java.io.File
+import distributed.repo.core._
+import sbt.IO
 
-case class RunBuild(target: File, build: Build, dependencies: BuildArtifacts, log: Logger)
+case class RunBuild(target: File, build: RepeatableProjectBuild, log: Logger)
 
 /** This actor can run builds locally and return the generated artifacts. */
-class BuildRunnerActor(builder: BuildRunner, resolver: ProjectResolver) extends Actor {
+class BuildRunnerActor(builder: LocalBuildRunner) extends Actor {
   def receive = {
-    case RunBuild(target, build, deps, log) => 
+    case RunBuild(target, build, log) => 
       forwardingErrorsToFutures(sender) {
         log info ("--== Building %s ==--" format(build.config.name))
-        sender ! runLocalBuild(target, build, deps, log)
+        sender ! builder.checkCacheThenBuild(target, build, log)
       }
-      
   }
-  /** Runs the build locally in its hashed directory.
-   * TODO - Conflicts? Locking? good code?
-   */
-  def runLocalBuild(target: File, build: Build, dependencies: BuildArtifacts, log: Logger): BuildArtifacts =
-    local.ProjectDirs.useDirFor(build.config, target) { dir =>
-      log.info("Resolving: " + build.config.uri + " in directory: " + dir)
-      resolver.resolve(build.config, dir, log)
-      log.info("Running local build: " + build.config + " in directory: " + dir)
-      builder.runBuild(build, dir, dependencies, log)
-    }
+  
+   
 }

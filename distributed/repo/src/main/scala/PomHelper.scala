@@ -8,13 +8,13 @@ import project.model.{
   BuildArtifacts,
   ProjectRef,
   ArtifactLocation,
-  DistributedBuild
+  RepeatableDistributedBuild
 }
 import collection.JavaConverters._
 
 /** A utility to create pom files. */
 object PomHelper {
-  def makePoms(build: DistributedBuild, arts: BuildArtifacts): Seq[Model] = {
+  def makePoms(build: RepeatableDistributedBuild, arts: BuildArtifacts): Seq[Model] = {
     val helper = new PomHelper(arts)
     for {
       b <- build.builds
@@ -22,7 +22,7 @@ object PomHelper {
     } yield helper makePom project
   }
   
-  def makePomStrings(build: DistributedBuild, arts: BuildArtifacts): Seq[String] =
+  def makePomStrings(build: RepeatableDistributedBuild, arts: BuildArtifacts): Seq[String] =
     makePoms(build, arts) map serialize
     
   def serialize(pom: Model): String = {

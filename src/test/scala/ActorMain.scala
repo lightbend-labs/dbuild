@@ -33,9 +33,9 @@ object ActorMain {
     "sbt-dirty-money",
     "sbt-lify"
   )
-  def sbtCommunityPlugins: Seq[BuildConfig] = 
+  def sbtCommunityPlugins: Seq[ProjectBuildConfig] = 
     for(name <- sbtCommunityPluginProjectNames)
-    yield BuildConfig(name, "sbt", "git://github.com/sbt/%s.git" format (name))
+    yield ProjectBuildConfig(name, "sbt", "git://github.com/sbt/%s.git" format (name))
   
   
   def sbtTypesafeProjectNames = Seq(
@@ -44,62 +44,67 @@ object ActorMain {
       "sbtscalariform" -> "sbt-0.12", 
       //"xsbt-start-script-plugin" -> "master", 
       "sbt-idea" -> "master")
-  def sbtTypesafePlugins: Seq[BuildConfig] = 
+  def sbtTypesafePlugins: Seq[ProjectBuildConfig] = 
     for((name, branch) <- sbtTypesafeProjectNames)
-    yield BuildConfig(name, "sbt", "git://github.com/typesafehub/%s.git#%s" format (name, branch))
+    yield ProjectBuildConfig(name, "sbt", "git://github.com/typesafehub/%s.git#%s" format (name, branch))
   
   
   def sbtPlugins = sbtTypesafePlugins ++ sbtCommunityPlugins
   
+  lazy val sbtWithPerformance = config.parseString("""{ 
+      measure-performance = false 
+      run-tests = false
+  }""").resolve.root
+  
   def scalacheck =
-    //BuildConfig("scalacheck", "sbt", "git://github.com/rickynils/scalacheck.git#master", "")
-    BuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/master")
+    //ProjectBuildConfig("scalacheck", "sbt", "git://github.com/rickynils/scalacheck.git#master", "")
+    ProjectBuildConfig("scalacheck", "sbt", "git://github.com/jsuereth/scalacheck.git#origin/master", sbtWithPerformance)
 
   def scalatest =
-    BuildConfig("scalatest", "sbt", "https://scalatest.googlecode.com/svn/branches/cmty2.10")
-    //BuildConfig("scalatest", "scalatest", "http://scalatest.googlecode.com/svn/branches/r18for210M4")
+    ProjectBuildConfig("scalatest", "sbt", "https://scalatest.googlecode.com/svn/branches/cmty2.10", sbtWithPerformance)
+    //ProjectBuildConfig("scalatest", "scalatest", "http://scalatest.googlecode.com/svn/branches/r18for210M4")
 
     
   def specs2scalaz =
-    BuildConfig("specs2-scalaz", "sbt", "git://github.com/jsuereth/specs2-scalaz.git#origin/community")
+    ProjectBuildConfig("specs2-scalaz", "sbt", "git://github.com/jsuereth/specs2-scalaz.git#origin/community", sbtWithPerformance)
   
   def specs2 =
-    BuildConfig("specs2", "sbt", "git://github.com/jsuereth/specs2.git#origin/community")
+    ProjectBuildConfig("specs2", "sbt", "git://github.com/jsuereth/specs2.git#origin/community", sbtWithPerformance)
     
   def scalaArm =
-    BuildConfig("scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#origin/community-build")
+    ProjectBuildConfig("scala-arm", "sbt", "git://github.com/jsuereth/scala-arm.git#origin/community-build", sbtWithPerformance)
     
   def scalaIo =
-    BuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community")
+    ProjectBuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community", sbtWithPerformance)
   
   def scalaConfig =
-    BuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
-    //BuildConfig("scala", "scala", "git://github.com/paulp/scala.git#2.10.x")
+    ProjectBuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
+    //ProjectBuildConfig("scala", "scala", "git://github.com/paulp/scala.git#origin/topic/anyval")
     
   def sperformance =
-    BuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community")
+    ProjectBuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community", sbtWithPerformance)
     
   def scalaStm =
-    BuildConfig("scala-stm", "sbt", "git://github.com/nbronson/scala-stm.git#master")
+    ProjectBuildConfig("scala-stm", "sbt", "git://github.com/nbronson/scala-stm.git#master", sbtWithPerformance)
   
   def scalariform = 
-    BuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master")
+    ProjectBuildConfig("scalariform", "maven", "git://github.com/mdr/scalariform.git#master", sbtWithPerformance)
     
   def akka =
-    BuildConfig("akka", "sbt", "https://github.com/akka/akka.git#master")
+    ProjectBuildConfig("akka", "sbt", "https://github.com/akka/akka.git#master", sbtWithPerformance)
     
   def scalaGraph =
-    BuildConfig("scala-graph", "sbt", "http://subversion.assembla.com/svn/scala-graph/trunk")
+    ProjectBuildConfig("scala-graph", "sbt", "http://subversion.assembla.com/svn/scala-graph/trunk", sbtWithPerformance)
     
   def communityProjects = 
     Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest/*, scalaGraph*/)
     
     
   def sbinary =
-    BuildConfig("sbinary", "sbt", "git://github.com/scala-ide/sbinary.git#plugin_version")
+    ProjectBuildConfig("sbinary", "sbt", "git://github.com/scala-ide/sbinary.git#plugin_version", sbtWithPerformance)
     
   def sbt13 =
-    BuildConfig("sbt", "sbt", "git://github.com/harrah/xsbt.git#0.13",
+    ProjectBuildConfig("sbt", "sbt", "git://github.com/harrah/xsbt.git#0.13",
         config.parseString("""{
           projects = [ 
             "classpath", 
@@ -121,10 +126,10 @@ object ActorMain {
         }""").resolve.root)
         
   def sbtRepublish =
-    BuildConfig("sbt-republish", "sbt", "git://github.com/typesafehub/sbt-republish#sbt-0.12")
+    ProjectBuildConfig("sbt-republish", "sbt", "git://github.com/typesafehub/sbt-republish#sbt-0.12")
         
   def scalaIdeToolChain =
-    BuildConfig("scala-ide-toolchain", "maven", "git://github.com/scala-ide/scala-ide.git#master",
+    ProjectBuildConfig("scala-ide-toolchain", "maven", "git://github.com/scala-ide/scala-ide.git#master",
         config.parseString("""{ directory = "org.scala-ide.build-toolchain" }""").resolve.root)
     
     

@@ -74,4 +74,14 @@ object GraphSpec extends Specification {
       Graphs.safeTopological(cyclic2) must throwAn[Exception]
     }
   }
+  "Graphs.subGraphFrom" should {
+    "return the node passed" in {
+      val result = Graphs.subGraphFrom(acyclic)(n1)
+      result must equalTo(Set(n1))
+    }
+    "find subgraphs" in {
+      val result = Graphs.subGraphFrom(acyclic)(n3)
+      result must equalTo(Set(n1, n3))
+    }
+  }
 }

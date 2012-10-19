@@ -7,25 +7,55 @@ import sbt.Path._
 import java.io.File
 
 import project.resolve.ProjectResolver
-import model.{Build,BuildConfig}
+import model.{ProjectConfigAndExtracted,ProjectBuildConfig,ExtractedBuildMeta}
 import logging._
 import config.makeConfigString
+import config.parseFileInto
+import repo.core.Repository
 
 
 /** This is used to extract dependencies from projects. */
 class Extractor(
     resolver: ProjectResolver, 
-    dependencyExtractor: BuildDependencyExtractor) {
+    dependencyExtractor: BuildDependencyExtractor,
+    repository: Repository) {
   
   /** Given an initial build configuraiton, extract *ALL* information needed for a full build. */
-  def extract(tdir: File, build: BuildConfig, logger: logging.Logger): Build = 
-    local.ProjectDirs.useDirFor(build, tdir) { dir =>
+  def extract(tdir: File, build: ProjectBuildConfig, logger: logging.Logger): ProjectConfigAndExtracted = 
+    local.ProjectDirs.useProjectExtractionDirectory(build, tdir) { dir =>
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
       val config = resolver.resolve(build, dir, logger)
       logger.debug("Repeatable Config: " + makeConfigString(config))
-      logger.debug("Extracting Dependencies for: " + build.name)
-      val deps = dependencyExtractor.extract(build, dir, logger)
-      logger.debug("Dependencies = " + makeConfigString(deps))
-      Build(config,deps)
+      // Here, we attempt to cache our extracted dependencies rather than do
+      // resolution again.
+      // TODO - This should be configurable!
+      cachedExtractOr(config, logger) {
+        logger.debug("Extracting Dependencies for: " + build.name)
+        val deps = dependencyExtractor.extract(build, dir, logger)      
+        logger.debug("Dependencies = " + makeConfigString(deps))
+        cacheExtract(config, deps)
+        ProjectConfigAndExtracted(config,deps)
+      }
     }
+  
+    private def makeExtractKey(config: ProjectBuildConfig) = 
+      "meta/extract/" + config.uuid
+  
+    private def cacheExtract(config: ProjectBuildConfig, extract: ExtractedBuildMeta): Unit =
+      IO.withTemporaryFile("extract", config.uuid) { file =>
+        IO.write(file, makeConfigString(extract))
+        repository.put(makeExtractKey(config), file)
+      }
+    
+    private def cachedExtractOr(config: ProjectBuildConfig, logger: logging.Logger)(f: => ProjectConfigAndExtracted): ProjectConfigAndExtracted = 
+      try {
+        val key = makeExtractKey(config)
+    	val file = repository.get(key)
+    	logger.debug("Dependencies are cached!")
+    	val deps = parseFileInto[ExtractedBuildMeta](file).get
+    	logger.debug("Dependencies = " + makeConfigString(deps))
+    	ProjectConfigAndExtracted(config, deps)
+      } catch {
+        case _: Exception => f
+      }
 }

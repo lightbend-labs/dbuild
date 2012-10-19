@@ -2,7 +2,7 @@ import com.typesafe.config.ConfigValue
 
 package object hashing {
 
-  def sha1Sum(t: Any): String =
+  def sha1(t: Any): String =
     messageDigestHex(java.security.MessageDigest.getInstance("SHA-1"))(t)
 
   def sha512(t: Any): String =

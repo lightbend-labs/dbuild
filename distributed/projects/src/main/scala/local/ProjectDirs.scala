@@ -1,6 +1,6 @@
 package local
 
-import distributed.project.model.{BuildConfig, DistributedBuildConfig}
+import distributed.project.model._
 import java.io.File
 
 // TODO - Locally configured area for projects
@@ -12,29 +12,37 @@ object ProjectDirs {
   // TODO - Pull from config!
   val builddir = new File(".")
   val targetDir = new File(builddir, "target")
+  val userhome = new File(sys.props("user.home"))
+  val userCache = new File(userhome, ".dsbt/cache")
   
   
   def logDir = new File(targetDir, "logs")
   
-  // TODO - Check lock file or something...
-  def useDirFor[A](build: BuildConfig, tdir: File = targetDir)(f: File => A) = {
+  def useProjectExtractionDirectory[A](build: ProjectBuildConfig, tdir: File = targetDir)(f: File => A) = {
     val dir = new File(tdir, "projects")
     // TODO - just build name?
-    val projdir = new File(dir, build.name + "-" + hashing.sha1Sum(build))
+    val projdir = new File(dir, build.name)
     projdir.mkdirs()
     f(projdir)
   }
   
+  def useProjectUniqueBuildDir[A](uuid: String, tdir: File = targetDir)(f: File => A) = {
+    val dir = new File(tdir, "project-builds")
+    // TODO - just build name?
+    val projdir = new File(dir, uuid)
+    projdir.mkdirs()
+    f(projdir)
+  }
+  @deprecated
   def makeDirForBuild(build: DistributedBuildConfig, tdir: File = targetDir): File = {
-    val file = new File(tdir, hashing.sha1Sum(build))
+    val file = new File(tdir, hashing sha1 build)
     file.mkdirs()
     file
   }
   
-  
-  def userRepoDirFor[A](build:DistributedBuildConfig)(f: File => A) = {
+  def userRepoDirFor[A](build: RepeatableDistributedBuild)(f: File => A) = {
     val dir = new File(targetDir, "repositories")
-    val repodir = new File(dir, hashing.sha1Sum(build))
+    val repodir = new File(dir, build.uuid)
     repodir.mkdirs()
     f(repodir)
   }

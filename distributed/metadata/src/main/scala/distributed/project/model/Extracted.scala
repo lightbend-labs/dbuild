@@ -15,7 +15,9 @@ case class ProjectRef(
     name: String, 
     organization: String, 
     extension: String = "jar", 
-    classifier: Option[String] = None)
+    classifier: Option[String] = None) {
+  override def toString = organization + ":" + name + ":" + (classifier map (_ + ":") getOrElse "") + extension
+}
 object ProjectRef {
   implicit object ProjectDepPrettyPrint extends ConfigPrint[ProjectRef] {
     def apply(t: ProjectRef): String = {

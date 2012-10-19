@@ -14,7 +14,7 @@ import sys.process._
 object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
   
-  def extractDependencies(config: BuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
     // TODO - don't HardCode
     ExtractedBuildMeta("", 
         Seq(
@@ -30,7 +30,7 @@ object ScalaBuildSystem extends BuildSystem {
         ))
   }
 
-  def runBuild(project: Build, dir: File, dependencies: BuildArtifacts, log: logging.Logger): BuildArtifacts = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifacts = {
     Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
@@ -40,32 +40,28 @@ object ScalaBuildSystem extends BuildSystem {
     
     // Now deliver scala to the remote repo.
     // TODO - VERSIONING!!!!!!!!!!!!!!!!!!
-    val localRepo = dependencies.localRepo.getAbsolutePath
+    val localRepo = input.outRepo
     Process(Seq("ant", "deploy.local",
-        "-Dlocal.snapshot.repository="+localRepo,
-        "-Dlocal.release.repository="+localRepo,
+        "-Dlocal.snapshot.repository="+localRepo.getAbsolutePath,
+        "-Dlocal.release.repository="+localRepo.getAbsolutePath,
         "-Dmaven.version.number="+version
     ), Some(dir / "dists" / "maven" / "latest")) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
-    
-    // Now, return hardcoded results.
-    val libDir = dir / "build" / "pack" / "lib"
-
+    // Hardcoded results...
     BuildArtifacts(Seq(
-      ArtifactLocation(lib, libDir / "scala-library.jar", version),
-      ArtifactLocation(reflect, libDir / "scala-reflect.jar", version),
-      ArtifactLocation(comp, libDir / "scala-compiler.jar", version),
-      ArtifactLocation(actors, libDir / "scala-actors.jar", version),
-      ArtifactLocation(swing, libDir / "scala-swing.jar", version),
-      ArtifactLocation(actorsMigration, libDir / "scala-actors-migration.jar", version),
-      ArtifactLocation(scalap, libDir / "scalap.jar", version),
-      ArtifactLocation(jline, libDir / "jline.jar", version),
-      ArtifactLocation(partest, libDir / "paretst.jar", version),
-      ArtifactLocation(continuations, dir / "build/pack/misc/scala-devel/plugins/continuations.jar", version)
-    ) ++ dependencies.artifacts, 
-    dependencies.localRepo)
+      ArtifactLocation(lib, version),
+      ArtifactLocation(reflect, version),
+      ArtifactLocation(comp, version),
+      ArtifactLocation(actors, version),
+      ArtifactLocation(swing, version),
+      ArtifactLocation(actorsMigration, version),
+      ArtifactLocation(scalap, version),
+      ArtifactLocation(jline, version),
+      ArtifactLocation(partest, version),
+      ArtifactLocation(continuations, version)
+    ), localRepo)
   }
 
     

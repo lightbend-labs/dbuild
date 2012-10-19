@@ -101,5 +101,18 @@ object Graphs {
       bottomNodes foreach visit
       sequence.toSeq
     }
+  
+  def subGraphFrom[N,E](g: Graph[N,E])(n: Node[N]): Set[Node[N]] = {
+    assert(g.nodes(n), "Node is not contained inside the graph.")
+    def findNodes(current: Seq[Node[N]], found: Set[Node[N]]): Set[Node[N]] = 
+      if(current.isEmpty) found
+      else {
+        val head = current.head
+        def spans = g edges n map (_.to)
+        if(found contains head) findNodes(current.tail, found)
+        else findNodes(current.tail ++ spans, found + head)
+      }
+    findNodes(Seq(n), Set.empty)
+  }
 }
 

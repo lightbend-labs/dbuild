@@ -18,7 +18,7 @@ object DistributedBuildConfigSpec extends Specification {
           uri = "uri"
     }]
 }""") must equalTo(Some(DistributedBuildConfig(
-      Seq(BuildConfig(
+      Seq(ProjectBuildConfig(
           name = "p1",
           uri = "uri",
           system = "sbt",
@@ -38,7 +38,7 @@ object DistributedBuildConfigSpec extends Specification {
           extra = { directory = "ZOMG" }
     }]
 }""") must equalTo(Some(DistributedBuildConfig(
-      Seq(BuildConfig(
+      Seq(ProjectBuildConfig(
           name = "p1",
           uri = "uri",
           system = "humpty",

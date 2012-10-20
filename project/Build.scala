@@ -21,6 +21,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     settings(Packaging.settings:_*)
     settings(
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDsbtProps,
+      mappings in Universal <+= (target, sourceDirectory, scalaVersion in drepo, version in drepo) map Packaging.makeDRepoProps,
       version := MyVersion
     )
   )
@@ -56,7 +57,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val drepo = (
     DmodProject("repo")
     dependsOn(dmeta)
-    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo)
+    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, sbtLaunchInt)
   )
   lazy val dbuild = (
       DmodProject("build")

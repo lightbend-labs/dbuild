@@ -31,7 +31,12 @@ object Repository {
     new LocalRepository(cacheDir)
   
   def defaultCacheDir =
-    (sys.props get "user.home" 
-       map (new File(_, ".dsbt/cache"))
-       getOrElse new File(sbt.IO.temporaryDirectory, "dsbt-cache"))
+    sysPropsCacheDir orElse defaultUserHomeCacheDir getOrElse sys.error("Could not find default caching directory for DSBT repository.")
+    
+  def sysPropsCacheDir =
+    sys.props get "dsbt.cache.dir" map (new File(_))
+    
+  def defaultUserHomeCacheDir =
+    sys.props get "user.home" map (new File(_, ".dsbt/cache"))
+       
 }

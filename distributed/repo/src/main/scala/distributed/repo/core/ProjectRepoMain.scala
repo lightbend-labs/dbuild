@@ -8,6 +8,20 @@ import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
 
+class SbtRepoMain extends xsbti.AppMain {
+  def run(configuration: xsbti.AppConfiguration) =
+    try {
+      val args = configuration.arguments
+      ProjectRepoMain.main(args.toArray)
+      Exit(0)
+    } catch {
+      case e: Exception =>
+        e.printStackTrace
+        Exit(1)
+    }
+  case class Exit(val code: Int) extends xsbti.Exit
+}
+
 
 object ProjectRepoMain {
   val cache = Repository.localCache()
@@ -24,9 +38,20 @@ object ProjectRepoMain {
         printProjectArtifacts(uuid)
       case Seq("build", uuid) => printBuildInfo(uuid)
       case Seq("build-projects", uuid) => printAllProjectInfo(uuid)
-
-        
-      case _ =>  println("TODO - Usage")
+      case _ =>  
+        println("""|Usage: <repo-reader> <cmd>
+                   |  where cmd in:
+                   |  -  project <uuid>
+                   |      prints the information about a project.
+                   |  -  project-files <uuid>
+                   |      prints the files stored for a project.
+                   |  -  project-artifacts <uuid>
+                   |      prints the artifacts published by a project.
+                   |  -  build <uuid>
+                   |      prints the information about a build.
+                   |  -  build-projects <uuid>
+                   |      prints the information about projects within a build.
+                   |""".stripMargin)
     }
   }
   

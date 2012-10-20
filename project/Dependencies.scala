@@ -13,7 +13,12 @@ object Dependencies {
   val specs2         = "org.specs2" %% "specs2" % "1.10" % "test"
 
   val dispatch       = "net.databinder" % "dispatch-http_2.9.1" % "0.8.6"
-
+  
+  
+  //  Unfiltered
+  val unfiltered = "net.databinder" %% "unfiltered-netty-server" % "0.6.3"
+  
+  // SBT libraries.
   val sbtIo          = "org.scala-sbt" % "io" % sbtVersion
   val sbtLogging     = "org.scala-sbt" % "logging" % sbtVersion
   val sbtCollections     = "org.scala-sbt" % "collections" % sbtVersion

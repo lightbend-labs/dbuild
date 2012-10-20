@@ -8,6 +8,7 @@ import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
 
+/** Expose for SBT launcher support. */
 class SbtRepoMain extends xsbti.AppMain {
   def run(configuration: xsbti.AppConfiguration) =
     try {
@@ -23,7 +24,10 @@ class SbtRepoMain extends xsbti.AppMain {
 }
 
 
+/** Direct main for use in SBT. */
 object ProjectRepoMain {
+  // TODO - this file-specific knowledge is evil
+  val cacheDir = Repository.defaultCacheDir
   val cache = Repository.localCache()
   val projectRepo = new ReadableProjectRepository(cache)
   
@@ -38,6 +42,8 @@ object ProjectRepoMain {
         printProjectArtifacts(uuid)
       case Seq("build", uuid) => printBuildInfo(uuid)
       case Seq("build-projects", uuid) => printAllProjectInfo(uuid)
+      case Seq("list-builds") => printAvailableBuilds()
+      case Seq("list-projects") => printAvailableProjects()
       case _ =>  
         println("""|Usage: <repo-reader> <cmd>
                    |  where cmd in:
@@ -52,6 +58,44 @@ object ProjectRepoMain {
                    |  -  build-projects <uuid>
                    |      prints the information about projects within a build.
                    |""".stripMargin)
+    }
+  }
+  
+  def printAvailableBuilds(): Unit = {
+    // TODO - This is pretty evil here...
+    println("--- Available Builds")
+    for(file <- IO.listFiles(new java.io.File(cacheDir, "meta/build"))) {
+      val uuid = file.getName
+      val date = new java.util.Date(file.lastModified())
+      println("  * " + uuid + " @ " + date)
+      val projects = for {
+          build <- LocalRepoHelper.readBuildMeta(uuid, cache).toSeq
+          project <- build.repeatableBuilds
+      } yield (project.config.name, project.uuid)
+      val names = padStrings(projects map (_._1))
+      val uuids = projects map (_._2)
+      for((name, id) <- names zip uuids) {
+        println("      + " + name + " " + id)
+      }
+    }
+  }
+  
+  def printAvailableProjects(): Unit = {
+    // TODO - this is pretty evil here...
+    println("--- Available Projects")
+    val uuids = IO.listFiles(new java.io.File(cacheDir, "meta/project")) map (_.getName)
+    printProjects(uuids)
+  }
+  
+  private def printProjects(uuids: Seq[String]): Unit = {
+    val meta = uuids map { id => 
+      val (info, _) = projectRepo getProjectInfo id
+      info
+    }
+    val names = padStrings(meta map (_.project.config.name))
+    val uris  = meta map (_.project.config.uri)
+    for(((uuid, name), uri)  <- uuids zip names zip uris) {
+      println("  * " + uuid + " " + name + " @ " + uri)
     }
   }
   

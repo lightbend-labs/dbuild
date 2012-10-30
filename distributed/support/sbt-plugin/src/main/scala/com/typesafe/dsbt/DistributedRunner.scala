@@ -154,6 +154,14 @@ object DistributedRunner {
           s.asInstanceOf[Setting[Task[Boolean]]].mapInit((_,old) => old map (_ => true))
         case _ => s
       }
+    case Keys.version.key => 
+      // TODO - Modify version to be unique, not snapshot.
+      s.asInstanceOf[Setting[String]] mapInit { (key, value) =>
+        if(value endsWith "-SNAPSHOT") {
+           
+           value replace ("-SNAPSHOT", "-" + config.info.uuid)
+        } else value
+      } 
     case _ => fixDependencies(config.info.arts.artifacts)(s)
   } 
   

@@ -1,5 +1,5 @@
 import com.typesafe.config.ConfigValue
-
+import collection.JavaConverters._
 package object hashing {
 
   def sha1(t: Any): String =
@@ -17,12 +17,29 @@ package object hashing {
         // Add a product marker
         md update 5.toByte
         s.productIterator foreach addBytes
+      case map: Map[String,_] =>
+        val data = map.toSeq.sortBy(_._1)
+        data foreach { case (k,v) =>
+          addBytes(k)
+          addBytes(v)
+        }        
       case s: Traversable[_] =>
         // First add a traversable marker..
         md update 1.toByte
         s foreach addBytes
+      case list: java.util.List[_] =>
+        md update 1.toByte
+        list.asScala foreach addBytes
+      case map: java.util.Map[String,_] =>
+        val data = map.entrySet.iterator.asScala.toSeq.sortBy(_.getKey)
+        data foreach { kv =>
+          addBytes(kv.getKey)
+          addBytes(kv.getValue)
+        }
+      case b: Boolean =>
+        md update (if(b) 0.toByte else 1.toByte)
       case c: ConfigValue =>
-        addBytes(c.render)
+        addBytes(c.unwrapped)
         
     }
     addBytes(t)

@@ -78,8 +78,8 @@ object ActorMain {
     ProjectBuildConfig("scala-io", "sbt", "git://github.com/jsuereth/scala-io.git#origin/community", sbtWithPerformance)
   
   def scalaConfig =
-    ProjectBuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.x")
-    //ProjectBuildConfig("scala", "scala", "git://github.com/paulp/scala.git#origin/topic/anyval")
+    ProjectBuildConfig("scala", "scala", "git://github.com/scala/scala.git#2.10.0-wip")
+    //ProjectBuildConfig("scala", "scala", "git://github.com/paulp/scala.git#2.10.x")
     
   def sperformance =
     ProjectBuildConfig("sperformance", "sbt", "git://github.com/jsuereth/sperformance.git#origin/community", sbtWithPerformance)
@@ -96,10 +96,16 @@ object ActorMain {
   def scalaGraph =
     ProjectBuildConfig("scala-graph", "sbt", "http://subversion.assembla.com/svn/scala-graph/trunk", sbtWithPerformance)
     
-  def communityProjects = 
-    Seq(akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest/*, scalaGraph*/)
-    
-    
+  def play =
+    ProjectBuildConfig("play", "sbt", "git://github.com/playframework/Play20#master",
+        config.parseString("""{
+          options = [ "-Dplay.version=2.1-SNAPSHOT", "-Dfile.encoding=UTF-8" ]
+          projects = [ "Play-Test", "Anorm", "SBT-link", "Templates", "Play", "Root" ]
+        }""").resolve.root)
+
+  def communityProjects =
+    Seq(play, akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest)
+
   def sbinary =
     ProjectBuildConfig("sbinary", "sbt", "git://github.com/scala-ide/sbinary.git#plugin_version", sbtWithPerformance)
     
@@ -131,9 +137,7 @@ object ActorMain {
   def scalaIdeToolChain =
     ProjectBuildConfig("scala-ide-toolchain", "maven", "git://github.com/scala-ide/scala-ide.git#master",
         config.parseString("""{ directory = "org.scala-ide.build-toolchain" }""").resolve.root)
-    
-    
-    
+
   def dBuildConfig =
     //DistributedBuildConfig(Seq(scalaIdeToolChain))
     //DistributedBuildConfig(Seq(scalaConfig, scalaGraph))

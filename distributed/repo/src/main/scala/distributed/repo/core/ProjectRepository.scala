@@ -9,7 +9,7 @@ import sbt.{RichFile, IO, Path}
 import Path._
 
 /** This class provides utilities for dealing with a project repository. */
-class ReadableProjectRepository(remote: ReadableRepository) {
+class ReadableProjectRepository(val remote: ReadableRepository) {
   /**
    * Materialize the artifacts for a given project UUID.
    * Does *not* pull down transitive dependencies.

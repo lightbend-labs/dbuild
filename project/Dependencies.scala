@@ -7,7 +7,7 @@ object Dependencies {
   val sbtVersion = "0.12.0"
   val mvnVersion = "3.0.4"
 
-  val typesafeConfig = "com.typesafe" % "config" % "0.3.1"
+  val typesafeConfig = "com.typesafe" % "config" % "0.4.1"
   val akkaActor      = "com.typesafe.akka" % "akka-actor" % akkaVersion
 
   val specs2         = "org.specs2" %% "specs2" % "1.10" % "test"

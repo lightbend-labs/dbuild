@@ -101,6 +101,7 @@ object ActorMain {
         config.parseString("""{
           options = [ "-Dplay.version=2.1-SNAPSHOT", "-Dfile.encoding=UTF-8" ]
           projects = [ "Play-Test", "Anorm", "SBT-link", "Templates", "Play", "Root" ]
+          directory = "framework"
         }""").resolve.root)
 
   def communityProjects =

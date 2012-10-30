@@ -14,7 +14,7 @@ object DistributedRunner {
   
   // TODO - Config helper!
   def isValidProject(config: SbtBuildConfig, ref: ProjectRef): Boolean =
-    config.config.projects.isEmpty || (config.config.projects exists ref.project.contains) 
+    config.config.projects.isEmpty || (config.config.projects exists (_ == ref.project))
   
   def timed[A](f: => Stated[A]): Stated[Long] = {
     val start = java.lang.System.currentTimeMillis

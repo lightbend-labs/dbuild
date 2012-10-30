@@ -105,7 +105,7 @@ object ActorMain {
         }""").resolve.root)
 
   def communityProjects =
-    Seq(play, akka, scalaStm, specs2, scalacheck, /*scalaIo,*/ scalaConfig, scalaArm, sperformance, specs2scalaz, scalatest)
+    Seq(play, akka, scalaStm, /*specs2,*/ scalacheck, scalaConfig, /*scalaArm, sperformance, specs2scalaz,*/ scalatest)
 
   def sbinary =
     ProjectBuildConfig("sbinary", "sbt", "git://github.com/scala-ide/sbinary.git#plugin_version", sbtWithPerformance)

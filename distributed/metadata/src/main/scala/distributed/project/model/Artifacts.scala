@@ -160,8 +160,10 @@ object BuildArtifacts {
 /** This represents general information every dbuild must know:
  * What artifacts are coming in (from metadta) and where to
  * write new artifacts (so we can save them for later).
+ * 
+ * Also includes the UUID of this build, in case of direct d-build integration.
  */
-case class BuildInput(arts: BuildArtifacts, outRepo: File)
+case class BuildInput(arts: BuildArtifacts, uuid: String, outRepo: File)
 object BuildInput {
   implicit object PrettyPrinter extends ConfigPrint[BuildInput] {
     def apply(r: BuildInput): String = {
@@ -169,6 +171,8 @@ object BuildInput {
       sb append makeMember("artifacts", r.arts)
       sb append ","
       sb append makeMember("outRepo", r.outRepo)
+      sb append ","
+      sb append makeMember("uuid", r.uuid)
       sb append "}"
       sb.toString
     }
@@ -177,11 +181,12 @@ object BuildInput {
     import config._
     val Members = (
       readMember[BuildArtifacts]("artifacts") :^:
-      readMember[java.io.File]("outRepo")
+      readMember[java.io.File]("outRepo") :^:
+      readMember[String]("uuid")
     )
     def unapply(in: ConfigValue): Option[BuildInput] = in match {
-      case Members(artifacts :+: repo :+: HNil) =>
-        Some(BuildInput(artifacts, repo))
+      case Members(artifacts :+: repo :+: uuid :+: HNil) =>
+        Some(BuildInput(artifacts, uuid, repo))
       case _ => None
     }
   }

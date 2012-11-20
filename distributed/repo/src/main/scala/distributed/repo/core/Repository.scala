@@ -24,12 +24,9 @@ object Repository {
     def repoCredFile = cacheDir map (new File(_, "../remote.cache.properties"))
     def readCredFile(f: File): Option[(String, Credentials)] = {
       val props = new java.util.Properties
-      val fin = new java.io.FileInputStream(f)
-      try props load fin
-      finally fin.close()
+      sbt.IO.load(props, f)
       def getProp(name: String): Option[String] =
-        if(props containsKey name) Some(props getProperty name)
-        else None 
+        Option(props getProperty name)
       for {
         url <- getProp("remote.url")
         user <- getProp("remote.user")

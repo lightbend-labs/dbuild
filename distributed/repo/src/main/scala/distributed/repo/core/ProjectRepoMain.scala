@@ -28,7 +28,7 @@ class SbtRepoMain extends xsbti.AppMain {
 object ProjectRepoMain {
   // TODO - this file-specific knowledge is evil
   val cacheDir = Repository.defaultCacheDir
-  val cache = Repository.localCache()
+  val cache = Repository.default
   val projectRepo = new ReadableProjectRepository(cache)
   
   def main(args: Array[String]): Unit = {
@@ -57,6 +57,10 @@ object ProjectRepoMain {
                    |      prints the information about a build.
                    |  -  build-projects <uuid>
                    |      prints the information about projects within a build.
+                   |  -  list-projects
+                   |      lists all projects available in *current cache only*.
+                   |  -  list-builds
+                   |      lists all builds available in *current cache only*.
                    |""".stripMargin)
     }
   }

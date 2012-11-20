@@ -31,7 +31,7 @@ class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
     mgr ! Props(new logging.SystemOutLoggerActor)
     mgr
   }
-  val repository = new LocalRepository(local.ProjectDirs.userCache)
+  val repository = Repository.default
   val logger = new logging.ActorLogger(logMgr)
   val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, logger)))
   // TODO - Look up target elsewhere...

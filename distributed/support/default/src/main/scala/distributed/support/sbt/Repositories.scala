@@ -16,6 +16,8 @@ object Repositories {
       sb append (" mvn-%s: %s\n" format(name, uri))
     }
     // TODO - move these into default config or something....
+    // First check for local.
+    sb append  "  local\n"
     sb append  "  maven-central\n"
     sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
     sb append  "  java-annoying-cla-shtuff: http://download.java.net/maven/2/\n"
@@ -26,7 +28,6 @@ object Repositories {
     // This is because the git plugin is too prevalent...
     sb append  "  jgit-repo: http://download.eclipse.org/jgit/maven\n"
     sb append  "  scala-fresh-2.10.x: http://typesafe.artifactoryonline.com/typesafe/scala-fresh-2.10.x/\n"
-    sb append  "  local\n"
     IO.write(config, sb.toString)
   } 
 }

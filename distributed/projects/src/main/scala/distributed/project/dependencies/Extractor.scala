@@ -44,6 +44,7 @@ class Extractor(
     private def cacheExtract(config: ProjectBuildConfig, extract: ExtractedBuildMeta): Unit =
       IO.withTemporaryFile("extract", config.uuid) { file =>
         IO.write(file, makeConfigString(extract))
+        println("Putting extraction information into: " + repository)
         repository.put(makeExtractKey(config), file)
       }
     

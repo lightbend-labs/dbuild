@@ -17,6 +17,33 @@ trait Repository extends ReadableRepository {
 }
 
 object Repository {
+  
+  def default: Repository = {
+    // Look for repository/credentials file
+    def cacheDir = sysPropsCacheDir orElse defaultUserHomeCacheDir
+    def repoCredFile = cacheDir map (new File(_, "../remote.cache.properties"))
+    def readCredFile(f: File): Option[(String, Credentials)] = {
+      val props = new java.util.Properties
+      sbt.IO.load(props, f)
+      def getProp(name: String): Option[String] =
+        Option(props getProperty name)
+      for {
+        url <- getProp("remote.url")
+        user <- getProp("remote.user")
+        pw <- getProp("remote.password")
+      } yield url -> Credentials(user, pw)
+    }
+    def remoteRepo =
+      for {
+        c <- cacheDir
+        f <- repoCredFile
+        if f.exists
+        (url, credentials) <- readCredFile(f)
+      } yield remote(url, credentials, c)
+    def localRepo = cacheDir map local 
+    remoteRepo orElse localRepo getOrElse sys.error("Unable to initialize default repository.")  
+  }
+  
   /** Construct a repository that reads from a given URI and stores in a local cache. */
   def readingFrom(uri: String, cacheDir: File = defaultCacheDir): ReadableRepository = 
     new CachedRemoteReadableRepository(cacheDir, uri)
@@ -35,8 +62,10 @@ object Repository {
     
   def sysPropsCacheDir =
     sys.props get "dsbt.cache.dir" map (new File(_))
-    
+  
+  def defaultUserHomeDir = sys.props get "user.home" 
+  
   def defaultUserHomeCacheDir =
-    sys.props get "user.home" map (new File(_, ".dsbt/cache"))
+     defaultUserHomeDir map (new File(_, ".dsbt/cache"))
        
 }

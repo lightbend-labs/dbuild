@@ -8,6 +8,10 @@ import java.io.File
 trait ReadableRepository {
   /** Retrieves the contents stored at a given key. */ 
   def get(key: String): File
+  /** TODO - Cheating interface.
+   * This assumes that keys with '/' in them are *directory paths* and looks for sub-keys in the repository.
+   */
+  def subKeys(key: String): Seq[String]
 }
 
 /** Abstract trait representing the interface by which we can push/get files. */ 

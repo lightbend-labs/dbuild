@@ -16,6 +16,13 @@ class OfflineLocalCacheRepository(cacheDir: File) extends ReadableRepository {
       throw new ResolveException(key, "Key ["+key+"] does not exist!")
     cacheFile
   }
+  
+  def subKeys(key: String): Seq[String] = {
+    val cacheFile = new File(cacheDir, key)
+    if(cacheFile.isDirectory) {
+      (IO listFiles cacheFile) map (_.getName) map (key + "/" + _)
+    } else Seq.empty
+  }
 }
 
 class LocalRepository(repo: File) 

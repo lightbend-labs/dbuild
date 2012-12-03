@@ -27,7 +27,6 @@ class SbtRepoMain extends xsbti.AppMain {
 /** Direct main for use in SBT. */
 object ProjectRepoMain {
   // TODO - this file-specific knowledge is evil
-  val cacheDir = Repository.defaultCacheDir
   val cache = Repository.default
   val projectRepo = new ReadableProjectRepository(cache)
   
@@ -68,7 +67,8 @@ object ProjectRepoMain {
   def printAvailableBuilds(): Unit = {
     // TODO - This is pretty evil here...
     println("--- Available Builds")
-    for(file <- IO.listFiles(new java.io.File(cacheDir, "meta/build"))) {
+    for(key <- cache subKeys "meta/build") {
+      val file = cache get key
       val uuid = file.getName
       val date = new java.util.Date(file.lastModified())
       println("  * " + uuid + " @ " + date)
@@ -87,7 +87,10 @@ object ProjectRepoMain {
   def printAvailableProjects(): Unit = {
     // TODO - this is pretty evil here...
     println("--- Available Projects")
-    val uuids = IO.listFiles(new java.io.File(cacheDir, "meta/project")) map (_.getName)
+    val uuids = for(key <- cache subKeys "meta/project") yield {
+      val file = cache get key
+      file.getName
+    }
     printProjects(uuids)
   }
   
@@ -95,7 +98,7 @@ object ProjectRepoMain {
     val meta = uuids map { id => 
       val (info, _) = projectRepo getProjectInfo id
       info
-    }
+    } sortBy (x => x.project.config.name + "  " + x.project.uuid)
     val names = padStrings(meta map (_.project.config.name))
     val uris  = meta map (_.project.config.uri)
     for(((uuid, name), uri)  <- uuids zip names zip uris) {
@@ -111,6 +114,12 @@ object ProjectRepoMain {
         printProjectDependencies(uuid)
         printProjectArtifacts(uuid)
         printProjectFiles(uuid)
+  }
+  
+  def printProjectShortInfo(uuid: String): Unit = {
+        printProjectHeader(uuid)
+        printProjectDependencies(uuid)
+        printProjectArtifacts(uuid)
   }
   
   def printProjectDependencies(uuid:String): Unit = {
@@ -194,7 +203,7 @@ object ProjectRepoMain {
     for {
       build <- LocalRepoHelper.readBuildMeta(buildUUID, cache)
       project <- build.repeatableBuilds
-    } try printProjectInfo(project.uuid)
+    } try printProjectShortInfo(project.uuid)
       catch { case _ => println("     " + project.config.name + " is not built.")}
   }
 }

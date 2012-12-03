@@ -20,10 +20,27 @@ class CachedRemoteReadableRepository(cacheDir: File, uri: String) extends Readab
       try Remote pull (makeUrl(uri, key), cacheFile)
       catch {
         case e: Exception =>
+          e.printStackTrace()
           throw new ResolveException(key, e.getMessage)
       }
     cacheFile
   }
+  
+   def subKeys(key: String): Seq[String] = try {
+     def addSlashPath(path: String) =
+       if(path endsWith "/") path
+       else path + "/"
+     def remveSlashPath(path: String) =
+       if(path endsWith "/") path dropRight 1
+       else path
+     for {
+       path <- Remote listSupaths makeUrl(remveSlashPath(uri), addSlashPath(key)) 
+       if !((path endsWith ".sha1") || (path endsWith ".md5"))
+     } yield key + "/" +path
+   } catch {
+     case e: Exception =>
+       throw new TraversalException(key, e.getMessage)
+   }
 }
 
 /** A cached remote repository where we can update files. */
@@ -68,8 +85,10 @@ object Remote {
     // Ensure directory exists.
     local.getParentFile.mkdirs()
     
+    def cleanForTmp(key: String) = key.replaceAll("/", "-")
+    
     // Pull to temporary file, then move.
-    IO.withTemporaryFile("dsbt-cache", uri) { tmp =>
+    IO.withTemporaryFile("dsbt-cache", cleanForTmp(uri)) { tmp =>
       import dispatch._
       val fous = new java.io.FileOutputStream(tmp)
       // IF there's an error, we must delete the file...
@@ -79,6 +98,20 @@ object Remote {
       // appropriate location.  This should be a far more atomic operation, and "safer".
       IO.move(tmp, local)
     }
+  }
+  
+  def listSupaths(uri: String): Seq[String] = {
+    import dispatch._
     
+    val handler = url(uri) >- { content =>
+      val result = new collection.mutable.ListBuffer[String]
+      val p = java.util.regex.Pattern compile "href=\"(.*?)\""
+      val m = p matcher content
+      while(m.find()) {
+        result +=  (m.group(1))
+      }
+      result.toList filterNot (_ == "../") 
+    }
+    Http(handler)
   }
 }

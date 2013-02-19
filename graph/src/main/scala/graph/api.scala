@@ -1,7 +1,7 @@
 package graph
 
 
-/** Abstract node in a graph.  A vertix.
+/** Abstract node in a graph.  A vertex.
  * May store a value for later calculations after graph algorithms are done.
  */
 trait Node[N] {

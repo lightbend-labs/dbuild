@@ -21,7 +21,9 @@ object Repository {
   def default: Repository = {
     // Look for repository/credentials file
     def cacheDir = sysPropsCacheDir orElse defaultUserHomeCacheDir
-    def repoCredFile = cacheDir map (new File(_, "../remote.cache.properties"))
+    def repoCredFile = cacheDir map (
+        new File(_, "../remote.cache.properties").getCanonicalFile()
+      )
     def readCredFile(f: File): Option[(String, Credentials)] = {
       val props = new java.util.Properties
       sbt.IO.load(props, f)

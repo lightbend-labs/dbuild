@@ -158,7 +158,7 @@ object BuildArtifacts {
 
 
 /** This represents general information every dbuild must know:
- * What artifacts are coming in (from metadta) and where to
+ * What artifacts are coming in (from metadata) and where to
  * write new artifacts (so we can save them for later).
  * 
  * Also includes the UUID of this build, in case of direct d-build integration.

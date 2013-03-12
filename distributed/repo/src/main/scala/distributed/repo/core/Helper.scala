@@ -71,7 +71,7 @@ object LocalRepoHelper {
   /**
    * Publishes the metadata for a project build.
    * 
-   * @param project  The repeatable project build, used to genreate UUIDs and find dependencies.
+   * @param project  The repeatable project build, used to generate UUIDs and find dependencies.
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
@@ -95,7 +95,7 @@ object LocalRepoHelper {
   /**
    * This method takes in a project UUID, a repository and a function that operates on every
    * Artifact that project has in the repository.  It returns the projet metadata and a sequence of
-   * results of the operation run against eah artifact in the repository.
+   * results of the operation run against each artifact in the repository.
    */
   protected def resolveArtifacts[T](uuid: String, remote: ReadableRepository)(f: (File, ArtifactSha) => T): (ProjectArtifactInfo, Seq[T]) = {
     val metadata =

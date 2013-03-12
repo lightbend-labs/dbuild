@@ -2,7 +2,7 @@ package distributed
 package repo
 package core
 
-
+// TODO - rename this source file
 trait RepositoryException
 /** This represents we had trouble resolving a particular key from the repository. */
 case class ResolveException(key: String, msg: String) extends java.lang.RuntimeException(msg) with RepositoryException

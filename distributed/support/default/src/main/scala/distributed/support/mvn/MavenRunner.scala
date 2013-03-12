@@ -35,6 +35,9 @@ class MavenRunner(container: PlexusContainer) {
   }
   
   val defaultRepositories = Seq[ArtifactRepository](
+     // TODO - here for debugging only
+     makeRepo("rover", "http://localhost:8088/artifactory/repo"),
+     // the rest:
      makeRepo("central", "http://repo1.maven.org/maven2/"),
      makeRepo("typesafe", "http://repo.typesafe.com/releases"),
      // TODO - Configure this from build?

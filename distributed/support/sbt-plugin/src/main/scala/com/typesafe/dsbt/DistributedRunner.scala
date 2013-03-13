@@ -220,21 +220,21 @@ object DistributedRunner {
 
   // Fixing Scala version; similar to the above.
   //
-  def fixScalaVersion2(dsbtDir:File, repoDir:File, locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]]) = {
+  def fixScalaVersion2(dsbtDir: File, repoDir: File, locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]]) = {
     val verKeys = Seq(Keys.scalaVersion.key, Keys.crossVersion.key, Keys.scalaHome.key)
     val scalaV = customScalaVersion(locs)
     //change only if new version is requested, otherwise should not generate the new setting
-    scalaV map { ver => (oldSettings.filter { s => verKeys.contains(s.key.key) }.groupBy(_.key).map(_._2.last).toSeq.
+    scalaV map { ver => oldSettings.filter { s => verKeys.contains(s.key.key) }.groupBy(_.key).map(_._2.last).toSeq.
       map { s =>
-      s.key.key match {
-        case Keys.scalaVersion.key => fixScalaVersionSetting2(locs,ver)(s)
-        case Keys.crossVersion.key => fixCrossVersion2(s)
-        case Keys.scalaHome.key => fixScalaHome2(dsbtDir,repoDir, locs,ver)(s)
-        // TODO - change into an Exception
-        case _ => sys.error("Unexpected key in fixScalaVersion. This shouldn't happen.")
+        s.key.key match {
+          case Keys.scalaVersion.key => fixScalaVersionSetting2(locs, ver)(s)
+          case Keys.crossVersion.key => fixCrossVersion2(s)
+          case Keys.scalaHome.key => fixScalaHome2(dsbtDir, repoDir, locs, ver)(s)
+          // TODO - change into an Exception
+          case _ => sys.error("Unexpected key in fixScalaVersion. This shouldn't happen.")
+        }
       }
-      }
-    )} getOrElse Seq.empty
+    } getOrElse Seq.empty
   }
 
   private def fixCrossVersion2(s: sbt.Project.Setting[_]): sbt.Project.Setting[sbt.CrossVersion] =

@@ -297,7 +297,6 @@ object DistributedRunner {
     printResolvers(state)
     val state3 = fixSettings(config, state)
     val (state4, artifacts) = buildProject(state3, config)
-    // TODO - TEST Projects, only if flag enabled.
     testProject(state4, config)
     // TODO - Use artifacts extracted to deploy!
     publishProjects(state4, config)

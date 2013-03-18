@@ -69,7 +69,10 @@ object Remote {
     local.getParentFile.mkdirs()
     
     // Pull to temporary file, then move.
-    IO.withTemporaryFile("dsbt-cache", uri) { tmp =>
+    // uri must be sanitized first: can't contain slashes etc.
+    val saneUri=java.net.URLEncoder.encode(uri)
+    val suffix=saneUri.substring(Math.max(0,saneUri.length-45))
+    IO.withTemporaryFile("dsbt-cache", suffix) { tmp =>
       import dispatch._
       val fous = new java.io.FileOutputStream(tmp)
       // IF there's an error, we must delete the file...

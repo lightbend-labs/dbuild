@@ -135,7 +135,7 @@ object ProjectRepoMain {
   }
   
   def padStrings(strings: Seq[String]): Seq[String] = {
-    val max = (strings map (_.length)).max
+    val max = ((strings map (_.length)) :+ 0).max
     val pad = Seq.fill(max)(' ') mkString ""
     for {
       string <- strings

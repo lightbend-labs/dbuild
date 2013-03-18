@@ -1,5 +1,6 @@
 import akka.actor.ActorRef
 
+// TODO: is the misspelling intentional?
 package object actorpaterns {
   
   @inline

@@ -37,7 +37,7 @@ object ConfigPrint {
   }
   
   implicit object fileConfig extends ConfigPrint[java.io.File] {
-    def apply(f: java.io.File): String = f.getAbsolutePath
+    def apply(f: java.io.File): String = stringConfig(f.getAbsolutePath)
   }
   
   implicit object configObj extends ConfigPrint[ConfigObject] {

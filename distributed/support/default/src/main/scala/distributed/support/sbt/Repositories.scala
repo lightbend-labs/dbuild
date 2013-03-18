@@ -18,13 +18,6 @@ object Repositories {
     // TODO - move these into default config or something....
     // First check for local.
     sb append  "  local\n"
-
-    // TODO - these are here just for debugging (Toni)
-    sb append ("  roverz: http://localhost:8088/artifactory/tonirepo/temp-distributed-build-snapshots, %s\n" format (ivyPattern))
-    sb append  "  rover: http://localhost:8088/artifactory/repo\n"
-    sb append ("  rover-typesafe-ivy-releases: http://localhost:8088/artifactory/typesafe-ivy-releases, %s\n" format (ivyPattern))
-
-    // the rest
     sb append  "  maven-central\n"
     sb append  "  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots\n"
     sb append  "  java-annoying-cla-shtuff: http://download.java.net/maven/2/\n"

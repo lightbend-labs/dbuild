@@ -4,6 +4,8 @@ import Keys._
 import Dependencies._
 import com.typesafe.packager.PackagerPlugin.Universal  
 import com.typesafe.sbt.SbtSite.site
+import com.typesafe.sbt.SbtGhPages.ghpages
+import com.typesafe.sbt.SbtGit.{git, GitKeys}
 import com.typesafe.sbt.site.SphinxSupport
 import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
 
@@ -150,12 +152,10 @@ trait BuildHelper extends Build {
   }
 
   lazy val ddocs = (Project("d-docs",file("docs"))
-    settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++ Seq(
-//      sourceDirectory in Sphinx <<= baseDirectory { _ / "src" / "sphynx" },
-//      sphinxPackages in Sphinx <+= baseDirectory { _ / "_sphinx" / "pygments" },
+    settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++ ghpages.settings ++ Seq(
 //      enableOutput in generatePdf in Sphinx := true,
 //      enableOutput in generateEpub in Sphinx := true,
-//      publishArtifact in Compile := false,
+        git.remoteRepo := "git@github.com:cunei/distributed-build.git",
       publish := (),
       publishLocal := ()
     ):_*))

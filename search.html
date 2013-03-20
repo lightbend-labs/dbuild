@@ -9,7 +9,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>dbuild &mdash; dbuild Documentation</title>
+    <title>Search &mdash; dbuild Documentation</title>
     
     <link rel="stylesheet" href="_static/style.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -31,9 +31,15 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/searchtools.js"></script>
     <script type="text/javascript" src="../../versions.js"></script>
     <script type="text/javascript" src="_static/set-versions.js"></script>
-    <link rel="top" title="dbuild Documentation" href="#" /> 
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+  <script type="text/javascript">
+    jQuery(function() { Search.loadIndex("searchindex.js"); });
+  </script>
+   
+
   </head>
   <body>
   <div class="navbar">
@@ -41,7 +47,7 @@
       <div class="container">
         <ul class="nav">
           <li><a href="home.html">Home</a></li>
-          <li><a href="#">Documentation</a></li>
+          <li><a href="index.html">Documentation</a></li>
           <li><a href="Getting-Started/Setup.html">Download</a></li>
           <li><a href="http://github.com/typesafehub/distributed-build">Project</a></li>           
         </ul>
@@ -50,7 +56,7 @@
   </div>
   <div class="main">
     <div class="container">
-      <div class="page-title">dbuild</div>
+      <div class="page-title">Search</div>
     </div>
     <div class="main-container">
       <div class="container">
@@ -62,7 +68,7 @@
               <li>
               </li>
               <li>
-                <a href="#">Contents</a>
+                <a href="index.html">Contents</a>
               </li>
               <li>
               </li>
@@ -75,39 +81,35 @@
         <div class="row">
           <div class="span9">
             
-  <div class="section" id="dbuild">
-<h1>dbuild<a class="headerlink" href="#dbuild" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<ul class="simple">
-</ul>
-</div>
-<div class="section" id="what-is-it">
-<h2>What is it?<a class="headerlink" href="#what-is-it" title="Permalink to this headline">¶</a></h2>
-<p>dbuild, or distributed-build, is a build tool used to coordinating multiple, independent projects
-that are simultaneously under development, and that may evolve independently while relying on one another.
-The aim of the tool is to make sure that changes in one or more of those projects do not adversely affect
-the entire network of inter-dependent project. Further, dbuild offers facilities that simplify debugging in
-the case in which the compilation of the group of projects should fail.</p>
-</div>
-<div class="section" id="how-does-it-work">
-<h2>How does it work?<a class="headerlink" href="#how-does-it-work" title="Permalink to this headline">¶</a></h2>
-<p>(...coming up...)</p>
-</div>
-</div>
-
+  <h1 id="search-documentation">Search</h1>
+  <div id="fallback" class="admonition warning">
+  <script type="text/javascript">$('#fallback').hide();</script>
+  <p>
+    Please activate JavaScript to enable the search
+    functionality.
+  </p>
+  </div>
+  <p>
+    From here you can search these documents. Enter your search
+    words into the box below and click "search". Note that the search
+    function will automatically search for all of the words. Pages
+    containing fewer words won't appear in the result list.
+  </p>
+  <form action="" method="get">
+    <input type="text" name="q" value="" />
+    <input type="submit" value="search" />
+    <span id="search-progress" style="padding-left: 10px"></span>
+  </form>
+  
+  <div id="search-results">
+  
+  </div>
 
           </div>
           <div class="span3"><p class="contents-title">Contents</p>
               <div id="scroller-anchor">
                 <div id="scroller">
-                  <div id="toc"><ul>
-<li><a class="reference internal" href="#">dbuild</a><ul>
-<li><a class="reference internal" href="#what-is-it">What is it?</a></li>
-<li><a class="reference internal" href="#how-does-it-work">How does it work?</a></li>
-</ul>
-</li>
-</ul>
-</div>
+                  <div id="toc"></div>
                 </div>
               </div></div>
         </div>

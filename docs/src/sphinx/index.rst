@@ -2,7 +2,7 @@ dbuild
 ======
 
 .. toctree::
-   :hidden:
+   :maxdepth: 2
 
 What is it?
 -----------
@@ -15,4 +15,4 @@ the case in which the compilation of the group of projects should fail.
 How does it work?
 -----------------
 
-todo
+(...coming up...)

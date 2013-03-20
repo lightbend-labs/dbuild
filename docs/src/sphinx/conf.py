@@ -16,7 +16,7 @@ release = '0.4.3-SNAPSHOT'
 needs_sphinx = '1.1'
 nitpicky = True
 default_role = 'literal'
-master_doc = 'home'
+master_doc = 'index'
 highlight_language = 'scala'
 add_function_parentheses = False
 

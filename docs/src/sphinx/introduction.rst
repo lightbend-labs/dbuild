@@ -57,7 +57,7 @@ Now dbuild will download, parse, and build in turn scala and sperformance, from 
 
 It is important to notice that here sperformance will be forced to use the scala version that
 you specify, overriding its normal build settings. In case the build file contains many different projects,
-each of them will be tweaked on-the-fly, in order to use the exact combination of branches/commits that were
+each of them will be tweaked on-the-fly, in order to use the exact combination of branches/commits that you
 specified in the configuration file.
 
 dbuild will keep an index of the actual commit ids (git hashes, svn versions, etc) used during that particular

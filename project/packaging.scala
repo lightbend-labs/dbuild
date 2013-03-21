@@ -2,12 +2,15 @@ import sbt._
 import com.typesafe.packager.Keys._
 import sbt.Keys._
 import com.typesafe.packager.PackagerPlugin._
+import com.typesafe.sbt.S3Plugin
+import com.typesafe.sbt.S3Plugin.S3._
+import com.typesafe.packager.universal.Keys.packageZipTarball
 
 object Packaging {
 
 
-  def settings: Seq[Setting[_]] = packagerSettings ++ Seq(
-     name := "dsbt",
+  def settings: Seq[Setting[_]] = packagerSettings ++ S3Plugin.s3Settings ++ Seq(
+     name := "dbuild",
      wixConfig := <wix/>,
      maintainer := "Antonio Cunei <antonio.cunei@typesafe.com>",
      packageSummary := "Multi-project builder.",
@@ -15,10 +18,15 @@ object Packaging {
      mappings in Universal <+= SbtSupport.sbtLaunchJar map { jar =>
        jar -> "bin/sbt-launch.jar"
      },
+     name in Universal <<= (name,version).apply((n,v) => (n+"-"+v)),
      rpmRelease := "1",
      rpmVendor := "typesafe",
-     rpmUrl := Some("https://github.com/typesafehub/distributed-build"),
-     rpmLicense := Some("BSD")
+     rpmUrl := Some("http://github.com/typesafehub/distributed-build"),
+     rpmLicense := Some("BSD"),
+     host in upload := "downloads.typesafe.com",
+     mappings in upload <<= (packageZipTarball in Universal, name, version, name in Universal) map
+       {(tgz,n,v,nu) => Seq((tgz,n+"/"+v+"/"+nu))},
+     credentials += Credentials(Path.userHome / ".s3credentials")
   )
 
   

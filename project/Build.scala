@@ -154,7 +154,7 @@ trait BuildHelper extends Build {
 
   lazy val ddocs = (Project("d-docs",file("docs"))
     settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++
-      ghpages.settings ++ S3Plugin.s3Settings ++ Seq(
+      ghpages.settings ++ Seq(
 //      enableOutput in generatePdf in Sphinx := true,
 //      enableOutput in generateEpub in Sphinx := true,
         git.remoteRepo := "git@github.com:cunei/distributed-build.git",

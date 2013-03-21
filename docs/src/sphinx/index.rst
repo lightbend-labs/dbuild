@@ -1,18 +1,25 @@
 dbuild
 ======
 
+What is it?
+-----------
+dbuild, or distributed-build, is a build and debugging tool based on sbt.
+
+It is used to coordinate the development of multiple, independent projects that evolve in parallel: dbuild
+uses a multi-project definition file to build all the requested projects, and make sure that they all work
+together, even though each of them may evolve independently.
+
+In case a failure is detected, typically because one change in one project affects one or more of the others,
+dbuild can be used as a debugging tool: an affected project can be automatically configured with the exact set
+of dependencies that caused the failure, preparing the necessary environment for further debugging.
+
+Please read below to discover how dbuild works, and how you can use it with your project.
+
+Contents
+--------
+
 .. toctree::
    :maxdepth: 2
 
-What is it?
------------
-dbuild, or distributed-build, is a build tool used to coordinating multiple, independent projects
-that are simultaneously under development, and that may evolve independently while relying on one another.
-The aim of the tool is to make sure that changes in one or more of those projects do not adversely affect
-the entire network of inter-dependent project. Further, dbuild offers facilities that simplify debugging in
-the case in which the compilation of the group of projects should fail.
+   introduction
 
-How does it work?
------------------
-
-(...coming up...)

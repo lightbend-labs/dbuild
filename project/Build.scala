@@ -8,6 +8,7 @@ import com.typesafe.sbt.SbtGhPages.ghpages
 import com.typesafe.sbt.SbtGit.{git, GitKeys}
 import com.typesafe.sbt.site.SphinxSupport
 import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
+import com.typesafe.sbt.S3Plugin
 
 object DistributedBuilderBuild extends Build with BuildHelper {
 
@@ -152,7 +153,8 @@ trait BuildHelper extends Build {
   }
 
   lazy val ddocs = (Project("d-docs",file("docs"))
-    settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++ ghpages.settings ++ Seq(
+    settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++
+      ghpages.settings ++ S3Plugin.s3Settings ++ Seq(
 //      enableOutput in generatePdf in Sphinx := true,
 //      enableOutput in generateEpub in Sphinx := true,
         git.remoteRepo := "git@github.com:cunei/distributed-build.git",

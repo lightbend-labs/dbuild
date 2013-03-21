@@ -9,7 +9,7 @@ object Packaging {
   def settings: Seq[Setting[_]] = packagerSettings ++ Seq(
      name := "dsbt",
      wixConfig := <wix/>,
-     maintainer := "Josh Suereth <joshua.suereth@typesafe.com>",
+     maintainer := "Antonio Cunei <antonio.cunei@typesafe.com>",
      packageSummary := "Multi-project builder.",
      packageDescription := """A multi-project builder capable of gluing together a set of related projects.""",
      mappings in Universal <+= SbtSupport.sbtLaunchJar map { jar =>
@@ -17,7 +17,7 @@ object Packaging {
      },
      rpmRelease := "1",
      rpmVendor := "typesafe",
-     rpmUrl := Some("http://github.com/scala/scala-dist"),
+     rpmUrl := Some("https://github.com/typesafehub/distributed-build"),
      rpmLicense := Some("BSD")
   )
 
@@ -43,9 +43,9 @@ object Packaging {
 [repositories]
   local
   maven-central
-  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases
-  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  typesafe-releases: http://repo.typesafe.com/typesafe/releases
+  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  dbuild-snapshots: http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
 
 [boot]
  directory: ${dsbt.boot.directory-${dsbt.global.base-${user.home}/.dsbt}/boot/}
@@ -79,9 +79,9 @@ object Packaging {
 [repositories]
   local
   maven-central
-  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases
-  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  typesafe-releases: http://repo.typesafe.com/typesafe/releases
+  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  dbuild-snapshots: http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
 
 [boot]
  directory: ${dsbt.boot.directory-${dsbt.global.base-${user.home}/.dsbt}/boot/}

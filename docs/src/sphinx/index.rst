@@ -13,7 +13,8 @@ In case a failure is detected, typically because one change in one project affec
 dbuild can be used as a debugging tool: an affected project can be automatically configured with the exact set
 of dependencies that caused the failure, preparing the necessary environment for further debugging.
 
-Please read below to discover how dbuild works, and how you can use it with your project.
+Please the rest of this guide to discover how dbuild works, and how you can use it with your project. Start the
+tour from :doc:`introduction`.
 
 Contents
 --------
@@ -22,4 +23,6 @@ Contents
    :maxdepth: 2
 
    introduction
-
+   download
+   dbuild
+   repositories

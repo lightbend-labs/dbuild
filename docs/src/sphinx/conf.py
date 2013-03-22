@@ -10,6 +10,7 @@ extensions = ['sphinxcontrib.issuetracker', 'sphinx.ext.extlinks', 'howto']
 project = 'dbuild'
 version = '0.4.3'
 release = '0.4.3-SNAPSHOT'
+sbt_version = '0.12.2'
 
 # General settings
 
@@ -59,3 +60,17 @@ issuetracker_plaintext_issues = True
 issuetracker_issue_pattern = r'\bgh-(\d+)\b'
 issuetracker_title_template = '#{issue.id}'
 
+rst_epilog = """
+.. role:: nv
+.. role:: s2
+.. _zip: %(dbuild_native_package_base)s/%(version)s/%(project)s-%(version)s.zip
+.. _tgz: %(dbuild_native_package_base)s/%(version)s/%(project)s-%(version)s.tgz
+.. |version| replace:: %(version)s
+.. |sbtversion| replace:: %(sbtversion)s
+.. |addsbtplugin| replace:: addSbtPlugin(:s2:`"com.typesafe.dsbt"` %% :s2:`"distributed-sbt-plugin"` %% :s2:`"%(version)s"`)
+""" % {
+   'sbtversion': sbt_version,
+   'version': release,
+   'project': project,
+   'dbuild_native_package_base': 'http://download.typesafe.com/dbuild',
+}

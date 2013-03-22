@@ -1,4 +1,4 @@
-dbuild: introduction
+dbuild: Introduction
 ====================
 
 Terminology
@@ -16,7 +16,6 @@ dbuild project
   It is one software projects in a dbuild build. A dbuild project can be based on sbt or (in the future)
   on Maven, or other tools. Hence, an entire sbt build (which can contain multiple sbt projects) counts
   as just one dbuild project.
-
 
 A quick example
 ---------------
@@ -116,3 +115,7 @@ options and features available.
    dbuild is currently under active development, and should still be considered experimental.
    New features and improvements will be introduced in the coming months: the syntax and other details of
    the tool may change over time.
+
+|
+
+*Next:* :doc:`download`.

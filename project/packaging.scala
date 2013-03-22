@@ -24,8 +24,9 @@ object Packaging {
      rpmUrl := Some("http://github.com/typesafehub/distributed-build"),
      rpmLicense := Some("BSD"),
      host in upload := "downloads.typesafe.com",
-     mappings in upload <<= (packageZipTarball in Universal, name, version, name in Universal) map
-       {(tgz,n,v,nu) => Seq((tgz,n+"/"+v+"/"+nu))},
+     mappings in upload <<= (packageZipTarball in Universal, packageBin in Universal, name, version) map
+       {(tgz,zip,n,v) => Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
+     progress in upload := true,
      credentials += Credentials(Path.userHome / ".s3credentials")
   )
 

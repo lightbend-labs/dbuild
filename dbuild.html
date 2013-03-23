@@ -34,6 +34,7 @@
     <script type="text/javascript" src="../../versions.js"></script>
     <script type="text/javascript" src="_static/set-versions.js"></script>
     <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Repositories" href="repositories.html" />
     <link rel="prev" title="Download and Setup" href="download.html" /> 
   </head>
   <body>
@@ -58,6 +59,7 @@
           <div class="span12">
             <ul class="breadcrumb">        
               <li>
+                 <span class="divider">|</span> <a href="repositories.html">Repositories</a> <span class="divider">»</span>
               </li>
               <li>
               </li>
@@ -78,9 +80,9 @@
             
   <div class="section" id="using-dbuild">
 <h1>Using dbuild<a class="headerlink" href="#using-dbuild" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="dbuild-usage">
-<h2>dbuild: Usage<a class="headerlink" href="#dbuild-usage" title="Permalink to this headline">¶</a></h2>
-<p>The stand-alone dbuild tool is called specifying on the command line the build configuration file:</p>
+<div class="section" id="id1">
+<h2>Using dbuild<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>The stand-alone <tt class="docutils literal"><span class="pre">dbuild</span></tt> tool is called by specifying on the command line its build configuration file:</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/dbuild build-file.dsbt
 </pre></div>
 </div>
@@ -104,9 +106,10 @@ or the location of the Ivy cache it uses). Again, that is only necessary in spec
 <p>The central part of the build tool operation revolves around the build configuration file, which describes
 in detail which software projects are involved in the build, which version of each should be used, and many
 other aspects of the build process.</p>
-<p>The build file is written in a JSON format. The Typesafe <a class="reference external" href="http://github.com/typesafehub/config">config library</a>
-is used, therefore the standard JSON syntax can be simplified accordingly, if desired.</p>
-<p>The top-level structure of the configuration file is:</p>
+<p>The build file is written in a JSON format. The file is parsed by using the Typesafe
+<a class="reference external" href="http://github.com/typesafehub/config">config library</a>, therefore the syntax of the file can be simplified
+by using the conventions of that library.</p>
+<p>The top level of the configuration file is:</p>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;projects&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="o">&lt;</span><span class="nx">dbuild_project1</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="nx">dbuild_project2</span><span class="o">&gt;</span><span class="p">,...]</span> <span class="p">}</span>
 </pre></div>
 </div>
@@ -128,7 +131,7 @@ Scala ARM project.</dd>
 <dt>build-system</dt>
 <dd>A string that describes the build mechanism used by this software project. Valid values are currently
 &quot;scala&quot; (custom for the Scala project) and &quot;sbt&quot;; additional mechanisms will be added soon (Maven
-support is in the works).</dd>
+support is in the works). If not specified, &quot;sbt&quot; is assumed.</dd>
 <dt>source-repository-uri</dt>
 <dd><p class="first">A string pointing to the source repository for this project. It can be git-based (if the uri begins
 with <tt class="docutils literal"><span class="pre">git://</span></tt> or ends with <tt class="docutils literal"><span class="pre">.git</span></tt>), or svn (schemes <tt class="docutils literal"><span class="pre">http://</span></tt>, <tt class="docutils literal"><span class="pre">https://</span></tt>, <tt class="docutils literal"><span class="pre">svn://</span></tt>, only
@@ -146,13 +149,43 @@ version in git master, or svn head.</p>
 <dd>The &quot;extra&quot; component is optional, as are all of its sub-components. Its structure is:</dd>
 </dl>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
- <span class="s2">&quot;name&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">project</span><span class="o">-</span><span class="nx">name</span><span class="o">&gt;</span><span class="p">,</span>
- <span class="s2">&quot;system&quot;</span><span class="o">:</span> <span class="o">&lt;</span><span class="nx">build</span><span class="o">-</span><span class="nx">system</span><span class="o">&gt;</span><span class="p">,</span>
- <span class="s2">&quot;uri&quot;</span>   <span class="o">:</span> <span class="o">&lt;</span><span class="nx">source</span><span class="o">-</span><span class="nx">repository</span><span class="o">-</span><span class="nx">uri</span><span class="o">&gt;</span><span class="p">,</span>
- <span class="s2">&quot;extra&quot;</span> <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">build</span><span class="o">-</span><span class="nx">parameters</span><span class="o">&gt;</span>
+ <span class="s2">&quot;sbt-version&quot;</span>         <span class="o">:</span> <span class="o">&lt;</span><span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;projects&quot;</span>            <span class="o">:</span> <span class="p">[</span> <span class="nx">subproj1</span><span class="p">,</span> <span class="nx">subproj2</span><span class="p">,...</span> <span class="p">]</span>
+ <span class="s2">&quot;run-tests&quot;</span>           <span class="o">:</span> <span class="o">&lt;</span><span class="nx">run</span><span class="o">-</span><span class="nx">tests</span><span class="o">&gt;</span>
+ <span class="s2">&quot;options&quot;</span>             <span class="o">:</span> <span class="p">[</span> <span class="nx">opt1</span><span class="p">,</span> <span class="nx">opt2</span><span class="p">,...</span> <span class="p">]</span>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>Each of them is optional, and their meaning is:</p>
+<dl class="docutils">
+<dt>sbt-version</dt>
+<dd>A string that specifies the version of sbt that should be used to compile
+this dbuild project.</dd>
+<dt>projects</dt>
+<dd><p class="first">A sequence of strings that identifies a subset of the sbt subprojects that should be
+built within this dbuild project. For instance, you can specify:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="s2">&quot;projects&quot;</span><span class="o">:</span>  <span class="p">[</span><span class="s2">&quot;akka-actor&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p class="last">in order to compile only the &quot;akka-actor&quot; sbt project within Akka. Note: make sure to
+use double quotes for the subproject names; if you use single quotes, your entry may
+be interpreted incorrectly, and possibly silently ignored.</p>
+</dd>
+<dt>run-tests</dt>
+<dd><p class="first">Boolean value: if set to false, the project will be built but no tests will be run.</p>
+<p class="last">Normally, each project is built first, then tested; if compilation succeeds but testing
+fails, the dbuild run will abort and no artifacts will be stored into the repository.
+If you set run-tests to false, however, testing for the affected project will be skipped,
+and the artifacts will be published at the end of the compilation stage. This is useful
+in case you would like to use the artifacts of a given project, even though its testing
+stage is currently failing for whatever reason.</p>
+</dd>
+<dt>options</dt>
+<dd>A sequence of strings; they will be
+passed as-is as additional JVM options, while launching the sbt instance that is used
+to build this project.</dd>
+</dl>
+<p><em>Next:</em> <a class="reference internal" href="repositories.html"><em>Repositories</em></a>.</p>
 </div>
 </div>
 
@@ -163,7 +196,7 @@ version in git master, or svn head.</p>
                 <div id="scroller">
                   <div id="toc"><ul>
 <li><a class="reference internal" href="#">Using dbuild</a><ul>
-<li><a class="reference internal" href="#dbuild-usage">dbuild: Usage</a></li>
+<li><a class="reference internal" href="#id1">Using dbuild</a></li>
 <li><a class="reference internal" href="#properties-file">Properties file</a></li>
 <li><a class="reference internal" href="#the-build-configuration-file">The build configuration file</a></li>
 </ul>

@@ -22,7 +22,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.4.4',
+        VERSION:     '0.5.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  false
@@ -70,7 +70,7 @@
                 <span class="divider">«</span> <a href="introduction.html">dbuild: Introduction</a> <span class="divider">|</span>
               </li>
               <li>
-                <select id="versions"><option selected value="0.4.4">Version 0.4.4</option></select>
+                <select id="versions"><option selected value="0.5.0">Version 0.5.0</option></select>
               </li>
             </ul>         
           </div>
@@ -93,10 +93,10 @@ components share much of the code, but they can be used and installed independen
 <h2>Installing the build tool<a class="headerlink" href="#installing-the-build-tool" title="Permalink to this headline">¶</a></h2>
 <p>The stand-alone build compontent of dbuild can be downloaded in one of the following formats:</p>
 <dl class="docutils">
-<dt>Available formats, dbuild-0.4.4:</dt>
+<dt>Available formats, dbuild-0.5.0:</dt>
 <dd><ul class="first last simple">
-<li>gzipped tar: <a class="reference external" href="http://downloads.typesafe.com/dbuild/0.4.4/dbuild-0.4.4.tgz">tgz</a></li>
-<li>zip archive: <a class="reference external" href="http://downloads.typesafe.com/dbuild/0.4.4/dbuild-0.4.4.zip">zip</a></li>
+<li>gzipped tar: <a class="reference external" href="http://downloads.typesafe.com/dbuild/0.5.0/dbuild-0.5.0.tgz">tgz</a></li>
+<li>zip archive: <a class="reference external" href="http://downloads.typesafe.com/dbuild/0.5.0/dbuild-0.5.0.zip">zip</a></li>
 </ul>
 </dd>
 </dl>
@@ -123,7 +123,7 @@ That is done by adding a small file to the global <tt class="docutils literal"><
 <span class="nv">$</span> cat &lt;&lt;EOF &gt;~/.sbt/plugins/dbuild.sbt
 resolvers ++= Seq(Resolver.url(<span class="s2">&quot;dbuild-snapshots&quot;</span>,url(&quot;<a class="reference external" href="http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots/">http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots/</a>&quot;))(Resolver.ivyStylePatterns), <span class="s2">&quot;akka-releases&quot;</span> at &quot;<a class="reference external" href="http://repo.akka.io/releases">http://repo.akka.io/releases</a>&quot;)
 
-addSbtPlugin(<span class="s2">&quot;com.typesafe.dbuild&quot;</span> % <span class="s2">&quot;distributed-sbt-plugin&quot;</span> % <span class="s2">&quot;0.4.4&quot;</span>)
+addSbtPlugin(<span class="s2">&quot;com.typesafe.dbuild&quot;</span> % <span class="s2">&quot;distributed-sbt-plugin&quot;</span> % <span class="s2">&quot;0.5.0&quot;</span>)
 EOF
 <span class="nv">$</span>
 </pre>

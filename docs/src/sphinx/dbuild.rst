@@ -16,7 +16,7 @@ used as a staging area for the current build.
 
 Unless specified otherwise, the end results of the build (artifacts and build information) will be stored
 into a local repository in ``~/.dbuild``. It is also possible to use a remote Ivy repository as storage;
-that is explained later in the REPOSITORIES section, later (**TODO**).
+that is explained later in the section :doc:`repositories`.
 
 Properties file
 ---------------

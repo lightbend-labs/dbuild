@@ -22,7 +22,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.4.3-SNAPSHOT',
+        VERSION:     '0.4.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  false
@@ -70,7 +70,7 @@
                 <span class="divider">«</span> <a href="download.html">Download and Setup</a> <span class="divider">|</span>
               </li>
               <li>
-                <select id="versions"><option selected value="0.4.3-SNAPSHOT">Version 0.4.3-SNAPSHOT</option></select>
+                <select id="versions"><option selected value="0.4.4">Version 0.4.4</option></select>
               </li>
             </ul>         
           </div>
@@ -83,7 +83,7 @@
 <div class="section" id="id1">
 <h2>Using dbuild<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <p>The stand-alone <tt class="docutils literal"><span class="pre">dbuild</span></tt> tool is called by specifying on the command line its build configuration file:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/dbuild build-file.dsbt
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/dbuild build-file.dbuild
 </pre></div>
 </div>
 <p>The build tool will create, if not existing, a <tt class="docutils literal"><span class="pre">~/.dbuild</span></tt> directory in your home, which stores general
@@ -95,10 +95,10 @@ that is explained later in the REPOSITORIES section, later (<strong>TODO</strong
 </div>
 <div class="section" id="properties-file">
 <h2>Properties file<a class="headerlink" href="#properties-file" title="Permalink to this headline">¶</a></h2>
-<p>By default, dbuild will use the file <tt class="docutils literal"><span class="pre">dsbt.properties</span></tt> to retrieve information about its internal
+<p>By default, dbuild will use the file <tt class="docutils literal"><span class="pre">dbuild.properties</span></tt> to retrieve information about its internal
 configuration. Normally, there is no need to touch this file, as its contents are only used while the tool
 is starting up, and not during the build process itself. However, you can modify this file if you would
-like to modify the standard behavior in some way (for instance, relocating the default <tt class="docutils literal"><span class="pre">~/.dsbt</span></tt> directory,
+like to modify the standard behavior in some way (for instance, relocating the default <tt class="docutils literal"><span class="pre">~/.dbuild</span></tt> directory,
 or the location of the Ivy cache it uses). Again, that is only necessary in special cases.</p>
 </div>
 <div class="section" id="the-build-configuration-file">

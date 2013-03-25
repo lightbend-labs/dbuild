@@ -22,7 +22,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.4.3-SNAPSHOT',
+        VERSION:     '0.4.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  false
@@ -70,7 +70,7 @@
                 <span class="divider">«</span> <a href="dbuild.html">Using dbuild</a> <span class="divider">|</span>
               </li>
               <li>
-                <select id="versions"><option selected value="0.4.3-SNAPSHOT">Version 0.4.3-SNAPSHOT</option></select>
+                <select id="versions"><option selected value="0.4.4">Version 0.4.4</option></select>
               </li>
             </ul>         
           </div>
@@ -83,7 +83,7 @@
 <div class="section" id="local-and-remote">
 <h2>Local and remote<a class="headerlink" href="#local-and-remote" title="Permalink to this headline">¶</a></h2>
 <p>The dbuild tool stores its artifacts and build/project information in a custom repository, which can be
-either local (typically in the <tt class="docutils literal"><span class="pre">~/.dsbt/cache</span></tt> directory), or remote, in a special Ivy repository that has
+either local (typically in the <tt class="docutils literal"><span class="pre">~/.dbuild/cache</span></tt> directory), or remote, in a special Ivy repository that has
 a custom layout.</p>
 <p>At this time, the typical usage of dbuild is with a local repository: this is the default configuration
 and no special setting is required.</p>
@@ -95,7 +95,7 @@ dbuild sbt plugin, or using the <tt class="docutils literal"><span class="pre">d
 </div>
 <div class="section" id="remote-repository-configuration">
 <h2>Remote repository configuration<a class="headerlink" href="#remote-repository-configuration" title="Permalink to this headline">¶</a></h2>
-<p>In order to use a remote repository, you will need to add a file called <tt class="docutils literal"><span class="pre">~/.dsbt/remote.cache.properties</span></tt>
+<p>In order to use a remote repository, you will need to add a file called <tt class="docutils literal"><span class="pre">~/.dbuild/remote.cache.properties</span></tt>
 with the following content:</p>
 <div class="highlight-text"><div class="highlight"><pre>remote.url=https://somehost.com/path-to-your-dbuild-repository
 remote.user=...

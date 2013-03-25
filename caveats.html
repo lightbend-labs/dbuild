@@ -22,7 +22,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.4.3-SNAPSHOT',
+        VERSION:     '0.4.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  false
@@ -68,7 +68,7 @@
                 <span class="divider">«</span> <a href="plugin.html">The sbt plugin</a> <span class="divider">|</span>
               </li>
               <li>
-                <select id="versions"><option selected value="0.4.3-SNAPSHOT">Version 0.4.3-SNAPSHOT</option></select>
+                <select id="versions"><option selected value="0.4.4">Version 0.4.4</option></select>
               </li>
             </ul>         
           </div>
@@ -90,9 +90,9 @@ unlucky case in which a project upload has been interrupted half-way through, it
 remove the project file from <tt class="docutils literal"><span class="pre">meta/project</span></tt> and the corresponding artifacts from the <tt class="docutils literal"><span class="pre">raw</span></tt> directory.
 Future versions of dbuild will include more robust repository handling, and consistency checking/fixing
 tools.</li>
-<li>dsbt-setup will modify your running sbt environment by running the equivalent of 'set' commands. These
+<li>dbuild-setup will modify your running sbt environment by running the equivalent of 'set' commands. These
 will show up in the session list as comments, but the session cannot be saved and restored using the
-<tt class="docutils literal"><span class="pre">session</span> <span class="pre">save</span></tt> command. In case you do, the dsbt settings will just be ignored.</li>
+<tt class="docutils literal"><span class="pre">session</span> <span class="pre">save</span></tt> command. In case you do, the dbuild settings will just be ignored.</li>
 <li>The list of resolvers used to build the projects in a dbuild build configuration file cannot be
 configured at this time. It will automatically use common repositories (Typesafe, Maven Central, etc),
 which should be ok for most projects, but libraries hosted on obscure third-party repositories
@@ -102,7 +102,7 @@ point release.</li>
 in general, but at this time if Scala is not included, and cross-versioning is used in any of the
 other projects, versioning issues may arise.</li>
 <li>Cross-versioning is intentionally disabled in all projects during a dbuild run, and as a result of
-dsbt-setup. This is necessary, as only one specific version of Scala and of the various libraries is
+dbuild-setup. This is necessary, as only one specific version of Scala and of the various libraries is
 tested by dbuild.</li>
 </ul>
 <div class="line-block">

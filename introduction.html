@@ -22,7 +22,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.4.3-SNAPSHOT',
+        VERSION:     '0.4.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  false
@@ -70,7 +70,7 @@
                 <span class="divider">«</span> <a href="index.html">dbuild</a> <span class="divider">|</span>
               </li>
               <li>
-                <select id="versions"><option selected value="0.4.3-SNAPSHOT">Version 0.4.3-SNAPSHOT</option></select>
+                <select id="versions"><option selected value="0.4.4">Version 0.4.4</option></select>
               </li>
             </ul>         
           </div>
@@ -113,13 +113,13 @@ of <a class="reference external" href="http://github.com/scala/scala">scala</a>.
 <span class="p">]}</span>
 </pre></div>
 </div>
-<p>We will put this into a file called <tt class="docutils literal"><span class="pre">test.dsbt</span></tt>. The line &quot;system&quot; specifies the build mechanism used to build each of the
+<p>We will put this into a file called <tt class="docutils literal"><span class="pre">test.dbuild</span></tt>. The line &quot;system&quot; specifies the build mechanism used to build each of the
 projects (a custom &quot;scala&quot; build system for scala, and &quot;sbt&quot; for sperformance). Let's download dbuild, and try it out (the
 exact download instructions and other details are in the following pages):</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="o">[</span>...download and unzip dbuild...<span class="o">]</span>
 <span class="nv">$ </span><span class="nb">cd </span>dbuild
-<span class="nv">$ </span><span class="o">[</span>...edit test.dsbt...<span class="o">]</span>
-<span class="nv">$ </span>bin/dbuild test.dsbt
+<span class="nv">$ </span><span class="o">[</span>...edit test.dbuild...<span class="o">]</span>
+<span class="nv">$ </span>bin/dbuild test.dbuild
 </pre></div>
 </div>
 <p>Now dbuild will download, parse, and build in turn scala and sperformance, from the branches
@@ -131,7 +131,7 @@ specified in the configuration file.</p>
 <p>dbuild will keep an index of the actual commit ids (git hashes, svn versions, etc) used during that particular
 run: the same configuration can later be reproduced again, and prepared for debugging.</p>
 <p>At the end of the build, all the of generated artifacts and other information on the build will be stored
-in a local repository, contained in your <tt class="docutils literal"><span class="pre">~/.dsbt/cache</span></tt> directory. If the build ends successfully, you know
+in a local repository, contained in your <tt class="docutils literal"><span class="pre">~/.dbuild/cache</span></tt> directory. If the build ends successfully, you know
 that all the network of inter-dependent projects you specified builds together as desired.</p>
 </div>
 <div class="section" id="what-if-the-build-fails">
@@ -150,7 +150,7 @@ sperformance failed, and that we want to debug it. We can use the sbt plugin as 
 $ cd sperformance
 $ sbt
 [info] Set current project to sperformance (in build file:/home/cunei/i/sperformance/)
-&gt; dsbt-setup 48baab8156458005cb2e0569e8e8c2c39221d56e
+&gt; dbuild-setup 48baab8156458005cb2e0569e8e8c2c39221d56e
 [info] Retrieving dependencies for 26a265808a6abe8e8451a9f0b43d6dc02176ed16 scala
 [info] Retrieving dependencies for 9fc2901cdc4f1e4ce4209bfad5dfbf02633fcd5f sperformance
 [info] Retrieved from project 26a265808a6abe8e8451a9f0b43d6dc02176ed16: 10 artifacts

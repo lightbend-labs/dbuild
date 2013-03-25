@@ -22,7 +22,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.4.3-SNAPSHOT',
+        VERSION:     '0.4.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  false
@@ -70,7 +70,7 @@
                 <span class="divider">«</span> <a href="repositories.html">Repositories</a> <span class="divider">|</span>
               </li>
               <li>
-                <select id="versions"><option selected value="0.4.3-SNAPSHOT">Version 0.4.3-SNAPSHOT</option></select>
+                <select id="versions"><option selected value="0.4.4">Version 0.4.4</option></select>
               </li>
             </ul>         
           </div>
@@ -90,8 +90,8 @@
 <div class="section" id="reloading-a-dbuild-configuration">
 <h2>Reloading a dbuild configuration<a class="headerlink" href="#reloading-a-dbuild-configuration" title="Permalink to this headline">¶</a></h2>
 <p>Once sbt has started, you can reload the artifacts and prepare your debugging environment by using the
-<tt class="docutils literal"><span class="pre">dsbt-setup</span></tt> command, as follows:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/dsbt &lt;dbuild-build-hash&gt; <span class="o">[</span>&lt;dbuild-project-name&gt;<span class="o">]</span>
+<tt class="docutils literal"><span class="pre">dbuild-setup</span></tt> command, as follows:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/dbuild &lt;dbuild-build-hash&gt; <span class="o">[</span>&lt;dbuild-project-name&gt;<span class="o">]</span>
 </pre></div>
 </div>
 <p>Where <tt class="docutils literal"><span class="pre">dbuild-build-hash</span></tt> is the ID of the build, and the optional <tt class="docutils literal"><span class="pre">dbuild-project-name</span></tt> is the name of
@@ -99,7 +99,7 @@ your project, as specified in the build configuration file. For example:</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>sbt
 <span class="o">[</span>...<span class="o">]</span>
 <span class="o">[</span>info<span class="o">]</span> Set current project to sperformance <span class="o">(</span>in build file:<span class="o">[</span>...<span class="o">]</span>/sperformance/<span class="o">)</span>
-&gt; dsbt-setup 48baab8156458005cb2e0569e8e8c2c39221d56e sperformance
+&gt; dbuild-setup 48baab8156458005cb2e0569e8e8c2c39221d56e sperformance
 <span class="o">[</span>info<span class="o">]</span> Retrieving dependencies <span class="k">for </span>9fc2901cdc4f1e4ce4209bfad5dfbf02633fcd5f sperformance
 <span class="o">[</span>info<span class="o">]</span> Retrieved from project 26a265808a6abe8e8451a9f0b43d6dc02176ed16: 10 artifacts
 <span class="o">[</span>info<span class="o">]</span> Updating dependencies...

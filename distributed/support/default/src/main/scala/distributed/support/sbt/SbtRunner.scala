@@ -117,7 +117,7 @@ object SbtRunner {
   }
   
   def writeDeps(file: File): Unit =
-    IO.write(file, """addSbtPlugin("com.typesafe.dsbt" % "distributed-sbt-plugin" % """+'"'+ Defaults.version + "\")")
+    IO.write(file, """addSbtPlugin("com.typesafe.dbuild" % "distributed-sbt-plugin" % """+'"'+ Defaults.version + "\")")
   
   def writeRepoFile(config: File): Unit =
     Repositories.writeRepoFile(config)

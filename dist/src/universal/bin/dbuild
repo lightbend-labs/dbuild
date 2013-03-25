@@ -3,6 +3,6 @@
 SCRIPT_DIR=$(dirname $0)
 
 java \
-  -Dsbt.boot.properties=$SCRIPT_DIR/dsbt.properties \
+  -Dsbt.boot.properties=$SCRIPT_DIR/dbuild.properties \
   -jar $SCRIPT_DIR/sbt-launch.jar \
   $@

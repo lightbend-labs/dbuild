@@ -33,8 +33,8 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
-      val readRepo = new File(dir, ".dsbt/local-repo")
-      val writeRepo = new File(dir, ".dsbt/local-publish-repo")
+      val readRepo = new File(dir, ".dbuild/local-repo")
+      val writeRepo = new File(dir, ".dbuild/local-publish-repo")
       if(!writeRepo.exists()) writeRepo.mkdirs()
       val artifactLocations = for {
         uuid <- build.transitiveDependencyUUIDs.toSeq

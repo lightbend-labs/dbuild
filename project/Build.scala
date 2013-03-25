@@ -3,6 +3,10 @@ import Keys._
 
 import Dependencies._
 import com.typesafe.packager.PackagerPlugin.Universal  
+import com.typesafe.sbt.SbtSite.site
+import com.typesafe.sbt.site.SphinxSupport
+import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
+
 object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
@@ -12,7 +16,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
-    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo, dmeta)
+    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo, dmeta, ddocs)
     settings(publish := (), version := MyVersion)
   )
 
@@ -144,4 +148,16 @@ trait BuildHelper extends Build {
   class RemoteDepHelper(p: Project) {
     def dependsOnRemote(ms: ModuleID*): Project = p.settings(libraryDependencies ++= ms)
   }
+
+  lazy val ddocs = (Project("d-docs",file("docs"))
+    settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++ Seq(
+//      sourceDirectory in Sphinx <<= baseDirectory { _ / "src" / "sphynx" },
+//      sphinxPackages in Sphinx <+= baseDirectory { _ / "_sphinx" / "pygments" },
+//      enableOutput in generatePdf in Sphinx := true,
+//      enableOutput in generateEpub in Sphinx := true,
+//      publishArtifact in Compile := false,
+      publish := (),
+      publishLocal := ()
+    ):_*))
+
 }

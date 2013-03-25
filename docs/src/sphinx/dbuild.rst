@@ -11,7 +11,7 @@ The stand-alone ``dbuild`` tool is called by specifying on the command line its 
    $ bin/dbuild build-file.dbuild
 
 The build tool will create, if not existing, a ``~/.dbuild`` directory in your home, which stores general
-dbuild support files and the local repository cache, and a ``.dbuild`` in your current directory, which is
+dbuild support files and the local repository cache, and a ``target`` in your current directory, which is
 used as a staging area for the current build.
 
 Unless specified otherwise, the end results of the build (artifacts and build information) will be stored

@@ -175,7 +175,7 @@ object ProjectRepoMain {
   }
   
   def printBuildInfo(uuid: String): Unit = {
-        println("--- RepetableBuild: " + uuid)
+        println("--- RepeatableBuild: " + uuid)
         println(" = Projects = ")
         for {
           build <- LocalRepoHelper.readBuildMeta(uuid, cache)
@@ -190,7 +190,7 @@ object ProjectRepoMain {
   
   
   def printAllProjectInfo(buildUUID: String): Unit = {
-    println("--- RepetableBuild: " + buildUUID)
+    println("--- RepeatableBuild: " + buildUUID)
     for {
       build <- LocalRepoHelper.readBuildMeta(buildUUID, cache)
       project <- build.repeatableBuilds

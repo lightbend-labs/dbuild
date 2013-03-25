@@ -3,16 +3,23 @@ import Keys._
 
 import Dependencies._
 import com.typesafe.packager.PackagerPlugin.Universal  
+import com.typesafe.sbt.SbtSite.site
+import com.typesafe.sbt.SbtGhPages.ghpages
+import com.typesafe.sbt.SbtGit.{git, GitKeys}
+import com.typesafe.sbt.site.SphinxSupport
+import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
+import com.typesafe.sbt.S3Plugin
+
 object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.4.3-SNAPSHOT"
+  def MyVersion: String = "0.5.0"
   
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
-    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo, dmeta)
+    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo, dmeta, ddocs)
     settings(publish := (), version := MyVersion)
   )
 
@@ -20,7 +27,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     Project("dist", file("dist")/*, eclipse plugin bombs if we do this: settings = Packaging.settings */) 
     settings(Packaging.settings:_*)
     settings(
-      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDsbtProps,
+      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDbuildProps,
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in drepo, version in drepo) map Packaging.makeDRepoProps,
       version := MyVersion
     )
@@ -107,13 +114,13 @@ trait BuildHelper extends Build {
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
-    organization := "com.typesafe.dsbt",
+    organization := "com.typesafe.dbuild",
     scalaVersion := "2.9.2",
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
-    publishTo := Some(Resolver.url("typesafe-dsbt-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns))
+    publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns))
   )
   
   // TODO - Aggregate into a single JAR if possible for easier resolution later...
@@ -144,4 +151,15 @@ trait BuildHelper extends Build {
   class RemoteDepHelper(p: Project) {
     def dependsOnRemote(ms: ModuleID*): Project = p.settings(libraryDependencies ++= ms)
   }
+
+  lazy val ddocs = (Project("d-docs",file("docs"))
+    settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++
+      ghpages.settings ++ Seq(
+//      enableOutput in generatePdf in Sphinx := true,
+//      enableOutput in generateEpub in Sphinx := true,
+        git.remoteRepo := "git@github.com:typesafehub/distributed-build.git",
+      publish := (),
+      publishLocal := ()
+    ):_*))
+
 }

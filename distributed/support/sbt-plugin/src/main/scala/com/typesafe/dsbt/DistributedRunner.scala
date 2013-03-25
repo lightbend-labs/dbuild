@@ -338,17 +338,20 @@ object DistributedRunner {
   def loadBuildArtifacts(readRepo: File, builduuid: String, thisProject: Option[String], log: Logger) = {
     import distributed.repo.core._
     val cache = Repository.default
-    val projects = (for {
-      build <- LocalRepoHelper.readBuildMeta(builduuid, cache).toSeq
-      project <- build.repeatableBuilds if (thisProject match {
-        case Some(proj) => project.config.name == proj
-        case None => true
-      })
-    } yield project).distinct
     val uuids = (for {
-      project <- projects
-      _ = log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
-      uuid <- project.transitiveDependencyUUIDs
+      build <- LocalRepoHelper.readBuildMeta(builduuid, cache).toSeq
+      allProjects = build.repeatableBuilds
+      uuid <- thisProject match {
+        case Some(proj) => for {
+          project <- allProjects.filter(_.config.name == proj)
+          _ = log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
+          uuid <- project.transitiveDependencyUUIDs
+        } yield uuid
+        case None => {
+          log.info("Retrieving all artifacts from "+allProjects.length+" projects")
+          build.repeatableBuilds map { _.uuid }
+        }
+      }
     } yield uuid).distinct
     for {
       uuid <- uuids
@@ -368,13 +371,9 @@ object DistributedRunner {
     val builduuid = args(0)
 
     // The dsbt-setup command accepts a builduuid, and optionally a string that should match the project string
-    // of the current sbt project, as specified in the .dsbt project file (which apparently may be arbitrary)
-    // If specified, download the dependencies of the specified project; if not specified, download the dependencies
-    // of all the projects listed under builduuid. Please note that the project files themselves are not
-    // downloaded in this case, if no other project in the list depends on them.
-    // Example: if the build lists scala, scalacheck, akka-actors, where scalacheck needs scala, and akka-actors
-    // needs scala and scalacheck, only scala and scalacheck will be loaded, which completes the set of dependencies
-    // needed for sbt debugging (under dsbt-setup) of any of the three.
+    // of the current sbt project, as specified in the .dsbt project file (which may be arbitrary)
+    // If specified, download the dependencies of the specified project; if not specified, download all of the
+    // artifacts of all the projects listed under builduuid.
     val project = if (args.length == 1) None else Some(args(1))
     val extracted = Project.extract(state)
     import extracted._

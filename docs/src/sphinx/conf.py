@@ -72,5 +72,5 @@ rst_epilog = """
    'sbtversion': sbt_version,
    'version': release,
    'project': project,
-   'dbuild_native_package_base': 'http://download.typesafe.com/dbuild',
+   'dbuild_native_package_base': 'http://downloads.typesafe.com/dbuild',
 }

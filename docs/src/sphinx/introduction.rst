@@ -81,7 +81,7 @@ During the dbuild run, you will see two lines like:
    [info]  uuid = 48baab8156458005cb2e0569e8e8c2c39221d56e
 
 The uuid uniquely identifies the tested combination of projects and commits. Let us assume that
-sperformance failed, and that we want to debug it. We can use (after installing the `dbuild sbt plugin`_):
+sperformance failed, and that we want to debug it. We can use the sbt plugin as follows (more details at :doc:`plugin`):
 
 .. code-block:: text
 
@@ -106,7 +106,7 @@ sperformance failed, and that we want to debug it. We can use (after installing 
 At this point, all the dependencies of sperformance are exactly as they were during the multi-project dbuild run,
 and the code can be debugged.
 
-We will see in the following pages how to :ref:`download` and set up dbuild and the dbuild sbt plugin, and the various
+We will see in the following pages how to download and set up dbuild and the dbuild sbt plugin, and the various
 options and features available.
 
 |

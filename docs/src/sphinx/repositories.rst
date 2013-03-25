@@ -25,7 +25,7 @@ with the following content:
 
 .. code-block:: text
 
-   remote.url=https://sometesthost.com/path-to-your-dbuild-repository
+   remote.url=https://somehost.com/path-to-your-dbuild-repository
    remote.user=...
    remote.password=...
 
@@ -35,14 +35,16 @@ There is currently a Typesafe dbuild repository that can be used for testing at 
 
    https://typesafe.artifactoryonline.com/typesafe/temp-distributed-builds
 
-The content of this particular repository may be purged without warning, as it is currently
-mainly used for testing and development of the dbuild tool itself.
+The content of this particular repository may be purged without warning, as it is also used for
+the testing and development of the dbuild tool itself.
 
 .. Caution::
 
-   If a dbuild run is interrupted prematurely manually during the build stage, and a remote repository
-   is being used, the dbuild run may be erroneously marked as failed, and a subsequent run may not fix
+   If dbuild is interrupted prematurely manually during the build stage, and a remote repository
+   is being used, the build run may be erroneously marked as failed, and a subsequent run may not fix
    the situation. A more robust handling of this situation will be added in subsequent releases.
+
+.. _section-drepo:
 
 drepo
 -----
@@ -78,9 +80,9 @@ If no options are present, it will print a list of options and commands. The mai
       = Repeatable Config =
      {"projects":[{"name":"scala","system":"scala","uri":"git://github.com/scala/scala.git#2f3a7fa417f7ba92251fdae53e5548f081c2fd04","extra":{}},{"name":"sperformance","system":"sbt","uri":"git://github.com/jsuereth/sperformance.git#8c472f2a1ae8da817c43c873e3126c486aa79446","extra":{}}]}
 
-   Notably, if the build ID that you specify refers to a build in the remote repository, the
-   relevant information will be automatically fetched from the remote repository and copied to the
-   local repository, which acts as a cache. You will then see it listed when using ``dbuild list-builds``.
+  Notably, if the build ID that you specify refers to a build in the remote repository, the
+  relevant information will be automatically fetched from the remote repository and copied to the
+  local repository, which acts as a cache. You will then see it listed when using ``dbuild`` ``list-builds``.
 
 ``drepo`` ``list-projects``
   Lists all of the known project that have been built by a dbuild build. Each project in this list is
@@ -88,7 +90,7 @@ If no options are present, it will print a list of options and commands. The mai
   Only the projects already in the local repository will be listed.
 
 ``drepo`` ``project`` ``<id>``
-  Prints the details of that build project. For example:
+  Prints the details of that built project. An example (reformatted for clarity) is:
 
   .. parsed-literal:: :class: highlight
 
@@ -99,30 +101,31 @@ If no options are present, it will print a list of options and commands. The mai
          * ac54d173fb38755efeaaf69bccb8d875e1be7560
          * 2865b37b10e2f62efa43568cc86eb7aa3a0cf283
       -- Artifacts -- 
-       - org.scala-stm : scala-stm :         : pom : 0.7-384bd35367f6ea7489007f5b550455ba791725e9
-       - org.scala-stm : scala-stm :         : jar : 0.7-384bd35367f6ea7489007f5b550455ba791725e9
-       - org.scala-stm : scala-stm : sources : jar : 0.7-384bd35367f6ea7489007f5b550455ba791725e9
-       - org.scala-stm : scala-stm : javadoc : jar : 0.7-384bd35367f6ea7489007f5b550455ba791725e9
+       - org.scala-stm : scala-stm :         : pom : 0.7-384bd353....791725e9
+       - org.scala-stm : scala-stm :         : jar : 0.7-384bd353....791725e9
+       - org.scala-stm : scala-stm : sources : jar : 0.7-384bd353....791725e9
+       - org.scala-stm : scala-stm : javadoc : jar : 0.7-384bd353....791725e9
       -- Files -- 
        org/scala-stm/scala-stm/0.7-384bd35367f6ea7489007f5b550455ba791725e9
-         bd...42bc      40  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9-javadoc.jar.sha1
-         9b...ae3e  909.4k  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9-javadoc.jar
-         89...d6d1      40  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9.pom.sha1
-         cf...5db4      32  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9-javadoc.jar.md5
-         5c...0c59      32  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9-sources.jar.md5
-         28...c6d4      40  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9-sources.jar.sha1
-         2d...12b4  113.5k  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9-sources.jar
-         f2...e1dd    2.6k  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9.pom
-         46...1c0f      40  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9.jar.sha1
-         1f...39ff      32  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9.pom.md5
-         28...f1c2  635.2k  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9.jar
-         5a...1f26      32  scala-stm-0.7-384bd35367f6ea7489007f5b550455ba791725e9.jar.md5
+         bdf43920...c2d642bc      40  scala-stm-0.7-384bd353...791725e9-javadoc.jar.sha1
+         9b705a28...fb1eae3e  909.4k  scala-stm-0.7-384bd353...791725e9-javadoc.jar
+         89e1f8db...e12bd6d1      40  scala-stm-0.7-384bd353...791725e9.pom.sha1
+         cfe25924...02005db4      32  scala-stm-0.7-384bd353...791725e9-javadoc.jar.md5
+         5c82c856...7e670c59      32  scala-stm-0.7-384bd353...791725e9-sources.jar.md5
+         28023b5b...ae7fc6d4      40  scala-stm-0.7-384bd353...791725e9-sources.jar.sha1
+         2d8f63d8...b48012b4  113.5k  scala-stm-0.7-384bd353...791725e9-sources.jar
+         f20cc5d8...1b43e1dd    2.6k  scala-stm-0.7-384bd353...791725e9.pom
+         46e8e6fe...b7811c0f      40  scala-stm-0.7-384bd353...791725e9.jar.sha1
+         1f5dd547...150639ff      32  scala-stm-0.7-384bd353...791725e9.pom.md5
+         2891f187...8094f1c2  635.2k  scala-stm-0.7-384bd353...791725e9.jar
+         5a9c7d83...aa311f26      32  scala-stm-0.7-384bd353...791725e9.jar.md5
 
   Again, if you specify the ID of a project in the remote repository, the relevant files will be copied
   to your local repository (both information and artifacts), and the project details will be displayed.
 
 .. Note::
-   The layout of the repository may change in future versions of dbuild.
+   The internal layout of the repository may change in future versions of dbuild.
+
+|
 
 *Next:* :doc:`plugin`.
-

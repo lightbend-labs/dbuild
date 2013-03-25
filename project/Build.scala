@@ -157,7 +157,7 @@ trait BuildHelper extends Build {
       ghpages.settings ++ Seq(
 //      enableOutput in generatePdf in Sphinx := true,
 //      enableOutput in generateEpub in Sphinx := true,
-        git.remoteRepo := "git@github.com:cunei/distributed-build.git",
+        git.remoteRepo := "git@github.com:typesafehub/distributed-build.git",
       publish := (),
       publishLocal := ()
     ):_*))

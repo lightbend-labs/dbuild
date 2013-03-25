@@ -14,11 +14,11 @@ Reloading a dbuild configuration
 --------------------------------
 
 Once sbt has started, you can reload the artifacts and prepare your debugging environment by using the
-`dsbt-setup` command, as follows:
+`dbuild-setup` command, as follows:
 
 .. code-block:: bash
 
-   $ bin/dsbt <dbuild-build-hash> [<dbuild-project-name>]
+   $ bin/dbuild <dbuild-build-hash> [<dbuild-project-name>]
 
 Where `dbuild-build-hash` is the ID of the build, and the optional `dbuild-project-name` is the name of
 your project, as specified in the build configuration file. For example:
@@ -28,7 +28,7 @@ your project, as specified in the build configuration file. For example:
    $ sbt
    [...]
    [info] Set current project to sperformance (in build file:[...]/sperformance/)
-   > dsbt-setup 48baab8156458005cb2e0569e8e8c2c39221d56e sperformance
+   > dbuild-setup 48baab8156458005cb2e0569e8e8c2c39221d56e sperformance
    [info] Retrieving dependencies for 9fc2901cdc4f1e4ce4209bfad5dfbf02633fcd5f sperformance
    [info] Retrieved from project 26a265808a6abe8e8451a9f0b43d6dc02176ed16: 10 artifacts
    [info] Updating dependencies...

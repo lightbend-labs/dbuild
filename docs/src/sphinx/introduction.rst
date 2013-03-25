@@ -40,7 +40,7 @@ A suitable build configuration file is:
      }
    ]}
 
-We will put this into a file called ``test.dsbt``. The line "system" specifies the build mechanism used to build each of the
+We will put this into a file called ``test.dbuild``. The line "system" specifies the build mechanism used to build each of the
 projects (a custom "scala" build system for scala, and "sbt" for sperformance). Let's download dbuild, and try it out (the
 exact download instructions and other details are in the following pages):
 
@@ -48,8 +48,8 @@ exact download instructions and other details are in the following pages):
 
    $ [...download and unzip dbuild...]
    $ cd dbuild
-   $ [...edit test.dsbt...]
-   $ bin/dbuild test.dsbt
+   $ [...edit test.dbuild...]
+   $ bin/dbuild test.dbuild
 
 Now dbuild will download, parse, and build in turn scala and sperformance, from the branches
 "2.10.x" and "community" respectively. You can also specify a commit hash, in place of the branch.
@@ -63,7 +63,7 @@ dbuild will keep an index of the actual commit ids (git hashes, svn versions, et
 run: the same configuration can later be reproduced again, and prepared for debugging.
 
 At the end of the build, all the of generated artifacts and other information on the build will be stored
-in a local repository, contained in your ``~/.dsbt/cache`` directory. If the build ends successfully, you know
+in a local repository, contained in your ``~/.dbuild/cache`` directory. If the build ends successfully, you know
 that all the network of inter-dependent projects you specified builds together as desired.
 
 What if the build fails?
@@ -89,7 +89,7 @@ sperformance failed, and that we want to debug it. We can use the sbt plugin as 
    $ cd sperformance
    $ sbt
    [info] Set current project to sperformance (in build file:/home/cunei/i/sperformance/)
-   > dsbt-setup 48baab8156458005cb2e0569e8e8c2c39221d56e
+   > dbuild-setup 48baab8156458005cb2e0569e8e8c2c39221d56e
    [info] Retrieving dependencies for 26a265808a6abe8e8451a9f0b43d6dc02176ed16 scala
    [info] Retrieving dependencies for 9fc2901cdc4f1e4ce4209bfad5dfbf02633fcd5f sperformance
    [info] Retrieved from project 26a265808a6abe8e8451a9f0b43d6dc02176ed16: 10 artifacts

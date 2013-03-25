@@ -13,7 +13,7 @@ object ProjectDirs {
   val builddir = new File(".")
   val targetDir = new File(builddir, "target")
   val userhome = new File(sys.props("user.home"))
-  val userCache = new File(userhome, ".dsbt/cache")
+  val userCache = new File(userhome, ".dbuild/cache")
   
   
   def logDir = new File(targetDir, "logs")

@@ -1,4 +1,4 @@
-package com.typesafe.dsbt
+package com.typesafe.dbuild
 
 import sbt._
 import distributed.project.model

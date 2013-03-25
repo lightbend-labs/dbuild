@@ -27,7 +27,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     Project("dist", file("dist")/*, eclipse plugin bombs if we do this: settings = Packaging.settings */) 
     settings(Packaging.settings:_*)
     settings(
-      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDsbtProps,
+      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDbuildProps,
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in drepo, version in drepo) map Packaging.makeDRepoProps,
       version := MyVersion
     )
@@ -114,13 +114,13 @@ trait BuildHelper extends Build {
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
-    organization := "com.typesafe.dsbt",
+    organization := "com.typesafe.dbuild",
     scalaVersion := "2.9.2",
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
-    publishTo := Some(Resolver.url("typesafe-dsbt-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns))
+    publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns))
   )
   
   // TODO - Aggregate into a single JAR if possible for easier resolution later...

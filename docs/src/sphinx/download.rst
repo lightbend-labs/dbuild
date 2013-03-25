@@ -26,13 +26,13 @@ The archive contains the following files:
 
    ./bin
    ./bin/dbuild
-   ./bin/dsbt.properties
+   ./bin/dbuild.properties
    ./bin/drepo
    ./bin/drepo.properties
    ./bin/sbt-launch.jar
    ./samples/[...]
 
-Where ``dbuild`` is the build tool, and ``dsbt.properties`` is its configuration file. The ``bin`` directory also contains
+Where ``dbuild`` is the build tool, and ``dbuild.properties`` is its configuration file. The ``bin`` directory also contains
 the ``drepo`` repository inspection tool, together with its configuration file; you can find more information in the
 section :ref:`section-drepo`, later in this guide.
 
@@ -50,11 +50,11 @@ That is done by adding a small file to the global ``~/.sbt/plugins`` directory, 
       :nv:`$` cat <<EOF >~/.sbt/plugins/dbuild.sbt
       resolvers ++= Seq(Resolver.url(:s2:`"dbuild-snapshots"`,url("http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns), :s2:`"akka-releases"` at "http://repo.akka.io/releases")
 
-      |addsbtplugin|
+      |addSbtplugin|
       EOF
       :nv:`$`
 
-Once the file is in place, just launch sbt in your project as usual. You will get access to the ``dsbt-setup`` command,
+Once the file is in place, just launch sbt in your project as usual. You will get access to the ``dbuild-setup`` command,
 which is explained on the next page of this guide (:doc:`dbuild`). This sbt plugin was compiled for sbt |sbtversion|.
 
 .. note::

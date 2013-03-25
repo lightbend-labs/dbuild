@@ -42,7 +42,7 @@ object Packaging {
   version: %s
 
 [app]
-  org: com.typesafe.dsbt
+  org: com.typesafe.dbuild
   name: d-repo
   version: %s
   class: distributed.repo.core.SbtRepoMain
@@ -57,10 +57,10 @@ object Packaging {
   dbuild-snapshots: http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
 
 [boot]
- directory: ${dsbt.boot.directory-${dsbt.global.base-${user.home}/.dsbt}/boot/}
+ directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}
 
 [ivy]
-  ivy-home: ${user.home}/.dsbt/ivy/
+  ivy-home: ${user.home}/.dbuild/ivy/
   checksums: ${sbt.checksums-sha1,md5}
   override-build-repos: ${sbt.override.build.repos-false}
 """ format(sv, v))
@@ -68,17 +68,17 @@ object Packaging {
   }
   
 
-  def makeDsbtProps(t: File, src: File, sv: String, v: String): (File, String) = {
+  def makeDbuildProps(t: File, src: File, sv: String, v: String): (File, String) = {
     val tdir = t / "generated-sources"
     if(!tdir.exists) tdir.mkdirs()
-    val tprops = tdir / "dsbt.properties"
+    val tprops = tdir / "dbuild.properties"
     // TODO - better caching
     if(!tprops.exists) IO.write(tprops, """
 [scala]
   version: %s
 
 [app]
-  org: com.typesafe.dsbt
+  org: com.typesafe.dbuild
   name: d-build
   version: %s
   class: distributed.build.SbtBuildMain
@@ -93,13 +93,13 @@ object Packaging {
   dbuild-snapshots: http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
 
 [boot]
- directory: ${dsbt.boot.directory-${dsbt.global.base-${user.home}/.dsbt}/boot/}
+ directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}
 
 [ivy]
-  ivy-home: ${user.home}/.dsbt/ivy/
+  ivy-home: ${user.home}/.dbuild/ivy/
   checksums: ${sbt.checksums-sha1,md5}
   override-build-repos: ${sbt.override.build.repos-false}
 """ format(sv, v))
-    tprops -> "bin/dsbt.properties"
+    tprops -> "bin/dbuild.properties"
   }
 }

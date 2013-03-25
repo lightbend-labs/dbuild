@@ -5,7 +5,7 @@ Local and remote
 ----------------
 
 The dbuild tool stores its artifacts and build/project information in a custom repository, which can be
-either local (typically in the ``~/.dsbt/cache`` directory), or remote, in a special Ivy repository that has
+either local (typically in the ``~/.dbuild/cache`` directory), or remote, in a special Ivy repository that has
 a custom layout.
 
 At this time, the typical usage of dbuild is with a local repository: this is the default configuration
@@ -20,7 +20,7 @@ dbuild sbt plugin, or using the ``drepo`` inspection tool, below.
 Remote repository configuration
 -------------------------------
 
-In order to use a remote repository, you will need to add a file called ``~/.dsbt/remote.cache.properties``
+In order to use a remote repository, you will need to add a file called ``~/.dbuild/remote.cache.properties``
 with the following content:
 
 .. code-block:: text

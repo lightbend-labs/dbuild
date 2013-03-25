@@ -1,4 +1,4 @@
-package com.typesafe.dsbt
+package com.typesafe.dbuild
 
 import sbt._
 import distributed.project.model
@@ -188,7 +188,7 @@ object DistributedRunner {
 
   // the "...2" versions are somewhat similar, except they only generate a list of new settings rather than generating
   // a full list. So, fixDependencies() always creates a setting, while fixDependencies2() only generates new settings
-  // TODO - once debugging is complete, code should consolidated, probably changing dsbt-build to use the new mechanism
+  // TODO - once debugging is complete, code should consolidated, probably changing dbuild-build to use the new mechanism
 
   // fixDependencies2()
   // Generates a list of additional settings that can be tacked onto the current list of settings in order to
@@ -196,9 +196,9 @@ object DistributedRunner {
   // Note: the "libraryDependencies" setting is usually present in multiple places in the list of settings; each one may
   // modify the list (usually adding further dependencies). Hence, it would be unnecessary to create a new setting patching
   // each occurrence: duplicates and other weirdness may result.
-  // We only inspect the most recent setting for each scope, adding a rewriting to that last one. In case "dsbt-setup" is
-  // called multiple times, each will patch the previous dsbt one, which is however ok as we replace rather than adding;
-  // ideally a "reload" should precede "dsbt-setup", however.
+  // We only inspect the most recent setting for each scope, adding a rewriting to that last one. In case "dbuild-setup" is
+  // called multiple times, each will patch the previous dbuild one, which is however ok as we replace rather than adding;
+  // ideally a "reload" should precede "dbuild-setup", however.
   //
   // so: start from the list of existing settings, and generate a list of settings that should be appended
   def fixDependencies2(locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
@@ -209,7 +209,7 @@ object DistributedRunner {
       
   // Fixing Scala version; similar to the above.
   //
-  def fixScalaVersion2(dsbtDir: File, repoDir: File, locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
+  def fixScalaVersion2(dbuildDir: File, repoDir: File, locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
     val verKeys = Seq(Keys.scalaVersion.key, Keys.crossVersion.key, Keys.scalaHome.key)
     val scalaV = customScalaVersion(locs)
     //change only if new version is requested, otherwise should not generate the new setting
@@ -226,7 +226,7 @@ object DistributedRunner {
             seq map fixCrossVersion2
           }
           case Keys.scalaHome.key => {
-        	val scalaHome = dsbtDir / "scala" / ver
+        	val scalaHome = dbuildDir / "scala" / ver
             log.info("Preparing Scala binaries: version "+ver)
             generateScalaDir(scalaHome, repoDir, locs, ver)
             log.info("Setting Scala home in "+seq.length+" scopes")
@@ -328,9 +328,9 @@ object DistributedRunner {
       log.info("Adding resolvers to retrieve build artifacts in " + lastSettings.length + " scopes")
     lastSettings map { s =>
       Project.update(s.asInstanceOf[Setting[Seq[Resolver]]].key) { old =>
-        Seq("dsbt-local-repo-maven" at ("file:" + repo.getAbsolutePath()),
-          Resolver.file("dsbt-local-repo-ivy", repo)(Patterns("[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"))) ++
-          (old filterNot { r => val n = r.name; n == "dsbt-local-repo-maven" || n == "dsbt-local-repo-ivy" })
+        Seq("dbuild-local-repo-maven" at ("file:" + repo.getAbsolutePath()),
+          Resolver.file("dbuild-local-repo-ivy", repo)(Patterns("[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"))) ++
+          (old filterNot { r => val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy" })
       }
     }
   }
@@ -363,24 +363,24 @@ object DistributedRunner {
 
   def setupCmd(state: State, args: Seq[String]): State = {
     val log = sbt.ConsoleLogger()
-    // TODO - here I just grab the console logger, but "last" won't work as dsbt-setup
+    // TODO - here I just grab the console logger, but "last" won't work as dbuild-setup
     // is not a task. I could add a wrapper task around the command, though.
 
     // TODO - add help text
-    if (args.length < 1 || args.length > 2) sys.error("Usage: dsbt-setup <builduuid> [<thisProjectInDsbt>]")
+    if (args.length < 1 || args.length > 2) sys.error("Usage: dbuild-setup <builduuid> [<thisProjectInDsbt>]")
     val builduuid = args(0)
 
-    // The dsbt-setup command accepts a builduuid, and optionally a string that should match the project string
-    // of the current sbt project, as specified in the .dsbt project file (which may be arbitrary)
+    // The dbuild-setup command accepts a builduuid, and optionally a string that should match the project string
+    // of the current sbt project, as specified in the .dbuild project file (which may be arbitrary)
     // If specified, download the dependencies of the specified project; if not specified, download all of the
     // artifacts of all the projects listed under builduuid.
     val project = if (args.length == 1) None else Some(args(1))
     val extracted = Project.extract(state)
     import extracted._
-    val dsbtDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dsbt")
+    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
 
-    dsbtDirectory map { dsbtDir =>
-      val repoDir = dsbtDir / "local-repo"
+    dbuildDirectory map { dbuildDir =>
+      val repoDir = dbuildDir / "local-repo"
       val arts = loadBuildArtifacts(repoDir, builduuid, project, log)
       if (arts.isEmpty) {
         log.warn("No artifacts are dependencies" + { project map (" of project " + _) getOrElse ""} + " in build " + builduuid)
@@ -390,10 +390,10 @@ object DistributedRunner {
         val oldSettings = session.mergeSettings
         val newSettings = fixResolvers2(repoDir, oldSettings, log) ++
           fixDependencies2(arts, oldSettings, log) ++
-          fixScalaVersion2(dsbtDir, repoDir, arts, oldSettings, log)
+          fixScalaVersion2(dbuildDir, repoDir, arts, oldSettings, log)
 
         // Session strings can't be replayed, but are useful for debugging
-        val newSessionSettings = newSettings map (a => (a, List("// dsbt-setup: " + a.key.toString)))
+        val newSessionSettings = newSettings map (a => (a, List("// dbuild-setup: " + a.key.toString)))
         // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
         val newSession = session.appendSettings(newSessionSettings)
         val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
@@ -406,8 +406,8 @@ object DistributedRunner {
     }
   }
 
-  private def buildIt = Command.command("dsbt-build")(buildCmd)
-  private def setItUp = Command.args("dsbt-setup", "<builduuid> [<thisProjectInDsbt>]")(setupCmd)
+  private def buildIt = Command.command("dbuild-build")(buildCmd)
+  private def setItUp = Command.args("dbuild-setup", "<builduuid> [<thisProjectInDsbt>]")(setupCmd)
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
   private def comment = Command.args("//", "// [comments]") {(state, _) => state}
 

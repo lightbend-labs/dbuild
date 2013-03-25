@@ -67,7 +67,7 @@ rst_epilog = """
 .. _tgz: %(dbuild_native_package_base)s/%(version)s/%(project)s-%(version)s.tgz
 .. |version| replace:: %(version)s
 .. |sbtversion| replace:: %(sbtversion)s
-.. |addsbtplugin| replace:: addSbtPlugin(:s2:`"com.typesafe.dsbt"` %% :s2:`"distributed-sbt-plugin"` %% :s2:`"%(version)s"`)
+.. |addSbtplugin| replace:: addSbtPlugin(:s2:`"com.typesafe.dbuild"` %% :s2:`"distributed-sbt-plugin"` %% :s2:`"%(version)s"`)
 """ % {
    'sbtversion': sbt_version,
    'version': release,

@@ -8,7 +8,7 @@ The stand-alone ``dbuild`` tool is called by specifying on the command line its 
 
 .. code-block:: bash
 
-   $ bin/dbuild build-file.dsbt
+   $ bin/dbuild build-file.dbuild
 
 The build tool will create, if not existing, a ``~/.dbuild`` directory in your home, which stores general
 dbuild support files and the local repository cache, and a ``.dbuild`` in your current directory, which is
@@ -21,10 +21,10 @@ that is explained later in the REPOSITORIES section, later (**TODO**).
 Properties file
 ---------------
 
-By default, dbuild will use the file ``dsbt.properties`` to retrieve information about its internal
+By default, dbuild will use the file ``dbuild.properties`` to retrieve information about its internal
 configuration. Normally, there is no need to touch this file, as its contents are only used while the tool
 is starting up, and not during the build process itself. However, you can modify this file if you would
-like to modify the standard behavior in some way (for instance, relocating the default ``~/.dsbt`` directory,
+like to modify the standard behavior in some way (for instance, relocating the default ``~/.dbuild`` directory,
 or the location of the Ivy cache it uses). Again, that is only necessary in special cases.
 
 The build configuration file

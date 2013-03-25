@@ -18,14 +18,14 @@ object SbtBuilder {
 
   def buildSbtProject(runner: SbtRunner)(project: File, config: SbtBuildConfig, log: logging.Logger): BuildArtifacts = {    
     IO.withTemporaryDirectory { tmpDir => 
-      val resultFile = tmpDir / "results.dsbt"
+      val resultFile = tmpDir / "results.dbuild"
       // TODO - Where should depsfile + repo file be?  
       // For debugging/reproducing issues, we're putting them in a local directory for now.
-      val dsbtDir = project / ".dsbt"
-      val depsFile = dsbtDir / "deps.dsbt"
-      val repoFile = dsbtDir / "repositories"
+      val dbuildDir = project / ".dbuild"
+      val depsFile = dbuildDir / "deps.dbuild"
+      val repoFile = dbuildDir / "repositories"
       // We need a new ivy cache to ensure no corruption of minors (or projects)
-      val ivyCache = dsbtDir / "ivy2"
+      val ivyCache = dbuildDir / "ivy2"
       IO.write(depsFile, makeConfigString(config))
       writeRepoFile(repoFile, config.info.arts.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
@@ -38,7 +38,7 @@ object SbtBuilder {
             "project.build.deps.file" -> depsFile.getAbsolutePath,
             "sbt.ivy.home" -> ivyCache.getAbsolutePath),
         extraArgs = config.config.options
-      )("dsbt-build")
+      )("dbuild-build")
       (parseFileInto[BuildArtifacts](resultFile) getOrElse
         sys.error("Failed to generate or load build results!"))
     }

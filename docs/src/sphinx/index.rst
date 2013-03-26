@@ -6,7 +6,7 @@ What is it?
 **dbuild**, or distributed-build, is a build and debugging tool based on sbt.
 
 It is used to coordinate the development of multiple, independent projects that evolve in parallel: dbuild
-uses a multi-project definition file to build all the requested projects, and make sure that they all work
+uses a multi-project definition file to build all the requested projects, and makes sure that they all work
 together, even though each of them may evolve independently.
 
 In case a failure is detected, typically because one change in one project affects one or more of the others,

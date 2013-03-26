@@ -146,7 +146,9 @@ exact version or commit in case if specified . If no prefix is added, dbuild wil
 version in git master, or svn head.</p>
 </dd>
 <dt>optional-extra-build-parameters</dt>
-<dd>The &quot;extra&quot; component is optional, as are all of its sub-components. Its structure is:</dd>
+<dd>The &quot;extra&quot; component is optional, as are all of its sub-components; it describes additional
+parameters used while building the project, and its content depends on the build system. At this
+time it is only used for sbt builds, in which case its structure is:</dd>
 </dl>
 <div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
  <span class="s2">&quot;sbt-version&quot;</span>         <span class="o">:</span> <span class="o">&lt;</span><span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span><span class="o">&gt;</span><span class="p">,</span>

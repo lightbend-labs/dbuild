@@ -84,7 +84,9 @@ source-repository-uri
   version in git master, or svn head.
 
 optional-extra-build-parameters
-  The "extra" component is optional, as are all of its sub-components. Its structure is:
+  The "extra" component is optional, as are all of its sub-components; it describes additional
+  parameters used while building the project, and its content depends on the build system. At this
+  time it is only used for sbt builds, in which case its structure is:
 
 .. code-block:: javascript
 

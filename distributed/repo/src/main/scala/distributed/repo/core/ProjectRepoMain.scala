@@ -2,11 +2,11 @@ package distributed
 package repo
 package core
 
-
 import project.model._
 import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
+import distributed.project.model.Utils.mapper.writeValueAsString
 
 /** Expose for SBT launcher support. */
 class SbtRepoMain extends xsbti.AppMain {
@@ -124,10 +124,10 @@ object ProjectRepoMain {
     val (meta, _) = projectRepo.getProjectInfo(uuid)
     println(" -- Artifacts -- ")
     val arts = meta.versions
-    val groups = padStrings(arts map (_.dep.organization))
-    val names = padStrings(arts map (_.dep.name))
-    val classifiers = padStrings(arts map (_.dep.classifier getOrElse ""))
-    val extensions = padStrings(arts map (_.dep.extension))
+    val groups = padStrings(arts map (_.info.organization))
+    val names = padStrings(arts map (_.info.name))
+    val classifiers = padStrings(arts map (_.info.classifier getOrElse ""))
+    val extensions = padStrings(arts map (_.info.extension))
     val versions = padStrings(arts map (_.version))
     for {
       ((((group, name), classifier), extension), version) <- groups zip names zip classifiers zip extensions zip versions
@@ -184,7 +184,7 @@ object ProjectRepoMain {
         } println("  - " + project.uuid + " " + name)
         println(" = Repeatable Config =")
         LocalRepoHelper.readBuildMeta(uuid, cache) foreach { build =>
-           println(config makeConfigString build.repeatableBuildConfig)
+           println(writeValueAsString(build.repeatableBuildConfig))
         }    
   }
   

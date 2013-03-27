@@ -4,92 +4,96 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
-import config._
+import Utils.mapper.{writeValueAsString,readValue}
+
+import com.lambdaworks.jacks._
+import JacksOption._
 
 object RepeatableDistributedBuildSpec extends Specification {
+
   "RepeatableDistributedBuild" should {
     
     val sample = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "system", "uri"),
+              ProjectBuildConfig("a", "system", "uri", extra = None),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
                     name = "a",
                     organization = "a",
-                    artifacts = Seq(ProjectRef("a", "a")),
+                    artifacts = Seq(ProjectRef("a", "a", classifier = None)),
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "system", "uri2"),
+              ProjectBuildConfig("b", "system", "uri2", extra = None),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
                     name = "b",
                     organization = "b",
-                    artifacts = Seq(ProjectRef("b", "b")),
-                    dependencies = Seq(ProjectRef("a", "a"))
+                    artifacts = Seq(ProjectRef("b", "b", classifier = None)),
+                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "system", "uri3"),
+              ProjectBuildConfig("c", "system", "uri3", extra = None),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
                     name = "c",
                     organization = "c",
-                    artifacts = Seq(ProjectRef("c", "c")),
-                    dependencies = Seq(ProjectRef("a", "a"))
+                    artifacts = Seq(ProjectRef("c", "c", classifier = None)),
+                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("d", "system", "uri4"),
+              ProjectBuildConfig("d", "system", "uri4", extra = None),
               ExtractedBuildMeta("uri4", 
                   Seq(Project(
                     name = "d",
                     organization = "d",
-                    artifacts = Seq(ProjectRef("d", "d")),
-                    dependencies = Seq(ProjectRef("c", "c"), ProjectRef("b", "b"))
+                    artifacts = Seq(ProjectRef("d", "d", classifier = None)),
+                    dependencies = Seq(ProjectRef("c", "c", classifier = None), ProjectRef("b", "b", classifier = None))
                   )))),
         ProjectConfigAndExtracted(
-              ProjectBuildConfig("e", "system", "uri5"),
+              ProjectBuildConfig("e", "system", "uri5", extra = None),
               ExtractedBuildMeta("uri5", 
                   Seq(Project(
                     name = "e",
                     organization = "e",
-                    artifacts = Seq(ProjectRef("e", "e")),
+                    artifacts = Seq(ProjectRef("e", "e", classifier = None)),
                     dependencies = Seq.empty
                   ))))
     ))
     
     val sample2 = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "system", "uri"),
+              ProjectBuildConfig("a", "system", "uri", extra = None),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
                     name = "a",
                     organization = "a",
-                    artifacts = Seq(ProjectRef("a", "a")),
+                    artifacts = Seq(ProjectRef("a", "a", classifier = None)),
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "system", "uri2"),
+              ProjectBuildConfig("b", "system", "uri2", extra = None),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
                     name = "b",
                     organization = "b",
-                    artifacts = Seq(ProjectRef("b", "b")),
-                    dependencies = Seq(ProjectRef("a", "a"))
+                    artifacts = Seq(ProjectRef("b", "b", classifier = None)),
+                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "system", "uri3"),
+              ProjectBuildConfig("c", "system", "uri3", extra = None),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
                     name = "c",
                     organization = "c",
-                    artifacts = Seq(ProjectRef("c", "c")),
-                    dependencies = Seq(ProjectRef("a", "a"))
+                    artifacts = Seq(ProjectRef("c", "c", classifier = None)),
+                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
                   ))))
     ))
     
     
     "serialize/deserialize" in {
-      val result = parseStringInto[RepeatableDistributedBuild](makeConfigString(sample)) getOrElse sys.error("Failure to parse")
+      val result = readValue[RepeatableDistributedBuild](writeValueAsString(sample))
       result must equalTo(sample)
     }
     "Make unique project build UUID" in {

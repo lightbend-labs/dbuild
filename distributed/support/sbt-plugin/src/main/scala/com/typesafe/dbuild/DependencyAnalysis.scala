@@ -2,9 +2,9 @@ package com.typesafe.dbuild
 
 import sbt._
 import distributed.project.model
-import _root_.config.makeConfigString
 import StateHelpers._
 import NameFixer.fixName
+import distributed.project.model.Utils.mapper.writeValueAsString
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
@@ -46,7 +46,7 @@ object DependencyAnalysis {
     val deps = getProjectInfos(extracted, state, refs)    
     val meta = model.ExtractedBuildMeta(uri, deps)
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
-    try output println makeConfigString(meta)
+    try output println writeValueAsString(meta)
     finally output.close()
   }
   

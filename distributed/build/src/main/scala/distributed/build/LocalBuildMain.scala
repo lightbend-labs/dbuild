@@ -7,7 +7,8 @@ import akka.dispatch.Await
 import akka.util.Timeout
 import akka.util.duration._
 import project.model._
-import _root_.config.parseFileInto
+import distributed.project.model.Utils.fromHOCON
+import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
 import distributed.repo.core._
 
 class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
@@ -53,10 +54,7 @@ object LocalBuildMain {
   def main(args: Array[String]): Unit = 
     // TODO - Parse inputs for realz...
     if(args.length == 1) {
-      parseFileInto[DistributedBuildConfig](new File(args(0))) match{
-        case Some(b) => build(b)
-        case _ => sys.error("Failure reading build file: " + args(0))
-      }
+      readValue[DistributedBuildConfig](fromHOCON(new File(args(0))))
     }
     else System.err.println("Usage: dbuild {build-file}")
 }

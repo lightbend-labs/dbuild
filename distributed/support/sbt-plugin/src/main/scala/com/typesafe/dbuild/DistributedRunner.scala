@@ -3,8 +3,8 @@ package com.typesafe.dbuild
 import sbt._
 import distributed.project.model
 import distributed.support.sbt.SbtBuildConfig
-import _root_.config.makeConfigString
-import _root_.config.parseFileInto
+import distributed.project.model.Utils.fromHOCON
+import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
 import StateHelpers._
 import DistributedBuildKeys._
 import NameFixer.fixName
@@ -59,7 +59,7 @@ object DistributedRunner {
     // Stage half the computation, including what we're churning through.
     val buildAggregate = runAggregate[ArtifactMap](state,config, Seq.empty)(_ ++ _) _
     // If we're measuring, run the build several times.
-    if(config.config.measurePerformance) buildAggregate(timedBuildProject)
+    if(config.config.`measure-performance`) buildAggregate(timedBuildProject)
     else buildAggregate(untimedBuildProject)
   }
   
@@ -79,7 +79,7 @@ object DistributedRunner {
   }
   
   def testProject(state: State, config: SbtBuildConfig): State = 
-    if(config.config.runTests) {
+    if(config.config.`run-tests`) {
       println("Testing project")
       val (state2, _) = runAggregate(state, config, List.empty)(_++_) { (proj, state) =>
         val y = Stated(state).runTask(Keys.test in Test)
@@ -92,12 +92,12 @@ object DistributedRunner {
     model.BuildArtifacts(artifacts, localRepo)
   
   def printResults(fileName: String, artifacts: ArtifactMap, localRepo: File): Unit = 
-    IO.write(new File(fileName), makeConfigString(makeBuildResults(artifacts, localRepo)))
+    IO.write(new File(fileName), writeValueAsString(makeBuildResults(artifacts, localRepo)))
   
   def loadBuildConfig: Option[SbtBuildConfig] =
     for {
       f <- Option(System getProperty "project.build.deps.file") map (new File(_))
-      deps <- parseFileInto[SbtBuildConfig](f)
+      deps = readValue[SbtBuildConfig](fromHOCON(f))
     } yield deps
     
     
@@ -105,8 +105,8 @@ object DistributedRunner {
       def findArt: Option[model.ArtifactLocation] =
         (for {
           artifact <- arts.view
-          if artifact.dep.organization == m.organization
-          if artifact.dep.name == fixName(m.name)
+          if artifact.info.organization == m.organization
+          if artifact.info.name == fixName(m.name)
         } yield artifact).headOption
       findArt map { art => 
         // println("Updating: " + m + " to: " + art)
@@ -114,7 +114,7 @@ object DistributedRunner {
         // TODO - warning: cross-version settings should probably
         // /not/ be changed in case a new scala version is not specified
         // (in case scala is not part of the dbuild project file)
-        m.copy(name = art.dep.name, revision=art.version, crossVersion = CrossVersion.Disabled)
+        m.copy(name = art.info.name, revision=art.version, crossVersion = CrossVersion.Disabled)
       } getOrElse m
   }
     
@@ -130,7 +130,7 @@ object DistributedRunner {
   private def customScalaVersion(arts: Seq[distributed.project.model.ArtifactLocation]): Option[String] =
     (for {
       artifact <- arts.view
-      dep = artifact.dep
+      dep = artifact.info
       if dep.organization == "org.scala-lang"
       if dep.name == "scala-library"
     } yield artifact.version).headOption
@@ -260,7 +260,7 @@ object DistributedRunner {
            value replace ("-SNAPSHOT", "-" + config.info.uuid)
         } else value
       } 
-    case _ => fixDependencies(config.info.arts.artifacts)(s)
+    case _ => fixDependencies(config.info.artifacts.artifacts)(s)
   } 
   
   def fixSettings(config: SbtBuildConfig, state: State): State = {

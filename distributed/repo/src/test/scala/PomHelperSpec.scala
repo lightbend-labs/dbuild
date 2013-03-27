@@ -11,22 +11,22 @@ object PomHelperSpec extends Specification {
   def makeBuildArts: (RepeatableDistributedBuild, BuildArtifacts) = {
     val build = RepeatableDistributedBuild(
             Seq(ProjectConfigAndExtracted(
-                config = ProjectBuildConfig("", "", "" ),
+                config = ProjectBuildConfig("", "", "", None),
                 extracted = ExtractedBuildMeta(
                   uri = "",
                   projects = Seq(
                     Project(
                       name = "scala-arm",
                       organization = "com.jsuereth",
-                      artifacts = Seq(ProjectRef("scala-arm", "com.jsuereth")),
-                      dependencies = Seq(ProjectRef("scala-library", "org.scala-lang"))
+                      artifacts = Seq(ProjectRef("scala-arm", "com.jsuereth", classifier = None)),
+                      dependencies = Seq(ProjectRef("scala-library", "org.scala-lang", classifier = None))
                     )
                   )
                 )
             ))
           )
       val arts = BuildArtifacts(Seq(
-        ArtifactLocation(ProjectRef("scala-arm", "com.jsuereth"), "1.2")    
+        ArtifactLocation(ProjectRef("scala-arm", "com.jsuereth", classifier = None), "1.2")    
       ), new File("."))
       
     (build,arts)

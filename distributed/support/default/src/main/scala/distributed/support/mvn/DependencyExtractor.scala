@@ -59,7 +59,7 @@ object DependencyExtractor {
     Project(
       name = name,
       organization = org,
-      artifacts = Seq(ProjectRef(name,org,ext)),
+      artifacts = Seq(ProjectRef(name,org,ext,None)),
       dependencies = getDependencies(model.getDependencies)
     )
   }

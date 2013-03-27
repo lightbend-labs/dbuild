@@ -19,10 +19,10 @@ object MvnBuildSystem extends BuildSystem {
   }
   
   
-  def mvnConfig(config: ProjectBuildConfig): MvnConfig =
+  def mvnConfig(config: ProjectBuildConfig) =
     config.extra match {
-      case MvnConfig.Configured(c) => c
-      case _ => sys.error("Maven build is misconfigured: " + config)
+      case Some(ec) => ec
+      case None => ExtraConfig()
     }
   
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifacts = {
@@ -33,7 +33,7 @@ object MvnBuildSystem extends BuildSystem {
       else  dir / mc.directory / "pom.xml"
     // TODO - Fix up project poms.
     // TODO - Allow directory/pom specification for Mvn.
-    val result = MvnBuilder.runBuild(pom, input.arts.localRepo, log)
+    val result = MvnBuilder.runBuild(pom, input.artifacts.localRepo, log)
     if(result.hasExceptions()) {
       result.getExceptions.asScala foreach (t => log.trace(t))
     } else log.info("DONE!")

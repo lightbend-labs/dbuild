@@ -85,14 +85,14 @@ object ScalaBuildSystem extends BuildSystem {
   } 
     
   private[this] def group = "org.scala-lang"
-  private[this] def lib = ProjectRef("scala-library", group)
-  private[this] def reflect = ProjectRef("scala-reflect", group)
-  private[this] def actorsMigration = ProjectRef("scala-actors-migration", group)
-  private[this] def actors = ProjectRef("scala-actors", group)
-  private[this] def swing= ProjectRef("scala-swing", group)
-  private[this] def jline = ProjectRef("jline", group)
-  private[this] def comp = ProjectRef("scala-compiler", group)
-  private[this] def scalap = ProjectRef("scalap", group)
-  private[this] def partest = ProjectRef("partest", group)
-  private[this] def continuations = ProjectRef("continuations", group+".plugins")
+  private[this] def lib = ProjectRef("scala-library", group, classifier=None)
+  private[this] def reflect = ProjectRef("scala-reflect", group, classifier=None)
+  private[this] def actorsMigration = ProjectRef("scala-actors-migration", group, classifier=None)
+  private[this] def actors = ProjectRef("scala-actors", group, classifier=None)
+  private[this] def swing= ProjectRef("scala-swing", group, classifier=None)
+  private[this] def jline = ProjectRef("jline", group, classifier=None)
+  private[this] def comp = ProjectRef("scala-compiler", group, classifier=None)
+  private[this] def scalap = ProjectRef("scalap", group, classifier=None)
+  private[this] def partest = ProjectRef("partest", group, classifier=None)
+  private[this] def continuations = ProjectRef("continuations", group+".plugins", classifier=None)
 }

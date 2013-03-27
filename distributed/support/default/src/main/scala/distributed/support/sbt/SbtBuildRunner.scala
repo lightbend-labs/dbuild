@@ -7,7 +7,8 @@ import _root_.sbt.{IO, Path, PathExtra}
 import Path._
 import _root_.java.io.File
 import sys.process.Process
-import config.{makeConfigString, parseFileInto}
+import distributed.project.model.Utils.fromHOCON
+import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
 // script...
@@ -26,8 +27,8 @@ object SbtBuilder {
       val repoFile = dbuildDir / "repositories"
       // We need a new ivy cache to ensure no corruption of minors (or projects)
       val ivyCache = dbuildDir / "ivy2"
-      IO.write(depsFile, makeConfigString(config))
-      writeRepoFile(repoFile, config.info.arts.localRepo)
+      IO.write(depsFile, writeValueAsString(config))
+      writeRepoFile(repoFile, config.info.artifacts.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       runner.run(
         projectDir = project,
@@ -39,8 +40,11 @@ object SbtBuilder {
             "sbt.ivy.home" -> ivyCache.getAbsolutePath),
         extraArgs = config.config.options
       )("dbuild-build")
-      (parseFileInto[BuildArtifacts](resultFile) getOrElse
-        sys.error("Failed to generate or load build results!"))
+      try readValue[BuildArtifacts](fromHOCON(resultFile))
+      catch { case e:Exception =>
+        e.printStackTrace
+        sys.error("Failed to generate or load build results!")
+      }
     }
   }
 }

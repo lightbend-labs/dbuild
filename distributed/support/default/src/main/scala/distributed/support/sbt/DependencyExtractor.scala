@@ -3,13 +3,12 @@ package support
 package sbt
 
 import project.model._
-import config.parseStringInto
 import _root_.sbt.{IO, Path, PathExtra}
 import Path._
 import _root_.java.io.File
 import sys.process.Process
-
-
+import distributed.project.model.Utils.fromHOCON
+import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
 
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
@@ -17,8 +16,11 @@ import sys.process.Process
 object SbtExtractor {
   
   def extractMetaData(runner: SbtRunner)(projectDir: File, log: logging.Logger): ExtractedBuildMeta = 
-        (parseStringInto[ExtractedBuildMeta](runSbtExtractionProject(runner)(projectDir, log)) 
-         getOrElse sys.error("Failure to parse build metadata in sbt extractor!"))
+    try readValue[ExtractedBuildMeta](runSbtExtractionProject(runner)(projectDir, log)) 
+    catch { case e:Exception =>
+      e.printStackTrace
+      sys.error("Failure to parse build metadata in sbt extractor!")
+    }
 
   // TODO - Better synchronize?
   private def runSbtExtractionProject(runner: SbtRunner)(project: File, log: logging.Logger): String = {

@@ -2,34 +2,35 @@ package distributed
 package project
 package model
 
+import Utils._
 import org.specs2.mutable.Specification
 import project.model._
-import config._
+import Utils.fromHOCON
+import Utils.mapper.{writeValueAsString,readValue}
 
 object DistributedBuildConfigSpec extends Specification {
+
   "DistributedBuildConfig" should {
     "parse project with defaults" in {
-      
-      
-      parseStringInto[DistributedBuildConfig](
-"""{
+
+      readValue[DistributedBuildConfig](fromHOCON("""{
   projects = [{
           name = "p1"
           uri = "uri"
     }]
-}""") must equalTo(Some(DistributedBuildConfig(
+}""")) must equalTo(DistributedBuildConfig(
       Seq(ProjectBuildConfig(
           name = "p1",
           uri = "uri",
           system = "sbt",
-          extra = config.parseString("{}").resolve.root
+          extra = None
       ))
-    )))
+    ))
     }
     "parse project" in {
       
       
-      parseStringInto[DistributedBuildConfig](
+      readValue[DistributedBuildConfig](fromHOCON(
 """{
   projects = [{
           name = "p1"
@@ -37,14 +38,14 @@ object DistributedBuildConfigSpec extends Specification {
           system = "humpty"
           extra = { directory = "ZOMG" }
     }]
-}""") must equalTo(Some(DistributedBuildConfig(
+}""")) must equalTo(DistributedBuildConfig(
       Seq(ProjectBuildConfig(
           name = "p1",
           uri = "uri",
           system = "humpty",
-          extra = config.parseString("{directory = ZOMG}").resolve.root
+          extra = readValue[Option[ExtraConfig]](fromHOCON("{directory = ZOMG}"))
       ))
-    )))
+    ))
     }
   }
 }

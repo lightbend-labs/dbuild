@@ -4,16 +4,17 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
-import config._
+import Utils.fromHOCON
+import Utils.mapper.{writeValueAsString,readValue}
 
 object ExtractedBuildMetaSpec extends Specification {
+
   "ExtractedBuildMeta" should {
     "parse metadata file" in {
       
-      
-      parseStringInto[ExtractedBuildMeta](
+      readValue[ExtractedBuildMeta](fromHOCON(
 """{
-  scm = "foo/bar"  
+  uri = "foo/bar"  
   projects = [{
           name = "p1"
           organization = "o1"
@@ -24,24 +25,24 @@ object ExtractedBuildMetaSpec extends Specification {
           }]
           dependencies = []
     }]
-}""") must equalTo(Some(ExtractedBuildMeta("foo/bar", 
-    Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar")), Seq.empty)))))
+}""")) must equalTo(ExtractedBuildMeta("foo/bar", 
+    Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar", None)), Seq.empty))))
     }
     
     "parse pretty printed metadata" in {
       val data = 
         ExtractedBuildMeta("foo/bar", 
           Seq(
-              Project("p1", "o1", Seq(ProjectRef("p1", "o1")), Seq.empty),
-              Project("p2", "o1", Seq(ProjectRef("p2", "o1")), 
+              Project("p1", "o1", Seq(ProjectRef("p1", "o1", classifier = None)), Seq.empty),
+              Project("p2", "o1", Seq(ProjectRef("p2", "o1", classifier = None)), 
                   Seq(
-                    ProjectRef("p3", "o2"),
-                    ProjectRef("p4", "o3")
+                    ProjectRef("p3", "o2", classifier = None),
+                    ProjectRef("p4", "o3", classifier = None)
                   ))))
-      val config = makeConfigString(data)
-      (parseStringInto[ExtractedBuildMeta](config) 
+      val config = writeValueAsString(data)
+      (readValue[ExtractedBuildMeta](config) 
           must 
-          equalTo(Option(data)))
+          equalTo(data))
     }
   }
 }

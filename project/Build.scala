@@ -19,7 +19,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
-    aggregate(graph,hashing,config,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo, dmeta, ddocs)
+    aggregate(graph,hashing,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo, dmeta, ddocs)
     settings(publish := (), version := MyVersion)
   )
 
@@ -41,14 +41,11 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       LibProject("hashing")
       dependsOnRemote(akkaActor)
     )
-  lazy val config = (
-      LibProject("config") 
-      dependsOnRemote(typesafeConfig, sbtCollections)
-    )
 
   lazy val dmeta = (
       DmodProject("metadata")
-      dependsOn(graph, config, hashing)
+      dependsOn(graph, hashing)
+      dependsOnRemote(jacks, typesafeConfig, sbtCollections)
     )
 
   // Projects relating to distributed builds.
@@ -58,18 +55,18 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val dprojects = (
       DmodProject("projects")
-      dependsOn(dmeta, graph, config, hashing, logging, drepo)
+      dependsOn(dmeta, graph, hashing, logging, drepo)
       dependsOnRemote(sbtIo)
     )
   lazy val drepo = (
     DmodProject("repo")
     dependsOn(dmeta)
-    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, sbtLaunchInt)
+    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, jacks, sbtLaunchInt)
   )
   lazy val dbuild = (
       DmodProject("build")
-      dependsOn(dprojects, defaultSupport, drepo, config)
-      dependsOnRemote(sbtLaunchInt)
+      dependsOn(dprojects, defaultSupport, drepo, dmeta)
+      dependsOnRemote(sbtLaunchInt, jacks)
     )
 
   lazy val backend = (
@@ -80,8 +77,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // Projects relating to supprting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
-      dependsOn(dprojects, drepo)
-      dependsOnRemote(mvnEmbedder, mvnWagon)
+      dependsOn(dprojects, drepo, dmeta)
+      dependsOnRemote(mvnEmbedder, mvnWagon, jacks)
       settings(SbtSupport.settings:_*)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
         val file = dir / "Defaults.scala"
@@ -102,7 +99,8 @@ object Defaults {
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
-    dependsOn(dprojects, defaultSupport)
+    dependsOn(dprojects, defaultSupport, dmeta)
+    dependsOnRemote(jacks)
   )
 }
 
@@ -119,6 +117,7 @@ trait BuildHelper extends Build {
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+    resolvers += "rover" at "http://localhost:8088/artifactory/toni-maven",
     publishMavenStyle := false,
     publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns))
   )

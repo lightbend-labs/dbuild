@@ -1,0 +1,1 @@
+var availableDocumentationVersions = ['0.5.0']

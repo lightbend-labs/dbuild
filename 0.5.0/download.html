@@ -1,0 +1,167 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Download and Setup &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.5.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Using dbuild" href="dbuild.html" />
+    <link rel="prev" title="dbuild: Introduction" href="introduction.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="#">Download</a></li>
+          <li><a href="http://github.com/typesafehub/distributed-build">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Download and Setup</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="dbuild.html">Using dbuild</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="introduction.html">dbuild: Introduction</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.5.0">Version 0.5.0</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="download-and-setup">
+<h1>Download and Setup<a class="headerlink" href="#download-and-setup" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>dbuild provides both the main multi-project build tool, as well as an sbt plugin that is used as for debugging. The two
+components share much of the code, but they can be used and installed independently.</p>
+<ol class="arabic simple">
+<li>The build tool is distributed as a tgz/zip archive. You can download it and run the &quot;dbuild&quot; executable in order to build your multi-project configuration.</li>
+<li>The sbt plugin is easily obtained by configuring a global sbt plugin file (see below)</li>
+</ol>
+</div>
+<div class="section" id="installing-the-build-tool">
+<h2>Installing the build tool<a class="headerlink" href="#installing-the-build-tool" title="Permalink to this headline">¶</a></h2>
+<p>The stand-alone build compontent of dbuild can be downloaded in one of the following formats:</p>
+<dl class="docutils">
+<dt>Available formats, dbuild-0.5.0:</dt>
+<dd><ul class="first last simple">
+<li>gzipped tar: <a class="reference external" href="http://downloads.typesafe.com/dbuild/0.5.0/dbuild-0.5.0.tgz">tgz</a></li>
+<li>zip archive: <a class="reference external" href="http://downloads.typesafe.com/dbuild/0.5.0/dbuild-0.5.0.zip">zip</a></li>
+</ul>
+</dd>
+</dl>
+<p>The archive contains the following files:</p>
+<div class="highlight-text"><div class="highlight"><pre>./bin
+./bin/dbuild
+./bin/dbuild.properties
+./bin/drepo
+./bin/drepo.properties
+./bin/sbt-launch.jar
+./samples/[...]
+</pre></div>
+</div>
+<p>Where <tt class="docutils literal"><span class="pre">dbuild</span></tt> is the build tool, and <tt class="docutils literal"><span class="pre">dbuild.properties</span></tt> is its configuration file. The <tt class="docutils literal"><span class="pre">bin</span></tt> directory also contains
+the <tt class="docutils literal"><span class="pre">drepo</span></tt> repository inspection tool, together with its configuration file; you can find more information in the
+section <a class="reference internal" href="repositories.html#section-drepo"><em>drepo</em></a>, later in this guide.</p>
+</div>
+<div class="section" id="installing-the-sbt-plugin">
+<span id="installing-sbt"></span><h2>Installing the sbt plugin<a class="headerlink" href="#installing-the-sbt-plugin" title="Permalink to this headline">¶</a></h2>
+<p>If you need to use the results of a dbuild build in order to debug one of the projects, you can add to your system the dbuild sbt plugin.
+That is done by adding a small file to the global <tt class="docutils literal"><span class="pre">~/.sbt/plugins</span></tt> directory, as follows:</p>
+<pre class="highlight literal-block">
+<span class="nv">$</span> mkdir -p ~/.sbt/plugins
+<span class="nv">$</span> cat &lt;&lt;EOF &gt;~/.sbt/plugins/dbuild.sbt
+resolvers ++= Seq(Resolver.url(<span class="s2">&quot;dbuild-snapshots&quot;</span>,url(&quot;<a class="reference external" href="http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots/">http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots/</a>&quot;))(Resolver.ivyStylePatterns), <span class="s2">&quot;akka-releases&quot;</span> at &quot;<a class="reference external" href="http://repo.akka.io/releases">http://repo.akka.io/releases</a>&quot;)
+
+addSbtPlugin(<span class="s2">&quot;com.typesafe.dbuild&quot;</span> % <span class="s2">&quot;distributed-sbt-plugin&quot;</span> % <span class="s2">&quot;0.5.0&quot;</span>)
+EOF
+<span class="nv">$</span>
+</pre>
+<p>Once the file is in place, just launch sbt in your project as usual. You will get access to the <tt class="docutils literal"><span class="pre">dbuild-setup</span></tt> command,
+which is explained on the next page of this guide (<a class="reference internal" href="dbuild.html"><em>Using dbuild</em></a>). This sbt plugin was compiled for sbt 0.12.2.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">For the time being all of the releases of dbuild are published to the <tt class="docutils literal"><span class="pre">&quot;dbuild-snapshots&quot;</span></tt> repository,
+shown above. Future releases will be published to either the sbt or the standard Typesafe repositories.</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="dbuild.html"><em>Using dbuild</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Download and Setup</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#installing-the-build-tool">Installing the build tool</a></li>
+<li><a class="reference internal" href="#installing-the-sbt-plugin">Installing the sbt plugin</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

@@ -18,15 +18,15 @@ object PomHelperSpec extends Specification {
                     Project(
                       name = "scala-arm",
                       organization = "com.jsuereth",
-                      artifacts = Seq(ProjectRef("scala-arm", "com.jsuereth", classifier = None)),
-                      dependencies = Seq(ProjectRef("scala-library", "org.scala-lang", classifier = None))
+                      artifacts = Seq(ProjectRef("scala-arm", "com.jsuereth")),
+                      dependencies = Seq(ProjectRef("scala-library", "org.scala-lang"))
                     )
                   )
                 )
             ))
           )
       val arts = BuildArtifacts(Seq(
-        ArtifactLocation(ProjectRef("scala-arm", "com.jsuereth", classifier = None), "1.2")    
+        ArtifactLocation(ProjectRef("scala-arm", "com.jsuereth"), "1.2")    
       ), new File("."))
       
     (build,arts)

@@ -7,7 +7,7 @@ case class ProjectRef(
     name: String, 
     organization: String, 
     extension: String = "jar", 
-    classifier: Option[String]) {
+    classifier: Option[String]=None) {
   override def toString = organization + ":" + name + ":" + (classifier map (_ + ":") getOrElse "") + extension
 }
 

@@ -10,7 +10,7 @@ package distributed.project.model
 case class ProjectBuildConfig(name: String, 
     system: String = "sbt",
     uri: String, 
-    extra: Option[ExtraConfig]) {
+    extra: Option[ExtraConfig]=None) {
   def uuid = hashing sha1 this
 }
 

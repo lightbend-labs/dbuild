@@ -26,18 +26,18 @@ object ExtractedBuildMetaSpec extends Specification {
           dependencies = []
     }]
 }""")) must equalTo(ExtractedBuildMeta("foo/bar", 
-    Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar", None)), Seq.empty))))
+    Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar")), Seq.empty))))
     }
     
     "parse pretty printed metadata" in {
       val data = 
         ExtractedBuildMeta("foo/bar", 
           Seq(
-              Project("p1", "o1", Seq(ProjectRef("p1", "o1", classifier = None)), Seq.empty),
-              Project("p2", "o1", Seq(ProjectRef("p2", "o1", classifier = None)), 
+              Project("p1", "o1", Seq(ProjectRef("p1", "o1")), Seq.empty),
+              Project("p2", "o1", Seq(ProjectRef("p2", "o1")), 
                   Seq(
-                    ProjectRef("p3", "o2", classifier = None),
-                    ProjectRef("p4", "o3", classifier = None)
+                    ProjectRef("p3", "o2"),
+                    ProjectRef("p4", "o3")
                   ))))
       val config = writeValueAsString(data)
       (readValue[ExtractedBuildMeta](config) 

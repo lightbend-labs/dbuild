@@ -15,79 +15,79 @@ object RepeatableDistributedBuildSpec extends Specification {
     
     val sample = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "system", "uri", extra = None),
+              ProjectBuildConfig("a", "system", "uri"),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
                     name = "a",
                     organization = "a",
-                    artifacts = Seq(ProjectRef("a", "a", classifier = None)),
+                    artifacts = Seq(ProjectRef("a", "a")),
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "system", "uri2", extra = None),
+              ProjectBuildConfig("b", "system", "uri2"),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
                     name = "b",
                     organization = "b",
-                    artifacts = Seq(ProjectRef("b", "b", classifier = None)),
-                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
+                    artifacts = Seq(ProjectRef("b", "b")),
+                    dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "system", "uri3", extra = None),
+              ProjectBuildConfig("c", "system", "uri3"),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
                     name = "c",
                     organization = "c",
-                    artifacts = Seq(ProjectRef("c", "c", classifier = None)),
-                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
+                    artifacts = Seq(ProjectRef("c", "c")),
+                    dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("d", "system", "uri4", extra = None),
+              ProjectBuildConfig("d", "system", "uri4"),
               ExtractedBuildMeta("uri4", 
                   Seq(Project(
                     name = "d",
                     organization = "d",
-                    artifacts = Seq(ProjectRef("d", "d", classifier = None)),
-                    dependencies = Seq(ProjectRef("c", "c", classifier = None), ProjectRef("b", "b", classifier = None))
+                    artifacts = Seq(ProjectRef("d", "d")),
+                    dependencies = Seq(ProjectRef("c", "c"), ProjectRef("b", "b"))
                   )))),
         ProjectConfigAndExtracted(
-              ProjectBuildConfig("e", "system", "uri5", extra = None),
+              ProjectBuildConfig("e", "system", "uri5"),
               ExtractedBuildMeta("uri5", 
                   Seq(Project(
                     name = "e",
                     organization = "e",
-                    artifacts = Seq(ProjectRef("e", "e", classifier = None)),
+                    artifacts = Seq(ProjectRef("e", "e")),
                     dependencies = Seq.empty
                   ))))
     ))
     
     val sample2 = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "system", "uri", extra = None),
+              ProjectBuildConfig("a", "system", "uri"),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
                     name = "a",
                     organization = "a",
-                    artifacts = Seq(ProjectRef("a", "a", classifier = None)),
+                    artifacts = Seq(ProjectRef("a", "a")),
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "system", "uri2", extra = None),
+              ProjectBuildConfig("b", "system", "uri2"),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
                     name = "b",
                     organization = "b",
-                    artifacts = Seq(ProjectRef("b", "b", classifier = None)),
-                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
+                    artifacts = Seq(ProjectRef("b", "b")),
+                    dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "system", "uri3", extra = None),
+              ProjectBuildConfig("c", "system", "uri3"),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
                     name = "c",
                     organization = "c",
-                    artifacts = Seq(ProjectRef("c", "c", classifier = None)),
-                    dependencies = Seq(ProjectRef("a", "a", classifier = None))
+                    artifacts = Seq(ProjectRef("c", "c")),
+                    dependencies = Seq(ProjectRef("a", "a"))
                   ))))
     ))
     

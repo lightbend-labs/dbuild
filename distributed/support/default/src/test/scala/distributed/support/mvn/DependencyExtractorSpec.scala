@@ -47,8 +47,8 @@ object DependencyExtractorSpec extends Specification {
         Project(
           name = "stuff",
           organization = "com.jsuereth",
-          artifacts = Seq(ProjectRef("stuff", "com.jsuereth", classifier=None)),
-          dependencies = Seq(ProjectRef("scala-library", "org.scala-lang", classifier=None))
+          artifacts = Seq(ProjectRef("stuff", "com.jsuereth")),
+          dependencies = Seq(ProjectRef("scala-library", "org.scala-lang"))
         )
       )))
     }

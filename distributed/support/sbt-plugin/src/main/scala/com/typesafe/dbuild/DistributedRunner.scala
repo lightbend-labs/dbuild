@@ -3,8 +3,7 @@ package com.typesafe.dbuild
 import sbt._
 import distributed.project.model
 import distributed.support.sbt.SbtBuildConfig
-import distributed.project.model.Utils.fromHOCON
-import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
+import distributed.project.model.Utils.{writeValue,readValue}
 import StateHelpers._
 import DistributedBuildKeys._
 import NameFixer.fixName
@@ -92,12 +91,12 @@ object DistributedRunner {
     model.BuildArtifacts(artifacts, localRepo)
   
   def printResults(fileName: String, artifacts: ArtifactMap, localRepo: File): Unit = 
-    IO.write(new File(fileName), writeValueAsString(makeBuildResults(artifacts, localRepo)))
+    IO.write(new File(fileName), writeValue(makeBuildResults(artifacts, localRepo)))
   
   def loadBuildConfig: Option[SbtBuildConfig] =
     for {
       f <- Option(System getProperty "project.build.deps.file") map (new File(_))
-      deps = readValue[SbtBuildConfig](fromHOCON(f))
+      deps = readValue[SbtBuildConfig](f)
     } yield deps
     
     

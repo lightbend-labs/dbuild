@@ -4,7 +4,7 @@ import sbt._
 import distributed.project.model
 import StateHelpers._
 import NameFixer.fixName
-import distributed.project.model.Utils.mapper.writeValueAsString
+import distributed.project.model.Utils.writeValue
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
@@ -46,7 +46,7 @@ object DependencyAnalysis {
     val deps = getProjectInfos(extracted, state, refs)    
     val meta = model.ExtractedBuildMeta(uri, deps)
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
-    try output println writeValueAsString(meta)
+    try output println writeValue(meta)
     finally output.close()
   }
   

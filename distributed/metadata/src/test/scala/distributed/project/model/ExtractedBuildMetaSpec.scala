@@ -4,15 +4,14 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
-import Utils.fromHOCON
-import Utils.mapper.{writeValueAsString,readValue}
+import Utils.{writeValue,readValue}
 
 object ExtractedBuildMetaSpec extends Specification {
 
   "ExtractedBuildMeta" should {
     "parse metadata file" in {
       
-      readValue[ExtractedBuildMeta](fromHOCON(
+      readValue[ExtractedBuildMeta](
 """{
   uri = "foo/bar"  
   projects = [{
@@ -25,7 +24,7 @@ object ExtractedBuildMetaSpec extends Specification {
           }]
           dependencies = []
     }]
-}""")) must equalTo(ExtractedBuildMeta("foo/bar", 
+}""") must equalTo(ExtractedBuildMeta("foo/bar", 
     Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar")), Seq.empty))))
     }
     
@@ -39,7 +38,7 @@ object ExtractedBuildMetaSpec extends Specification {
                     ProjectRef("p3", "o2"),
                     ProjectRef("p4", "o3")
                   ))))
-      val config = writeValueAsString(data)
+      val config = writeValue(data)
       (readValue[ExtractedBuildMeta](config) 
           must 
           equalTo(data))

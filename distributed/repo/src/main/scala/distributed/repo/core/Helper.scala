@@ -7,8 +7,7 @@ import project.model._
 import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
-import distributed.project.model.Utils.fromHOCON
-import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
+import distributed.project.model.Utils.{writeValue,readValue}
 
 object LocalRepoHelper {
   
@@ -25,13 +24,13 @@ object LocalRepoHelper {
   def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository): Unit =
     IO.withTemporaryFile("repeatable-build", build.uuid) { file =>
       val key = makeBuildMetaKey(build.uuid)
-      IO.write(file, writeValueAsString(build))
+      IO.write(file, writeValue(build))
       remote put (key, file)
     }
   
   def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {
     val file = remote get makeBuildMetaKey(uuid)
-    Some(readValue[RepeatableDistributedBuild](fromHOCON(file)))
+    Some(readValue[RepeatableDistributedBuild](file))
   }
     
   /**
@@ -65,7 +64,7 @@ object LocalRepoHelper {
   protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository): Unit = {
     val key = makeProjectMetaKey(meta.project.uuid)
     IO.withTemporaryFile(meta.project.config.name, meta.project.uuid) { file =>
-      IO.write(file, writeValueAsString(meta))
+      IO.write(file, writeValue(meta))
       remote put (key, file)
     }
   }
@@ -88,7 +87,7 @@ object LocalRepoHelper {
   protected def materializeProjectMetadata(uuid: String, remote: ReadableRepository): Option[ProjectArtifactInfo] = {
     val key = makeProjectMetaKey(uuid)
     val file = remote get key
-    try Some(readValue[ProjectArtifactInfo](fromHOCON(IO read file)))
+    try Some(readValue[ProjectArtifactInfo](IO read file))
     catch {
       case t: Throwable => throw new MalformedMetadata(key, "Unable to parse ProjectArtifactInfo metadata from: " + file.getAbsolutePath)
     }

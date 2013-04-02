@@ -1,8 +1,7 @@
 package distributed.project.model
 
 import org.specs2.mutable.Specification
-import Utils.fromHOCON
-import Utils.mapper.{writeValueAsString,readValue}
+import Utils.{writeValue,readValue}
 
 object BuildArtifactsSpec extends Specification {
 
@@ -17,7 +16,7 @@ object BuildArtifactsSpec extends Specification {
           ),
           new java.io.File("repo").getAbsoluteFile
         )
-      val config = writeValueAsString(data)
+      val config = writeValue(data)
       (readValue[BuildArtifacts](config) 
           must 
           equalTo(data))

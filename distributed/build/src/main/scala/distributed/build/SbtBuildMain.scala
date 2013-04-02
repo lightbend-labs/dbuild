@@ -3,8 +3,8 @@ package build
 
 import java.io.File
 import distributed.project.model.{BuildArtifacts,DistributedBuildConfig}
-import distributed.project.model.Utils.fromHOCON
-import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
+import distributed.project.model.Utils.{writeValue,readValue}
+import distributed.project.model.ClassLoaderMadness
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -39,9 +39,9 @@ class SbtBuildMain extends xsbti.AppMain {
       println("Args (" + (configuration.arguments mkString ",") + ")")
       val config = 
         if(args.length == 1)
-          readValue[DistributedBuildConfig](fromHOCON(new File(args(0))))
+          readValue[DistributedBuildConfig](new File(args(0)))
         else sys.error("Usage: dbuild {build-file}")
-      println("Config: " + writeValueAsString(config))
+      println("Config: " + writeValue(config))
       println("Classloader:")
       printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(configuration.baseDirectory)

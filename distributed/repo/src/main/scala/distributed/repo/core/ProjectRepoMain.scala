@@ -6,7 +6,7 @@ import project.model._
 import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
-import distributed.project.model.Utils.mapper.writeValueAsString
+import distributed.project.model.Utils.writeValue
 
 /** Expose for SBT launcher support. */
 class SbtRepoMain extends xsbti.AppMain {
@@ -184,7 +184,7 @@ object ProjectRepoMain {
         } println("  - " + project.uuid + " " + name)
         println(" = Repeatable Config =")
         LocalRepoHelper.readBuildMeta(uuid, cache) foreach { build =>
-           println(writeValueAsString(build.repeatableBuildConfig))
+           println(writeValue(build.repeatableBuildConfig))
         }    
   }
   

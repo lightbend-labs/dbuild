@@ -4,7 +4,7 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
-import Utils.mapper.{writeValueAsString,readValue}
+import Utils.{writeValue,readValue}
 
 import com.lambdaworks.jacks._
 import JacksOption._
@@ -93,7 +93,7 @@ object RepeatableDistributedBuildSpec extends Specification {
     
     
     "serialize/deserialize" in {
-      val result = readValue[RepeatableDistributedBuild](writeValueAsString(sample))
+      val result = readValue[RepeatableDistributedBuild](writeValue(sample))
       result must equalTo(sample)
     }
     "Make unique project build UUID" in {

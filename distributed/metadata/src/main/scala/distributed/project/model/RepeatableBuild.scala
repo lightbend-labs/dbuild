@@ -1,8 +1,7 @@
 package distributed.project.model
 
 import graph.Graphs
-import Utils.fromHOCON
-import Utils.mapper.{writeValueAsString,readValue}
+import Utils.writeValue
 
 /** Information on how to build a project.  Consists of both distributed build
  * configuration and extracted information.  Note: That the config in this case
@@ -39,7 +38,7 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
   def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config))
-  def repeatableBuildString = writeValueAsString(this)
+  def repeatableBuildString = writeValue(this)
   
   /** Our own graph helper for interacting with the build meta information. */
   private[this] lazy val graph = new BuildGraph(builds)

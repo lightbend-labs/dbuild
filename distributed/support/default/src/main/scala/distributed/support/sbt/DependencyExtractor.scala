@@ -7,8 +7,7 @@ import _root_.sbt.{IO, Path, PathExtra}
 import Path._
 import _root_.java.io.File
 import sys.process.Process
-import distributed.project.model.Utils.fromHOCON
-import distributed.project.model.Utils.mapper.{writeValueAsString,readValue}
+import distributed.project.model.Utils.readValue
 
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH

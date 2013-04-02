@@ -45,7 +45,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val dmeta = (
       DmodProject("metadata")
       dependsOn(graph, hashing)
-      dependsOnRemote(jacks, typesafeConfig, sbtCollections)
+      dependsOnRemote(jacks, jackson, typesafeConfig, sbtCollections)
     )
 
   // Projects relating to distributed builds.

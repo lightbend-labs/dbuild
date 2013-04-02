@@ -1,4 +1,5 @@
 package distributed.project.model
+import com.fasterxml.jackson.annotation.JsonProperty
 
 // import distributed.support.sbt.SbtConfig
 
@@ -25,10 +26,13 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig])
  *  for all fields. */
 // TODO - Autogenerate SBT versions!
 case class ExtraConfig(
-    `sbt-version`: String = "****", // TODO - was distributed.support.sbt.Defaults.sbtVersion,
+    @JsonProperty("build-tool-version")
+      buildToolVersion: String = "", // Note: empty version is interpreted as default, when the Build System extracts this bit
     directory: String = "",
-    `measure-performance`: Boolean = false,
-    `run-tests`: Boolean = true,
+    @JsonProperty("measure-performance")
+      measurePerformance: Boolean = false,
+    @JsonProperty("run-tests")
+      runTests: Boolean = true,
     options: Seq[String] = Seq.empty,
     projects: Seq[String] = Seq.empty // if empty -> build all projects (default)
 )

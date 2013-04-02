@@ -27,4 +27,5 @@ object Dependencies {
   val mvnEmbedder    = "org.apache.maven" % "maven-embedder" % mvnVersion
 
   val jacks          = "com.cunei" %% "jacks" % "2.1.7"
+  val jackson        = "com.fasterxml.jackson.core" % "jackson-annotations" % "2.1.4"
 }

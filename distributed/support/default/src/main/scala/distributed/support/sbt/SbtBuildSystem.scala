@@ -18,10 +18,10 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
   
   
   def sbtConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => ExtraConfig(`build-tool-version` = Defaults.sbtVersion) // pick all default values
+    case None => ExtraConfig(buildToolVersion = Defaults.sbtVersion) // pick all default values
     case Some(ec) => {
-      if (ec.`build-tool-version` == "")
-        ec.copy(`build-tool-version` = Defaults.sbtVersion)
+      if (ec.buildToolVersion == "")
+        ec.copy(buildToolVersion = Defaults.sbtVersion)
       else
         ec
     }

@@ -61,12 +61,12 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val drepo = (
     DmodProject("repo")
     dependsOn(dmeta)
-    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, jacks, sbtLaunchInt)
+    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, sbtLaunchInt)
   )
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt, jacks)
+      dependsOnRemote(sbtLaunchInt)
     )
 
   lazy val backend = (
@@ -78,7 +78,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dprojects, drepo, dmeta)
-      dependsOnRemote(mvnEmbedder, mvnWagon, jacks)
+      dependsOnRemote(mvnEmbedder, mvnWagon)
       settings(SbtSupport.settings:_*)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
         val file = dir / "Defaults.scala"
@@ -100,7 +100,6 @@ object Defaults {
   lazy val sbtSupportPlugin = (
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
     dependsOn(dprojects, defaultSupport, dmeta)
-    dependsOnRemote(jacks)
   )
 }
 

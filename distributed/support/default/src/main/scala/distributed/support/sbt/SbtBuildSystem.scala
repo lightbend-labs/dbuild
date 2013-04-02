@@ -17,8 +17,8 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
   final val extractor = new SbtRunner(buildBase / "extractor")
   
   
-  def sbtConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => ExtraConfig(buildToolVersion = Defaults.sbtVersion) // pick all default values
+  def sbtExpandConfig(config: ProjectBuildConfig) = config.extra match {
+    case None => ExtraConfig(buildToolVersion = Defaults.sbtVersion) // pick default values
     case Some(ec) => {
       if (ec.buildToolVersion == "")
         ec.copy(buildToolVersion = Defaults.sbtVersion)
@@ -28,17 +28,22 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
   }
   
   def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
-    val sc = sbtConfig(config)
+    val Some(sc) = config.extra
     if(sc.directory.isEmpty) SbtExtractor.extractMetaData(extractor)(dir, log)
     else SbtExtractor.extractMetaData(extractor)(new File(dir, sc.directory), log)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifacts = {
-    val sc = sbtConfig(project.config)
+    val Some(sc) = project.config.extra
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
     val config = SbtBuildConfig(sc, info)
     SbtBuilder.buildSbtProject(runner)(pdir, config, log)
+  }
+
+  override def expandDefaults(config: ProjectBuildConfig): ProjectBuildConfig = {
+    val sc = sbtExpandConfig(config)
+    config.copy(extra=Some(sc))
   }
 }

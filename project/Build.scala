@@ -117,8 +117,9 @@ trait BuildHelper extends Build {
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     resolvers += "rover" at "http://localhost:8088/artifactory/toni-maven",
-    publishMavenStyle := false,
-    publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns))
+    resolvers += Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns),
+    publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns)),
+    publishMavenStyle := false
   )
   
   // TODO - Aggregate into a single JAR if possible for easier resolution later...

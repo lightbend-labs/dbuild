@@ -36,6 +36,9 @@ abstract class BasicLogger extends sbt.BasicLogger with Logger
 
 /** Logs to an output stream. */
 class StreamLogger(out: java.io.PrintStream) extends BasicLogger {
+
+  setLevel(Debug)
+
   def newNestedLogger(name: String): Logger = this
   def trace(t: => Throwable): Unit =
     out.synchronized {

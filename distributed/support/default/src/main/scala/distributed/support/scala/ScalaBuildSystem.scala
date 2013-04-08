@@ -9,7 +9,6 @@ import _root_.sbt.Path._
 import logging.Logger
 import sys.process._
 
-
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
@@ -63,7 +62,6 @@ object ScalaBuildSystem extends BuildSystem {
       ArtifactLocation(continuations, version)
     ), localRepo)
   }
-
     
     
     

@@ -8,7 +8,6 @@ import project.model._
 import Utils.{writeValue,readValue}
 
 object DistributedBuildConfigSpec extends Specification {
-
   "DistributedBuildConfig" should {
     "parse project with defaults" in {
 
@@ -34,15 +33,15 @@ object DistributedBuildConfigSpec extends Specification {
   projects = [{
           name = "p1"
           uri = "uri"
-          system = "humpty"
+          system = "sbt"
           extra = { directory = "ZOMG" }
     }]
 }""") must equalTo(DistributedBuildConfig(
       Seq(ProjectBuildConfig(
           name = "p1",
           uri = "uri",
-          system = "humpty",
-          extra = readValue[Option[ExtraConfig]]("{directory = ZOMG}")
+          system = "sbt",
+          extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
       ))
     ))
     }

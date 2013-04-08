@@ -91,15 +91,15 @@ optional-extra-build-parameters
 .. code-block:: javascript
 
    {
-    "build-tool-version"  : <build-tool-version>,
-    "projects"            : [ subproj1, subproj2,... ]
-    "run-tests"           : <run-tests>
-    "options"             : [ opt1, opt2,... ]
+    "sbt-version"    : <sbt-version>,
+    "projects"       : [ subproj1, subproj2,... ]
+    "run-tests"      : <run-tests>
+    "options"        : [ opt1, opt2,... ]
    }
 
 Each of them is optional, and their meaning is:
 
-build-tool-version
+sbt-version
   A string that specifies the version of sbt that should be used to compile
   this dbuild project.
 

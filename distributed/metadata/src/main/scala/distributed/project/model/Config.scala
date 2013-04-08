@@ -83,7 +83,7 @@ case class MavenExtraConfig (
 /** sbt-specific build parameters
  */
 case class SbtExtraConfig (
-    @JsonProperty("sbt-tool-version")
+    @JsonProperty("sbt-version")
       sbtVersion: String = "", // Note: empty version is interpreted as default, when the Build System extracts this bit
     directory: String = "",
     @JsonProperty("measure-performance")

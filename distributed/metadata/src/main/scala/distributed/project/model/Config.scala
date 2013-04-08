@@ -1,82 +1,102 @@
-package distributed
-package project
-package model
+package distributed.project.model
 
-import config.{ConfigPrint,ConfigRead, ConfigObject}
-import ConfigPrint.makeMember
-import ConfigRead.readMember
-import sbt.Types.:+:
-import sbt.HNil
+import com.fasterxml.jackson.databind._
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.lambdaworks.jacks._
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.annotation.JsonProperty
+
 
 /**
  * Metadata about a build.  This is extracted from a config file and contains enough information
  * to further extract information about a build.
  */
+@JsonDeserialize(using = classOf[BuildConfigDeserializer])
 case class ProjectBuildConfig(name: String, 
-    system: String, 
-    uri: String, 
-    extra: ConfigObject = ProjectBuildConfig.emptyConfigObject) {
+    system: String = "sbt",
+    uri: String,
+    extra: Option[ExtraConfig]) {
   def uuid = hashing sha1 this
 }
-    
-object ProjectBuildConfig {
-  
-  val emptyConfigObject = config.parseString("""{}""").resolve.root
-  
-  implicit object PrettyPrinter extends ConfigPrint[ProjectBuildConfig] {
-    def apply(c: ProjectBuildConfig): String = {
-      val sb = new StringBuffer("{")
-      sb append makeMember("name", c.name)
-      sb append ","
-      sb append makeMember("system", c.system)
-      sb append ","
-      sb append makeMember("uri", c.uri)
-      sb append ","
-      sb append makeMember("extra", c.extra)
-      sb append "}"
-      sb.toString
-    }
-  }
-  
-  implicit object Configured extends ConfigRead[ProjectBuildConfig] {
-    import config._
-    val Members = (
-        readMember[String]("name") :^:
-        readMember[String]("system") :^:
-        readMember[String]("uri") :^:
-        readMember[ConfigObject]("extra")
-    )
-    def unapply(c: ConfigValue): Option[ProjectBuildConfig] = 
-      (c withFallback defaultProject) match {
-        case Members(name :+: system :+: uri :+: extra :+: HNil) =>
-          Some(ProjectBuildConfig(name, system, uri, extra))
-        case _ => None
-      }
-    val defaultProject: ConfigObject = 
-      config.parseString("""{
-        system = "sbt"
-        extra = {}
-      }""").resolve.root
-  }
+
+case class ProjectBuildConfigShadow(name: String, 
+    system: String = "sbt",
+    uri: String, 
+    extra: JsonNode=null) {
 }
 
 /** The initial configuration for a build. */
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig])
-object DistributedBuildConfig {
-  implicit object PrettyPrinter extends ConfigPrint[DistributedBuildConfig] {
-     def apply(build: DistributedBuildConfig): String = {
-      val sb = new StringBuffer("{")
-      sb append makeMember("projects", build.projects)
-      sb append "}"
-      sb.toString
+
+
+/** Configuration used for SBT and other builds.
+  */
+@JsonSerialize(using = classOf[ExtraSerializer])
+class ExtraConfig
+
+
+class ExtraSerializer extends JsonSerializer[ExtraConfig] {
+  override def serialize(value: ExtraConfig, g: JsonGenerator, p: SerializerProvider) {
+    val cfg=p.getConfig()
+    val tf=cfg.getTypeFactory()
+    val jt=tf.constructType(value.getClass)
+    ScalaTypeSig(cfg.getTypeFactory, jt) match {
+      case Some(sts) if sts.isCaseClass =>
+        // the "true" below is for options.caseClassSkipNulls
+        (new CaseClassSerializer(jt, sts.annotatedAccessors, true)).serialize(value.asInstanceOf[Product],g,p)
+      case _ => throw new Exception("Internal error while serializing build system config. Please report.")
     }
   }
-  implicit object Configured extends ConfigRead[DistributedBuildConfig] {
-    import config._
-    val Members = readMember[Seq[ProjectBuildConfig]]("projects")
-    def unapply(c: ConfigValue): Option[DistributedBuildConfig] = c match {
-      case Members(list) => Some(DistributedBuildConfig(list))
-      case _                 => None
-    }
+}
+
+class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): ProjectBuildConfig = {
+    val buildSystems=BuildSystemExtras.buildSystems
+    
+    val tf=ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[ProjectBuildConfigShadow]), null)
+    val generic=d.deserialize(p, ctx).asInstanceOf[ProjectBuildConfigShadow]
+
+    if (generic==null) throw new Exception("Cannot deserialize build configuration: no value found")
+
+    val from=generic.extra
+    val system=generic.system
+    if (!(buildSystems.contains(system))) throw new Exception("Build system \""+system+"\" is unknown.")
+    val newData = if (from==null) None else Some({
+      val cls=buildSystems(system)
+      val jp=from.traverse()
+      jp.nextToken()
+      cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp,ctx))
+    })
+    ProjectBuildConfig(generic.name,system,generic.uri,newData)
   }
+}
+
+case class ScalaExtraConfig extends ExtraConfig
+
+case class MavenExtraConfig (
+    directory: String = ""
+) extends ExtraConfig
+
+/** sbt-specific build parameters
+ */
+case class SbtExtraConfig (
+    @JsonProperty("sbt-version")
+      sbtVersion: String = "", // Note: empty version is interpreted as default, when the Build System extracts this bit
+    directory: String = "",
+    @JsonProperty("measure-performance")
+      measurePerformance: Boolean = false,
+    @JsonProperty("run-tests")
+      runTests: Boolean = true,
+    options: Seq[String] = Seq.empty,
+    projects: Seq[String] = Seq.empty // if empty -> build all projects (default)
+) extends ExtraConfig
+
+object BuildSystemExtras {
+  val buildSystems:Map[String,java.lang.Class[_ <: ExtraConfig]] = Map(
+      "sbt"->classOf[SbtExtraConfig],
+      "scala"->classOf[ScalaExtraConfig],
+      "maven"->classOf[MavenExtraConfig])
 }

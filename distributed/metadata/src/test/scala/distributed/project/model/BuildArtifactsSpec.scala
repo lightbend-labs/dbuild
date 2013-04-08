@@ -1,11 +1,10 @@
-package distributed
-package project
-package model
+package distributed.project.model
 
 import org.specs2.mutable.Specification
-import config._
+import Utils.{writeValue,readValue}
 
 object BuildArtifactsSpec extends Specification {
+
   "BuildArtifactsParser" should {
     
     "parse pretty printed result" in {
@@ -17,10 +16,10 @@ object BuildArtifactsSpec extends Specification {
           ),
           new java.io.File("repo").getAbsoluteFile
         )
-      val config = makeConfigString(data)
-      (parseStringInto[BuildArtifacts](config) 
+      val config = writeValue(data)
+      (readValue[BuildArtifacts](config) 
           must 
-          equalTo(Some(data)))
+          equalTo(data))
     }
   }
 }

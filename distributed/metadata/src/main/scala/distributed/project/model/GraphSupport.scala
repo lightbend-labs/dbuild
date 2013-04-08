@@ -1,7 +1,4 @@
-package distributed
-package project
-package model
-
+package distributed.project.model
 import graph._
 
 case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfigAndExtracted] {

@@ -7,6 +7,7 @@ import project.model._
 import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
+import distributed.project.model.Utils.{writeValue,readValue}
 
 object LocalRepoHelper {
   
@@ -23,13 +24,13 @@ object LocalRepoHelper {
   def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository): Unit =
     IO.withTemporaryFile("repeatable-build", build.uuid) { file =>
       val key = makeBuildMetaKey(build.uuid)
-      IO.write(file, config makeConfigString build)
+      IO.write(file, writeValue(build))
       remote put (key, file)
     }
   
   def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {
     val file = remote get makeBuildMetaKey(uuid)
-    config.parseFileInto[RepeatableDistributedBuild](file)
+    Some(readValue[RepeatableDistributedBuild](file))
   }
     
   /**
@@ -63,7 +64,7 @@ object LocalRepoHelper {
   protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository): Unit = {
     val key = makeProjectMetaKey(meta.project.uuid)
     IO.withTemporaryFile(meta.project.config.name, meta.project.uuid) { file =>
-      IO.write(file, config makeConfigString meta)
+      IO.write(file, writeValue(meta))
       remote put (key, file)
     }
   }
@@ -86,7 +87,7 @@ object LocalRepoHelper {
   protected def materializeProjectMetadata(uuid: String, remote: ReadableRepository): Option[ProjectArtifactInfo] = {
     val key = makeProjectMetaKey(uuid)
     val file = remote get key
-    try config.parseStringInto[ProjectArtifactInfo](IO read file)
+    try Some(readValue[ProjectArtifactInfo](IO read file))
     catch {
       case t: Throwable => throw new MalformedMetadata(key, "Unable to parse ProjectArtifactInfo metadata from: " + file.getAbsolutePath)
     }
@@ -101,7 +102,7 @@ object LocalRepoHelper {
     val metadata =
       materializeProjectMetadata(uuid, remote) getOrElse (throw new ResolveException(makeProjectMetaKey(uuid), "Could not resolve metadata for " + uuid))
     val results = for {
-      artifact <- metadata.artifacts
+      artifact <- metadata.artifactLocations
       key = makeRawFileKey(artifact.sha)
       resolved = remote get key
     } yield f(resolved, artifact)

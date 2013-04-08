@@ -91,10 +91,10 @@ optional-extra-build-parameters
 .. code-block:: javascript
 
    {
-    "sbt-version"         : <sbt-version>,
-    "projects"            : [ subproj1, subproj2,... ]
-    "run-tests"           : <run-tests>
-    "options"             : [ opt1, opt2,... ]
+    "sbt-version"    : <sbt-version>,
+    "projects"       : [ subproj1, subproj2,... ]
+    "run-tests"      : <run-tests>
+    "options"        : [ opt1, opt2,... ]
    }
 
 Each of them is optional, and their meaning is:

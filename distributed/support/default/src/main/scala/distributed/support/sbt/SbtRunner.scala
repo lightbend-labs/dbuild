@@ -5,6 +5,7 @@ import _root_.sbt.{IO,Path}
 import Path._
 import _root_.distributed.logging.Logger
 import sys.process._
+import distributed.project.model.ExtraConfig
 
 /** A runner for SBT. 
  * TODO - Make it platform synch safe?
@@ -14,7 +15,7 @@ class SbtRunner(globalBase: File) {
   
   private val defaultProps = 
     Map("sbt.global.base" -> globalBase.getAbsolutePath,
-        "sbt.version" -> SbtConfig.sbtVersion,
+        "sbt.version" -> Defaults.sbtVersion,
         "sbt.override.build.repos" -> "true",
         "sbt.log.noformat" -> "true")
         
@@ -40,7 +41,7 @@ class SbtRunner(globalBase: File) {
     log.debug("Running: " + cmd.mkString("[", ",", "]"))
     Process(cmd, Some(projectDir)) ! log match {
       case 0 => ()
-      // TODO - SBT speicfic failures?
+      // TODO - SBT specific failures?
       case n => sys.error("Failure to run sbt!  Error code: " + n)
     }
   }

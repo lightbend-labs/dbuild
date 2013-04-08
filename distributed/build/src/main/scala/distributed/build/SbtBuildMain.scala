@@ -3,7 +3,8 @@ package build
 
 import java.io.File
 import distributed.project.model.{BuildArtifacts,DistributedBuildConfig}
-import config.{parseFileInto, makeConfigString}
+import distributed.project.model.Utils.{writeValue,readValue}
+import distributed.project.model.ClassLoaderMadness
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -37,13 +38,10 @@ class SbtBuildMain extends xsbti.AppMain {
       val args = configuration.arguments
       println("Args (" + (configuration.arguments mkString ",") + ")")
       val config = 
-        if(args.length == 1) 
-          parseFileInto[DistributedBuildConfig](new File(args(0))) match{
-            case Some(b) => b
-            case _ => sys.error("Failure reading build file: " + args(0))
-          }
+        if(args.length == 1)
+          readValue[DistributedBuildConfig](new File(args(0)))
         else sys.error("Usage: dbuild {build-file}")
-      println("Config: " + makeConfigString(config))
+      println("Config: " + writeValue(config))
       println("Classloader:")
       printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(configuration.baseDirectory)

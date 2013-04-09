@@ -4,8 +4,8 @@ import ClassLoaderMadness.withContextLoader
 import com.typesafe.config.ConfigFactory.{parseString,parseFile}
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.Config
-import com.lambdaworks.jacks._
-import JacksOption._
+import com.lambdaworks.jacks.JacksOption._
+import com.lambdaworks.jacks.JacksMapper
 import java.io.File
 
 object Utils {

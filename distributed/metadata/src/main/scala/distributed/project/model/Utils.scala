@@ -9,7 +9,8 @@ import com.lambdaworks.jacks.JacksMapper
 import java.io.File
 
 object Utils {
-  private val mapper=JacksMapper.withOptions(CaseClassCheckNulls(true),CaseClassSkipNulls(true))
+  private val mapper=JacksMapper.withOptions(CaseClassCheckNulls(true),
+      CaseClassSkipNulls(true),CaseClassRequireKnown(true))
   private def readValueT[T](c:Config)(implicit m: Manifest[T]) = 
     withContextLoader(getClass.getClassLoader){
       mapper.readValue[T](c.resolve.root.render(ConfigRenderOptions.concise))

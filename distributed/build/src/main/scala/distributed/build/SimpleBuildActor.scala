@@ -23,8 +23,15 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     case RunDistributedBuild(build, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       val logger = log.newNestedLogger(hashing sha1 build)
+      // "build" contains the project configs as written in the configuration file.
+      // Their 'extra' field could be None, or contain information that must be completed
+      // according to the build system in use for that project.
+      // Only each build system knows its own defaults (which may change over time),
+      // therefore we have to ask to the build system itself to expand the 'extra' field
+      // as appropriate.
       val result = for {
-        fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
+        expandedBuild <- fillDefaults(build)
+        fullBuild <- analyze(expandedBuild, target, log.newNestedLogger(hashing sha1 build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
         arts <- runBuild(target, fullBuild, fullLogger)
@@ -32,6 +39,13 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       result pipeTo listener
     }
   }
+  
+  def fillDefaults(config:DistributedBuildConfig):Future[DistributedBuildConfig] = {
+    implicit val ctx = context.system
+    Future.traverse(config.projects)(fillProjDef) map DistributedBuildConfig.apply
+  }
+  def fillProjDef(proj: ProjectBuildConfig): Future[ProjectBuildConfig] =
+    (builder ? ExpandExtraDefaults(proj)).mapTo[ProjectBuildConfig]
   
   /** Publishing the full build to the repository and logs the output for
    * re-use.
@@ -89,7 +103,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     // We don't have to do ordering here anymore.
     builds map RepeatableDistributedBuild.apply 
   } 
-  
+
   // Our Asynchronous API.
   def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ProjectConfigAndExtracted] =
     (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[ProjectConfigAndExtracted]

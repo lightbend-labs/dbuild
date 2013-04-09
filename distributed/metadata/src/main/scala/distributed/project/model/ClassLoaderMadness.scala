@@ -1,5 +1,4 @@
-package distributed
-package build
+package distributed.project.model
 
 object ClassLoaderMadness {
   def withContextLoader[A](cl: ClassLoader)(f: => A): A = {

@@ -4,16 +4,16 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
-import config._
+import Utils.{writeValue,readValue}
 
 object ExtractedBuildMetaSpec extends Specification {
+
   "ExtractedBuildMeta" should {
     "parse metadata file" in {
       
-      
-      parseStringInto[ExtractedBuildMeta](
+      readValue[ExtractedBuildMeta](
 """{
-  scm = "foo/bar"  
+  uri = "foo/bar"  
   projects = [{
           name = "p1"
           organization = "o1"
@@ -24,8 +24,8 @@ object ExtractedBuildMetaSpec extends Specification {
           }]
           dependencies = []
     }]
-}""") must equalTo(Some(ExtractedBuildMeta("foo/bar", 
-    Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar")), Seq.empty)))))
+}""") must equalTo(ExtractedBuildMeta("foo/bar", 
+    Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar")), Seq.empty))))
     }
     
     "parse pretty printed metadata" in {
@@ -38,10 +38,10 @@ object ExtractedBuildMetaSpec extends Specification {
                     ProjectRef("p3", "o2"),
                     ProjectRef("p4", "o3")
                   ))))
-      val config = makeConfigString(data)
-      (parseStringInto[ExtractedBuildMeta](config) 
+      val config = writeValue(data)
+      (readValue[ExtractedBuildMeta](config) 
           must 
-          equalTo(Option(data)))
+          equalTo(data))
     }
   }
 }

@@ -11,7 +11,7 @@ object PomHelperSpec extends Specification {
   def makeBuildArts: (RepeatableDistributedBuild, BuildArtifacts) = {
     val build = RepeatableDistributedBuild(
             Seq(ProjectConfigAndExtracted(
-                config = ProjectBuildConfig("", "", "" ),
+                config = ProjectBuildConfig("", "", "", None),
                 extracted = ExtractedBuildMeta(
                   uri = "",
                   projects = Seq(

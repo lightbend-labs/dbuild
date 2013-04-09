@@ -4,14 +4,18 @@ package model
 
 import org.specs2.mutable.Specification
 import model._
-import config._
+import Utils.{writeValue,readValue}
+
+import com.lambdaworks.jacks._
+import JacksOption._
 
 object RepeatableDistributedBuildSpec extends Specification {
+
   "RepeatableDistributedBuild" should {
     
     val sample = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "system", "uri"),
+              ProjectBuildConfig("a", "scala", "uri", None),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
                     name = "a",
@@ -20,7 +24,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "system", "uri2"),
+              ProjectBuildConfig("b", "scala", "uri2", None),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
                     name = "b",
@@ -29,7 +33,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "system", "uri3"),
+              ProjectBuildConfig("c", "scala", "uri3", None),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
                     name = "c",
@@ -38,7 +42,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("d", "system", "uri4"),
+              ProjectBuildConfig("d", "scala", "uri4", None),
               ExtractedBuildMeta("uri4", 
                   Seq(Project(
                     name = "d",
@@ -47,7 +51,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("c", "c"), ProjectRef("b", "b"))
                   )))),
         ProjectConfigAndExtracted(
-              ProjectBuildConfig("e", "system", "uri5"),
+              ProjectBuildConfig("e", "scala", "uri5", None),
               ExtractedBuildMeta("uri5", 
                   Seq(Project(
                     name = "e",
@@ -59,7 +63,7 @@ object RepeatableDistributedBuildSpec extends Specification {
     
     val sample2 = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "system", "uri"),
+              ProjectBuildConfig("a", "scala", "uri", None),
               ExtractedBuildMeta("uri", 
                   Seq(Project(
                     name = "a",
@@ -68,7 +72,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "system", "uri2"),
+              ProjectBuildConfig("b", "scala", "uri2", None),
               ExtractedBuildMeta("uri2", 
                   Seq(Project(
                     name = "b",
@@ -77,7 +81,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "system", "uri3"),
+              ProjectBuildConfig("c", "scala", "uri3", None),
               ExtractedBuildMeta("uri3", 
                   Seq(Project(
                     name = "c",
@@ -89,7 +93,7 @@ object RepeatableDistributedBuildSpec extends Specification {
     
     
     "serialize/deserialize" in {
-      val result = parseStringInto[RepeatableDistributedBuild](makeConfigString(sample)) getOrElse sys.error("Failure to parse")
+      val result = readValue[RepeatableDistributedBuild](writeValue(sample))
       result must equalTo(sample)
     }
     "Make unique project build UUID" in {

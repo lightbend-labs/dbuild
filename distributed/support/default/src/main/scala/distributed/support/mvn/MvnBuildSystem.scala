@@ -8,6 +8,7 @@ import _root_.java.io.File
 import distributed.logging.Logger
 import _root_.sbt.Path._
 import collection.JavaConverters._
+
 object MvnBuildSystem extends BuildSystem {
   val name = "maven"
   def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
@@ -19,10 +20,11 @@ object MvnBuildSystem extends BuildSystem {
   }
   
   
-  def mvnConfig(config: ProjectBuildConfig): MvnConfig =
+  def mvnConfig(config: ProjectBuildConfig) =
     config.extra match {
-      case MvnConfig.Configured(c) => c
-      case _ => sys.error("Maven build is misconfigured: " + config)
+      case Some(ec:MavenExtraConfig) => ec
+      case None => MavenExtraConfig()
+      case _ => throw new Exception("Internal error: Maven build config options are the wrong type. Please report")
     }
   
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifacts = {
@@ -33,7 +35,7 @@ object MvnBuildSystem extends BuildSystem {
       else  dir / mc.directory / "pom.xml"
     // TODO - Fix up project poms.
     // TODO - Allow directory/pom specification for Mvn.
-    val result = MvnBuilder.runBuild(pom, input.arts.localRepo, log)
+    val result = MvnBuilder.runBuild(pom, input.artifacts.localRepo, log)
     if(result.hasExceptions()) {
       result.getExceptions.asScala foreach (t => log.trace(t))
     } else log.info("DONE!")

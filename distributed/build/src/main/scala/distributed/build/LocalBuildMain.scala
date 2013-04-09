@@ -7,8 +7,9 @@ import akka.dispatch.Await
 import akka.util.Timeout
 import akka.util.duration._
 import project.model._
-import _root_.config.parseFileInto
+import distributed.project.model.Utils.readValue
 import distributed.repo.core._
+import distributed.project.model.ClassLoaderMadness
 
 class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
   // TODO - Pull these via plugins or something...
@@ -53,10 +54,7 @@ object LocalBuildMain {
   def main(args: Array[String]): Unit = 
     // TODO - Parse inputs for realz...
     if(args.length == 1) {
-      parseFileInto[DistributedBuildConfig](new File(args(0))) match{
-        case Some(b) => build(b)
-        case _ => sys.error("Failure reading build file: " + args(0))
-      }
+      readValue[DistributedBuildConfig](new File(args(0)))
     }
     else System.err.println("Usage: dbuild {build-file}")
 }

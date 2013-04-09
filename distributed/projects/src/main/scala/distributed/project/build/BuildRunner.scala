@@ -16,6 +16,14 @@ trait BuildRunner {
    * @param log  The log to write to.
    */
   def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, log: logging.Logger): BuildArtifacts
+  
+  /**
+   * Expands the build options (the 'extra' field) so that the defaults
+   * that apply for this build system are taken into account.
+   * 
+   * @param proj The project configuration that should be expanded
+   */
+  def expandExtraDefaults(proj: ProjectBuildConfig): ProjectBuildConfig
 }
 
 /** Aggregate builder. */
@@ -24,5 +32,9 @@ class AggregateBuildRunner(systems: Seq[BuildSystem]) extends BuildRunner {
   override def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, log: logging.Logger): BuildArtifacts = {
     val runner = systems find (_.name == b.config.system) getOrElse sys.error("Could not find build runner for " + b.config.system)
     runner.runBuild(b, dir, input, log)
+  }
+  override def expandExtraDefaults(proj: ProjectBuildConfig): ProjectBuildConfig = {
+    val runner = systems find (_.name == proj.system) getOrElse sys.error("Could not find build runner for " + proj.system)
+    runner.expandDefaults(proj)    
   }
 }

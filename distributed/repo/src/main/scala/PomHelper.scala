@@ -41,21 +41,21 @@ object PomHelper {
 /** A helper to generate pom files. */
 class PomHelper private (arts: BuildArtifacts) {
   val depVersions: Map[ProjectRef, String] =
-    arts.artifacts.map(a => a.dep -> a.version)(collection.breakOut)
+    arts.artifacts.map(a => a.info -> a.version)(collection.breakOut)
   
   def artLocOf(p: DProject): ArtifactLocation =
     (for {
       artifact <- arts.artifacts
-      if artifact.dep.name == p.name
-      if artifact.dep.organization == p.organization
-      if artifact.dep.classifier.isEmpty
+      if artifact.info.name == p.name
+      if artifact.info.organization == p.organization
+      if artifact.info.classifier.isEmpty
     } yield artifact).head
     
   def versionOf(p: DProject): String =
     artLocOf(p).version
   
   def depOf(p: DProject): ProjectRef =
-    artLocOf(p).dep
+    artLocOf(p).info
     
   def makePom(p: DProject): Model = {
     val m = new Model

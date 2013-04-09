@@ -19,7 +19,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
-    aggregate(graph,hashing,logging,dprojects,sbtSupportPlugin, dbuild, backend, defaultSupport, drepo, dmeta, ddocs)
+    aggregate(graph,hashing,logging,dprojects,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
     settings(publish := (), version := MyVersion)
   )
 
@@ -67,11 +67,6 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
       dependsOnRemote(sbtLaunchInt)
-    )
-
-  lazy val backend = (
-      DmodProject("backend")
-      dependsOn(defaultSupport)
     )
 
   // Projects relating to supprting various tools in distributed builds.

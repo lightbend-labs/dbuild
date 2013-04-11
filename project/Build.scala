@@ -19,7 +19,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
-    aggregate(graph,hashing,logging,dprojects,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
+    aggregate(graph,hashing,logging,actorLogging,dprojects,dcore,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
     settings(publish := (), version := MyVersion)
   )
 
@@ -39,7 +39,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val hashing = (
       LibProject("hashing")
-      dependsOnRemote(akkaActor)
+      dependsOnRemote(typesafeConfig)
     )
 
   lazy val dmeta = (
@@ -51,11 +51,21 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // Projects relating to distributed builds.
   lazy val logging = (
       DmodProject("logging")
+      dependsOnRemote(sbtLogging, sbtIo, sbtLaunchInt)
+    )
+  lazy val actorLogging = (
+      DmodProject("actorLogging")
+      dependsOn(logging)
       dependsOnRemote(sbtLogging, akkaActor, sbtIo, sbtLaunchInt)
+    )
+  lazy val dcore = (
+      DmodProject("core")
+      dependsOn(dmeta, graph, hashing, logging, drepo)
+      dependsOnRemote(sbtIo)
     )
   lazy val dprojects = (
       DmodProject("projects")
-      dependsOn(dmeta, graph, hashing, logging, drepo)
+      dependsOn(dcore, actorLogging)
       dependsOnRemote(sbtIo)
     )
   lazy val drepo = (
@@ -72,7 +82,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // Projects relating to supprting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
-      dependsOn(dprojects, drepo, dmeta)
+      dependsOn(dcore, drepo, dmeta)
       dependsOnRemote(mvnEmbedder, mvnWagon)
       settings(SbtSupport.settings:_*)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
@@ -94,7 +104,7 @@ object Defaults {
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
-    dependsOn(dprojects, defaultSupport, dmeta)
+    dependsOn(defaultSupport, dmeta)
   )
 }
 

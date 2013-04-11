@@ -83,7 +83,7 @@ object DistributedRunner {
     val requestedProjects=config.config.projects
     if (requestedProjects.nonEmpty) {
       val availableProjects=refs.map(_.project)
-      val notAvailable=requestedProjects.toSet-availableProjects
+      val notAvailable=requestedProjects.toSet--availableProjects
       if (notAvailable.nonEmpty)
         sys.error("These subprojects were not found: "+notAvailable.mkString("\"","\",\"","\"."))
     }

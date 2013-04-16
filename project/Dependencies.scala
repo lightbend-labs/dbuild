@@ -26,6 +26,6 @@ object Dependencies {
   val mvnWagon    = "org.apache.maven.wagon" % "wagon-http" % "2.2"
   val mvnEmbedder    = "org.apache.maven" % "maven-embedder" % mvnVersion
 
-  val jacks          = "com.cunei" %% "jacks" % "2.1.8"
+  val jacks          = "com.cunei" %% "jacks" % "2.1.9"
   val jackson        = "com.fasterxml.jackson.core" % "jackson-annotations" % "2.1.4"
 }

@@ -67,6 +67,7 @@ object DistributedRunner {
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
+    verifySubProjects(config, refs)
     refs.foldLeft[(State, T)](state -> init) { 
 	    case ((state, current), ref) => 
 	      if(isValidProject(config, ref)) {
@@ -75,6 +76,17 @@ object DistributedRunner {
 	    	state2 -> merge(current, next)
 	      } else state -> current    // TODO - if a project listed in the build does not exist, or list empty, it should really abort
       }
+  }
+  
+  private def verifySubProjects(config: SbtBuildConfig, refs: Set[ProjectRef]): Unit = {
+    // verify that the requested projects in SbtBuildConfig actually exist
+    val requestedProjects=config.config.projects
+    if (requestedProjects.nonEmpty) {
+      val availableProjects=refs.map(_.project)
+      val notAvailable=requestedProjects.toSet--availableProjects
+      if (notAvailable.nonEmpty)
+        sys.error("These subprojects were not found: "+notAvailable.mkString("\"","\",\"","\"."))
+    }
   }
   
   def testProject(state: State, config: SbtBuildConfig): State = 
@@ -430,5 +442,4 @@ object DistributedRunner {
   def projectSettings: Seq[Setting[_]] = Seq(
       extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile) map extractArtifactLocations
     )
-  
   }

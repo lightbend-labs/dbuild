@@ -31,8 +31,8 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
   
   def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
     val Some(sc:SbtExtraConfig) = config.extra
-    if(sc.directory.isEmpty) SbtExtractor.extractMetaData(extractor)(dir, log)
-    else SbtExtractor.extractMetaData(extractor)(new File(dir, sc.directory), log)
+    if(sc.directory.isEmpty) SbtExtractor.extractMetaData(extractor)(dir, sc, log)
+    else SbtExtractor.extractMetaData(extractor)(new File(dir, sc.directory), sc, log)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifacts = {

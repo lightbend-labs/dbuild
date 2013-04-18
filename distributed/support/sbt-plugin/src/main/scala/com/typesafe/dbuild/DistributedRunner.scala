@@ -189,6 +189,15 @@ object DistributedRunner {
   def fixPublishTo(repo: Resolver)(s: Setting[_]): Setting[_] =
     s.asInstanceOf[Setting[Option[Resolver]]] mapInit { (_, _) => Some(repo) }
 
+  def fixPublishTo2(repo: Resolver)(s: Setting[_]): Setting[_] =
+    Project.update(s.asInstanceOf[Setting[Option[Resolver]]].key) { _ => Some(repo) }
+
+  def fixPublishTos2(repo: Resolver, oldSettings: Seq[Setting[_]], log: Logger) = {
+    val lastSettings = oldSettings.filter(_.key.key == Keys.publishTo.key).groupBy(_.key.scope).map(_._2.last).toSeq
+    if (lastSettings.nonEmpty) log.info("Updating publishTo repo in " + lastSettings.length + " scopes")
+    lastSettings map fixPublishTo2(repo)
+  }
+
   def fixDependencies(locs: Seq[model.ArtifactLocation])(s: Setting[_]): Setting[_] = s.key.key match {
     case Keys.scalaVersion.key => fixScalaVersion(locs)(s)
     case Keys.libraryDependencies.key => fixLibraryDependencies(locs)(s)
@@ -251,7 +260,35 @@ object DistributedRunner {
 
   private def fixCrossVersion2(s: Setting[_]): sbt.Project.Setting[sbt.CrossVersion] =
     Project.update(s.asInstanceOf[Setting[CrossVersion]].key) { _ => CrossVersion.Disabled }
-      
+
+  def fixPGP2(s: Setting[_]): Setting[_] =
+    Project.update(s.asInstanceOf[Setting[Task[Boolean]]].key) { old => old map (_ => true)}
+
+  def fixPGPs2(oldSettings: Seq[Setting[_]], log: Logger) = {
+    val lastSettings = oldSettings.filter(_.key.key == Keys.skip.key).groupBy(_.key.scope).map(_._2.last).filter {
+      s => s.key.scope.task.toOption match {
+        case Some(scope) if scope.label.toString == "pgp-signer" => true
+        case _ => false
+      }
+    }.toSeq
+    if (lastSettings.nonEmpty) log.info("Disabling PGP signing in " + lastSettings.length + " scopes")
+    lastSettings map fixPGP2
+  }
+
+  def fixVersion2(config: SbtBuildConfig)(s: Setting[_]): Setting[_] =
+    Project.update(s.asInstanceOf[Setting[String]].key) { value =>
+        if(value endsWith "-SNAPSHOT") {
+           value replace ("-SNAPSHOT", "-" + config.info.uuid)
+        } else value
+      }
+
+  def fixVersions2(config: SbtBuildConfig, oldSettings: Seq[Setting[_]], log: Logger) = {
+    val lastSettings = oldSettings.filter(_.key.key == Keys.version.key).groupBy(_.key.scope).map(_._2.last).toSeq
+    if (lastSettings.nonEmpty) log.info("Updating version strings in " + lastSettings.length + " scopes")
+    lastSettings map fixVersion2(config)
+  }
+
+
   def fixSetting(config: SbtBuildConfig)(s: Setting[_]): Setting[_] = s.key.key match {
     case Keys.publishTo.key =>
       fixPublishTo(Resolver.file("deploy-to-local-repo", config.info.outRepo.getAbsoluteFile))(s)
@@ -272,10 +309,35 @@ object DistributedRunner {
         } else value
       } 
     case _ => fixDependencies(config.info.artifacts.artifacts)(s)
-  } 
+  }
+
+  def fixSettings2(config: SbtBuildConfig, state: State): State = {
+    println("Updating dependencies...")
+    val extracted = Project.extract(state)
+    import extracted._
+    val refs = getProjectRefs(session.mergeSettings)
+    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
+    val log = sbt.ConsoleLogger()
+    val oldSettings = session.mergeSettings
+
+    val newSettings = fixPublishTos2(Resolver.file("deploy-to-local-repo", config.info.outRepo.getAbsoluteFile),
+      oldSettings, log) ++ fixPGPs2(oldSettings, log) ++ fixVersions2(config, oldSettings, log) ++
+      fixDependencies2(config.info.artifacts.artifacts, oldSettings, log)
+
+    // TODO: remove duplication with setupCmd, below.
+    // Also: consolidate the ...s2(...) methods into a common skeleton
+
+    // Session strings can't be replayed; this info is only useful for debugging
+    val newSessionSettings = newSettings map (a => (a, List("// " + a.key.toString)))
+    // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
+    val newSession = session.appendSettings(newSessionSettings)
+    val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
+    val newState = Project.setProject(newSession, newStructure, state)
+    newState
+  }
   
   def fixSettings(config: SbtBuildConfig, state: State): State = {
-    println("Updating dependencies.")
+    println("Updating dependencies...")
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
@@ -313,8 +375,8 @@ object DistributedRunner {
   }
     
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
-    printResolvers(state)
-    val state3 = fixSettings(config, state)
+    // printResolvers(state)
+    val state3 = fixSettings2(config, state)
     val (state4, artifacts) = buildProject(state3, config)
     testProject(state4, config)
     // TODO - Use artifacts extracted to deploy!

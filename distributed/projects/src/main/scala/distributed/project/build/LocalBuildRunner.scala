@@ -40,10 +40,8 @@ class LocalBuildRunner(builder: BuildRunner,
       val readRepo = new File(dir, ".dbuild/local-repo")
       val writeRepo = new File(dir, ".dbuild/local-publish-repo")
       if(!writeRepo.exists()) writeRepo.mkdirs()
-      val artifactLocations = for {
-        uuid <- build.transitiveDependencyUUIDs.toSeq
-        art <- LocalRepoHelper.materializeProjectRepository(uuid, repository, readRepo)
-      } yield art
+      val uuids = build.transitiveDependencyUUIDs.toSeq
+      val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
       // TODO - Load this while resolving!
       val dependencies: BuildArtifacts = BuildArtifacts(artifactLocations, readRepo)
       log.info("Running local build: " + build.config + " in directory: " + dir)

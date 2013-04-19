@@ -129,14 +129,6 @@ object DistributedRunner {
       } getOrElse m
   }
     
-  def fixLibraryDependencies(arts: Seq[model.ArtifactLocation])(s: Setting[_]): Setting[_] = {
-    s.asInstanceOf[Setting[Seq[ModuleID]]] mapInit { (_, old) => old map fixModule(arts) }
-  }
-
-  def fixLibraryDependencies2(arts: Seq[model.ArtifactLocation])(s: Setting[_]): Setting[_] =
-    // Equivalent to ~=
-    Project.update(s.asInstanceOf[Setting[Seq[ModuleID]]].key) { old => old map fixModule(arts) }
-  
   // get the custom scala version string, if one is present somewhere in the list of artifacts of this build  
   private def customScalaVersion(arts: Seq[distributed.project.model.ArtifactLocation]): Option[String] =
     (for {
@@ -146,14 +138,6 @@ object DistributedRunner {
       if dep.name == "scala-library"
     } yield artifact.version).headOption
 
-
-  def fixScalaVersion(arts: Seq[model.ArtifactLocation])(s: Setting[_]): Setting[_] = {
-    val scalaV = customScalaVersion(arts)
-    scalaV map { v => fixScalaVersionSetting(arts, v)(s) } getOrElse s
-  }
-
-  def fixScalaVersionSetting(arts: Seq[model.ArtifactLocation], ver:String)(s: Setting[_]): Setting[_] =
-    s.asInstanceOf[Setting[String]].mapInit((_,_) => ver)
 
   def fixScalaVersionSetting2(arts: Seq[model.ArtifactLocation], ver:String)(s: Setting[_]): Setting[_] =
     Project.update(s.asInstanceOf[Setting[String]].key) {_ => ver}
@@ -176,7 +160,7 @@ object DistributedRunner {
         throw new LocalArtifactMissingException("Could not find needed jar in local repo: " + name + "-" + version + ".jar", e.getMessage)
     }
   }
-  def generateScalaDir(scalaHome: File, repoDir: File, arts: Seq[model.ArtifactLocation], ver: String) = {
+  def generateScalaDir(scalaHome: File, repoDir: File, ver: String) = {
     // sbt uses needs a small set of jars in scalaHome. I only copy those, therefore.
     val neededJars = Seq("scala-library", "scala-compiler")
     val optionalJars = Seq("scala-reflect", "jline", "fjbg")
@@ -186,11 +170,15 @@ object DistributedRunner {
     optionalJars foreach retrieveJarFile(scalaHome, repoDir, org, ver, false)
   }
 
-  def fixPublishTos2(repo: Resolver, oldSettings: Seq[Setting[_]], log: Logger) = {
+  def fixPublishTos2(repo: File, oldSettings: Seq[Setting[_]], log: Logger) = {
+    val mavenRepo=Resolver.file("deploy-to-local-repo", repo)
     val lastSettings = oldSettings.filter(_.key.key == Keys.publishTo.key).groupBy(_.key.scope).map(_._2.last).toSeq
     if (lastSettings.nonEmpty) log.info("Updating publishTo repo in " + lastSettings.length + " scopes")
     lastSettings map { s =>
-      Project.update(s.asInstanceOf[Setting[Option[Resolver]]].key) { x => Some(repo) }
+      val sc=s.key.scope
+      // I need to check publishMavenStyle for this scope, and change repo accordingly
+      Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { mavenStyle:Boolean => Some(repo)}
+//      Project.update(s.asInstanceOf[Setting[Option[Resolver]]].key) { x => Some(repo) }
     }
   }
 
@@ -212,18 +200,24 @@ object DistributedRunner {
   def fixDependencies2(locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
     val lastSettings = oldSettings.filter(_.key.key == Keys.libraryDependencies.key).groupBy(_.key.scope).map(_._2.last).toSeq
     if (lastSettings.nonEmpty) log.info("Updating library dependencies in " + lastSettings.length + " scopes")
-    lastSettings map fixLibraryDependencies2(locs)
+    lastSettings map { s =>
+      // Equivalent to ~=
+      Project.update(s.asInstanceOf[Setting[Seq[ModuleID]]].key) { old => old map fixModule(locs) }
+    }
   }
 
-  
-  private def fixCrossVersion2(s: Setting[_]): sbt.Project.Setting[sbt.CrossVersion] =
-    Project.update(s.asInstanceOf[Setting[CrossVersion]].key) { _ => CrossVersion.Disabled }
-
+  def fixCrossVersions2(oldSettings: Seq[Setting[_]], log: Logger) = {
+    val lastSettings = oldSettings.filter(_.key.key == Keys.crossVersion.key).groupBy(_.key.scope).map(_._2.last).toSeq
+    if (lastSettings.nonEmpty) log.info("Disabling cross versioning in " + lastSettings.length + " scopes")
+    lastSettings map { s =>
+      Project.update(s.asInstanceOf[Setting[CrossVersion]].key) { _ => CrossVersion.Disabled }
+    }
+  }
   
   // Fixing Scala version; similar to the above.
   //
   def fixScalaVersion2(dbuildDir: File, repoDir: File, locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
-    val verKeys = Seq(Keys.scalaVersion.key, Keys.crossVersion.key, Keys.scalaHome.key)
+    val verKeys = Seq(Keys.scalaVersion.key, Keys.scalaHome.key)
     val scalaV = customScalaVersion(locs)
     //change only if new version is requested, otherwise should not generate the new setting
     scalaV map { ver => oldSettings.filter { s => verKeys.contains(s.key.key) }.groupBy(_.key).map(_._2.last).toSeq.
@@ -234,14 +228,10 @@ object DistributedRunner {
             log.info("Setting Scala version to: "+ver+" in "+seq.length+" scopes")
             seq map fixScalaVersionSetting2(locs, ver)
           }
-          case Keys.crossVersion.key => {
-            log.info("Disabling cross building in "+seq.length+" scopes")
-            seq map fixCrossVersion2
-          }
           case Keys.scalaHome.key => {
         	val scalaHome = dbuildDir / "scala" / ver
             log.info("Preparing Scala binaries: version "+ver)
-            generateScalaDir(scalaHome, repoDir, locs, ver)
+            generateScalaDir(scalaHome, repoDir, ver)
             log.info("Setting Scala home in "+seq.length+" scopes")
             seq map fixScalaHome2(scalaHome)
           }
@@ -278,30 +268,42 @@ object DistributedRunner {
   }
 
   def fixSettings2(config: SbtBuildConfig, state: State): State = {
-    println("Updating dependencies...")
+    // TODO: replace with the correct logger
+    val log = sbt.ConsoleLogger()
+    log.info("Updating dependencies...")
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
-    val log = sbt.ConsoleLogger()
-    val oldSettings = session.mergeSettings
+    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
 
-    val newSettings = fixPublishTos2(Resolver.file("deploy-to-local-repo", config.info.outRepo.getAbsoluteFile),
-      oldSettings, log) ++ fixPGPs2(oldSettings, log) ++ fixVersions2(config, oldSettings, log) ++
-      fixDependencies2(config.info.artifacts.artifacts, oldSettings, log)
+    dbuildDirectory map { dbuildDir =>
+      val repoDir = dbuildDir / "local-repo"
 
-    // TODO: remove duplication with setupCmd, below.
-    // Also: consolidate the ...s2(...) methods into a common skeleton
+      val refs = getProjectRefs(session.mergeSettings)
+      val oldSettings = session.mergeSettings
 
-    // Session strings can't be replayed; this info is only useful for debugging
-//    val newSessionSettings = newSettings map (a => (a, List("// " + a.key.toString)))
-    // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
-//    val newSession = session.appendSettings(newSessionSettings)
+      val newSettings = fixPublishTos2(config.info.outRepo.getAbsoluteFile, oldSettings, log) ++
+        fixPGPs2(oldSettings, log) ++
+        fixVersions2(config, oldSettings, log) ++
+        fixResolvers2(repoDir, oldSettings, log) ++
+        fixDependencies2(config.info.artifacts.artifacts, oldSettings, log) ++
+        fixScalaVersion2(dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings, log) ++
+        fixCrossVersions2(oldSettings, log)
 
-    val newSession = session // let's not touch the session here...
+      // TODO: remove duplication with setupCmd, below.
+      // Also: consolidate the ...s2(...) methods into a common skeleton
+      // Also: consolidate this routine with setupCmd, below.
 
-    val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
-    val newState = Project.setProject(newSession, newStructure, state)
-    newState
+      // Session strings can't be replayed; this info is only useful for debugging
+      val newSessionSettings = newSettings map (a => (a, List("// " + a.key.toString)))
+      // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
+      val newSession = session.appendSettings(newSessionSettings)
+      val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
+      val newState = Project.setProject(newSession, newStructure, state)
+      newState
+    } getOrElse {
+      log.error("Key baseDirectory is undefined in ThisBuild: aborting.")
+      state
+    }
   }
   
   def publishProjects(state: State, config: SbtBuildConfig): State = {
@@ -414,7 +416,8 @@ object DistributedRunner {
         val oldSettings = session.mergeSettings
         val newSettings = fixResolvers2(repoDir, oldSettings, log) ++
           fixDependencies2(arts, oldSettings, log) ++
-          fixScalaVersion2(dbuildDir, repoDir, arts, oldSettings, log)
+          fixScalaVersion2(dbuildDir, repoDir, arts, oldSettings, log) ++
+          fixCrossVersions2(oldSettings, log)
 
         // Session strings can't be replayed, but are useful for debugging
         val newSessionSettings = newSettings map (a => (a, List("// dbuild-setup: " + a.key.toString)))

@@ -170,15 +170,32 @@ object DistributedRunner {
     optionalJars foreach retrieveJarFile(scalaHome, repoDir, org, ver, false)
   }
 
-  def fixPublishTos2(repo: File, oldSettings: Seq[Setting[_]], log: Logger) = {
-    val mavenRepo=Resolver.file("deploy-to-local-repo", repo)
+  def fixPublishTos2(repoDir: File, oldSettings: Seq[Setting[_]], log: Logger):Seq[Setting[_]] = {
+    val name = "deploy-to-local-repo"
+    val mavenRepo = Some(Resolver.file(name, repoDir)(Resolver.mavenStylePatterns))
+    val ivyRepo = Some(Resolver.file(name, repoDir)(Resolver.ivyStylePatterns))
     val lastSettings = oldSettings.filter(_.key.key == Keys.publishTo.key).groupBy(_.key.scope).map(_._2.last).toSeq
-    if (lastSettings.nonEmpty) log.info("Updating publishTo repo in " + lastSettings.length + " scopes")
-    lastSettings map { s =>
-      val sc=s.key.scope
-      // I need to check publishMavenStyle for this scope, and change repo accordingly
-      Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { mavenStyle:Boolean => Some(repo)}
-//      Project.update(s.asInstanceOf[Setting[Option[Resolver]]].key) { x => Some(repo) }
+    if (lastSettings.nonEmpty) {
+      log.info("Updating publishTo repo in " + lastSettings.length + " scopes")
+      lastSettings map { s =>
+        val sc = s.key.scope
+        // I need to check publishMavenStyle for this scope, and change repo accordingly
+        Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { if (_) mavenRepo else ivyRepo }
+      }
+    } else {
+      log.info("publishTo is not defined in any scope. Trying to find at least one publishMavenStyle setting...")
+      val pmsSettings = oldSettings.filter(_.key.key == Keys.publishMavenStyle.key).groupBy(_.key.scope).map(_._2.last).toSeq
+      if (pmsSettings.nonEmpty) {
+        log.info("Found publishMavenStyle in " + pmsSettings.length + " scopes; setting publishTo accordingly...")
+        pmsSettings map { s =>
+          val sc = s.key.scope
+          Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { if (_) mavenRepo else ivyRepo }
+        }
+      } else {
+        log.info("No publishMavenStyle setting found either. Preparing a default Maven publishTo.")
+        Seq(Keys.publishTo in ThisBuild := mavenRepo,
+          Keys.publishMavenStyle in ThisBuild := true)
+      }
     }
   }
 
@@ -359,6 +376,7 @@ object DistributedRunner {
       log.info("Adding resolvers to retrieve build artifacts in " + lastSettings.length + " scopes")
     lastSettings map { s =>
       Project.update(s.asInstanceOf[Setting[Seq[Resolver]]].key) { old =>
+        // make sure to add our resolvers at the beginning!
         Seq("dbuild-local-repo-maven" at ("file:" + repo.getAbsolutePath()),
           Resolver.file("dbuild-local-repo-ivy", repo)(Patterns("[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"))) ++
           (old filterNot { r => val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy" })

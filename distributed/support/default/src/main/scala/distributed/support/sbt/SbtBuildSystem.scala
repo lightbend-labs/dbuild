@@ -29,10 +29,13 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
     case _ => throw new Exception("Internal error: sbt build config options are the wrong type. Please report")
   }
   
-  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
     val Some(sc:SbtExtraConfig) = config.extra
-    if(sc.directory.isEmpty) SbtExtractor.extractMetaData(extractor)(dir, sc, log)
-    else SbtExtractor.extractMetaData(extractor)(new File(dir, sc.directory), sc, log)
+    val projectDir=if(sc.directory.isEmpty) baseDir else baseDir / sc.directory
+    // sanity check
+    if (!(projectDir.getAbsolutePath().startsWith(baseDir.getAbsolutePath())))
+        sys.error("The specified subdirectory \""+sc.directory+"\" does not seem not be a subdir of the project directory")
+    SbtExtractor.extractMetaData(extractor)(projectDir, sc, log)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifacts = {

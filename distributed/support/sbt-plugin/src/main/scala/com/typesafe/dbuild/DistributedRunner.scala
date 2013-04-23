@@ -170,33 +170,61 @@ object DistributedRunner {
     optionalJars foreach retrieveJarFile(scalaHome, repoDir, org, ver, false)
   }
 
-  def fixPublishTos2(repoDir: File, oldSettings: Seq[Setting[_]], log: Logger):Seq[Setting[_]] = {
+  def fixPublishTos2(repoDir: File, oldSettings: Seq[Setting[_]], log: Logger): Seq[Setting[_]] = {
     val name = "deploy-to-local-repo"
     val mavenRepo = Some(Resolver.file(name, repoDir)(Resolver.mavenStylePatterns))
     val ivyRepo = Some(Resolver.file(name, repoDir)(Resolver.ivyStylePatterns))
-    val lastSettings = lastSettingsByScope(oldSettings, Keys.publishTo)
-    if (lastSettings.nonEmpty) {
-      log.info("Updating publishTo repo in " + lastSettings.length + " scopes")
-      lastSettings map { s =>
-        val sc = s.key.scope
-        // I need to check publishMavenStyle for this scope, and change repo accordingly
-        Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { if (_) mavenRepo else ivyRepo }
-      }
-    } else {
-      log.info("publishTo is not defined in any scope. Trying to find at least one publishMavenStyle setting...")
-      val pmsSettings = lastSettingsByScope(oldSettings, Keys.publishMavenStyle)
-      if (pmsSettings.nonEmpty) {
-        log.info("Found publishMavenStyle in " + pmsSettings.length + " scopes; setting publishTo accordingly...")
-        pmsSettings map { s =>
-          val sc = s.key.scope
-          Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { if (_) mavenRepo else ivyRepo }
+
+    // The process is a bit tricky. Consider the following scenario (really occurring in sbt):
+    // - publishTo in ThisBuild: (...something... or None!...)
+    // - publishMavenStyle in ThisBuild: true
+    // - publishMavenStyle in project: false
+    //
+    // In this case, the project would see the publishTo above, and publishMavenStyle false. Yet, the
+    // two are in two different scopes, and it would not be obvious how to fix the settings just by
+    // looking at the only publishTo: checking the publishMavenStyle in the same scope would be misleading.
+    //
+    // I cannot "delete" existing publishTo repositories, unfortunately, therefore I am trying the
+    // following approach:
+    // 1) find lastSettings by publishTo. Change them according to their own format: PatternBased with
+    // isMavenCompatible=false -> Ivy, else Maven. If None, I still go for Maven, at this point.
+    // 2) scan according to publishMavenStyle, add a publishTo to each scope accordingly
+    // 3) if no publishTo and no publishMavenStyle, add a default Maven publishTo & publishMavenStyle
+    // (but there should always be a default publishMavenStyle in sbt)
+    //
+    // The mess above should do the trick, at least in theory.
+
+    val ptSettings = lastSettingsByScope(oldSettings, Keys.publishTo)
+    if (ptSettings.nonEmpty)
+      log.info("Updating publishTo repo in " + ptSettings.length + " scopes")
+
+    val newSettings1 = {
+      ptSettings map { s =>
+        Project.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
+          _ match {
+            case Some(r: PatternsBasedRepository) if (!r.patterns.isMavenCompatible) => ivyRepo
+            case _ => mavenRepo
+          }
         }
-      } else {
-        log.info("No publishMavenStyle setting found either. Preparing a default Maven publishTo.")
-        Seq(Keys.publishTo in ThisBuild := mavenRepo,
-          Keys.publishMavenStyle in ThisBuild := true)
       }
     }
+    
+    val pmsSettings = lastSettingsByScope(oldSettings ++ newSettings1, Keys.publishMavenStyle)
+    if (pmsSettings.nonEmpty)
+      log.info("Found publishMavenStyle in " + pmsSettings.length + " scopes; changing publishTo settings accordingly.")
+
+    val newSettings = newSettings1 ++ {
+      pmsSettings map { s =>
+        val sc = s.key.scope
+        Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { if (_) mavenRepo else ivyRepo }
+      }
+    }
+
+    if (newSettings.isEmpty) {
+      log.info("No publishTo or publishMavenStyle settings found; adding a default Maven publishTo.")
+      Seq(Keys.publishTo in ThisBuild := mavenRepo,
+        Keys.publishMavenStyle in ThisBuild := true)
+    } else newSettings
   }
 
   // the "...2" versions are somewhat similar, except they only generate a list of new settings rather than generating

@@ -174,7 +174,7 @@ object DistributedRunner {
     val name = "deploy-to-local-repo"
     val mavenRepo = Some(Resolver.file(name, repoDir)(Resolver.mavenStylePatterns))
     val ivyRepo = Some(Resolver.file(name, repoDir)(Resolver.ivyStylePatterns))
-    val lastSettings = oldSettings.filter(_.key.key == Keys.publishTo.key).groupBy(_.key.scope).map(_._2.last).toSeq
+    val lastSettings = lastSettingsByScope(oldSettings, Keys.publishTo)
     if (lastSettings.nonEmpty) {
       log.info("Updating publishTo repo in " + lastSettings.length + " scopes")
       lastSettings map { s =>
@@ -184,7 +184,7 @@ object DistributedRunner {
       }
     } else {
       log.info("publishTo is not defined in any scope. Trying to find at least one publishMavenStyle setting...")
-      val pmsSettings = oldSettings.filter(_.key.key == Keys.publishMavenStyle.key).groupBy(_.key.scope).map(_._2.last).toSeq
+      val pmsSettings = lastSettingsByScope(oldSettings, Keys.publishMavenStyle)
       if (pmsSettings.nonEmpty) {
         log.info("Found publishMavenStyle in " + pmsSettings.length + " scopes; setting publishTo accordingly...")
         pmsSettings map { s =>
@@ -213,9 +213,15 @@ object DistributedRunner {
   // called multiple times, each will patch the previous dbuild one, which is however ok as we replace rather than adding;
   // ideally a "reload" should precede "dbuild-setup", however.
   //
+  private def lastSettingsByScope(oldSettings: Seq[Setting[_]], theKey: Scoped): Seq[Setting[_]] = {
+    val key=theKey.key
+    oldSettings.filter(_.key.key == key).groupBy(_.key.scope).map(_._2.last).toSeq
+  }
+
+ 
   // so: start from the list of existing settings, and generate a list of settings that should be appended
   def fixDependencies2(locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
-    val lastSettings = oldSettings.filter(_.key.key == Keys.libraryDependencies.key).groupBy(_.key.scope).map(_._2.last).toSeq
+    val lastSettings = lastSettingsByScope(oldSettings, Keys.libraryDependencies)
     if (lastSettings.nonEmpty) log.info("Updating library dependencies in " + lastSettings.length + " scopes")
     lastSettings map { s =>
       // Equivalent to ~=
@@ -224,7 +230,7 @@ object DistributedRunner {
   }
 
   def fixCrossVersions2(oldSettings: Seq[Setting[_]], log: Logger) = {
-    val lastSettings = oldSettings.filter(_.key.key == Keys.crossVersion.key).groupBy(_.key.scope).map(_._2.last).toSeq
+    val lastSettings = lastSettingsByScope(oldSettings, Keys.crossVersion)
     if (lastSettings.nonEmpty) log.info("Disabling cross versioning in " + lastSettings.length + " scopes")
     lastSettings map { s =>
       Project.update(s.asInstanceOf[Setting[CrossVersion]].key) { _ => CrossVersion.Disabled }
@@ -260,12 +266,12 @@ object DistributedRunner {
 
 
   def fixPGPs2(oldSettings: Seq[Setting[_]], log: Logger) = {
-    val lastSettings = oldSettings.filter(_.key.key == Keys.skip.key).groupBy(_.key.scope).map(_._2.last).filter {
+    val lastSettings = lastSettingsByScope(oldSettings, Keys.skip).filter {
       s => s.key.scope.task.toOption match {
         case Some(scope) if scope.label.toString == "pgp-signer" => true
         case _ => false
       }
-    }.toSeq
+    }
     if (lastSettings.nonEmpty) log.info("Disabling PGP signing in " + lastSettings.length + " scopes")
     lastSettings map { s =>
       Project.update(s.asInstanceOf[Setting[Task[Boolean]]].key) { old => old map (_ => true)}
@@ -273,7 +279,7 @@ object DistributedRunner {
   }
 
   def fixVersions2(config: SbtBuildConfig, oldSettings: Seq[Setting[_]], log: Logger):Seq[Setting[_]] = {
-    val lastSettings = oldSettings.filter(_.key.key == Keys.version.key).groupBy(_.key.scope).map(_._2.last).toSeq
+    val lastSettings = lastSettingsByScope(oldSettings, Keys.version)
     if (lastSettings.nonEmpty) log.info("Updating version strings in " + lastSettings.length + " scopes")
     lastSettings map { s =>
       Project.update(s.asInstanceOf[Setting[String]].key) { value =>
@@ -305,10 +311,6 @@ object DistributedRunner {
         fixDependencies2(config.info.artifacts.artifacts, oldSettings, log) ++
         fixScalaVersion2(dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings, log) ++
         fixCrossVersions2(oldSettings, log)
-
-      // TODO: remove duplication with setupCmd, below.
-      // Also: consolidate the ...s2(...) methods into a common skeleton
-      // Also: consolidate this routine with setupCmd, below.
 
       // Session strings can't be replayed; this info is only useful for debugging
       val newSessionSettings = newSettings map (a => (a, List("// " + a.key.toString)))
@@ -478,4 +480,5 @@ object DistributedRunner {
   def projectSettings: Seq[Setting[_]] = Seq(
       extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile) map extractArtifactLocations
     )
-  }
+  
+}

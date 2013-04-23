@@ -423,6 +423,8 @@ object DistributedRunner {
     import extracted._
     val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
 
+    // note: we don't include config.config.directory here; the user needs to be in the
+    // right subdir before entering sbt, in any case, so we should be ok
     dbuildDirectory map { dbuildDir =>
       val repoDir = dbuildDir / "local-repo"
       val arts = loadBuildArtifacts(repoDir, builduuid, project, log)

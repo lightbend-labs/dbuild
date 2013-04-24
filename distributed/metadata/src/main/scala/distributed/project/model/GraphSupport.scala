@@ -7,6 +7,10 @@ case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfi
       p.artifacts exists (dep == _)
     value.extracted.projects exists hasArtifact
   }
+  override def toString() = "   Project \""+value.config.name+"\". Contains the subprojects:\n"+(value.extracted.projects map { p =>
+    "      "+p.organization+":"+p.name+"\n"+
+    (if (p.dependencies.nonEmpty) "         depends on:\n"+p.dependencies.mkString("            ","\n            ","\n") else "")
+  }).mkString
 }
 
 class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectConfigAndExtracted, Nothing] {

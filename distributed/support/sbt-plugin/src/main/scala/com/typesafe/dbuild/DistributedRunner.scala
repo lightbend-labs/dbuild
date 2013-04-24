@@ -14,8 +14,8 @@ import distributed.repo.core.LocalArtifactMissingException
 object DistributedRunner {
   
   // TODO - Config helper!
-  def isValidProject(config: SbtBuildConfig, ref: ProjectRef): Boolean =
-    config.config.projects.isEmpty || (config.config.projects exists (_ == ref.project))
+  def isValidProject(projects: Seq[String], ref: ProjectRef): Boolean =
+    projects.isEmpty || (projects exists (_ == ref.project))
   
   def timed[A](f: => Stated[A]): Stated[Long] = {
     val start = java.lang.System.currentTimeMillis
@@ -67,10 +67,10 @@ object DistributedRunner {
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
-    verifySubProjects(config, refs)
+    verifySubProjects(config.config.projects, refs)
     refs.foldLeft[(State, T)](state -> init) { 
 	    case ((state, current), ref) => 
-	      if(isValidProject(config, ref)) {
+	      if(isValidProject(config.config.projects, ref)) {
 	    	val (state2, next) = 
 	    	  f(ref, state)
 	    	state2 -> merge(current, next)
@@ -78,9 +78,8 @@ object DistributedRunner {
       }
   }
   
-  private def verifySubProjects(config: SbtBuildConfig, refs: Set[ProjectRef]): Unit = {
-    // verify that the requested projects in SbtBuildConfig actually exist
-    val requestedProjects=config.config.projects
+  // verify that the requested projects in SbtBuildConfig actually exist
+  def verifySubProjects(requestedProjects: Seq[String], refs: Set[sbt.ProjectRef]): Unit = {
     if (requestedProjects.nonEmpty) {
       val availableProjects=refs.map(_.project)
       val notAvailable=requestedProjects.toSet--availableProjects
@@ -89,6 +88,7 @@ object DistributedRunner {
     }
   }
   
+
   def testProject(state: State, config: SbtBuildConfig): State = 
     if(config.config.runTests) {
       println("Testing project")
@@ -359,7 +359,7 @@ object DistributedRunner {
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
     refs.foldLeft[State](state) { case (state, ref) => 
-      if(isValidProject(config, ref)) { 
+      if(isValidProject(config.config.projects, ref)) { 
         val (state2,_) = 
           extracted.runTask(Keys.publish in ref, state)
         state2
@@ -390,7 +390,7 @@ object DistributedRunner {
     state4
   }
     
-  /** The implementation of the print-deps command. */
+  /** The implementation of the dbuild-build command. */
   def buildCmd(state: State): State = {
     val resultFile = Option(System.getProperty("project.build.results.file"))
     val results = for {

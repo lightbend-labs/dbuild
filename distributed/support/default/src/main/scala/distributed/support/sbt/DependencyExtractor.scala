@@ -30,6 +30,7 @@ object SbtExtractor {
           log = log,
           javaProps = Map(
               "project.dependency.metadata.file" -> result.getAbsolutePath,
+              "project.dependency.metadata.subprojects" -> extra.projects.mkString(","),
               "remote.project.uri" -> project.getAbsolutePath), // ++ runner.localIvyProps
           extraArgs = extra.options
       )(extra.commands.:+("print-deps"):_*)

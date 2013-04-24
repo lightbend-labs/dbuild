@@ -32,7 +32,7 @@ object SbtExtractor {
               "project.dependency.metadata.file" -> result.getAbsolutePath,
               "remote.project.uri" -> project.getAbsolutePath), // ++ runner.localIvyProps
           extraArgs = extra.options
-      )("print-deps")
+      )(extra.commands.:+("print-deps"):_*)
       IO read result
     }
   }

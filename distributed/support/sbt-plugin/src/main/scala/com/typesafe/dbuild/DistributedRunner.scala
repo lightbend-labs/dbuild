@@ -227,11 +227,10 @@ object DistributedRunner {
     } else newSettings
   }
 
-  // the "...2" versions are somewhat similar, except they only generate a list of new settings rather than generating
-  // a full list. So, fixDependencies() always creates a setting, while fixDependencies2() only generates new settings
-  // TODO - once debugging is complete, code should consolidated, probably changing dbuild-build to use the new mechanism
+  // the "...2" routines generate a list of new settings, typically one per scope, that are tacked at the end of the current
+  // ones; the sbt session is also patched accordingly once the full list of additional new settings is known. 
 
-  // fixDependencies2()
+  // fixDependencies2(), for example:
   // Generates a list of additional settings that can be tacked onto the current list of settings in order to
   // adapt dependencies in order to reflect the new values.
   // Note: the "libraryDependencies" setting is usually present in multiple places in the list of settings; each one may
@@ -241,31 +240,54 @@ object DistributedRunner {
   // called multiple times, each will patch the previous dbuild one, which is however ok as we replace rather than adding;
   // ideally a "reload" should precede "dbuild-setup", however.
   //
+
   private def lastSettingsByScope(oldSettings: Seq[Setting[_]], theKey: Scoped): Seq[Setting[_]] = {
     val key=theKey.key
     oldSettings.filter(_.key.key == key).groupBy(_.key.scope).map(_._2.last).toSeq
   }
 
- 
-  // so: start from the list of existing settings, and generate a list of settings that should be appended
-  def fixDependencies2(locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
-    val lastSettings = lastSettingsByScope(oldSettings, Keys.libraryDependencies)
-    if (lastSettings.nonEmpty) log.info("Updating library dependencies in " + lastSettings.length + " scopes")
-    lastSettings map { s =>
-      // Equivalent to ~=
-      Project.update(s.asInstanceOf[Setting[Seq[ModuleID]]].key) { old => old map fixModule(locs) }
-    }
+  // applies a generic transformation from Setting[K] (the old one) to another Setting[K] (the new one)
+  def fixGenericTransform2[K](oldSettings: Seq[Setting[_]], log: Logger, k: SettingKey[K], msg:String)(f: Setting[K] => Setting[K]) = {
+    val lastSettings = lastSettingsByScope(oldSettings, k)
+    if (lastSettings.nonEmpty) log.info(msg+" in " + lastSettings.length + " scopes")
+    lastSettings.asInstanceOf[Seq[Setting[K]]] map f
   }
 
-  def fixCrossVersions2(oldSettings: Seq[Setting[_]], log: Logger) = {
-    val lastSettings = lastSettingsByScope(oldSettings, Keys.crossVersion)
-    if (lastSettings.nonEmpty) log.info("Disabling cross versioning in " + lastSettings.length + " scopes")
-    lastSettings map { s =>
-      Project.update(s.asInstanceOf[Setting[CrossVersion]].key) { _ => CrossVersion.Disabled }
+  // as above, but assumes the transformation is a simple Project.update (aka: ~= )
+  def fixGeneric2[K](oldSettings: Seq[Setting[_]], log: Logger, k: SettingKey[K], msg:String)(f: K => K) =
+    fixGenericTransform2(oldSettings, log, k, msg) { s => Project.update(s.key)(f) }
+
+  def fixCrossVersions2(oldSettings: Seq[Setting[_]], log: Logger) = 
+   fixGeneric2(oldSettings, log, Keys.crossVersion, "Disabling cross versioning") { _ => CrossVersion.Disabled }
+
+  def fixDependencies2(locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = 
+   fixGeneric2(oldSettings, log, Keys.libraryDependencies, "Updating library dependencies") { old => old map fixModule(locs) }
+
+  def fixVersions2(config: SbtBuildConfig, oldSettings: Seq[Setting[_]], log: Logger): Seq[Setting[_]] =
+    fixGeneric2(oldSettings, log, Keys.version, "Updating version strings") { value =>
+      if (value endsWith "-SNAPSHOT") {
+        value replace ("-SNAPSHOT", "-" + config.info.uuid)
+      } else value
     }
-  }
-  
-  // Fixing Scala version; similar to the above.
+
+  def fixResolvers2(repo: File, oldSettings: Seq[Setting[_]], log: Logger) =
+    fixGeneric2(oldSettings, log, Keys.resolvers, "Adding resolvers to retrieve build artifacts") { old =>
+        // make sure to add our resolvers at the beginning!
+        Seq("dbuild-local-repo-maven" at ("file:" + repo.getAbsolutePath()),
+          Resolver.file("dbuild-local-repo-ivy", repo)(Patterns("[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"))) ++
+          (old filterNot { r => val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy" })
+      }
+
+  // we want to match against only one and precisely one scala version; therefore any
+  // binary compatibility lookup machinery must be disabled
+  def fixScalaBinaryVersions2(oldSettings: Seq[Setting[_]], log: Logger) = 
+   fixGenericTransform2(oldSettings, log, Keys.scalaBinaryVersion, "Setting Scala binary version") { s =>
+        val sc = s.key.scope
+        Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
+      }
+
+
+  // Fixing Scala version; similar to the routines above.
   //
   def fixScalaVersion2(dbuildDir: File, repoDir: File, locs: Seq[model.ArtifactLocation], oldSettings: Seq[Setting[_]], log: Logger) = {
     val verKeys = Seq(Keys.scalaVersion.key, Keys.scalaHome.key)
@@ -306,18 +328,6 @@ object DistributedRunner {
     }
   }
 
-  def fixVersions2(config: SbtBuildConfig, oldSettings: Seq[Setting[_]], log: Logger):Seq[Setting[_]] = {
-    val lastSettings = lastSettingsByScope(oldSettings, Keys.version)
-    if (lastSettings.nonEmpty) log.info("Updating version strings in " + lastSettings.length + " scopes")
-    lastSettings map { s =>
-      Project.update(s.asInstanceOf[Setting[String]].key) { value =>
-        if(value endsWith "-SNAPSHOT") {
-           value replace ("-SNAPSHOT", "-" + config.info.uuid)
-        } else value
-      }
-    }
-  }
-
   def fixSettings2(config: SbtBuildConfig, state: State): State = {
     // TODO: replace with the correct logger
     val log = sbt.ConsoleLogger()
@@ -338,6 +348,7 @@ object DistributedRunner {
         fixResolvers2(repoDir, oldSettings, log) ++
         fixDependencies2(config.info.artifacts.artifacts, oldSettings, log) ++
         fixScalaVersion2(dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings, log) ++
+        fixScalaBinaryVersions2(oldSettings, log) ++
         fixCrossVersions2(oldSettings, log)
 
       // Session strings can't be replayed; this info is only useful for debugging
@@ -400,20 +411,6 @@ object DistributedRunner {
     results getOrElse state
   }
 
-  def fixResolvers2(repo: File, oldSettings: Seq[Setting[_]], log: Logger) = {
-    val lastSettings = lastSettingsByScope(oldSettings, Keys.resolvers)
-    if (lastSettings.nonEmpty)
-      log.info("Adding resolvers to retrieve build artifacts in " + lastSettings.length + " scopes")
-    lastSettings map { s =>
-      Project.update(s.asInstanceOf[Setting[Seq[Resolver]]].key) { old =>
-        // make sure to add our resolvers at the beginning!
-        Seq("dbuild-local-repo-maven" at ("file:" + repo.getAbsolutePath()),
-          Resolver.file("dbuild-local-repo-ivy", repo)(Patterns("[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"))) ++
-          (old filterNot { r => val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy" })
-      }
-    }
-  }
-
   def loadBuildArtifacts(readRepo: File, builduuid: String, thisProject: Option[String], log: Logger) = {
     import distributed.repo.core._
     val cache = Repository.default
@@ -467,6 +464,7 @@ object DistributedRunner {
         val newSettings = fixResolvers2(repoDir, oldSettings, log) ++
           fixDependencies2(arts, oldSettings, log) ++
           fixScalaVersion2(dbuildDir, repoDir, arts, oldSettings, log) ++
+          fixScalaBinaryVersions2(oldSettings, log) ++
           fixCrossVersions2(oldSettings, log)
 
         // Session strings can't be replayed, but are useful for debugging

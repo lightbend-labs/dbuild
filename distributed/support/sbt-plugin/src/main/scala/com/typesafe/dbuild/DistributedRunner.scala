@@ -93,7 +93,7 @@ object DistributedRunner {
     if(config.config.runTests) {
       println("Testing project")
       val (state2, _) = runAggregate(state, config, List.empty)(_++_) { (proj, state) =>
-        val y = Stated(state).runTask(Keys.test in Test)
+        val y = Stated(state).runTask(Keys.test in (proj,Test))
         (y.state, List.empty)
       }
       state2

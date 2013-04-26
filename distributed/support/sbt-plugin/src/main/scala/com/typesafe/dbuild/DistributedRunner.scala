@@ -401,7 +401,7 @@ object DistributedRunner {
   }
 
   def fixResolvers2(repo: File, oldSettings: Seq[Setting[_]], log: Logger) = {
-    val lastSettings = oldSettings.filter(_.key.key == Keys.resolvers.key).last
+    val lastSettings = lastSettingsByScope(oldSettings, Keys.resolvers)
     if (lastSettings.nonEmpty)
       log.info("Adding resolvers to retrieve build artifacts in " + lastSettings.length + " scopes")
     lastSettings map { s =>

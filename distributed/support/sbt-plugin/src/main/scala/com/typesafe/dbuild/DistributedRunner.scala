@@ -321,19 +321,13 @@ object DistributedRunner {
       val repoDir = dbuildDir / "local-repo"
 
       val refs = getProjectRefs(session.mergeSettings)
-      val oldSettings = session.mergeSettings
 
-      val newSettings =
+      def newSettings(oldSettings:Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
           prepareCompileSettings(log, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings)
 
-      // Session strings can't be replayed; this info is only useful for debugging
-      val newSessionSettings = newSettings map (a => (a, List("// " + a.key.toString)))
-      // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
-      val newSession = session.appendSettings(newSessionSettings)
-      val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
-      val newState = Project.setProject(newSession, newStructure, state)
-      newState
+      newState(state, extracted, newSettings)
+
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")
       state
@@ -426,6 +420,20 @@ object DistributedRunner {
       ) flatMap { _(oldSettings, log) }
 
 
+  private def newState(state: State, extracted: Extracted, update: Seq[Setting[_]] => Seq[Setting[_]]) = {
+    import extracted._
+    val oldSettings = session.mergeSettings
+    val newSettings = update(oldSettings)
+    // Session strings can't be replayed, but are useful for debugging
+    val newSessionSettings = newSettings map (a => (a, List("// dbuild-setup: " + a.key.toString)))
+    // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
+    val newSession = session.appendSettings(newSessionSettings)
+    val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
+    val newState = Project.setProject(newSession, newStructure, state)
+    newState
+  }
+
+
   def setupCmd(state: State, args: Seq[String]): State = {
     val log = sbt.ConsoleLogger()
     // TODO - here I just grab the console logger, but "last" won't work as dbuild-setup
@@ -452,19 +460,8 @@ object DistributedRunner {
       if (arts.isEmpty) {
         log.warn("No artifacts are dependencies" + { project map (" of project " + _) getOrElse "" } + " in build " + builduuid)
         state
-      } else {
-        log.info("Updating dependencies...")
-        val oldSettings = session.mergeSettings
-        val newSettings = prepareCompileSettings(log, dbuildDir, repoDir, arts, oldSettings)
-
-        // Session strings can't be replayed, but are useful for debugging
-        val newSessionSettings = newSettings map (a => (a, List("// dbuild-setup: " + a.key.toString)))
-        // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
-        val newSession = session.appendSettings(newSessionSettings)
-        val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
-        val newState = Project.setProject(newSession, newStructure, state)
-        newState
-      }
+      } else
+        newState(state, extracted, prepareCompileSettings(log, dbuildDir, repoDir, arts, _))
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")
       state

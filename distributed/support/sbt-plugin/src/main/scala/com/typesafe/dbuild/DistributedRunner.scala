@@ -115,12 +115,18 @@ object DistributedRunner {
   // resolved against that repository. It requires a bit of code, but would
   // be somewhat more general, at least in principle.
   def fixModule(arts: Seq[model.ArtifactLocation])(m: ModuleID): ModuleID = {
-    def findArt: Option[model.ArtifactLocation] =
+      def expandName(a:Artifact) = {
+        import a._
+        classifier match {
+          case None => fixName(name)
+          case Some(clas) => fixName(name)+"-"+clas
+        }
+      }
+      def findArt: Option[model.ArtifactLocation] =
       (for {
         artifact <- arts.view
         if artifact.info.organization == m.organization
-        if artifact.info.name == fixName(m.name) ||
-          (m.explicitArtifacts map { _.name }).contains(artifact.info.name)
+        if artifact.info.name == fixName(m.name) || (m.explicitArtifacts map expandName).contains(artifact.info.name)
       } yield artifact).headOption
     findArt map { art =>
       // println("Updating: " + m + " to: " + art)

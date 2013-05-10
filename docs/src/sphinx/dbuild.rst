@@ -95,6 +95,7 @@ optional-extra-build-parameters
     "projects"       : [ subproj1, subproj2,... ]
     "run-tests"      : <run-tests>
     "options"        : [ opt1, opt2,... ]
+    "commands"       : [ cmd1, cmd2,... ]
    }
 
 Each of them is optional, and their meaning is:
@@ -129,6 +130,11 @@ options
   A sequence of strings; they will be
   passed as-is as additional JVM options, while launching the sbt instance that is used
   to build this project.
+
+commands
+  A sequence of sbt commands; they will be executed by sbt before dbuild rearranges
+  the project dependencies. These commands can be used, for example, to change settings
+  using forms like "set setting := ...".
 
 
 *Next:* :doc:`repositories`.

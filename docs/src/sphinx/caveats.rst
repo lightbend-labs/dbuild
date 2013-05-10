@@ -25,10 +25,6 @@ Limitations
   cannot (yet) be reached at this time. This limitation will be addressed first thing in the next
   point release.
 
-- Each dbuild build file should currently include Scala as one of the project. That should not be necessary
-  in general, but at this time if Scala is not included, and cross-versioning is used in any of the
-  other projects, versioning issues may arise.
-
 - Cross-versioning is intentionally disabled in all projects during a dbuild run, and as a result of
   dbuild-setup. This is necessary, as only one specific version of Scala and of the various libraries is
   tested by dbuild.

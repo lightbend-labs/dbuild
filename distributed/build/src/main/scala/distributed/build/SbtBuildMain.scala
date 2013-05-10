@@ -42,8 +42,8 @@ class SbtBuildMain extends xsbti.AppMain {
           readValue[DistributedBuildConfig](new File(args(0)))
         else sys.error("Usage: dbuild {build-file}")
       println("Config: " + writeValue(config))
-      println("Classloader:")
-      printClassLoaders(getClass.getClassLoader)
+//      println("Classloader:")
+//      printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(configuration.baseDirectory)
       try main build config
       finally main.dispose()

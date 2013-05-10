@@ -5,6 +5,7 @@ import distributed.project.model
 import StateHelpers._
 import NameFixer.fixName
 import distributed.project.model.Utils.writeValue
+import DistributedRunner.{isValidProject,verifySubProjects}
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
@@ -39,10 +40,15 @@ object DependencyAnalysis {
         deps)
     }
   /** Actually prints the dependencies to the given file. */
-  def printDependencies(state: State, uri: String, file: String): Unit = {
+  def printDependencies(state: State, uri: String, file: String, projects:Seq[String]): Unit = {
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
+    val allRefs=getProjectRefs(session.mergeSettings)
+    verifySubProjects(projects, allRefs)
+    val refs = if (projects.isEmpty)
+        allRefs
+      else
+        allRefs.filter(isValidProject(projects, _))
     val deps = getProjectInfos(extracted, state, refs)    
     val meta = model.ExtractedBuildMeta(uri, deps)
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
@@ -52,9 +58,13 @@ object DependencyAnalysis {
   
   /** The implementation of the print-deps command. */
   def printCmd(state: State): State = {
-    val uri = System.getProperty("remote.project.uri")
-    (Option(System.getProperty("project.dependency.metadata.file")) 
-        foreach (f => printDependencies(state, uri, f)))
+    val uri = System.getProperty("remote.project.uri")   
+    val projects = (Option(System.getProperty("project.dependency.metadata.subprojects")) getOrElse "") match {
+      case "" => Seq.empty
+      case projs => projs.split(",").toSeq
+    }
+    (Option(System.getProperty("project.dependency.metadata.file"))
+        foreach (f => printDependencies(state, uri, f, projects)))
     state
   }
 

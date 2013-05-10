@@ -8,6 +8,7 @@ import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
 import distributed.project.model.Utils.{writeValue,readValue}
+import distributed.project.model.ArtifactLocation
 
 object LocalRepoHelper {
   
@@ -127,7 +128,15 @@ object LocalRepoHelper {
     }
     meta.versions
   }
-  
+
+  def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, readRepo: java.io.File, uuids: Seq[String]): Seq[ArtifactLocation] =
+    for {
+      uuid <- uuids
+      arts = LocalRepoHelper.materializeProjectRepository(uuid, repo, readRepo)
+      _ = diagnostic("Retrieved from project " + uuid + ": " + arts.length + " artifacts")
+      art <- arts
+    } yield art
+
   def getProjectInfo(uuid: String, remote: ReadableRepository) =
     resolveArtifacts(uuid, remote)((x,y) => x -> y)
     

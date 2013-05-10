@@ -91,6 +91,8 @@ case class SbtExtraConfig (
     @JsonProperty("run-tests")
       runTests: Boolean = true,
     options: Seq[String] = Seq.empty,
+    // before extraction or building, run these commands ("set" or others)
+    commands: Seq[String] = Seq.empty,
     projects: Seq[String] = Seq.empty // if empty -> build all projects (default)
 ) extends ExtraConfig
 

@@ -38,7 +38,7 @@ object SbtBuilder {
             "project.build.deps.file" -> depsFile.getAbsolutePath,
             "sbt.ivy.home" -> ivyCache.getAbsolutePath),
         extraArgs = config.config.options
-      )("dbuild-build")
+      )(config.config.commands.:+("dbuild-build"):_*)
       try readValue[BuildArtifacts](resultFile)
       catch { case e:Exception =>
         e.printStackTrace

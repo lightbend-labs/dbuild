@@ -3,9 +3,10 @@ package graph
 
 object Graphs {
   
-  def isCyclic[N,E](graph: Graph[N,E]): Boolean = !isAcyclic(graph)
-  def isAcyclic[N,E](graph: Graph[N,E]): Boolean = 
-    tarjan(graph) forall (_ drop(1) isEmpty)
+  // find the strongly connected components of size greater than one
+  def cycles[N,E](graph: Graph[N,E]) = tarjan(graph).filter(_.size>1)
+  
+  def isCyclic[N,E](graph: Graph[N,E]): Boolean = cycles(graph).nonEmpty
     
   /** Generates a digraph DOT file using a given DAG. */  
   def toDotFile[N](graph: Graph[N,_])(nodeNames: N => String): String = {
@@ -25,12 +26,12 @@ object Graphs {
   
   def tarjanSubGraphs[N,E](graph: Graph[N,E]): Set[Graph[N,E]] =
     tarjan(graph) map { edges => new FilteredByNodesGraph(graph, edges) }
-  
-    // Note this is used to detect cycles.   Breaks
-    // The graph into strongly arrowed graphs, or whatever the
-    // technical term is.   We can use this to look for any
-    // groups larger than 1 and we have a cycle between that set of nodes.
-  def tarjan[N,E](graph: Graph[N,E]): Set[Set[Node[N]]] = {
+
+  // Note this is used to detect cycles. Breaks
+  // the graph into strongly connected subgraphs.
+  // We can use this to look for any subgraph containing more
+  // than one node: we will have a cycle between those nodes.
+  def tarjan[N, E](graph: Graph[N, E]): Set[Set[Node[N]]] = {
     val stack = new collection.mutable.Stack[Node[N]]
     val scc = new collection.mutable.ArrayBuffer[Set[Node[N]]]
     val index = new collection.mutable.ArrayBuffer[Node[N]]
@@ -68,13 +69,21 @@ object Graphs {
     } tarjanImpl(node)
     scc.toSet
   }
-  // TODO - use tarjan directly for nice error messages....
-  def safeTopological[N,E](g: Graph[N,E]): Seq[Node[N]] =
-    if(isCyclic(g)) sys.error("Graph is not acyclic!")
-    else topological(g)
+
+  def safeTopological[N, E](g: Graph[N, E]): Seq[Node[N]] = {
+    val c = cycles(g)
+    if (c.nonEmpty)
+      // I have no access to logging here, so I have to
+      // create a long error message instead
+      sys.error((c map { comp: Set[Node[N]] =>
+        comp mkString ("Found a cycle among the following:\n\n", "\n", "\n")
+      }).mkString + "The graph is not acyclic.")
+    else
+      topological(g)
+  }
   
   /** Returns a topological ordering of a graph, or the
-   * empty set if the graph is cyclical.
+   * empty set if the graph is cyclic.
    */
   def topological[N,E](g: Graph[N,E]): Seq[Node[N]] = 
     if(g.nodes.isEmpty) Seq.empty 

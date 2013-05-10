@@ -3,6 +3,8 @@ package project
 
 import project.model._
 import logging.Logger
+import java.io.File
+import sbt.Path._
 
 /** An abstraction representing a "hook" into the builder that understands how
  * to extract dependencies and run builds for a  given type of "build system".
@@ -41,4 +43,14 @@ trait BuildSystem {
    * @param proj The project configuration that should be expanded
    */
   def expandDefaults(proj: ProjectBuildConfig): ProjectBuildConfig = proj
+  
+  /**
+   * Determines the appropriate base for a per-project ".dbuild" directory
+   * for a project in "dir", configured according to "config".
+   * Build systems can override the default: dir / .dbuild
+   * 
+   * @param dir The dir containing the checkout of the project
+   * @param config The configuration record of this project
+   */
+  def projectDbuildDir(dir: File, proj: ProjectBuildConfig): File = dir / ".dbuild"
 }

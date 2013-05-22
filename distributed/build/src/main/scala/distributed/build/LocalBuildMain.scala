@@ -11,7 +11,7 @@ import distributed.project.model.Utils.readValue
 import distributed.repo.core._
 import distributed.project.model.ClassLoaderMadness
 
-class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
+class LocalBuildMain(repos:List[xsbti.Repository], workingDir: File = local.ProjectDirs.builddir) {
   // TODO - Pull these via plugins or something...
   val targetDir = local.ProjectDirs.targetDir
   // Maybe even read global config for each module...
@@ -19,7 +19,7 @@ class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
       new support.git.GitProjectResolver, 
       new support.svn.SvnProjectResolver)
   val buildSystems: Seq[project.BuildSystem] = 
-    Seq(new support.sbt.SbtBuildSystem(targetDir),
+    Seq(new support.sbt.SbtBuildSystem(repos, targetDir),
         support.scala.ScalaBuildSystem,
         support.mvn.MvnBuildSystem)
   
@@ -45,6 +45,7 @@ class LocalBuildMain(workingDir: File = local.ProjectDirs.builddir) {
   }
   def dispose(): Unit = system.shutdown()
 }
+/*
 object LocalBuildMain {
   def build(build: DistributedBuildConfig) = {
       val main = new LocalBuildMain
@@ -58,3 +59,4 @@ object LocalBuildMain {
     }
     else System.err.println("Usage: dbuild {build-file}")
 }
+*/

@@ -76,14 +76,14 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt)
+      dependsOnRemote(sbtLaunchInt, sbtLauncher)
     )
 
   // Projects relating to supprting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dcore, drepo, dmeta)
-      dependsOnRemote(mvnEmbedder, mvnWagon)
+      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt)
       settings(SbtSupport.settings:_*)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
         val file = dir / "Defaults.scala"

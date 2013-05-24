@@ -22,10 +22,16 @@ Properties file
 ---------------
 
 By default, dbuild will use the file ``dbuild.properties`` to retrieve information about its internal
-configuration. Normally, there is no need to touch this file, as its contents are only used while the tool
-is starting up, and not during the build process itself. However, you can modify this file if you would
-like to modify the standard behavior in some way (for instance, relocating the default ``~/.dbuild`` directory,
-or the location of the Ivy cache it uses). Again, that is only necessary in special cases.
+configuration. There is usually no need to touch this file, as it contains defaults that should be
+adequate for most projects. However, you can modify this file if you would like to modify the standard
+behavior in some way (for instance, relocating the default ``~/.dbuild`` directory, or the location of
+the Ivy cache it uses).
+
+One important case, however, is the customization of the resolvers list: you can just change the
+``[repositories]`` stanza in this properties file, adding or removing resolvers as needed. The list
+specified in this properties file will completely override the normal list of library resolvers,
+for all of the projects invoked by dbuild. By specifying here a local Artifactory cache, for instance,
+the artifactory resolution can be made considerably faster.
 
 The build configuration file
 ----------------------------

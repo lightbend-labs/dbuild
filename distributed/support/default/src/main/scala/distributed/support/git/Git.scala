@@ -66,7 +66,7 @@ object Git {
       map { _.substring("  remotes/origin/".length) } filterNot (_.startsWith("HEAD "))
     branches foreach { b =>
       runIgnoreErrors(Seq("branch", "--track", b, "remotes/origin/" + b), dir, log)
-      run(Seq("update-ref", b, "remotes/origin/" + b), dir, log)
+      run(Seq("update-ref", "refs/heads/" + b, "remotes/origin/" + b), dir, log)
       }
   }
          

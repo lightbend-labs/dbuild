@@ -15,15 +15,19 @@ object Git {
     this.read(Seq("rev-parse", ref), dir).trim
 
   def fetch(ref: String, tempDir: File, log: Logger): Unit = {
-    val args = if(ref.isEmpty) Seq("fetch","-t")
-               else Seq("fetch","-t",ref)
+    val args = if(ref.isEmpty) Seq("fetch")
+               else Seq("fetch",ref)
     this.apply(args, tempDir, log)
+    val args2 = if(ref.isEmpty) Seq("fetch","-t")
+                else Seq("fetch","-t",ref)
+    this.apply(args2, tempDir, log)
   }
 
   // we allow failures, which may happen if we are offline
   // but we want to use our current local cache
   def fetchSafe(uriString: String, tempDir: File, log: Logger): Unit = {
     try {
+      apply(Seq("fetch", "origin"), tempDir, log)
       apply(Seq("fetch", "-t", "origin"), tempDir, log)
     } catch {
       case e: Exception =>
@@ -84,7 +88,7 @@ object Git {
   
   private def read(args: Seq[String], cwd: File): String =
     Process(OS.callCmdIfWindows("git") ++ args, cwd).!!
-
+  
   def run(args: Seq[String], cwd: File, log: Logger) = {
     log.debug(cwd.getAbsolutePath()+", running: git "+args.mkString(" "))
     Process(OS.callCmdIfWindows("git") ++ args, cwd) ! log

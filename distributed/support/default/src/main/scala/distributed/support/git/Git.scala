@@ -64,7 +64,10 @@ object Git {
   def setupRemoteBranches(dir: File, log: Logger): Unit = {
     val branches = read(Seq("branch", "-a"), dir).split("\n").filter(_.startsWith("  remotes/origin/")).
       map { _.substring("  remotes/origin/".length) } filterNot (_.startsWith("HEAD "))
-    branches foreach { b => runIgnoreErrors(Seq("branch", "--track", b, "remotes/origin/" + b), dir, log) }
+    branches foreach { b =>
+      runIgnoreErrors(Seq("branch", "--track", b, "remotes/origin/" + b), dir, log)
+      run(Seq("update-ref", b, "remotes/origin/" + b), dir, log)
+      }
   }
          
   def checkout(tempDir: File, branch: String, log: Logger): Unit =

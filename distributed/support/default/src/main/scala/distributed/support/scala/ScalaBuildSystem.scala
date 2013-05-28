@@ -43,7 +43,7 @@ object ScalaBuildSystem extends BuildSystem {
     Process(Seq("ant", "deploy.local",
         "-Dlocal.snapshot.repository="+localRepo.getAbsolutePath,
         "-Dlocal.release.repository="+localRepo.getAbsolutePath,
-        "-Dmaven.version.number="+version+"-dbuild"
+        "-Dmaven.version.number="+version
     ), Some(dir / "dists" / "maven" / "latest")) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
@@ -78,7 +78,7 @@ object ScalaBuildSystem extends BuildSystem {
       f <- if (propsFile.exists) Some(propsFile) else None
       props <- loadProps(f)
       version <- Option(props get "version.number")
-    } yield version.toString
+    } yield version.toString+"-dbuild"
     version getOrElse sys.error("unable to load scala version number!")
   } 
     

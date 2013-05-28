@@ -43,6 +43,7 @@ class GitProjectResolver extends ProjectResolver {
     
     // Make sure we pull down all the refs from origin for our repeatable builds...
     Git.fetch("origin", dir, log)
+    Git.setupRemoteBranches(dir,log)
     
     // Now clean the directory so only desired artifacts are there...
     if(config.name != "scala") Git.clean(dir, log)

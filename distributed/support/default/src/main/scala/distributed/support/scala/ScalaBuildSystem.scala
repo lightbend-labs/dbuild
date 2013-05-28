@@ -43,7 +43,7 @@ object ScalaBuildSystem extends BuildSystem {
     Process(Seq("ant", "deploy.local",
         "-Dlocal.snapshot.repository="+localRepo.getAbsolutePath,
         "-Dlocal.release.repository="+localRepo.getAbsolutePath,
-        "-Dmaven.version.number="+version
+        "-Dmaven.version.number="+version+"-dbuild"
     ), Some(dir / "dists" / "maven" / "latest")) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)

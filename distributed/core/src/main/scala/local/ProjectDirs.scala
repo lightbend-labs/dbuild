@@ -12,6 +12,7 @@ object ProjectDirs {
   // TODO - Pull from config!
   val builddir = new File(".")
   val targetDir = new File(builddir, "target")
+  val clonesDir = new File(targetDir, "clones")
   val userhome = new File(sys.props("user.home"))
   val userCache = new File(userhome, ".dbuild/cache")
   

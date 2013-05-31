@@ -19,12 +19,6 @@ Limitations
   will show up in the session list as comments, but the session cannot be saved and restored using the
   `session save` command. In case you do, the dbuild settings will just be ignored.
 
-- The list of resolvers used to build the projects in a dbuild build configuration file cannot be
-  configured at this time. It will automatically use common repositories (Typesafe, Maven Central, etc),
-  which should be ok for most projects, but libraries hosted on obscure third-party repositories
-  cannot (yet) be reached at this time. This limitation will be addressed first thing in the next
-  point release.
-
 - Cross-versioning is intentionally disabled in all projects during a dbuild run, and as a result of
   dbuild-setup. This is necessary, as only one specific version of Scala and of the various libraries is
   tested by dbuild.

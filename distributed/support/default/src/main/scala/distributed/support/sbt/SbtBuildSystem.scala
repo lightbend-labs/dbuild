@@ -10,12 +10,12 @@ import distributed.project.model.SbtExtraConfig
 import _root_.java.io.File
 
 /** Implementation of the SBT build system. */
-class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends BuildSystem {
+class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.ProjectDirs.builddir) extends BuildSystem {
   val name: String = "sbt"  
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"
-  final val runner = new SbtRunner(buildBase / "runner")
-  final val extractor = new SbtRunner(buildBase / "extractor")
+  final val runner = new SbtRunner(repos, buildBase / "runner")
+  final val extractor = new SbtRunner(repos, buildBase / "extractor")
   
   // expandDefaults is always called as first step; diagnostic should go here.
   // the others can assume the 'extra' field is of the right type (and will
@@ -61,7 +61,7 @@ class SbtBuildSystem(workingDir: File = local.ProjectDirs.builddir) extends Buil
     // TODO - Does this work correctly?
     val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
     val config = SbtBuildConfig(sc, info)
-    SbtBuilder.buildSbtProject(runner)(pdir, config, log)
+    SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log)
   }
 
 }

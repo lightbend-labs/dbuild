@@ -29,7 +29,7 @@ class AggregateProjectResolver(resolvers: Seq[ProjectResolver]) extends ProjectR
   def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig = {
     resolvers find (_ canResolve config) match {
       case Some(r) => r.resolve(config, dir, log)
-      case _       => sys.error("Could not find a resolver for: " + ProjectBuildConfig)
+      case _       => sys.error("Could not find a resolver for: " + config.name)
     }
   }
   

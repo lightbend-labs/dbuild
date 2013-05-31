@@ -10,8 +10,8 @@ import distributed.project.model.ExtraConfig
 /** A runner for SBT. 
  * TODO - Make it platform synch safe?
  */
-class SbtRunner(globalBase: File) {
-  private val launcherJar = SbtRunner initSbtGlobalBase globalBase
+class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
+  private val launcherJar = SbtRunner.initSbtGlobalBase(repos,globalBase)
   
   private val defaultProps = 
     Map("sbt.global.base" -> globalBase.getAbsolutePath,
@@ -71,7 +71,7 @@ object SbtRunner {
   )
   
   /** inits global base and returns location of launcher jar file. */
-  private def initSbtGlobalBase(dir: File): File = {
+  private def initSbtGlobalBase(repos:List[xsbti.Repository], dir: File): File = {
     if(!(dir / "plugins" / "deps.sbt").exists) {
       val pluginDir = dir / "plugins"
       pluginDir.mkdirs
@@ -85,9 +85,8 @@ object SbtRunner {
       transferResource("sbt-launch.jar", launcherJar)
     }
     val repoFile = dir / "repositories" 
-    if(!repoFile.exists) {
-      writeRepoFile(repoFile)
-    }
+    // always rewrite the repo file
+    writeRepoFile(repos,repoFile)
     launcherJar
   }
   
@@ -120,6 +119,6 @@ object SbtRunner {
   def writeDeps(file: File): Unit =
     IO.write(file, """addSbtPlugin("com.typesafe.dbuild" % "distributed-sbt-plugin" % """+'"'+ Defaults.version + "\")")
   
-  def writeRepoFile(config: File): Unit =
-    Repositories.writeRepoFile(config)
+  def writeRepoFile(repos:List[xsbti.Repository], config: File): Unit =
+    Repositories.writeRepoFile(repos, config)
 }

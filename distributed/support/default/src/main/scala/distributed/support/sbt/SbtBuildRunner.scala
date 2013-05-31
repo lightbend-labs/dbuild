@@ -13,10 +13,10 @@ import distributed.project.model.Utils.{writeValue,readValue}
 // script...
 object SbtBuilder {
   
-  def writeRepoFile(config: File, repo: File): Unit =
-    Repositories.writeRepoFile(config, "build-local" -> repo.toURI.toASCIIString)
+  def writeRepoFile(repos:List[xsbti.Repository], config: File, repo: File): Unit =
+    Repositories.writeRepoFile(repos, config, "build-local" -> repo.toURI.toASCIIString)
 
-  def buildSbtProject(runner: SbtRunner)(project: File, config: SbtBuildConfig, log: logging.Logger): BuildArtifacts = {    
+  def buildSbtProject(repos:List[xsbti.Repository], runner: SbtRunner)(project: File, config: SbtBuildConfig, log: logging.Logger): BuildArtifacts = {    
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dbuild"
       // TODO - Where should depsfile + repo file be?  
@@ -27,7 +27,7 @@ object SbtBuilder {
       // We need a new ivy cache to ensure no corruption of minors (or projects)
       val ivyCache = dbuildDir / "ivy2"
       IO.write(depsFile, writeValue(config))
-      writeRepoFile(repoFile, config.info.artifacts.localRepo)
+      writeRepoFile(repos, repoFile, config.info.artifacts.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       runner.run(
         projectDir = project,

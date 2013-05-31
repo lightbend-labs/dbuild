@@ -14,7 +14,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.5.2"
+  def MyVersion: String = "0.5.3"
   
   lazy val root = (
     Project("root", file(".")) 
@@ -83,7 +83,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dcore, drepo, dmeta)
-      dependsOnRemote(mvnEmbedder, mvnWagon)
+      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt)
       settings(SbtSupport.settings:_*)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
         val file = dir / "Defaults.scala"

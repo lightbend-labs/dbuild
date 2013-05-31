@@ -78,7 +78,7 @@ object ScalaBuildSystem extends BuildSystem {
       f <- if (propsFile.exists) Some(propsFile) else None
       props <- loadProps(f)
       version <- Option(props get "version.number")
-    } yield version.toString
+    } yield version.toString+"-dbuild"
     version getOrElse sys.error("unable to load scala version number!")
   } 
     

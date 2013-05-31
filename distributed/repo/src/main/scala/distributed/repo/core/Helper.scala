@@ -64,7 +64,8 @@ object LocalRepoHelper {
     
   protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository): Unit = {
     val key = makeProjectMetaKey(meta.project.uuid)
-    IO.withTemporaryFile(meta.project.config.name, meta.project.uuid) { file =>
+    // padding string, as withTemporaryFile() will fail if the prefix is too short
+    IO.withTemporaryFile(meta.project.config.name+"-padding", meta.project.uuid) { file =>
       IO.write(file, writeValue(meta))
       remote put (key, file)
     }

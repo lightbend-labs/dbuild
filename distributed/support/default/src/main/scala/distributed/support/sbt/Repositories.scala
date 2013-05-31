@@ -15,11 +15,10 @@ object Repositories {
       sb append (" ivy-%s: %s, %s\n" format(name, uri, ivyPattern))
       sb append (" mvn-%s: %s\n" format(name, uri))
     }
-    repos foreach {_ match {
+    repos foreach {
       case m:xsbti.MavenRepository => sb append ("  "+m.id+": "+m.url+"\n")
       case i:xsbti.IvyRepository => sb append ("  "+i.id+": "+i.url+", "+i.ivyPattern+"\n")
       case p:xsbti.PredefinedRepository => sb append ("  "+p.id+"\n")
-      }
     }
     IO.write(config, sb.toString)
   } 

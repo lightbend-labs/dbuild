@@ -52,9 +52,14 @@ object Packaging {
 [repositories]
   local
   maven-central
-  typesafe-releases: http://repo.typesafe.com/typesafe/releases
-  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  dbuild-snapshots: http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots
+  java-annoying-cla-shtuff: http://download.java.net/maven/2/
+  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases
+  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  jgit-repo: http://download.eclipse.org/jgit/maven
+  scala-fresh-2.10.x: http://typesafe.artifactoryonline.com/typesafe/scala-fresh-2.10.x/
 
 [boot]
  directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}
@@ -88,9 +93,14 @@ object Packaging {
 [repositories]
   local
   maven-central
-  typesafe-releases: http://repo.typesafe.com/typesafe/releases
-  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  dbuild-snapshots: http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots
+  java-annoying-cla-shtuff: http://download.java.net/maven/2/
+  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases
+  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  jgit-repo: http://download.eclipse.org/jgit/maven
+  scala-fresh-2.10.x: http://typesafe.artifactoryonline.com/typesafe/scala-fresh-2.10.x/
 
 [boot]
  directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}

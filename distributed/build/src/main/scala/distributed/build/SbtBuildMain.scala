@@ -42,6 +42,12 @@ class SbtBuildMain extends xsbti.AppMain {
         if(args.length == 1)
           readValue[DistributedBuildConfig](new File(args(0)))
         else sys.error("Usage: dbuild {build-file}")
+      // Unique names?
+      val allNames=config.projects map {_.name}
+      val uniqueNames=allNames.distinct
+      if (uniqueNames.size != allNames.size) {
+        sys.error("Project names must be unique! Duplicates found: "+(allNames diff uniqueNames).mkString(","))
+      }
       println("Config: " + writeValue(config))
 //      println("Classloader:")
 //      printClassLoaders(getClass.getClassLoader)

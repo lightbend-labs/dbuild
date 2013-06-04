@@ -27,9 +27,6 @@ class LocalBuildRunner(builder: BuildRunner,
         runLocalBuild(target, build, log)
     } 
   
-  def expandExtraDefaults(proj: ProjectBuildConfig) =
-    builder.expandExtraDefaults(proj)
-
   def runLocalBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifacts =
     local.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)

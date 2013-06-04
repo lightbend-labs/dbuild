@@ -30,8 +30,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       // therefore we have to ask to the build system itself to expand the 'extra' field
       // as appropriate.
       val result = for {
-        expandedBuild <- fillDefaults(build)
-        fullBuild <- analyze(expandedBuild, target, log.newNestedLogger(hashing sha1 build))
+        fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
         arts <- runBuild(target, fullBuild, fullLogger)
@@ -39,13 +38,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       result pipeTo listener
     }
   }
-  
-  def fillDefaults(config:DistributedBuildConfig):Future[DistributedBuildConfig] = {
-    implicit val ctx = context.system
-    Future.traverse(config.projects)(fillProjDef) map DistributedBuildConfig.apply
-  }
-  def fillProjDef(proj: ProjectBuildConfig): Future[ProjectBuildConfig] =
-    (builder ? ExpandExtraDefaults(proj)).mapTo[ProjectBuildConfig]
   
   /** Publishing the full build to the repository and logs the output for
    * re-use.

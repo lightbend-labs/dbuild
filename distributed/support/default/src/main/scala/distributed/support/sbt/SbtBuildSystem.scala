@@ -17,14 +17,6 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.Proje
   final val runner = new SbtRunner(repos, buildBase / "runner")
   final val extractor = new SbtRunner(repos, buildBase / "extractor")
   
-  // expandDefaults is always called as first step; diagnostic should go here.
-  // the others can assume the 'extra' field is of the right type (and will
-  // fail with a match error (internal error) if it is not.
-  override def expandDefaults(config: ProjectBuildConfig): ProjectBuildConfig = {
-    val sc = sbtExpandConfig(config)
-    config.copy(extra=Some(sc))
-  }
-    
   private def sbtExpandConfig(config: ProjectBuildConfig) = config.extra match {
     case None => SbtExtraConfig(sbtVersion = Defaults.sbtVersion) // pick default values
     case Some(ec:SbtExtraConfig) => {
@@ -50,7 +42,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.Proje
   }
 
   def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
-    val Some(ec:SbtExtraConfig) = config.extra
+    val Some(ec:SbtExtraConfig) = config.copy(extra=Some(sbtExpandConfig(config))).extra
     val projDir = projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log)
   }

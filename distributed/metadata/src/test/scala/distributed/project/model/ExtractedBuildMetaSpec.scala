@@ -20,7 +20,7 @@ object ExtractedBuildMetaSpec extends Specification {
           artifacts = [{
             name = "p1"
             organization = "o1"
-            ext = "jar"
+            extension = "jar"
           }]
           dependencies = []
     }]

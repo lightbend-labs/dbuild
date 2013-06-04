@@ -27,9 +27,9 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.Proje
     }
     case _ => throw new Exception("Internal error: sbt build config options are the wrong type in project \""+config.name+"\". Please report")
   }
-  
+
   override def projectDbuildDir(baseDir: File, config: ProjectBuildConfig): File = {
-    val Some(ec:SbtExtraConfig) = config.extra
+    val ec = sbtExpandConfig(config)
     projectDir(baseDir, ec) / ".dbuild"
   }
 
@@ -42,17 +42,17 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.Proje
   }
 
   def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
-    val Some(ec:SbtExtraConfig) = config.copy(extra=Some(sbtExpandConfig(config))).extra
+    val ec = sbtExpandConfig(config)
     val projDir = projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifacts = {
-    val Some(sc:SbtExtraConfig) = project.config.extra
+    val ec = sbtExpandConfig(project.config)
     val name = project.config.name
     // TODO - Does this work correctly?
-    val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
-    val config = SbtBuildConfig(sc, info)
+    val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
+    val config = SbtBuildConfig(ec, info)
     SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log)
   }
 

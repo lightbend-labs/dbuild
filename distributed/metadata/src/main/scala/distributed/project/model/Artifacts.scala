@@ -43,7 +43,8 @@ case class BuildArtifacts(artifacts: Seq[ArtifactLocation], localRepo: File)
 /** This represents general information every dbuild must know:
  * What artifacts are coming in (from metadata) and where to
  * write new artifacts (so we can save them for later).
+ * "version" is the version string that will result from the build
  * 
  * Also includes the UUID of this build, in case of direct d-build integration.
  */
-case class BuildInput(artifacts: BuildArtifacts, uuid: String, outRepo: File)
+case class BuildInput(artifacts: BuildArtifacts, uuid: String, version: String, outRepo: File)

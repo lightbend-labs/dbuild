@@ -22,8 +22,10 @@ case class Project(
 
 /** Represents the *Extracted* metadata of a build.
  * 
- * This includes things like dependencies.   Actually nothing else currently.
+ * This includes things like dependencies.
+ * The "version" string is the one extracted by dbuild; it may be overridden
+ * with an explicit "set-version" in the project configuration.
  */
-case class ExtractedBuildMeta(uri: String, projects: Seq[Project]) {
-  override def toString = "Build(%s, %s)" format (uri, projects.mkString("\n\t", "\n\t", "\n"))
+case class ExtractedBuildMeta(uri: String, version: String, projects: Seq[Project]) {
+  override def toString = "Build(%s, %s, %s)" format (uri, version, projects.mkString("\n\t", "\n\t", "\n"))
 }

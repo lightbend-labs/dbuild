@@ -21,6 +21,7 @@ object DistributedBuildConfigSpec extends Specification {
           name = "p1",
           uri = "uri",
           system = "sbt",
+          setVersion = None,
           extra = None
       ))
     ))
@@ -34,6 +35,7 @@ object DistributedBuildConfigSpec extends Specification {
           name = "p1"
           uri = "uri"
           system = "sbt"
+          set-version = "3.9.43"
           extra = { directory = "ZOMG" }
     }]
 }""") must equalTo(DistributedBuildConfig(
@@ -41,6 +43,7 @@ object DistributedBuildConfigSpec extends Specification {
           name = "p1",
           uri = "uri",
           system = "sbt",
+          setVersion = Some("3.9.43"),
           extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
       ))
     ))

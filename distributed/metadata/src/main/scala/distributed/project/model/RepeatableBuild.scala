@@ -16,8 +16,14 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  * the totally unique meta-data information for this project.  This
  * also includes all transitive dependencies so all artifacts can be
  * resolved appropriately.
+ * 
+ * We also include the (plain) project version string detected during
+ * extraction. We will later either append to it the UUID of this
+ * RepeatableProjectBuild, or use the explicit string provided in
+ * the "setVersion" of the ProjectBuildConfig (if not None).
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
+                       baseVersion: String,
                        dependencies: Seq[RepeatableProjectBuild]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
@@ -58,7 +64,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
             dep <- (subgraph - head)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
-        val headMeta = RepeatableProjectBuild(head.config, sortedDeps)
+        val headMeta = RepeatableProjectBuild(head.config, head.extracted.version, sortedDeps)
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse

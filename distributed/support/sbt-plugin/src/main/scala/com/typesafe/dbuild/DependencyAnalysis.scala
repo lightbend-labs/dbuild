@@ -84,8 +84,10 @@ object DependencyAnalysis {
       }
       newProjectNames map localRefsMap
     }
-    val deps = getProjectInfos(extracted, state, refs)    
-    val meta = model.ExtractedBuildMeta(uri, deps)
+    val deps = getProjectInfos(extracted, state, refs)
+    val Some(version) = Keys.version in currentRef get structure.data
+    // return just this version string now; we will append to it more stuff prior to building
+    val meta = model.ExtractedBuildMeta(uri, version, deps)
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
     try output println writeValue(meta)
     finally output.close()

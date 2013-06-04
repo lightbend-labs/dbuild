@@ -40,8 +40,17 @@ class LocalBuildRunner(builder: BuildRunner,
       val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
       // TODO - Load this while resolving!
       val dependencies: BuildArtifacts = BuildArtifacts(artifactLocations, readRepo)
+      val version = build.config.setVersion match {
+        case Some(v) => v
+        case _ => {
+          val value = build.baseVersion
+          (if (value endsWith "-SNAPSHOT") {
+            value replace ("-SNAPSHOT", "")
+          } else value) + "-" + build.uuid + "-dbuild"
+        }
+      }
       log.info("Running local build: " + build.config + " in directory: " + dir)
-      val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, writeRepo), log)
+      val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, version, writeRepo), log)
       // TODO - We pull out just the artifacts published and push them again
       LocalRepoHelper.publishProjectArtiactInfo(build, results.artifacts, writeRepo, repository)
       results

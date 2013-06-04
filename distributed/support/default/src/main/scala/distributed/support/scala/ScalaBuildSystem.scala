@@ -15,7 +15,8 @@ object ScalaBuildSystem extends BuildSystem {
   
   def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
     // TODO - don't HardCode
-    ExtractedBuildMeta("", 
+    
+    ExtractedBuildMeta("", readScalaVersion(dir),
         Seq(
           Project("jline", group, Seq(jline), Seq.empty),
           Project("scala-library", group, Seq(lib), Seq.empty),
@@ -34,8 +35,7 @@ object ScalaBuildSystem extends BuildSystem {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
-    // Now reading version number
-    val version = readScalaVersion(dir)
+    val version = input.version
     
     // Now deliver scala to the remote repo.
     // TODO - VERSIONING!!!!!!!!!!!!!!!!!!
@@ -66,7 +66,7 @@ object ScalaBuildSystem extends BuildSystem {
     
     
   private def readScalaVersion(baseDir: File): String = {
-    val propsFile = new File(baseDir, "build/quick/classes/library/library.properties")
+    val propsFile = new File(baseDir, "build.number")
     import util.control.Exception.catching
     def loadProps(file: File): Option[_root_.java.util.Properties] = 
      catching(classOf[_root_.java.io.IOException]) opt {
@@ -77,8 +77,10 @@ object ScalaBuildSystem extends BuildSystem {
     val version: Option[String] = for {
       f <- if (propsFile.exists) Some(propsFile) else None
       props <- loadProps(f)
-      version <- Option(props get "version.number")
-    } yield version.toString+"-dbuild"
+      major <- Option(props get "version.major")
+      minor <- Option(props get "version.minor")
+      patch <- Option(props get "version.patch")
+    } yield major.toString+"."+minor.toString+"."+patch.toString
     version getOrElse sys.error("unable to load scala version number!")
   } 
     

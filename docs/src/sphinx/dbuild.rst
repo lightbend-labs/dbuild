@@ -55,10 +55,11 @@ Each of the dbuild projects has the structure:
 .. code-block:: javascript
 
    {
-    "name"  : <project-name>,
-    "system": <build-system>,
-    "uri"   : <source-repository-uri>,
-    "extra" : <optional-extra-build-parameters>
+    "name"        : <project-name>,
+    "system"      : <build-system>,
+    "uri"         : <source-repository-uri>,
+    "set-version" : <optional-output-version>
+    "extra"       : <optional-extra-build-parameters>
    }
 
 Within a project description:
@@ -88,6 +89,12 @@ source-repository-uri
   dbuild will download and extract the most recent available version in the specified branch, or the
   exact version or commit in case if specified . If no prefix is added, dbuild will fetch the most recent
   version in git master, or svn head.
+
+optional-output-version
+  This component is optional, and normally not used. During compilation, dbuild will automatically
+  generate a version string that is used for the various artifacts that are produced by each
+  project. However, in case you need to obtain artifacts with a specific version string, you can
+  override the default value by specifying a specific version string here.
 
 optional-extra-build-parameters
   The "extra" component is optional, as are all of its sub-components; it describes additional

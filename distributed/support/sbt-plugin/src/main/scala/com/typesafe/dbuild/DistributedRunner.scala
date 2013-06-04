@@ -241,11 +241,7 @@ object DistributedRunner {
     fixGeneric2(Keys.libraryDependencies, "Updating library dependencies") { old => old map fixModule(locs) }
 
   def fixVersions2(config: SbtBuildConfig) =
-    fixGeneric2(Keys.version, "Updating version strings") { value =>
-      (if (value endsWith "-SNAPSHOT") {
-        value replace ("-SNAPSHOT", "")
-      } else value) + "-" + config.info.uuid
-    }
+    fixGeneric2(Keys.version, "Updating version strings") { _ => config.info.version }
 
   def fixResolvers2(repo: File) =
     fixGeneric2(Keys.resolvers, "Adding resolvers to retrieve build artifacts") { old =>

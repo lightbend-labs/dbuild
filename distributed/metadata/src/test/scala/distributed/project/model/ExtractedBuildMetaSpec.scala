@@ -13,7 +13,8 @@ object ExtractedBuildMetaSpec extends Specification {
       
       readValue[ExtractedBuildMeta](
 """{
-  uri = "foo/bar"  
+  uri = "foo/bar"
+  version = "1.0"
   projects = [{
           name = "p1"
           organization = "o1"
@@ -24,13 +25,13 @@ object ExtractedBuildMetaSpec extends Specification {
           }]
           dependencies = []
     }]
-}""") must equalTo(ExtractedBuildMeta("foo/bar", 
+}""") must equalTo(ExtractedBuildMeta("foo/bar", "1.0",
     Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar")), Seq.empty))))
     }
     
     "parse pretty printed metadata" in {
       val data = 
-        ExtractedBuildMeta("foo/bar", 
+        ExtractedBuildMeta("foo/bar", "1.0",
           Seq(
               Project("p1", "o1", Seq(ProjectRef("p1", "o1")), Seq.empty),
               Project("p2", "o1", Seq(ProjectRef("p2", "o1")), 

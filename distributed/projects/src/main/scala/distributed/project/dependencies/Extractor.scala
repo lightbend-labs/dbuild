@@ -19,7 +19,7 @@ class Extractor(
     dependencyExtractor: BuildDependencyExtractor,
     repository: Repository) {
   
-  /** Given an initial build configuraiton, extract *ALL* information needed for a full build. */
+  /** Given an initial build configuration, extract *ALL* information needed for a full build. */
   def extract(tdir: File, build: ProjectBuildConfig, logger: logging.Logger): ProjectConfigAndExtracted = 
     local.ProjectDirs.useProjectExtractionDirectory(build, tdir) { dir =>
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
@@ -33,7 +33,7 @@ class Extractor(
         val deps = dependencyExtractor.extract(build, dir, logger)      
         logger.debug("Dependencies = " + writeValue(deps))
         cacheExtract(config, deps)
-        ProjectConfigAndExtracted(config,deps)
+        ProjectConfigAndExtracted(config, deps)
       }
     }
   
@@ -46,7 +46,7 @@ class Extractor(
         println("Putting extraction information into: " + repository)
         repository.put(makeExtractKey(config), file)
       }
-    
+
     private def cachedExtractOr(config: ProjectBuildConfig, logger: logging.Logger)(f: => ProjectConfigAndExtracted): ProjectConfigAndExtracted = 
       try {
         val key = makeExtractKey(config)

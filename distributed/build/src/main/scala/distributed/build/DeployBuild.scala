@@ -58,7 +58,8 @@ object DeployBuild {
     } yield Creds(host.toString, user.toString, pass.toString)) getOrElse sys.error("unable to load properties from " + propsFile)
   }
 
-  def deployStuff[T](options: DeployOptions, dir: File, log: Logger, init: Creds => T, deploy: (T, Creds, File, java.net.URI) => Unit) {
+  def deployStuff[T](options: DeployOptions, dir: File, log: Logger, init: Creds => T,
+    message: (Logger, String) => Unit, deploy: (T, Creds, File, java.net.URI) => Unit) {
     val Some(credsFile) = options.credentials
     val credentials = loadCreds(credsFile)
     val handler = init(credentials)
@@ -75,11 +76,10 @@ object DeployBuild {
     (sorted._1 ++ sorted._2) foreach { file =>
       // IO.relativize seems not to do what I need
       val relative = dir.toURI.relativize(file.toURI).getPath
-      log.info("Deploying: " + relative)
+      message(log, relative)
       // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
       val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
-      if (!(relative.endsWith(".sha1") || relative.endsWith(".md5")))
-        deploy(handler, credentials, file, targetURI)
+      deploy(handler, credentials, file, targetURI)
     }
   }
 
@@ -118,22 +118,34 @@ object DeployBuild {
 
             case "http" | "https" =>
               // deploy to a Maven repository
-              deployStuff[Unit](options, dir, log, { _ => () }, { (_, credentials, file, uri) =>
-                import dispatch._
-                val sender =
-                  dispatch.url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
-                Http(sender >|)
-              })
+              deployStuff[Unit](options, dir, log, { _ => () },
+                { (log, relative) =>
+                  if (!(relative.endsWith(".sha1") || relative.endsWith(".md5")))
+                    log.info("Deploying: " + relative)
+                  else
+                    log.info("Verifying checksum: " + relative)
+                }, { (_, credentials, file, uri) =>
+                  import dispatch._
+                  val sender =
+                    dispatch.url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
+                  Http(sender >|)
+                })
 
             case "s3" =>
               // deploy to S3
               deployStuff[AmazonS3Client](options, dir, log, { credentials =>
                 new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
                   new ClientConfiguration().withProtocol(Protocol.HTTPS))
+              }, { (log, relative) =>
+                  if (!(relative.endsWith(".sha1") || relative.endsWith(".md5")))
+                    log.info("Uploading: " + relative)
               }, { (client, credentials, file, uri) =>
+                val path = uri.getPath
                 // putObject() will automatically calculate an MD5, upload, and compare with the response
-                // from the server. Any upload failure results in an exception.
-                client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
+                // from the server. Any upload failure results in an exception; so no need to process
+                // the sha1/md5 files we might have.
+                if (!(path.endsWith(".sha1") || path.endsWith(".md5")))
+                  client.putObject(new PutObjectRequest(credentials.host, path.replaceFirst("^/", ""), file))
               })
           }
         }

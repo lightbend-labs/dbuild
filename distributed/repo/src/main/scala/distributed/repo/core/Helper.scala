@@ -42,7 +42,7 @@ object LocalRepoHelper {
     for {
       file <- (localRepo.***).get
       _ = println("Checking file: " + file.getAbsolutePath)
-      if !file.isDirectory
+      if !(file.isDirectory || file.getName == "maven-metadata-local.xml")
     } yield {
       val sha = hashing.files sha1 file
       val name = IO.relativize(localRepo, file) getOrElse file.getName

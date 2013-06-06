@@ -62,13 +62,24 @@ object DeployBuild {
     val Some(credsFile) = options.credentials
     val credentials = loadCreds(credsFile)
     val handler = init(credentials)
-    (dir.***).get.filter(!_.isDirectory) foreach { file =>
+    val targetBaseURI = new java.net.URI(options.uri)
+    // First, we upload the main files,
+    // and only afterwards we can upload md5 and sha1 files
+    // (otherwise we get 404 errors from Artifactory)
+    // Note that a 409 error means the checksum calculated on
+    // the server does not match the checksum we are trying to upload
+    val sorted = (dir.***).get.filter(file => !file.isDirectory).partition { f =>
+      val name = f.getName
+      !(name.endsWith(".sha1") || name.endsWith(".md5"))
+    }
+    (sorted._1 ++ sorted._2) foreach { file =>
       // IO.relativize seems not to do what I need
       val relative = dir.toURI.relativize(file.toURI).getPath
       log.info("Deploying: " + relative)
       // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
-      val targetURI = org.eclipse.core.runtime.URIUtil.append(new java.net.URI(options.uri), relative)
-      deploy(handler, credentials, file, targetURI)
+      val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
+      if (!(relative.endsWith(".sha1") || relative.endsWith(".md5")))
+        deploy(handler, credentials, file, targetURI)
     }
   }
 
@@ -86,7 +97,7 @@ object DeployBuild {
             case Some(list) => list
           }
           log.info("")
-          log.info("Deploying to " + options.uri + " the artifacts from: " + projList.mkString("", ", ", "."))
+          log.info("Deploying to " + options.uri + ": " + projList.mkString("", ", ", "."))
           projList map { proj =>
             build.repeatableBuilds.find(_.config.name == proj) match {
               case None => sys.error("Error during deploy: \"" + proj + "\" is a project name.")
@@ -111,8 +122,7 @@ object DeployBuild {
                 import dispatch._
                 val sender =
                   dispatch.url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
-                // TODO - output to logger.
-                Http(sender >- { log.info(_) })
+                Http(sender >|)
               })
 
             case "s3" =>
@@ -121,7 +131,9 @@ object DeployBuild {
                 new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
                   new ClientConfiguration().withProtocol(Protocol.HTTPS))
               }, { (client, credentials, file, uri) =>
-                client.putObject(new PutObjectRequest(credentials.host, uri.getPath, file))
+                // putObject() will automatically calculate an MD5, upload, and compare with the response
+                // from the server. Any upload failure results in an exception.
+                client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
               })
           }
         }

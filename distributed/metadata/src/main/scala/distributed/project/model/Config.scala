@@ -28,12 +28,16 @@ case class ProjectBuildConfigShadow(name: String,
     uri: String, 
   @JsonProperty("set-version")
     setVersion: Option[String],
-    extra: JsonNode=null) {
-}
+    extra: JsonNode=null)
 
 /** The initial configuration for a build. */
-case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig])
+case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig], deploy: Option[Seq[DeployOptions]])
 
+/** Deploy information. */
+case class DeployOptions(uri:String, // deploy target
+    credentials: Option[String], // path to the credentials file
+    projects: Option[Seq[String]] // names of the projects that should be deployed
+)
 
 /** Configuration used for SBT and other builds.
   */

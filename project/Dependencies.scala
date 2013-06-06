@@ -28,4 +28,6 @@ object Dependencies {
 
   val jacks          = "com.cunei" %% "jacks" % "2.1.9"
   val jackson        = "com.fasterxml.jackson.core" % "jackson-annotations" % "2.1.4"
+  val aws            = "com.amazonaws" % "aws-java-sdk" % "1.3.29"
+  val uriutil        = "org.eclipse.equinox" % "org.eclipse.equinox.common" % "3.6.0.v20100503"
 }

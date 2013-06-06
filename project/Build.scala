@@ -1,4 +1,4 @@
-import sbt._
+'import sbt._
 import Keys._
 
 import Dependencies._
@@ -76,7 +76,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt)
+      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch)
     )
 
   // Projects relating to supprting various tools in distributed builds.

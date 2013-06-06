@@ -2,6 +2,7 @@ package distributed.project.model
 
 import graph.Graphs
 import Utils.writeValue
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /** Information on how to build a project.  Consists of both distributed build
  * configuration and extracted information.  Note: That the config in this case
@@ -23,7 +24,7 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  * the "setVersion" of the ProjectBuildConfig (if not None).
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
-                       baseVersion: String,
+                       @JsonProperty("base-version") baseVersion: String,
                        dependencies: Seq[RepeatableProjectBuild]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
@@ -42,8 +43,8 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
 /** A distributed build containing projects in *build order*
  *  Also known as the repeatable config. 
  */
-case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config))
+case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted], deployOptions:Option[Seq[DeployOptions]]) {
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), deployOptions)
   def repeatableBuildString = writeValue(this)
   
   /** Our own graph helper for interacting with the build meta information. */

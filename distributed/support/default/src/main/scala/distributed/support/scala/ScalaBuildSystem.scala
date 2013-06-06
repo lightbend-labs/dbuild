@@ -48,6 +48,9 @@ object ScalaBuildSystem extends BuildSystem {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
+    // Since this is a real local maven repo, it also contains
+    // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
+
     // Hardcoded results...
     BuildArtifacts(Seq(
       ArtifactLocation(lib, version),
@@ -68,7 +71,7 @@ object ScalaBuildSystem extends BuildSystem {
   private def readScalaVersion(baseDir: File): String = {
     val propsFile = new File(baseDir, "build.number")
     import util.control.Exception.catching
-    def loadProps(file: File): Option[_root_.java.util.Properties] = 
+    def loadProps(): Option[_root_.java.util.Properties] = 
      catching(classOf[_root_.java.io.IOException]) opt {
       val props = new _root_.java.util.Properties()
       props.load(new _root_.java.io.FileReader(propsFile))
@@ -76,7 +79,7 @@ object ScalaBuildSystem extends BuildSystem {
     }
     val version: Option[String] = for {
       f <- if (propsFile.exists) Some(propsFile) else None
-      props <- loadProps(f)
+      props <- loadProps()
       major <- Option(props get "version.major")
       minor <- Option(props get "version.minor")
       patch <- Option(props get "version.patch")

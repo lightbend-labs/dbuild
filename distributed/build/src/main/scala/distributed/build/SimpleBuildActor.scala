@@ -3,6 +3,7 @@ package build
 
 import project.model._
 import project.build._
+import DeployBuild._
 import repo.core.{Repository,LocalRepoHelper}
 import project.dependencies.ExtractBuildDependencies
 import logging.Logger
@@ -29,11 +30,13 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       // Only each build system knows its own defaults (which may change over time),
       // therefore we have to ask to the build system itself to expand the 'extra' field
       // as appropriate.
+      checkDeployFullBuild(build.deploy)
       val result = for {
         fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
         arts <- runBuild(target, fullBuild, fullLogger)
+        _ = deployFullBuild(fullBuild)
       } yield arts
       result pipeTo listener
     }
@@ -93,8 +96,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     val builds: Future[Seq[ProjectConfigAndExtracted]] = 
       Future.traverse(config.projects)(extract(tdir, log))
     // We don't have to do ordering here anymore.
-    builds map RepeatableDistributedBuild.apply 
-  } 
+    builds map {RepeatableDistributedBuild(_,config.deploy)}
+  }
 
   // Our Asynchronous API.
   def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ProjectConfigAndExtracted] =

@@ -22,7 +22,7 @@ class SimpleBuildAnalyzer(e: project.dependencies.Extractor) extends BuildAnalyz
     val scratchDir = local.ProjectDirs.makeDirForBuild(config, target / "extraction")
     
     val builds = config.projects map (p => e.extract(scratchDir, p, log))
-    RepeatableDistributedBuild(builds)
+    RepeatableDistributedBuild(builds, config.deploy)
   }
 }
 

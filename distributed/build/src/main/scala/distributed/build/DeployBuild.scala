@@ -128,7 +128,7 @@ object DeployBuild {
                   import dispatch._
                   val sender =
                     dispatch.url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
-                  Http(sender >|)
+                  (new Http with NoLogging)(sender >|)
                 })
 
             case "s3" =>

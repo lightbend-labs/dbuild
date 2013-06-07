@@ -38,11 +38,14 @@ object DistributedBuildConfigSpec extends Specification {
           set-version = "3.9.43"
           extra = { directory = "ZOMG" }
     }]
-    deploy = {
+    deploy = [{
           uri = "file://localhost:8088/some/path"
           credentials = "/credentials/file"
-          projects = ["p1","p2"]
-    }
+          projects = ["p1","p2",{
+    from:"aaa"
+    publish:["a","b"]
+    }]
+    }]
 }""") must equalTo(DistributedBuildConfig(
       Seq(ProjectBuildConfig(
           name = "p1",
@@ -51,7 +54,7 @@ object DistributedBuildConfigSpec extends Specification {
           setVersion = Some("3.9.43"),
           extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
       )),Some(Seq(DeployOptions("file://localhost:8088/some/path",Some("/credentials/file"),
-       Some(Seq("p1","p2")))))
+       Some(Seq(DeployElementProject("p1"),DeployElementProject("p2"),DeployElementSubProject(DeploySubProjects("aaa",Seq("a","b"))))))))
     ))
     }
   }

@@ -94,7 +94,8 @@ object DeployBuild {
           val cache = Repository.default
           val projList = options.projects match {
             case None => build.repeatableBuilds map { _.config.name }
-            case Some(list) => list
+            // TODO: must filter out and process DeployElementSubProject items as well
+            case Some(list) => list.collect {case DeployElementProject(s) => s}
           }
           log.info("")
           log.info("Deploying to " + options.uri + ": " + projList.mkString("", ", ", "."))

@@ -22,17 +22,19 @@ repository-uri
   A string specifying the URI of the desired repository; it can be written either with or
   without a trailing slash. It can be one of the following:
 
-  "file:///path/to/local/repository"
+  ``file:///path/to/local/repository``
     The artifacts will be copied to the local file system. The directory will be created
-    if it does not exist. Existing files in that directory with the same names will be
-    overwritten; other files will be left untouched.
+    if it does not exist. Existing files in that directory with colliding names will be
+    overwritten; the other files that were previously in the same directory will be left
+    untouched.
 
-  "http://hostname:port/path1/path2"
-    A Maven or Ivy (or other) remote repository. It can also use the "https" scheme;
-    a custom port may also optionally be specified. A credentials file is required (see later).
+  ``http://hostname:port/path1/path2``
+    A Maven or Ivy (or other) remote repository. It can also use the "https" scheme, and
+    a custom port may optionally be specified. A credentials file is required (see later).
 
-  "s3://bucket/path1/path2"
-    The artifacts can also be uploaded to an Amazon S3 bucket. A credentials is required.
+  ``s3://bucket/path1/path2``
+    The artifacts will be uploaded to an Amazon S3 bucket. Suitable credentials must be
+    specified.
 
 credentials
   A properties file containing at least the properties "host", "user", and "password". The
@@ -47,7 +49,8 @@ projects
   not present, the artifacts of all projects will be uploaded.
 
 Using such a sequence of deploy records, it is possible to deploy diffent sets of artifacts to different
-repositories, or also to upload the same artifacts to multiple repositories at once.
+repositories; it is also possible to upload the same artifacts to multiple repositories, during a
+single run.
 
 
 *Next:* :doc:`repositories`.

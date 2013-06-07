@@ -48,7 +48,8 @@ The top level of the configuration file is:
 
 .. code-block:: javascript
 
-   {"projects": [ <dbuild_project1>, <dbuild_project2>,...] }
+   {"projects": [ <dbuild_project1>, <dbuild_project2>,...],
+    "deploy":   [ <dbuild_deploy1>, <dbuild_deploy2>,...]}
 
 Each of the dbuild projects has the structure:
 
@@ -149,6 +150,7 @@ commands
   the project dependencies. These commands can be used, for example, to change settings
   using forms like "set setting := ...".
 
+The optional section ``deploy`` is described on the next page.
 
-*Next:* :doc:`repositories`.
+*Next:* :doc:`deploy`.
 

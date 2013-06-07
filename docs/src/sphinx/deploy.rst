@@ -5,8 +5,8 @@ The ``deploy`` section
 ----------------------
 
 At the end of the build process, dbuild can automatically upload the generated artifacts to one or more
-repository. The ``deploy`` section in the build configuration file is optional; it consists in a sequence
-of deploy records with the following structure:
+repositories. The ``deploy`` section in the build configuration file is optional; it consists of a sequence
+of deploy records, with the following structure:
 
 .. code-block:: javascript
 
@@ -33,8 +33,7 @@ repository-uri
     a custom port may optionally be specified. A credentials file is required (see later).
 
   ``s3://bucket/path1/path2``
-    The artifacts will be uploaded to an Amazon S3 bucket. Suitable credentials must be
-    specified.
+    The artifacts will be uploaded to an Amazon S3 bucket. Credentials must be specified.
 
 credentials
   A properties file containing at least the properties "host", "user", and "password". The
@@ -49,9 +48,37 @@ projects
   not present, the artifacts of all projects will be uploaded.
 
 Using such a sequence of deploy records, it is possible to deploy diffent sets of artifacts to different
-repositories; it is also possible to upload the same artifacts to multiple repositories, during a
-single run.
+repositories, or also to upload the same artifacts to multiple repositories during a
+single run. For example:
 
+.. code-block:: javascript
+
+  "deploy":[
+    {
+      uri="file:///home/user/files/repo"
+      projects=["genjavadoc"]
+    },
+    {
+      uri="s3://s3-testBucket/repo"
+      credentials="/home/user/.credentials-s3"
+      projects=["scala-arm"]
+    },
+    {
+      uri="http://localhost:8088/artifactory/repos/test1"
+      credentials="/home/user/.ivy2/.credentials-local"
+      projects=["genjavadoc","akka","scala","scala-arm"]
+    }
+  ]
+
+.. Note::
+
+  If you encounter an error ``404`` while deploying, that may be caused by an attempt to upload a checksum file
+  (.sha1 or .md5) that has no corresponding main file. This should normally never happen, but it may be the result
+  of some anomalous build/clean error during the build stage.
+
+  Similarly, an error ``409`` may occur when the checksum file that was generated during the build stage does
+  not match the checksum that was calculated on the server during the deployment of the main file. Again, this
+  may be the result of some unexpected build anomaly, or it may be caused by a failure while uploading the artifact
+  files to the repository server.
 
 *Next:* :doc:`repositories`.
-

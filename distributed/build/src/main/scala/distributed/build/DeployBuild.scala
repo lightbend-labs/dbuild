@@ -55,7 +55,7 @@ object DeployBuild {
       host <- Option(props get "host")
       user <- Option(props get "user")
       pass <- Option(props get "password")
-    } yield Creds(host.toString, user.toString, pass.toString)) getOrElse sys.error("unable to load properties from " + propsFile)
+    } yield Creds(host.toString, user.toString, pass.toString)) getOrElse sys.error("Unable to load properties from " + propsFile)
   }
 
   private def isNotChecksum(path: String): Boolean =
@@ -72,7 +72,7 @@ object DeployBuild {
     // (otherwise we get 404 errors from Artifactory)
     // Note that a 409 error means the checksum calculated on
     // the server does not match the checksum we are trying to upload
-    val sorted = (dir.***).get.filter(file => !file.isDirectory).partition{ f => isNotChecksum(f.getName) }
+    val sorted = (dir.***).get.filter(f => !f.isDirectory).partition(f => isNotChecksum(f.getName))
     (sorted._1 ++ sorted._2) foreach { file =>
       // IO.relativize seems not to do what I need
       val relative = dir.toURI.relativize(file.toURI).getPath
@@ -127,7 +127,7 @@ object DeployBuild {
                 }, { (_, credentials, file, uri) =>
                   import dispatch._
                   val sender =
-                    dispatch.url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
+                    url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
                   (new Http with NoLogging)(sender >|)
                 })
 
@@ -137,12 +137,12 @@ object DeployBuild {
                 new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
                   new ClientConfiguration().withProtocol(Protocol.HTTPS))
               }, { (log, relative) =>
-                  if (isNotChecksum(relative))
-                    log.info("Uploading: " + relative)
+                if (isNotChecksum(relative))
+                  log.info("Uploading: " + relative)
               }, { (client, credentials, file, uri) =>
                 // putObject() will automatically calculate an MD5, upload, and compare with the response
                 // from the server. Any upload failure results in an exception; so no need to process
-                // the sha1/md5 files we might have.
+                // the sha1/md5 here.
                 if (isNotChecksum(uri.getPath))
                   client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
               })

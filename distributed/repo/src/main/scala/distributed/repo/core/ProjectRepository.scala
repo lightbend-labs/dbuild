@@ -47,5 +47,5 @@ class ProjectRepository(remote: Repository) extends ReadableProjectRepository(re
    * @param localRepo  The location of all artifacts we should read and send.
    */
   def publishArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[ArtifactLocation], localRepo: File): ProjectArtifactInfo =
-    LocalRepoHelper.publishProjectArtiactInfo(project, extracted, localRepo, remote)
+    LocalRepoHelper.publishProjectArtifactInfo(project, extracted, localRepo, remote)
 }

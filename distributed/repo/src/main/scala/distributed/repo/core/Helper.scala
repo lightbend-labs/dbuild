@@ -78,7 +78,7 @@ object LocalRepoHelper {
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
-  def publishProjectArtiactInfo(project: RepeatableProjectBuild, extracted: Seq[ArtifactLocation], localRepo: File, remote: Repository): ProjectArtifactInfo = {
+  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[ArtifactLocation], localRepo: File, remote: Repository): ProjectArtifactInfo = {
     val arts = publishRawArtifacts(localRepo, remote)
     val info = ProjectArtifactInfo(project, extracted, arts)
     publishProjectMetadata(info, remote)

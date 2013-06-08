@@ -23,8 +23,8 @@ case class ArtifactSha(sha: String, location: String)
  */
 case class ProjectArtifactInfo(
     project: RepeatableProjectBuild,
-    //Relative locations
-    versions: Seq[ArtifactLocation],
+    // (Subprojects,Relative locations
+    versions: Seq[(String,Seq[ArtifactLocation])],
     artifactLocations: Seq[ArtifactSha])
   
 /**
@@ -35,9 +35,10 @@ case class ProjectArtifactInfo(
  * 
  * Unfortunately, It's currently used to represent both incoming and outgoing
  * artifacts in builds.   We must edit this so that we have explicit
- * "incoming artifacts to rewire" and "outgoing artifacts for publicaton".
+ * "incoming artifacts to rewire" and "outgoing artifacts for publication".
  */
-case class BuildArtifacts(artifacts: Seq[ArtifactLocation], localRepo: File)
+case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation])], localRepo: File)
+case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
 
 
 /** This represents general information every dbuild must know:
@@ -47,4 +48,4 @@ case class BuildArtifacts(artifacts: Seq[ArtifactLocation], localRepo: File)
  * 
  * Also includes the UUID of this build, in case of direct d-build integration.
  */
-case class BuildInput(artifacts: BuildArtifacts, uuid: String, version: String, outRepo: File)
+case class BuildInput(artifacts: BuildArtifactsIn, uuid: String, version: String, outRepo: File)

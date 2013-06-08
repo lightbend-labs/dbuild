@@ -30,7 +30,7 @@ object ScalaBuildSystem extends BuildSystem {
         ))
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifacts = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
     Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
@@ -52,7 +52,7 @@ object ScalaBuildSystem extends BuildSystem {
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
 
     // Hardcoded results...
-    BuildArtifacts(Seq(
+    BuildArtifactsOut(Seq(("",Seq(
       ArtifactLocation(lib, version),
       ArtifactLocation(reflect, version),
       ArtifactLocation(comp, version),
@@ -63,7 +63,7 @@ object ScalaBuildSystem extends BuildSystem {
       ArtifactLocation(jline, version),
       ArtifactLocation(partest, version),
       ArtifactLocation(continuations, version)
-    ), localRepo)
+    ))), localRepo)
   }
     
     

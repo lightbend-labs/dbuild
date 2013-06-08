@@ -18,8 +18,8 @@ class LocalBuildRunner(builder: BuildRunner,
     resolver: ProjectResolver, 
     repository: Repository) {
   
-  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifacts = 
-    try BuildArtifacts(LocalRepoHelper.getPublishedDeps(build.uuid, repository), target)
+  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifactsOut = 
+    try BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository), target)
     catch {
       case t: RepositoryException => 
         log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)
@@ -27,7 +27,7 @@ class LocalBuildRunner(builder: BuildRunner,
         runLocalBuild(target, build, log)
     } 
   
-  def runLocalBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifacts =
+  def runLocalBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifactsOut =
     local.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       resolver.resolve(build.config, dir, log)
@@ -39,7 +39,7 @@ class LocalBuildRunner(builder: BuildRunner,
       val uuids = build.transitiveDependencyUUIDs.toSeq
       val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
       // TODO - Load this while resolving!
-      val dependencies: BuildArtifacts = BuildArtifacts(artifactLocations, readRepo)
+      val dependencies: BuildArtifactsIn = BuildArtifactsIn(artifactLocations, readRepo)
       val version = build.config.setVersion match {
         case Some(v) => v
         case _ => {

@@ -123,7 +123,7 @@ object ProjectRepoMain {
   def printProjectArtifacts(uuid:String): Unit = {
     val (meta, _) = projectRepo.getProjectInfo(uuid)
     println(" -- Artifacts -- ")
-    val arts = meta.versions
+    val arts = meta.versions.map{_._2}.flatten
     val groups = padStrings(arts map (_.info.organization))
     val names = padStrings(arts map (_.info.name))
     val classifiers = padStrings(arts map (_.info.classifier getOrElse ""))

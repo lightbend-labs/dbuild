@@ -37,11 +37,11 @@ class LocalBuildMain(repos:List[xsbti.Repository], workingDir: File = local.Proj
   val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, logger)))
   // TODO - Look up target elsewhere...
   
-  def build(build: DistributedBuildConfig): BuildArtifacts = {
+  def build(build: DistributedBuildConfig): BuildArtifactsOut = {
     import akka.pattern.ask
     implicit val timeout: Timeout = (4).hours
     val result = builder ? RunLocalBuild(build, targetDir)
-    Await.result(result.mapTo[BuildArtifacts], akka.util.Duration.Inf)
+    Await.result(result.mapTo[BuildArtifactsOut], akka.util.Duration.Inf)
   }
   def dispose(): Unit = system.shutdown()
 }

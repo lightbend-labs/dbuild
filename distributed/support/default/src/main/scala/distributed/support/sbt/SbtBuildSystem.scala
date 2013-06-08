@@ -47,7 +47,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.Proje
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log)
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifacts = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifactsOut = {
     val ec = sbtExpandConfig(project.config)
     val name = project.config.name
     // TODO - Does this work correctly?

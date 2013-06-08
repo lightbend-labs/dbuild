@@ -2,7 +2,7 @@ package distributed
 package build
 
 import java.io.File
-import distributed.project.model.{BuildArtifacts,DistributedBuildConfig}
+import distributed.project.model.{BuildArtifactsOut,DistributedBuildConfig}
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.project.model.ClassLoaderMadness
 

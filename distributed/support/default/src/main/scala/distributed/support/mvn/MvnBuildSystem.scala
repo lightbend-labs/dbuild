@@ -27,7 +27,7 @@ object MvnBuildSystem extends BuildSystem {
       case _ => throw new Exception("Internal error: Maven build config options are the wrong type. Please report")
     }
   
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifacts = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
     log.info("Running maven...")
     val mc = mvnConfig(project.config)
     val pom = 
@@ -39,6 +39,6 @@ object MvnBuildSystem extends BuildSystem {
     if(result.hasExceptions()) {
       result.getExceptions.asScala foreach (t => log.trace(t))
     } else log.info("DONE!")
-    BuildArtifacts(Seq.empty, null)
+    BuildArtifactsOut(Seq.empty, null)
   }
 }

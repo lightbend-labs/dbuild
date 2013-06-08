@@ -54,7 +54,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     LocalRepoHelper.publishBuildMeta(build, repository)
   }
   
-  def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifacts, log: Logger): Unit = 
+  def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn, log: Logger): Unit = 
     try {
       log info "Printing Poms!"
       val poms = repo.PomHelper.makePomStrings(build, arts)
@@ -68,23 +68,23 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   implicit val buildTimeout: Timeout = 4 hours 
 
   // Chain together some Asynch to run this build.
-  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifacts] = {
+  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifactsOut] = {
     implicit val ctx = context.system
     val tdir = local.ProjectDirs.targetDir
-    def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
+    def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifactsOut]): Future[BuildArtifactsOut] = 
       builds match {
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
             newArts <- buildProject(tdir, b, log.newNestedLogger(b.config.name))
-          } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts, arts.localRepo)
+          } yield BuildArtifactsOut(arts.artifacts ++ newArts.artifacts, arts.localRepo)
           runBuild(rest, nextArts)
         case _ => fArts
       }
     
     // TODO - REpository management here!!!!
     local.ProjectDirs.userRepoDirFor(build) { localRepo =>      
-      runBuild(build.repeatableBuilds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
+      runBuild(build.repeatableBuilds.toList, Future(BuildArtifactsOut(Seq.empty, localRepo)))
     }
   }  
   
@@ -105,6 +105,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   
   
   // TODO - Repository Knowledge here
-  def buildProject(target: File, build: RepeatableProjectBuild, logger: Logger): Future[BuildArtifacts] =
-    (builder ? RunBuild(target, build, logger)).mapTo[BuildArtifacts]
+  def buildProject(target: File, build: RepeatableProjectBuild, logger: Logger): Future[BuildArtifactsOut] =
+    (builder ? RunBuild(target, build, logger)).mapTo[BuildArtifactsOut]
 }

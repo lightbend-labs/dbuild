@@ -78,7 +78,7 @@ object LocalRepoHelper {
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
-  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[ArtifactLocation], localRepo: File, remote: Repository): ProjectArtifactInfo = {
+  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[(String,Seq[ArtifactLocation])], localRepo: File, remote: Repository): ProjectArtifactInfo = {
     val arts = publishRawArtifacts(localRepo, remote)
     val info = ProjectArtifactInfo(project, extracted, arts)
     publishProjectMetadata(info, remote)
@@ -127,7 +127,7 @@ object LocalRepoHelper {
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
-    meta.versions
+    meta.versions.map{_._2}.flatten
   }
 
   def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, readRepo: java.io.File, uuids: Seq[String]): Seq[ArtifactLocation] =
@@ -142,7 +142,7 @@ object LocalRepoHelper {
     resolveArtifacts(uuid, remote)((x,y) => x -> y)
     
   /** Checks whether or not a given project (by UUID) is published. */
-  def getPublishedDeps(uuid: String, remote: ReadableRepository): Seq[ArtifactLocation] = {
+  def getPublishedDeps(uuid: String, remote: ReadableRepository):Seq[(String,Seq[ArtifactLocation])] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
     meta.versions

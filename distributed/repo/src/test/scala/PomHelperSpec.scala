@@ -8,7 +8,7 @@ import java.io.File
 
 object PomHelperSpec extends Specification {
   
-  def makeBuildArts: (RepeatableDistributedBuild, BuildArtifacts) = {
+  def makeBuildArts: (RepeatableDistributedBuild, BuildArtifactsIn) = {
     val build = RepeatableDistributedBuild(
             Seq(ProjectConfigAndExtracted(
                 config = ProjectBuildConfig("", "", "", None, None),
@@ -26,7 +26,7 @@ object PomHelperSpec extends Specification {
                 )
             )), None
           )
-      val arts = BuildArtifacts(Seq(
+      val arts = BuildArtifactsIn(Seq(
         ArtifactLocation(ProjectRef("scala-arm", "com.jsuereth"), "1.2")    
       ), new File("."))
       

@@ -96,10 +96,10 @@ object DistributedRunner {
       state2
     } else state
 
-  def makeBuildResults(artifacts: ArtifactMap, localRepo: File): model.BuildArtifacts =
-    model.BuildArtifacts(artifacts, localRepo)
+  def makeBuildResults(artifacts: Seq[(String,ArtifactMap)], localRepo: File): model.BuildArtifactsOut =
+    model.BuildArtifactsOut(artifacts, localRepo)
 
-  def printResults(fileName: String, artifacts: ArtifactMap, localRepo: File): Unit =
+  def printResults(fileName: String, artifacts: Seq[(String,ArtifactMap)], localRepo: File): Unit =
     IO.write(new File(fileName), writeValue(makeBuildResults(artifacts, localRepo)))
 
   def loadBuildConfig: Option[SbtBuildConfig] =
@@ -378,7 +378,7 @@ object DistributedRunner {
     testProject(state4, config)
     // TODO - Use artifacts extracted to deploy!
     publishProjects(state4, config)
-    printResults(resultFile, artifacts map (_._2) flatten , config.info.outRepo)
+    printResults(resultFile, artifacts, config.info.outRepo)
     state4
   }
 

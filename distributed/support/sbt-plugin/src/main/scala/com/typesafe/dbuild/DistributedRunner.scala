@@ -32,7 +32,7 @@ object DistributedRunner {
     result map (_ / n.toDouble)
   }
 
-  def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+  def timedBuildProject(ref: ProjectRef, state: State): (State, (String,ArtifactMap)) = {
     val x = Stated(state)
     def cleanBuild(state: Stated[_]) = {
       val cleaned = state runTask Keys.clean
@@ -41,33 +41,32 @@ object DistributedRunner {
     val perf = averageOf(10)(x)(cleanBuild)
     val y = perf.runTask(extractArtifacts in ref)
     val arts = y.value map (_.copy(buildTime = perf.value))
-    (y.state, arts)
+    (y.state, ref.project -> arts)
   }
-
-  def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+  def untimedBuildProject(ref: ProjectRef, state: State): (State, (String,ArtifactMap)) = {
     val y = Stated(state).runTask(extractArtifacts in ref)
-    (y.state, y.value)
+    (y.state, ref.project -> y.value)
   }
 
   // TODO - Use a specific key that allows posting other kinds of artifacts.
   // Maybe also use a platform-specific task such that we can expose
   // windows artifacts on windows, etc.
-  def buildProject(state: State, config: SbtBuildConfig): (State, ArtifactMap) = {
+  def buildProject(state: State, config: SbtBuildConfig): (State, Seq[(String,ArtifactMap)]) = {
     println("Building project")
     // Stage half the computation, including what we're churning through.
-    val buildAggregate = runAggregate[ArtifactMap](state, config, Seq.empty)(_ ++ _) _
+    val buildAggregate = runAggregate[Seq[(String,ArtifactMap)],(String,ArtifactMap)](state, config, Seq.empty)(_ :+ _) _
     // If we're measuring, run the build several times.
     if (config.config.measurePerformance) buildAggregate(timedBuildProject)
     else buildAggregate(untimedBuildProject)
   }
 
   /** Runs a serious of commands across projects, aggregating results. */
-  private def runAggregate[T](state: State, config: SbtBuildConfig, init: T)(merge: (T, T) => T)(f: (ProjectRef, State) => (State, T)): (State, T) = {
+  private def runAggregate[Q,T](state: State, config: SbtBuildConfig, init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(session.mergeSettings)
     verifySubProjects(config.config.projects, refs)
-    refs.foldLeft[(State, T)](state -> init) {
+    refs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
         if (isValidProject(config.config.projects, ref)) {
           val (state2, next) =
@@ -90,7 +89,7 @@ object DistributedRunner {
   def testProject(state: State, config: SbtBuildConfig): State =
     if (config.config.runTests) {
       println("Testing project")
-      val (state2, _) = runAggregate(state, config, List.empty)(_ ++ _) { (proj, state) =>
+      val (state2, _) = runAggregate[ArtifactMap,ArtifactMap](state, config, List.empty)(_ ++ _) { (proj, state) =>
         val y = Stated(state).runTask(Keys.test in (proj, Test))
         (y.state, List.empty)
       }
@@ -379,7 +378,7 @@ object DistributedRunner {
     testProject(state4, config)
     // TODO - Use artifacts extracted to deploy!
     publishProjects(state4, config)
-    printResults(resultFile, artifacts, config.info.outRepo)
+    printResults(resultFile, artifacts map (_._2) flatten , config.info.outRepo)
     state4
   }
 

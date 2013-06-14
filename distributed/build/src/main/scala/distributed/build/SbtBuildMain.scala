@@ -48,6 +48,9 @@ class SbtBuildMain extends xsbti.AppMain {
       if (uniqueNames.size != allNames.size) {
         sys.error("Project names must be unique! Duplicates found: "+(allNames diff uniqueNames).mkString(","))
       }
+      if (allNames.exists(_.size <3)) {
+        sys.error("Project names must be at least three characters long.")
+      }
       println("Config: " + writeValue(config))
 //      println("Classloader:")
 //      printClassLoaders(getClass.getClassLoader)

@@ -122,19 +122,19 @@ object LocalRepoHelper {
    *   @param localRepo  The location to store artifacts read from the repository.
    *   @return The list of *versioned* artifacts that are now in the local repo.
    */
-  def materializeProjectRepository(uuid: String, remote: ReadableRepository, localRepo: File): Seq[ArtifactLocation] = {
+  def materializeProjectRepository(uuid: String, remote: ReadableRepository, localRepo: File): (Seq[ArtifactLocation],String) = {
     val (meta, _) = resolveArtifacts(uuid, remote) { (resolved, artifact) =>
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
-    meta.versions.map{_._2}.flatten
+    (meta.versions.map{_._2}.flatten,meta.project.config.name+" (at: "+(new java.net.URI(meta.project.config.uri)).getFragment+")")
   }
 
   def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, readRepo: java.io.File, uuids: Seq[String]): Seq[ArtifactLocation] =
     for {
       uuid <- uuids
-      arts = LocalRepoHelper.materializeProjectRepository(uuid, repo, readRepo)
-      _ = diagnostic("Retrieved from project " + uuid + ": " + arts.length + " artifacts")
+      (arts,name) = LocalRepoHelper.materializeProjectRepository(uuid, repo, readRepo)
+      _ = diagnostic("Retrieved from project " + name + ": " + arts.length + " artifacts")
       art <- arts
     } yield art
 

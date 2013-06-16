@@ -15,10 +15,11 @@ object Graphs {
     val sb = new StringBuilder("digraph dependencies {")
     for {
       n <- graph.nodes
+      from = makeName(n.value)
+      _ = sb append (" %s ;" format (from))
       e <- graph.edges(n)
-      from = makeName(e.from.value)
       to = makeName(e.to.value)
-    } sb append ("  %s -> %s;" format (from, to))
+    } sb append (" %s -> %s ;" format (from, to))
     sb append "}"
     sb.toString
   }

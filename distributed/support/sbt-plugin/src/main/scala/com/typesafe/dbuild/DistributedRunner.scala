@@ -64,7 +64,7 @@ object DistributedRunner {
   private def runAggregate[Q,T](state: State, config: SbtBuildConfig, init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
+    val refs = getProjectRefs(extracted)
     verifySubProjects(config.config.projects, refs)
     refs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
@@ -77,7 +77,7 @@ object DistributedRunner {
   }
 
   // verify that the requested projects in SbtBuildConfig actually exist
-  def verifySubProjects(requestedProjects: Seq[String], refs: Set[sbt.ProjectRef]): Unit = {
+  def verifySubProjects(requestedProjects: Seq[String], refs: Seq[sbt.ProjectRef]): Unit = {
     if (requestedProjects.nonEmpty) {
       val availableProjects = refs.map(_.project)
       val notAvailable = requestedProjects.toSet -- availableProjects
@@ -330,7 +330,7 @@ object DistributedRunner {
     dbuildDirectory map { dbuildDir =>
       val repoDir = dbuildDir / "local-repo"
 
-      val refs = getProjectRefs(session.mergeSettings)
+      val refs = getProjectRefs(extracted)
 
       def newSettings(oldSettings:Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
@@ -348,7 +348,7 @@ object DistributedRunner {
     println("Publishing artifacts")
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
+    val refs = getProjectRefs(extracted)
     refs.foldLeft[State](state) {
       case (state, ref) =>
         if (isValidProject(config.config.projects, ref)) {
@@ -363,7 +363,7 @@ object DistributedRunner {
     println("Using resolvers:")
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
+    val refs = getProjectRefs(extracted)
     for {
       ref <- refs
       (_, resolvers) = extracted.runTask(Keys.fullResolvers in ref, state)
@@ -372,7 +372,7 @@ object DistributedRunner {
   }
 
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
-    // printResolvers(state)
+                 printResolvers(state)
     val state3 = fixBuildSettings(config, state)
     val (state4, artifacts) = buildProject(state3, config)
     testProject(state4, config)

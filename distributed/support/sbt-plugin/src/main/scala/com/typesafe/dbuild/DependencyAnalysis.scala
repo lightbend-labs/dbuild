@@ -68,8 +68,8 @@ object DependencyAnalysis {
       else {
         val requestedPreExclusion = allRefs.filter(isValidProject(projects, _))
         if (requestedPreExclusion.intersect(excluded).nonEmpty) {
-          log.warn(requestedPreExclusion.intersect(excluded).
-            mkString("You are simultaneously requesting and excluding some subprojects; they will be excluded: ", ",", ""))
+          log.warn(requestedPreExclusion.intersect(excluded).map{_.project}
+            mkString("*** Warning *** You are simultaneously requesting and excluding some subprojects; they will be excluded. They are: ", ",", ""))
         }
         requestedPreExclusion.diff(excluded)
       }
@@ -183,8 +183,8 @@ object DependencyAnalysis {
         
         // Have some of the needed subprojects been excluded? If so, print a warning.
         if (needed.intersect(excluded.toSet).nonEmpty) {
-          log.warn("*** Warning *** Some subprojects are needed dependencies, but have been explicitly excluded.")
-          log.warn("You will have to build them in a different project.")
+          log.warn("*** Warning *** Some subprojects are dependencies, but have been explicitly excluded.")
+          log.warn("You may have to build them in a different project.")
           log.warn(needed.intersect(excluded.toSet).map { _.project }.mkString("Needed: ", ", ", ""))
         }
 

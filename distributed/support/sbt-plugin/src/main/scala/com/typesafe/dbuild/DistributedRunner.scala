@@ -151,6 +151,8 @@ object DistributedRunner {
     } getOrElse m
   }
 
+  def inNScopes(n:Int) = if(n==1) "in one scope" else "in "+n+" scopes"
+  
   def fixPublishTos2(repoDir: File)(oldSettings: Seq[Setting[_]], log: Logger): Seq[Setting[_]] = {
     val name = "deploy-to-local-repo"
     val mavenRepo = Some(Resolver.file(name, repoDir)(Resolver.mavenStylePatterns))
@@ -177,7 +179,7 @@ object DistributedRunner {
 
     val ptSettings = lastSettingsByScope(oldSettings, Keys.publishTo)
     if (ptSettings.nonEmpty)
-      log.info("Updating publishTo repo in " + ptSettings.length + " scopes")
+      log.info("Updating publishTo repo " + inNScopes(ptSettings.length))
 
     val newSettings1 = {
       ptSettings map { s =>
@@ -192,7 +194,7 @@ object DistributedRunner {
 
     val pmsSettings = lastSettingsByScope(oldSettings ++ newSettings1, Keys.publishMavenStyle)
     if (pmsSettings.nonEmpty)
-      log.info("Found publishMavenStyle in " + pmsSettings.length + " scopes; changing publishTo settings accordingly.")
+      log.info("Found publishMavenStyle " + inNScopes(pmsSettings.length) + "; changing publishTo settings accordingly.")
 
     val newSettings = newSettings1 ++ {
       pmsSettings map { s =>
@@ -231,7 +233,7 @@ object DistributedRunner {
   // applies a generic transformation from Setting[K] (the old one) to another Setting[K] (the new one)
   def fixGenericTransform2[K](k: Scoped)(f: Setting[K] => Setting[K])(msg: String)(oldSettings: Seq[Setting[_]], log: Logger) = {
     val lastSettings = lastSettingsByScope(oldSettings, k)
-    if (lastSettings.nonEmpty) log.info(msg + " in " + lastSettings.length + " scopes")
+    if (lastSettings.nonEmpty) log.info(msg + " " + inNScopes(lastSettings.length))
     lastSettings.asInstanceOf[Seq[Setting[K]]] map f
   }
 

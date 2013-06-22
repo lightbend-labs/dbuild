@@ -140,7 +140,7 @@ log.setLevel(Level.Debug)
       log.debug("The graph contains:")
       allProjGraph.nodes foreach { n =>
         log.debug("Node: " + n.value.project)
-        allProjGraph.edges(n) foreach { e => log.debug("edge: " + n.value.project + " to: " + e.to.value.project + " (" + e.value + ")") }
+        allProjGraph.edges(n) foreach { e => log.debug("edge: " + n.value.project + " to " + e.to.value.project + " (" + e.value + ")") }
       }
 
       // at this point I have my graph with all the relationships, and a list of "requested" projectRefs.
@@ -195,9 +195,12 @@ log.setLevel(Level.Debug)
     }.reverse  // from the leaves to the roots
 
     val deps = getProjectInfos(extracted, state, refs)
+
+    // TODO: why only the root version? We might as well grab that of each subproject
     val Some(version) = Keys.version in currentRef get structure.data
     // return just this version string now; we will append to it more stuff prior to building
-    val meta = model.ExtractedBuildMeta(uri, version, deps)
+
+    val meta = model.ExtractedBuildMeta(uri, version, deps, refs.map{_.project}) // return the new list of subprojects as well!
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
     try output println writeValue(meta)
     finally output.close()

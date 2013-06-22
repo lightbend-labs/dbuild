@@ -47,5 +47,6 @@ case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
  * "version" is the version string that will result from the build
  * 
  * Also includes the UUID of this build, in case of direct d-build integration.
+ * For subproj, see RepeatableProjectBuild.
  */
-case class BuildInput(artifacts: BuildArtifactsIn, uuid: String, version: String, outRepo: File)
+case class BuildInput(artifacts: BuildArtifactsIn, uuid: String, version: String, subproj: Seq[String], outRepo: File)

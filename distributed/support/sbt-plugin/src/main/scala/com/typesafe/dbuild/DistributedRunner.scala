@@ -60,15 +60,19 @@ object DistributedRunner {
     else buildAggregate(untimedBuildProject)
   }
 
-  /** Runs a serious of commands across projects, aggregating results. */
+  /** Runs a series of commands across projects, aggregating results. */
   private def runAggregate[Q,T](state: State, config: SbtBuildConfig, init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(extracted)
-    verifySubProjects(config.config.projects, refs)
+    // this is the list of projects calculated in DependencyAnalysis;
+    // conversely, config.config.projects is the list specified in the
+    // configuration file (in the "extra" section)
+    val projects=config.info.subproj
+    verifySubProjects(projects, refs)
     refs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
-        if (isValidProject(config.config.projects, ref)) {
+        if (isValidProject(projects, ref)) {
           val (state2, next) =
             f(ref, state)
           state2 -> merge(current, next)

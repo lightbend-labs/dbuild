@@ -50,7 +50,7 @@ class LocalBuildRunner(builder: BuildRunner,
         }
       }
       log.info("Running local build: " + build.config + " in directory: " + dir)
-      val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, version, writeRepo), log)
+      val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo), log)
       // TODO - We pull out just the artifacts published and push them again
       LocalRepoHelper.publishProjectArtifactInfo(build, results.artifacts, writeRepo, repository)
       results

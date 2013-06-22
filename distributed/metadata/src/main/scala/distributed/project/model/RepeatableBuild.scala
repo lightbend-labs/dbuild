@@ -22,10 +22,17 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  * extraction. We will later either append to it the UUID of this
  * RepeatableProjectBuild, or use the explicit string provided in
  * the "setVersion" of the ProjectBuildConfig (if not None).
+ * 
+ * Also included (if the build system supports subprojects) is the
+ * actual list of subprojects that should be built, in the correct order.
+ * We use this as a payload, since the RepeatableProjectBuild gets
+ * included in the BuildInput, which eventually gets to the build system
+ * via LocalBuildRunner, when the project is eventually built.
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
                        @JsonProperty("base-version") baseVersion: String,
-                       dependencies: Seq[RepeatableProjectBuild]) {
+                       dependencies: Seq[RepeatableProjectBuild],
+                       subproj: Seq[String]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
   
@@ -65,7 +72,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted], de
             dep <- (subgraph - head)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
-        val headMeta = RepeatableProjectBuild(head.config, head.extracted.version, sortedDeps)
+        val headMeta = RepeatableProjectBuild(head.config, head.extracted.version, sortedDeps, head.extracted.subproj)
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse

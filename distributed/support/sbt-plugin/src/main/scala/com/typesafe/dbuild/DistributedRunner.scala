@@ -79,10 +79,14 @@ object DistributedRunner {
   // verify that the requested projects in SbtBuildConfig actually exist
   def verifySubProjects(requestedProjects: Seq[String], refs: Seq[sbt.ProjectRef]): Unit = {
     if (requestedProjects.nonEmpty) {
+      val uniq=requestedProjects.distinct
+      if (uniq.size != requestedProjects.size) {
+        sys.error("Some subprojects are listed twice: " + (requestedProjects.diff(uniq)).mkString("\"", "\", \"", "\"."))
+      }
       val availableProjects = refs.map(_.project)
       val notAvailable = requestedProjects.toSet -- availableProjects
       if (notAvailable.nonEmpty)
-        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\",\"", "\"."))
+        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\"."))
     }
   }
 

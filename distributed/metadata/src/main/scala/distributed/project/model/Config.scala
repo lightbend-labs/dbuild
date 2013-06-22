@@ -97,7 +97,8 @@ case class SbtExtraConfig(
   options: Seq[String] = Seq.empty,
   // before extraction or building, run these commands ("set" or others)
   commands: Seq[String] = Seq.empty,
-  projects: Seq[String] = Seq.empty // if empty -> build all projects (default)
+  projects: Seq[String] = Seq.empty, // if empty -> build all projects (default)
+  exclude: Seq[String] = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 
 object BuildSystemExtras {

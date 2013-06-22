@@ -40,27 +40,55 @@ object DependencyAnalysis {
         deps)
     }
   /** Actually prints the dependencies to the given file. */
-  def printDependencies(state: State, uri: String, file: String, projects: Seq[String]): Unit = {
+  def printDependencies(state: State, uri: String, file: String, projects: Seq[String], excludedProjects: Seq[String]): Unit = {
+    // TODO: fix logging
     val log = sbt.ConsoleLogger()
 
 log.setLevel(Level.Debug)
 
     val extracted = Project.extract(state)
     import extracted._
-    val allRefs = getProjectRefs(extracted)
-    verifySubProjects(projects, allRefs)
-    val refs = if (projects.isEmpty)
-      allRefs
-    else {
-      val requested = allRefs.filter(isValidProject(projects, _))
 
-      
+    val allRefs = getProjectRefs(extracted)
+
+    // we rely on allRefs to not contain duplicates. Let's insert an additional sanity check, just in case
+    val allRefsNames = allRefs.map{_.project}
+    if (allRefsNames.distinct.size!=allRefsNames.size)
+      sys.error(allRefsNames.mkString("Unexpected internal error: found duplicate name in ProjectRefs. List is: ",",",""))
+
+    verifySubProjects(excludedProjects, allRefs)
+    verifySubProjects(projects, allRefs)
+
+    val excluded = if (excludedProjects.nonEmpty)
+      allRefs.filter(isValidProject(excludedProjects, _))
+    else
+      Seq.empty
+
+    val requested = {
+      if (projects.isEmpty)
+        allRefs.diff(excluded)
+      else {
+        val requestedPreExclusion = allRefs.filter(isValidProject(projects, _))
+        if (requestedPreExclusion.intersect(excluded).nonEmpty) {
+          log.warn(requestedPreExclusion.intersect(excluded).
+            mkString("You are simultaneously requesting and excluding some subprojects; they will be excluded: ", ",", ""))
+        }
+        requestedPreExclusion.diff(excluded)
+      }
+    }
+
+    // this will be the list of ProjectRefs that will actually be build, in the right sequence
+    val refs = {
       
       import graph._
-      // first, let's linearize the list of subprojects. If this is not done,
+      // we need to linearize the list of subprojects. If this is not done,
       // when we try to build one of the (sbt) subprojects, multiple ones can be
       // built at once, which prevents us from finding easily which files are
       // created by which subprojects.
+      // further, we also ned to find the full set of subprojects that are dependencies
+      // of the ones that are listed in the configuration file. That is necessary both
+      // in order to build them in the correct order, as well as in order to find in turn
+      // their external dependencies, which we need to know about.
 
       // I introduce a local implementation of graphs. Please bear with me for a moment.
       // I use SimpleNode[ProjectRef] & SimpleEdge[ProjectRef,DepType]
@@ -69,7 +97,7 @@ log.setLevel(Level.Debug)
       case object Aggregate extends DepType
       class SubProjGraph(projs: Seq[ProjectRef], directDeps: Map[ProjectRef, Set[ProjectRef]],
         directAggregates: Map[ProjectRef, Set[ProjectRef]]) extends Graph[ProjectRef, DepType] {
-        private val nodeMap: Map[ProjectRef, graph.Node[ProjectRef]] = (projs map { p => (p, SimpleNode(p)) }).toMap
+        val nodeMap: Map[ProjectRef, graph.Node[ProjectRef]] = (projs map { p => (p, SimpleNode(p)) }).toMap
         private def wrapEdges(kind: DepType, edges: Map[ProjectRef, Set[ProjectRef]]) = edges map {
           case (from, to) => (nodeMap(from), to map nodeMap map { SimpleEdge(nodeMap(from), _, kind) } toSeq)
         }
@@ -87,32 +115,22 @@ log.setLevel(Level.Debug)
       // topological sort facilities in the graph package. (NB: I could maybe recycle some equivalent sbt
       // facilities, that are certainly in there, somewhere)
 
-      // NB2: I must consider in the ordering BOTH the regular dependencies, as well as the aggregations
-      // That is necessary since running a task on an aggregate will cause in any case all of the subprojects
-      // to run. The net result is actually messy in case I have projects:["a","b","group"] and "group"
-      // aggregates a,b,c,d,e. It will then appear that the artifacts of "group" are those of c,d,e alone.
-      // I wonder whether I should /DISABLE/ aggregates altogether. Or, I can use a better approach: include
-      // the aggregate structure in the publication information saved at the end, then disable aggregation everywhere.
-      // The result is then, for instance in the case above, I would "expand" group into a,b,c,d,e, and publish all of the
-      // artifacts/files for each subproject separately. Of course, if the "deploy" includes "group", I deploy the
-      // whole expanded group. This would actually be the most sensible solution, I believe. OK. It's quite a bit
-      // of work, though.
-      //
-      // Summary: while building the graph, expand the aggregates. Add all of the aggregations as dependencies iun the graph.
-      // While rewriting the settings, disable all of the aggregations. While deploying, expand (recursively) the aggregations, and deploy
-      // the individual projects. While reloading, all of deployed artifacts for a dbuild project are reloaded in a single block, so we
-      // no longer care about aggregates, at that time.
+      // I must consider in the ordering both the inter-project dependencies, as well as the aggregates.
+
+      // utility map from the project name to its ProjectRef
       val allProjRefsMap = (allRefs map { r => (r.project, r) }).toMap
-      // only direct dependencies
+
+      // let's extract sbt inter-project dependencies (only direct ones)
       val allProjDeps = extracted.currentUnit.defined map { p =>
         (allProjRefsMap(p._1), p._2.dependencies map { _.project } toSet)
       }
-      // only direct aggregate relationships (not transitive ones)
-      val allProjs = extracted.structure.allProjects
-      val allProjAggregates = allProjs map { p =>
+      // similarly for the "aggregate" relationship (only direct ones, not the transitive set)
+      // in order to extract it, I go through the list of all ResolvedProjects (in structure.allProjects)
+      val allProjAggregates = extracted.structure.allProjects map { p =>
         (allProjRefsMap(p.id), p.aggregate.toSet)
       } toMap
 
+      // some debugging won't hurt
       log.debug("Dependencies among subprojects:")
       allProjDeps map { case (s, l) => log.debug(s.project + " -> " + l.map { _.project }.mkString(",")) }
       log.debug("Aggregates of subprojects:")
@@ -125,59 +143,57 @@ log.setLevel(Level.Debug)
         allProjGraph.edges(n) foreach { e => log.debug("edge: " + n.value.project + " to: " + e.to.value.project + " (" + e.value + ")") }
       }
 
-      // Let's sort!
+      // at this point I have my graph with all the relationships, and a list of "requested" projectRefs.
+      // I need to find out 1) if there happen to be cycles (as a sanity check), and 2) the transitive set
+      // of projects reachable from "requested", or rather the reachable subgraph.
+
+      // 1) safeTopological() will check for cycles
 
       log.debug("sorting...")
       val allProjSorted = Graphs.safeTopological(allProjGraph)
-      log.debug(allRefs.map { _.project }.mkString("original: ", ", ", "."))
-      log.debug(allProjSorted.map { _.value.project }.mkString("sorted: ", ", ", "."))
+      log.debug(allRefs.map { _.project }.mkString("original: ", ", ", ""))
+      log.debug(allProjSorted.map { _.value.project }.mkString("sorted: ", ", ", ""))
       log.debug("dot: " + Graphs.toDotFile(allProjGraph)({ _.project }))
 
-      // Awesome!
-
-      // now it only becomes a bit tricky to find which subprojects should be included (check transitively the dependencies, and
-      // whether they come from aggregates or dependencies). Also, DISABLE sbt aggregation (I do mine). And at the end, expand
-      // aggregation in order to decide which files should be deployed if the name of an aggregate is requested in the list
-      // of subprojects that should be deployed (and expand recursively!!!!!)
-
+      // Excellent. 2) Now we need the set of projects transitively reachable from "requested".
       
-      // the code below is now obsolete, but we'll need to recycle some of it.
-      
-      // Now: let's investigate whether any other local projects
-      // are dependencies of the requested ones
-      //
-      // TODO: code is too convoluted; can it be simplified a little?
-      val localModulesMap = allRefs map { r => (r.project -> extracted.get(Keys.projectID in r)) } toMap
-      val localModulesIDs = localModulesMap.values.toList
-      val localRefsMap = allRefs map { r => (r.project -> r) } toMap
+      // note that excluded subprojects are only excluded individually: no transitive analysis
+      // is performed on exclusions.
+      // (if we are building all subprojects, and there are no exclusions, skip this step)
 
-      def dependencies(toScan: Seq[String], scanned: Map[String, ModuleID]): Map[String, ModuleID] = {
-        toScan.toList match {
-          case project :: rest =>
-            val id = localModulesMap(project)
-            val Some(Value(deps)) = Project.evaluateTask(Keys.projectDependencies in localRefsMap(project), state)
-            def matc(id: ModuleID, d: ModuleID) =
-              id.name == d.name && id.organization == d.organization && id.revision == d.revision
-            val newDeps = deps filter {
-              d => localModulesIDs.exists { id => matc(id, d) } && !scanned.exists { case (_, id) => matc(id, d) }
-            }
-            // Find the local projects for newDeps:
-            val newDepsNames = newDeps map { d => val Some((n, _)) = localModulesMap.find { case (_, id) => matc(id, d) }; n }
-            val newRest = (rest ++ newDepsNames).distinct
-            val added = newRest diff rest
-            if (added.size != 0)
-              println("Adding these subprojects, as they are needed by " + project + " (and possibly by others): " + added.mkString(", "))
-            dependencies(newRest, scanned + (project -> id))
-          case _ => scanned
+      if (projects.isEmpty && excluded.isEmpty) {
+        val result = allProjSorted.map { _.value }.diff(excluded)
+        log.info(result.map { _.project }.mkString("These subprojects will be built: ", ", ", ""))
+        result
+      } else {
+        val needed = requested.foldLeft(Set[Node[ProjectRef]]()) { (set, node) =>
+          set ++ Graphs.subGraphFrom(allProjGraph)(allProjGraph.nodeMap(node))
+        } map { _.value }
+
+        // In the end, our final sorted list (prior to explicit exclusions) is:
+        // (keep the order of allProjSorted)
+        val result = allProjSorted map { _.value } intersect needed.toSeq diff excluded
+
+        // Have we introduced new subprojects? (likely). If so, warn the user.
+        if (result.size != requested.size) {
+          log.warn("*** Warning *** Some additional subprojects will be included, as they are needed by the requested subprojects.")
+          log.warn(requested.map { _.project }.mkString("Originally requested: ", ", ", ""))
+          log.warn((result diff requested).map { _.project }.mkString("Now added: ", ", ", ""))
+        } else {
+          log.info(result.map { _.project }.mkString("These subprojects will be built: ", ", ", ""))
         }
+        
+        // Have some of the needed subprojects been excluded? If so, print a warning.
+        if (needed.intersect(excluded.toSet).nonEmpty) {
+          log.warn("*** Warning *** Some subprojects are needed dependencies, but have been explicitly excluded.")
+          log.warn("You will have to build them in a different project.")
+          log.warn(needed.intersect(excluded.toSet).map { _.project }.mkString("Needed: ", ", ", ""))
+        }
+
+        result
       }
-      val newProjectNames = projects // dependencies(projects, Map()) map (_._1)
-      if (newProjectNames.size != projects.size) {
-        println("\n*** WARNING ***\n\nFurther subprojects will be included, as they are dependencies of the requested projects.")
-        println((newProjectNames.toList diff projects).mkString("Added: ", ", ", ".\n"))
-      }
-      newProjectNames map localRefsMap
-    }
+    }.reverse  // from the leaves to the roots
+
     val deps = getProjectInfos(extracted, state, refs)
     val Some(version) = Keys.version in currentRef get structure.data
     // return just this version string now; we will append to it more stuff prior to building
@@ -194,8 +210,12 @@ log.setLevel(Level.Debug)
       case "" => Seq.empty
       case projs => projs.split(",").toSeq
     }
+    val excluded = (Option(System.getProperty("project.dependency.metadata.excluded")) getOrElse "") match {
+      case "" => Seq.empty
+      case projs => projs.split(",").toSeq
+    }
     (Option(System.getProperty("project.dependency.metadata.file"))
-        foreach (f => printDependencies(state, uri, f, projects)))
+        foreach (f => printDependencies(state, uri, f, projects, excluded)))
     state
   }
 

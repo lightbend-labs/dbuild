@@ -100,6 +100,7 @@ object DistributedRunner {
     if (config.config.runTests) {
       println("Testing project")
       val (state2, _) = runAggregate[ArtifactMap,ArtifactMap](state, config, List.empty)(_ ++ _) { (proj, state) =>
+        println("Testing: "+proj.project)
         val y = Stated(state).runTask(Keys.test in (proj, Test))
         (y.state, List.empty)
       }

@@ -118,7 +118,7 @@ object Graphs {
       if(current.isEmpty) found
       else {
         val head = current.head
-        def spans = g edges n map (_.to)
+        def spans = g edges head map (_.to)
         if(found contains head) findNodes(current.tail, found)
         else findNodes(current.tail ++ spans, found + head)
       }

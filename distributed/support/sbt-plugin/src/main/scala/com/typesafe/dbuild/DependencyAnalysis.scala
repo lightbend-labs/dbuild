@@ -73,6 +73,8 @@ object DependencyAnalysis {
     // TODO: fix logging
     val log = sbt.ConsoleLogger()
 
+log.setLevel(Level.Debug)
+
     val extracted = Project.extract(state)
     import extracted._
 

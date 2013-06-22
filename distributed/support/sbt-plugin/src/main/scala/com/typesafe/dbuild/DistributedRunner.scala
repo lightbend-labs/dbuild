@@ -33,6 +33,7 @@ object DistributedRunner {
   }
 
   def timedBuildProject(ref: ProjectRef, state: State): (State, (String,ArtifactMap)) = {
+    println("Running timed build: "+ref.project)
     val x = Stated(state)
     def cleanBuild(state: Stated[_]) = {
       val cleaned = state runTask Keys.clean
@@ -44,6 +45,7 @@ object DistributedRunner {
     (y.state, ref.project -> arts)
   }
   def untimedBuildProject(ref: ProjectRef, state: State): (State, (String,ArtifactMap)) = {
+    println("Running build: "+ref.project)
     val y = Stated(state).runTask(extractArtifacts in ref)
     (y.state, ref.project -> y.value)
   }
@@ -357,9 +359,12 @@ object DistributedRunner {
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(extracted)
+    val projects=config.info.subproj
+    verifySubProjects(projects, refs)
     refs.foldLeft[State](state) {
       case (state, ref) =>
-        if (isValidProject(config.config.projects, ref)) {
+        if (isValidProject(projects, ref)) {
+          println("Publishing: "+ref.project)
           val (state2, _) =
             extracted.runTask(Keys.publish in ref, state)
           state2

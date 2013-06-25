@@ -75,20 +75,22 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted], de
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version, sortedDeps, head.extracted.subproj)
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
-    val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse
-    val generatedArtifacts = orderedBuilds flatMap { _.extracted.projects }
+    // we need to check for duplicates /before/ checking for cycles, otherwise spurious
+    // cycles may be detected, leading to unhelpful error messages
+    val generatedArtifacts = builds flatMap { _.extracted.projects }
     val uniq = generatedArtifacts.distinct
     if (uniq.size != generatedArtifacts.size) {
       val conflicting = generatedArtifacts.diff(uniq).distinct
       val conflictSeq = conflicting map {
         a =>
-          (orderedBuilds filter {
+          (builds filter {
             b => b.extracted.projects contains a
           } map { _.config.name }).mkString("  " + a.name + "#" + a.organization + ", from:  ", ", ", "")
       }
       sys.error(conflictSeq.
         mkString("\n\nFatal: multiple projects produce the same artifacts. Please exclude them from some of the conflicting projects.\n\n", "\n", "\n"))
     }
+    val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse
     makeMeta(orderedBuilds, Map.empty, Seq.empty)
   }
     

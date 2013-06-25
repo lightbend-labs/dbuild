@@ -77,6 +77,8 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted], de
       }
     // we need to check for duplicates /before/ checking for cycles, otherwise spurious
     // cycles may be detected, leading to unhelpful error messages
+    // TODO: if model.Project is ever associated with the subproject name, it would be
+    // more appropriate to print the actual subproject name, rather than the Project
     val generatedArtifacts = builds flatMap { _.extracted.projects }
     val uniq = generatedArtifacts.distinct
     if (uniq.size != generatedArtifacts.size) {

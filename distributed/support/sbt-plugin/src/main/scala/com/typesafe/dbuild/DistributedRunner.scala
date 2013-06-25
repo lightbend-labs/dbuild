@@ -33,7 +33,7 @@ object DistributedRunner {
     result map (_ / n.toDouble)
   }
 
-  def timedBuildProject(ref: ProjectRef, state: State): (State, (String,ArtifactMap)) = {
+  def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
     println("Running timed build: "+ref.project)
     val x = Stated(state)
     def cleanBuild(state: Stated[_]) = {
@@ -43,12 +43,12 @@ object DistributedRunner {
     val perf = averageOf(10)(x)(cleanBuild)
     val y = perf.runTask(extractArtifacts in ref)
     val arts = y.value map (_.copy(buildTime = perf.value))
-    (y.state, ref.project -> arts)
+    (y.state, arts)
   }
-  def untimedBuildProject(ref: ProjectRef, state: State): (State, (String,ArtifactMap)) = {
+  def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
     println("Running build: "+ref.project)
     val y = Stated(state).runTask(extractArtifacts in ref)
-    (y.state, ref.project -> y.value)
+    (y.state, y.value)
   }
 
   /** Runs a series of commands across projects, aggregating results. */
@@ -390,14 +390,14 @@ object DistributedRunner {
     val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
     def buildTestPublish(ref: ProjectRef, state6: State): (State, (String,ArtifactMap)) = {
-      val (state7,(name,artifacts)) = buildTask(ref,state6)
+      val (state7,artifacts) = buildTask(ref,state6)
       println("Testing: "+ref.project)
       val (state8,_) = 
         Project.extract(state7).runTask(Keys.test in (ref, Test),state7)
       println("Publishing: "+ref.project)
       val (state9, _) =
             Project.extract(state8).runTask(Keys.publish in ref, state8)
-      (state9,(name,artifacts))
+      (state9,(ref.project,artifacts))
     }
 
     val (state3,artifacts) = buildAggregate(buildTestPublish)

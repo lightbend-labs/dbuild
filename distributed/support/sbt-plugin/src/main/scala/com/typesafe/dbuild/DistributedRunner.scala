@@ -52,14 +52,10 @@ object DistributedRunner {
   }
 
   /** Runs a series of commands across projects, aggregating results. */
-  private def runAggregate[Q,T](state: State, config: SbtBuildConfig, init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
+  private def runAggregate[Q,T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
     val refs = getProjectRefs(extracted)
-    // this is the list of projects calculated in DependencyAnalysis;
-    // conversely, config.config.projects is the list specified in the
-    // configuration file (in the "extra" section)
-    val projects=config.info.subproj
     verifySubProjects(projects, refs)
     refs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
@@ -281,8 +277,9 @@ object DistributedRunner {
       }
     }("Patching the inter-project resolver") _
 
-  def getModuleRevisionIds(state: State, config: SbtBuildConfig, log: Logger) =
-    runAggregate[Seq[ModuleRevisionId], ModuleRevisionId](state, config, Seq.empty) { _ :+ _ } {
+  // extract the ModuleRevisionIds of all the subprojects of this dbuild project (as calculated from exclusions, dependencies, etc).
+  def getModuleRevisionIds(state: State, projects: Seq[String], log: Logger) =
+    runAggregate[Seq[ModuleRevisionId], ModuleRevisionId](state, projects, Seq.empty) { _ :+ _ } {
       (proj, state) => (state, Project.extract(state).evalTask(Keys.ivyModule in proj, state).dependencyMapping(log)._1)
     }._2
     
@@ -352,7 +349,10 @@ object DistributedRunner {
 
       val refs = getProjectRefs(extracted)
 
-      val modules=getModuleRevisionIds(state, config, log)
+      // config.info.subproj is the list of projects calculated in DependencyAnalysis;
+      // conversely, config.config.projects is the list specified in the
+      // configuration file (in the "extra" section)
+      val modules=getModuleRevisionIds(state, config.info.subproj, log)
 
       def newSettings(oldSettings:Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
@@ -386,7 +386,7 @@ object DistributedRunner {
     val refs = getProjectRefs(Project.extract(state2))
     val projects=config.info.subproj
     verifySubProjects(projects, refs)
-    val buildAggregate = runAggregate[Seq[(String,ArtifactMap)],(String,ArtifactMap)](state2, config, Seq.empty)(_ :+ _) _
+    val buildAggregate = runAggregate[Seq[(String,ArtifactMap)],(String,ArtifactMap)](state2, config.info.subproj, Seq.empty)(_ :+ _) _
 
     // If we're measuring, run the build several times.
     val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
@@ -418,25 +418,27 @@ object DistributedRunner {
     results getOrElse state
   }
 
-  def loadBuildArtifacts(readRepo: File, builduuid: String, thisProject: Option[String], log: Logger) = {
+  def loadBuildArtifacts(readRepo: File, builduuid: String, thisProject: String, log: Logger) = {
     import distributed.repo.core._
     val cache = Repository.default
-    val uuids = (for {
+    val project = findRepeatableProjectBuild(builduuid, thisProject, log)
+    log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
+    val uuids = project.transitiveDependencyUUIDs.toSeq
+    (project,LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids))
+  }
+
+  def findRepeatableProjectBuild(builduuid: String, thisProject: String, log: Logger) = {
+    import distributed.repo.core._
+    log.info("Finding information for project " + thisProject + " in build " + builduuid)
+    val cache = Repository.default
+    val projects = (for {
       build <- LocalRepoHelper.readBuildMeta(builduuid, cache).toSeq
       allProjects = build.repeatableBuilds
-      uuid <- thisProject match {
-        case Some(proj) => for {
-          project <- allProjects.filter(_.config.name == proj)
-          _ = log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
-          uuid <- project.transitiveDependencyUUIDs
-        } yield uuid
-        case None => {
-          log.info("Retrieving all artifacts from " + allProjects.length + " projects")
-          build.repeatableBuilds map { _.uuid }
-        }
-      }
-    } yield uuid).distinct
-    LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids)
+      project <- allProjects.filter(_.config.name == thisProject)
+    } yield project) // we know project names are unique
+    if (projects.isEmpty) sys.error("There is no project named "+thisProject+" in build "+builduuid)
+    if (projects.size >1) sys.error("Unexpected internal error; found multiple projects named "+thisProject+" in build "+builduuid)
+    projects.head
   }
 
   private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
@@ -479,14 +481,14 @@ object DistributedRunner {
     // is not a task. I could add a wrapper task around the command, though.
 
     // TODO - add help text
-    if (args.length < 1 || args.length > 2) sys.error("Usage: dbuild-setup <builduuid> [<thisProjectInDsbt>]")
+    if (args.length != 2) sys.error("Usage: dbuild-setup <builduuid> <projectNameInDBuild>")
     val builduuid = args(0)
+    val project = args(1)
 
     // The dbuild-setup command accepts a builduuid, and optionally a string that should match the project string
     // of the current sbt project, as specified in the .dbuild project file (which may be arbitrary)
     // If specified, download the dependencies of the specified project; if not specified, download all of the
     // artifacts of all the projects listed under builduuid.
-    val project = if (args.length == 1) None else Some(args(1))
     val extracted = Project.extract(state)
     import extracted._
     val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
@@ -495,15 +497,12 @@ object DistributedRunner {
     // right subdir before entering sbt, in any case, so we should be ok
     dbuildDirectory map { dbuildDir =>
       val repoDir = dbuildDir / "local-repo"
-      val arts = loadBuildArtifacts(repoDir, builduuid, project, log)
+      val (proj,arts) = loadBuildArtifacts(repoDir, builduuid, project, log)
       if (arts.isEmpty) {
-        log.warn("No artifacts are dependencies" + { project map (" of project " + _) getOrElse "" } + " in build " + builduuid)
+        log.warn("No artifacts are dependencies of project " + project + " in build " + builduuid)
         state
       } else {
-        // FIXME: currently broken. I take the list of projects (the calculated one) to the buildcmd via
-        // the SbtBuildConfig, which includes a BuildInput, which includes the list of projects. But I have
-        // no such elements here, hence I'll have to come up with some other approach
-        val modules=Seq[ModuleRevisionId]() // val modules=getModuleRevisionIds(state, config, log)
+        val modules=getModuleRevisionIds(state, proj.subproj, log)
         newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _))
       }
     } getOrElse {
@@ -513,7 +512,7 @@ object DistributedRunner {
   }
 
   private def buildIt = Command.command("dbuild-build")(buildCmd)
-  private def setItUp = Command.args("dbuild-setup", "<builduuid> [<thisProjectInDsbt>]")(setupCmd)
+  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(setupCmd)
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
   private def comment = Command.args("//", "// [comments]") { (state, _) => state }
 

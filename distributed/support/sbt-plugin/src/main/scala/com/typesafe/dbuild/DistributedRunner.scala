@@ -227,8 +227,10 @@ object DistributedRunner {
   def fixCrossVersions2 =
     fixGeneric2(Keys.crossVersion, "Disabling cross versioning") { _ => CrossVersion.Disabled }
 
+  // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
+  // This is necessary in case some required inter-project dependencies have been explicitly excluded.
   def fixDependencies2(locs: Seq[model.ArtifactLocation]) =
-    fixGeneric2(Keys.libraryDependencies, "Updating library dependencies") { old => old map fixModule(locs) }
+    fixGeneric2(Keys.allDependencies, "Updating dependencies") { _ map { old => old map fixModule(locs) } }
 
   def fixVersions2(config: SbtBuildConfig) =
     fixGeneric2(Keys.version, "Updating version strings") { _ => config.info.version }

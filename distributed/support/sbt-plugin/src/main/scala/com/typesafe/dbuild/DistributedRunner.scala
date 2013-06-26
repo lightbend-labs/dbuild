@@ -391,15 +391,16 @@ object DistributedRunner {
     // If we're measuring, run the build several times.
     val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
-    def buildTestPublish(ref: ProjectRef, state6: State): (State, (String,ArtifactMap)) = {
-      val (state7,artifacts) = buildTask(ref,state6)
-      println("Testing: "+ref.project)
-      val (state8,_) = 
-        Project.extract(state7).runTask(Keys.test in (ref, Test),state7)
-      println("Publishing: "+ref.project)
+    def buildTestPublish(ref: ProjectRef, state6: State): (State, (String, ArtifactMap)) = {
+      val (state7, artifacts) = buildTask(ref, state6)
+      val state8 = if (config.config.runTests) {
+        println("Testing: " + ref.project)
+        Project.extract(state7).runTask(Keys.test in (ref, Test), state7)._1
+      } else state7
+      println("Publishing: " + ref.project)
       val (state9, _) =
-            Project.extract(state8).runTask(Keys.publish in ref, state8)
-      (state9,(ref.project,artifacts))
+        Project.extract(state8).runTask(Keys.publish in ref, state8)
+      (state9, (ref.project, artifacts))
     }
 
     val (state3,artifacts) = buildAggregate(buildTestPublish)

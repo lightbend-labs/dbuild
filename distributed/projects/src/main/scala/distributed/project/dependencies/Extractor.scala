@@ -54,6 +54,8 @@ class Extractor(
     	logger.debug("Dependencies are cached!")
     	val deps = readValue[ExtractedBuildMeta](file)
     	logger.debug("Dependencies = " + writeValue(deps))
+    	if (deps.subproj.nonEmpty)
+    	  logger.info(deps.subproj.mkString("The following subprojects will be built in project "+config.name+": ",", ",""))
     	ProjectConfigAndExtracted(config, deps)
       } catch {
         case _: Exception => f

@@ -57,6 +57,24 @@ object DependencyAnalysis {
     verifySubProjects(excludedProjects, allRefs)
     verifySubProjects(projects, allRefs)
 
+    
+    // Some additional hacks will be required, due to sbt's default projects. Such projects may take names like "default-b46525" (in 0.12 or 0.13),
+    // or the name of the build directory (in 0.13). In case of plugins in 0.13, a default sbt project may have other names, but we are not concerned
+    // with that at the moment.
+    // Since dbuild uses different directories, the default project names have the unpleasant tendency to change. In order to recognize them, we
+    // need to discover them and normalize their names to something recognizable across extractions/builds.
+    // In particular, with 0.13 the default project name may be the name of the build directory. Both extraction and build use, as their checkout
+    // directory, a uuid. That will makes the default project name pretty unique and easy to recognize.
+    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
+    val defaultIDs = Seq(Build.defaultID(baseDirectory),StringUtilities.normalize(baseDirectory.getName))
+    println(defaultIDs)
+    val defaultName = "default-project-id-dbuild-normalized"
+    def normalizedProjectName(s:String)= if (defaultIDs contains s) defaultName else s
+    def normalizedProjectNames(r:Seq[ProjectRef]) = r map {p => normalizedProjectName(p.project)}
+
+    
+    // now let's get the list of projects excluded and requested, as specified in the dbuild configuration file
+    
     val excluded = if (excludedProjects.nonEmpty)
       allRefs.filter(isValidProject(excludedProjects, _))
     else
@@ -74,7 +92,7 @@ object DependencyAnalysis {
         requestedPreExclusion.diff(excluded)
       }
     }
-
+    
     // this will be the list of ProjectRefs that will actually be build, in the right sequence
     val refs = {
       
@@ -161,7 +179,7 @@ object DependencyAnalysis {
 
       if (projects.isEmpty && excluded.isEmpty) {
         val result = allProjSorted.map { _.value }.diff(excluded)
-        log.info(result.map { _.project }.mkString("These subprojects will be built: ", ", ", ""))
+        log.info(normalizedProjectNames(result).mkString("These subprojects will be built: ", ", ", ""))
         result
       } else {
         val needed = requested.foldLeft(Set[Node[ProjectRef]]()) { (set, node) =>
@@ -175,17 +193,17 @@ object DependencyAnalysis {
         // Have we introduced new subprojects? (likely). If so, warn the user.
         if (result.size != requested.size) {
           log.warn("*** Warning *** Some additional subprojects will be included, as they are needed by the requested subprojects.")
-          log.warn(requested.map { _.project }.mkString("Originally requested: ", ", ", ""))
-          log.warn((result diff requested).map { _.project }.mkString("Now added: ", ", ", ""))
+          log.warn(normalizedProjectNames(requested).mkString("Originally requested: ", ", ", ""))
+          log.warn(normalizedProjectNames(result diff requested).mkString("Now added: ", ", ", ""))
         } else {
-          log.info(result.map { _.project }.mkString("These subprojects will be built: ", ", ", ""))
+          log.info(normalizedProjectNames(result).mkString("These subprojects will be built: ", ", ", ""))
         }
         
         // Have some of the needed subprojects been excluded? If so, print a warning.
         if (needed.intersect(excluded.toSet).nonEmpty) {
           log.warn("*** Warning *** Some subprojects are dependencies, but have been explicitly excluded.")
           log.warn("You may have to build them in a different project.")
-          log.warn(needed.intersect(excluded.toSet).map { _.project }.mkString("Needed: ", ", ", ""))
+          log.warn(normalizedProjectNames(needed.intersect(excluded.toSet).toSeq).mkString("Needed: ", ", ", ""))
         }
 
         result
@@ -198,7 +216,7 @@ object DependencyAnalysis {
     val Some(version) = Keys.version in currentRef get structure.data
     // return just this version string now; we will append to it more stuff prior to building
 
-    val meta = model.ExtractedBuildMeta(uri, version, deps, refs.map{_.project}) // return the new list of subprojects as well!
+    val meta = model.ExtractedBuildMeta(uri, version, deps, normalizedProjectNames(refs)) // return the new list of subprojects as well!
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
     try output println writeValue(meta)
     finally output.close()

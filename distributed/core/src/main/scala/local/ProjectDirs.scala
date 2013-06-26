@@ -21,15 +21,13 @@ object ProjectDirs {
   
   def useProjectExtractionDirectory[A](build: ProjectBuildConfig, tdir: File = targetDir)(f: File => A) = {
     val dir = new File(tdir, "projects")
-    // TODO - just build name?
-    val projdir = new File(dir, build.name)
+    val projdir = new File(dir, build.uuid)
     projdir.mkdirs()
     f(projdir)
   }
   
   def useProjectUniqueBuildDir[A](uuid: String, tdir: File = targetDir)(f: File => A) = {
     val dir = new File(tdir, "project-builds")
-    // TODO - just build name?
     val projdir = new File(dir, uuid)
     projdir.mkdirs()
     f(projdir)

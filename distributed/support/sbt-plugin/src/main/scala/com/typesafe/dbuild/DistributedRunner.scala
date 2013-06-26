@@ -6,6 +6,7 @@ import distributed.support.sbt.SbtBuildConfig
 import distributed.project.model.ArtifactLocation
 import distributed.project.model.Utils.{ writeValue, readValue }
 import StateHelpers._
+import DependencyAnalysis.{normalizedProjectNames,normalizedProjectName}
 import DistributedBuildKeys._
 import NameFixer.fixName
 import java.io.File
@@ -13,10 +14,6 @@ import distributed.repo.core.LocalArtifactMissingException
 import org.apache.ivy.core.module.id.ModuleRevisionId
 
 object DistributedRunner {
-
-  // TODO - Config helper!
-  def isValidProject(projects: Seq[String], ref: ProjectRef): Boolean =
-    projects.isEmpty || (projects exists (_ == ref.project))
 
   def timed[A](f: => Stated[A]): Stated[Long] = {
     val start = java.lang.System.currentTimeMillis
@@ -55,11 +52,12 @@ object DistributedRunner {
   private def runAggregate[Q,T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
+    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
     val refs = getProjectRefs(extracted)
-    verifySubProjects(projects, refs)
+    verifySubProjects(projects, refs, baseDirectory)
     refs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
-        if (isValidProject(projects, ref)) {
+        if (isValidProject(projects, ref, baseDirectory)) {
           val (state2, next) =
             f(ref, state)
           state2 -> merge(current, next)
@@ -68,18 +66,22 @@ object DistributedRunner {
   }
 
   // verify that the requested projects in SbtBuildConfig actually exist
-  def verifySubProjects(requestedProjects: Seq[String], refs: Seq[sbt.ProjectRef]): Unit = {
+  def verifySubProjects(requestedProjects: Seq[String], refs: Seq[sbt.ProjectRef], baseDirectory: File): Unit = {
     if (requestedProjects.nonEmpty) {
       val uniq=requestedProjects.distinct
       if (uniq.size != requestedProjects.size) {
         sys.error("Some subprojects are listed twice: " + (requestedProjects.diff(uniq)).mkString("\"", "\", \"", "\"."))
       }
-      val availableProjects = refs.map(_.project)
+      val availableProjects = normalizedProjectNames(refs,baseDirectory)
       val notAvailable = requestedProjects.toSet -- availableProjects
       if (notAvailable.nonEmpty)
         sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\"."))
     }
   }
+
+  def isValidProject(projects: Seq[String], ref: ProjectRef, baseDirectory: File): Boolean =
+    projects.isEmpty || (projects exists (_ == normalizedProjectName(ref.project, baseDirectory)))
+
 
   def makeBuildResults(artifacts: Seq[(String,ArtifactMap)], localRepo: File): model.BuildArtifactsOut =
     model.BuildArtifactsOut(artifacts, localRepo)
@@ -384,8 +386,6 @@ object DistributedRunner {
 
     println("Building project...")
     val refs = getProjectRefs(Project.extract(state2))
-    val projects=config.info.subproj
-    verifySubProjects(projects, refs)
     val buildAggregate = runAggregate[Seq[(String,ArtifactMap)],(String,ArtifactMap)](state2, config.info.subproj, Seq.empty)(_ :+ _) _
 
     // If we're measuring, run the build several times.

@@ -39,6 +39,27 @@ object DependencyAnalysis {
         artifacts,
         deps)
     }
+
+
+  // TODO: move to a different file; the two routines below are used both by DependencyAnalysis and by DistributedRunner
+  // Also move there verifySubProjects() and isValidProject().
+
+  // Some additional hacks will be required, due to sbt's default projects. Such projects may take names like "default-b46525" (in 0.12 or 0.13),
+  // or the name of the build directory (in 0.13). In case of plugins in 0.13, a default sbt project may have other names, but we are not concerned
+  // with that at the moment.
+  // Since dbuild uses different directories, the default project names may change along the way. In order to recognize them, we
+  // need to discover them and normalize their names to something recognizable across extractions/builds.
+  // In particular, with 0.13 the default project name may be the name of the build directory. Both extraction and build use, as their checkout
+  // directory, a uuid. That will makes the default project name pretty unique and easy to recognize.
+  def normalizedProjectName(s: String, baseDirectory: File) = {
+    val defaultIDs = Seq(Build.defaultID(baseDirectory), StringUtilities.normalize(baseDirectory.getName))
+    val defaultName = "default-sbt-project"
+    if (defaultIDs contains s) defaultName else s
+  }
+  def normalizedProjectNames(r: Seq[ProjectRef], baseDirectory: File) = r map { p => normalizedProjectName(p.project, baseDirectory) }
+
+
+
   /** Actually prints the dependencies to the given file. */
   def printDependencies(state: State, uri: String, file: String, projects: Seq[String], excludedProjects: Seq[String]): Unit = {
     // TODO: fix logging
@@ -47,6 +68,9 @@ object DependencyAnalysis {
     val extracted = Project.extract(state)
     import extracted._
 
+    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
+    def normalizedProjectNames(r:Seq[ProjectRef])=DependencyAnalysis.normalizedProjectNames(r,baseDirectory)
+
     val allRefs = getProjectRefs(extracted)
 
     // we rely on allRefs to not contain duplicates. Let's insert an additional sanity check, just in case
@@ -54,29 +78,13 @@ object DependencyAnalysis {
     if (allRefsNames.distinct.size!=allRefsNames.size)
       sys.error(allRefsNames.mkString("Unexpected internal error: found duplicate name in ProjectRefs. List is: ",",",""))
 
-    verifySubProjects(excludedProjects, allRefs)
-    verifySubProjects(projects, allRefs)
+    verifySubProjects(excludedProjects, allRefs, baseDirectory)
+    verifySubProjects(projects, allRefs, baseDirectory)
 
-    
-    // Some additional hacks will be required, due to sbt's default projects. Such projects may take names like "default-b46525" (in 0.12 or 0.13),
-    // or the name of the build directory (in 0.13). In case of plugins in 0.13, a default sbt project may have other names, but we are not concerned
-    // with that at the moment.
-    // Since dbuild uses different directories, the default project names have the unpleasant tendency to change. In order to recognize them, we
-    // need to discover them and normalize their names to something recognizable across extractions/builds.
-    // In particular, with 0.13 the default project name may be the name of the build directory. Both extraction and build use, as their checkout
-    // directory, a uuid. That will makes the default project name pretty unique and easy to recognize.
-    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
-    val defaultIDs = Seq(Build.defaultID(baseDirectory),StringUtilities.normalize(baseDirectory.getName))
-    println(defaultIDs)
-    val defaultName = "default-project-id-dbuild-normalized"
-    def normalizedProjectName(s:String)= if (defaultIDs contains s) defaultName else s
-    def normalizedProjectNames(r:Seq[ProjectRef]) = r map {p => normalizedProjectName(p.project)}
-
-    
     // now let's get the list of projects excluded and requested, as specified in the dbuild configuration file
     
     val excluded = if (excludedProjects.nonEmpty)
-      allRefs.filter(isValidProject(excludedProjects, _))
+      allRefs.filter(isValidProject(excludedProjects, _, baseDirectory))
     else
       Seq.empty
 
@@ -84,9 +92,9 @@ object DependencyAnalysis {
       if (projects.isEmpty)
         allRefs.diff(excluded)
       else {
-        val requestedPreExclusion = allRefs.filter(isValidProject(projects, _))
+        val requestedPreExclusion = allRefs.filter(isValidProject(projects, _, baseDirectory))
         if (requestedPreExclusion.intersect(excluded).nonEmpty) {
-          log.warn(requestedPreExclusion.intersect(excluded).map{_.project}
+          log.warn(normalizedProjectNames(requestedPreExclusion.intersect(excluded))
             mkString("*** Warning *** You are simultaneously requesting and excluding some subprojects; they will be excluded. They are: ", ",", ""))
         }
         requestedPreExclusion.diff(excluded)

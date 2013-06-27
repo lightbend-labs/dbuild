@@ -5,7 +5,7 @@ import distributed.project.model
 import StateHelpers._
 import NameFixer.fixName
 import distributed.project.model.Utils.writeValue
-import DistributedRunner.{isValidProject,verifySubProjects}
+import DistributedRunner.{getSortedProjects,verifySubProjects}
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
@@ -82,9 +82,9 @@ object DependencyAnalysis {
     verifySubProjects(projects, allRefs, baseDirectory)
 
     // now let's get the list of projects excluded and requested, as specified in the dbuild configuration file
-    
+    // note that getSortedProjects() helpfully checks all arguments for sanity, printing messages if necessary
     val excluded = if (excludedProjects.nonEmpty)
-      allRefs.filter(isValidProject(excludedProjects, _, baseDirectory))
+      getSortedProjects(excludedProjects, allRefs, baseDirectory)
     else
       Seq.empty
 
@@ -92,7 +92,7 @@ object DependencyAnalysis {
       if (projects.isEmpty)
         allRefs.diff(excluded)
       else {
-        val requestedPreExclusion = allRefs.filter(isValidProject(projects, _, baseDirectory))
+        val requestedPreExclusion = getSortedProjects(projects, allRefs, baseDirectory)
         if (requestedPreExclusion.intersect(excluded).nonEmpty) {
           log.warn(normalizedProjectNames(requestedPreExclusion.intersect(excluded))
             mkString("*** Warning *** You are simultaneously requesting and excluding some subprojects; they will be excluded. They are: ", ",", ""))
@@ -218,6 +218,8 @@ object DependencyAnalysis {
       }
     }.reverse  // from the leaves to the roots
 
+    if (refs.isEmpty) sys.error("Fatal: no subprojects will be compiled in this project")
+    
     val deps = getProjectInfos(extracted, state, refs)
 
     // TODO: why only the root version? We might as well grab that of each subproject

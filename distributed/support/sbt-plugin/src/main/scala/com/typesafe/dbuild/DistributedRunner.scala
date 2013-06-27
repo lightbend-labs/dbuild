@@ -49,19 +49,18 @@ object DistributedRunner {
   }
 
   /** Runs a series of commands across projects, aggregating results. */
-  private def runAggregate[Q,T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
+  private def runAggregate[Q, T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
     val refs = getProjectRefs(extracted)
-    verifySubProjects(projects, refs, baseDirectory)
-    refs.foldLeft[(State, Q)](state -> init) {
+    // I need a subset of refs, a sequence in the order specified by "project"
+    val newRefs = getSortedProjects(projects, refs, baseDirectory)
+    newRefs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
-        if (isValidProject(projects, ref, baseDirectory)) {
-          val (state2, next) =
-            f(ref, state)
-          state2 -> merge(current, next)
-        } else state -> current // TODO - if a project listed in the build does not exist, or list empty, it should really abort
+        val (state2, next) =
+          f(ref, state)
+        state2 -> merge(current, next)
     }
   }
 
@@ -76,12 +75,13 @@ object DistributedRunner {
       val notAvailable = requestedProjects.toSet -- availableProjects
       if (notAvailable.nonEmpty)
         sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\"."))
-    }
+    } else  sys.error("Internal error: subproject list is empty")
   }
 
-  def isValidProject(projects: Seq[String], ref: ProjectRef, baseDirectory: File): Boolean =
-    projects.isEmpty || (projects exists (_ == normalizedProjectName(ref.project, baseDirectory)))
-
+  def getSortedProjects(projects: Seq[String], refs: Seq[ProjectRef], baseDirectory: File): Seq[ProjectRef] = {
+    verifySubProjects(projects, refs, baseDirectory)
+    projects map { p => refs.find(ref => (p == normalizedProjectName(ref.project, baseDirectory))).get }
+  }
 
   def makeBuildResults(artifacts: Seq[(String,ArtifactMap)], localRepo: File): model.BuildArtifactsOut =
     model.BuildArtifactsOut(artifacts, localRepo)

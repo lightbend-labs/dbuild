@@ -273,9 +273,10 @@ object DistributedRunner {
       val sc = r.key.scope
       Keys.projectResolver in sc <<= (Keys.projectDescriptors in sc) map {
         m => 
-          new RawRepository(new ProjectResolver("inter-project", m.filter {
+          val k=m.filter {
             case (a,_) => modules exists { b => b.getOrganisation == a.getOrganisation && fixName(b.getName) == a.getName }
-          }))
+          }
+          new RawRepository(new ProjectResolver("inter-project", k))
       }
     }("Patching the inter-project resolver") _
 
@@ -364,7 +365,28 @@ object DistributedRunner {
 
     } getOrElse {
       sys.error("Key baseDirectory is undefined in ThisBuild: aborting.")
-      state
+    }
+  }
+
+  def printPR(state: State): Unit = {
+    val extracted = Project.extract(state)
+    import extracted._
+    val refs = getProjectRefs(extracted)
+    refs foreach { ref =>
+      println(" PROJECT: "+ref.project)
+      println("inter-project resolver:")
+      val resolvers = extracted.runTask(Keys.fullResolvers in ref, state)._2
+      resolvers.filter(_.name=="inter-project") foreach { r=>
+        println("\t%s: (%s) - %s" format (ref.project, r.name, r.toString))
+      }
+      println("projectResolver:")
+      val resolver = extracted.runTask(Keys.projectResolver in ref, state)._2
+      println("\tprojectResolver in %s: (%s)" format (ref.project, resolver))
+      println("inter-project resolver (after the fact):")
+      val resolvers2 = extracted.runTask(Keys.fullResolvers in ref, state)._2
+      resolvers2.filter(_.name=="inter-project") foreach { r=>
+        println("\t%s: (%s) - %s" format (ref.project, r.name, r.toString))
+      }
     }
   }
 
@@ -381,8 +403,9 @@ object DistributedRunner {
   }
 
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
-    // printResolvers(state)
     val state2 = fixBuildSettings(config, state)
+//    printResolvers(state2)
+//    printPR(state2)
 
     println("Building project...")
     val refs = getProjectRefs(Project.extract(state2))

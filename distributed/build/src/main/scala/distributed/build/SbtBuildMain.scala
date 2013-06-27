@@ -55,7 +55,10 @@ class SbtBuildMain extends xsbti.AppMain {
 //      println("Classloader:")
 //      printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(repos, configuration.baseDirectory)
-      try main build config
+      try {
+        main build config
+        println("All done.")
+      }
       finally main.dispose()
       Exit(0)
     } catch {

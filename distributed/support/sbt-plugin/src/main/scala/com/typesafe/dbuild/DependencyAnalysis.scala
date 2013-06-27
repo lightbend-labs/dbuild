@@ -78,11 +78,10 @@ object DependencyAnalysis {
     if (allRefsNames.distinct.size!=allRefsNames.size)
       sys.error(allRefsNames.mkString("Unexpected internal error: found duplicate name in ProjectRefs. List is: ",",",""))
 
-    verifySubProjects(excludedProjects, allRefs, baseDirectory)
-    verifySubProjects(projects, allRefs, baseDirectory)
-
     // now let's get the list of projects excluded and requested, as specified in the dbuild configuration file
-    // note that getSortedProjects() helpfully checks all arguments for sanity, printing messages if necessary
+    // note that getSortedProjects() already calls verifySubProjects(), which checks all arguments for sanity, printing messages
+    // if anything in the passed projects list is incorrect. But don't call getSortedProjects() or verifySubProjects() if the
+    // projects list is empty.
     val excluded = if (excludedProjects.nonEmpty)
       getSortedProjects(excludedProjects, allRefs, baseDirectory)
     else

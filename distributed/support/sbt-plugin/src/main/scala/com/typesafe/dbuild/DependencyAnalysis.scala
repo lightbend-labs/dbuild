@@ -154,11 +154,11 @@ object DependencyAnalysis {
       } toMap
 
       // some debugging won't hurt
-      log.debug("Dependencies among subprojects:")
-      allProjDeps map { case (s, l) => log.debug(s.project + " -> " + l.map { _.project }.mkString(",")) }
-      log.debug("Aggregates of subprojects:")
-      allProjAggregates map { case (s, l) => log.debug(s.project + " -> " + l.map { _.project }.mkString(",")) }
-      log.debug("Building graph...")
+      log.info("Dependencies among subprojects:")
+      allProjDeps map { case (s, l) => log.info(s.project + " -> " + l.map { _.project }.mkString(",")) }
+      log.info("Aggregates of subprojects:")
+      allProjAggregates map { case (s, l) => log.info(s.project + " -> " + l.map { _.project }.mkString(",")) }
+      log.info("Building graph...")
       val allProjGraph = new SubProjGraph(allRefs, allProjDeps, allProjAggregates)
       log.debug("The graph contains:")
       allProjGraph.nodes foreach { n =>
@@ -172,7 +172,7 @@ object DependencyAnalysis {
 
       // 1) safeTopological() will check for cycles
 
-      log.debug("sorting...")
+      log.info("sorting...")
       val allProjSorted = Graphs.safeTopological(allProjGraph)
       log.debug(allRefs.map { _.project }.mkString("original: ", ", ", ""))
       log.debug(allProjSorted.map { _.value.project }.mkString("sorted: ", ", ", ""))

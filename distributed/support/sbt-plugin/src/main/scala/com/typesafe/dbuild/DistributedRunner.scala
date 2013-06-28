@@ -80,7 +80,7 @@ object DistributedRunner {
 
   def getSortedProjects(projects: Seq[String], refs: Seq[ProjectRef], baseDirectory: File): Seq[ProjectRef] = {
     verifySubProjects(projects, refs, baseDirectory)
-    projects map { p => refs.find(ref => (p == normalizedProjectName(ref.project, baseDirectory))).get }
+    projects map { p => refs.find(ref => (p == normalizedProjectName(ref, baseDirectory))).get }
   }
 
   def makeBuildResults(artifacts: Seq[(String,ArtifactMap)], localRepo: File): model.BuildArtifactsOut =

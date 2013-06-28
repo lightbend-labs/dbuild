@@ -51,12 +51,15 @@ object DependencyAnalysis {
   // need to discover them and normalize their names to something recognizable across extractions/builds.
   // In particular, with 0.13 the default project name may be the name of the build directory. Both extraction and build use, as their checkout
   // directory, a uuid. That will makes the default project name pretty unique and easy to recognize.
-  def normalizedProjectName(s: String, baseDirectory: File) = {
+  //
+  // Use these normalization routines only when printing or comparing
+  //
+  def normalizedProjectName(s: ProjectRef, baseDirectory: File) = {
     val defaultIDs = Seq(Build.defaultID(baseDirectory), StringUtilities.normalize(baseDirectory.getName))
     val defaultName = "default-sbt-project"
-    if (defaultIDs contains s) defaultName else s
+    if (defaultIDs contains s.project) defaultName else s.project
   }
-  def normalizedProjectNames(r: Seq[ProjectRef], baseDirectory: File) = r map { p => normalizedProjectName(p.project, baseDirectory) }
+  def normalizedProjectNames(r: Seq[ProjectRef], baseDirectory: File) = r map { p => normalizedProjectName(p, baseDirectory) }
 
 
 
@@ -70,11 +73,12 @@ object DependencyAnalysis {
 
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
     def normalizedProjectNames(r:Seq[ProjectRef])=DependencyAnalysis.normalizedProjectNames(r,baseDirectory)
+    def normalizedProjectName(p:ProjectRef)=DependencyAnalysis.normalizedProjectName(p,baseDirectory)
 
     val allRefs = getProjectRefs(extracted)
 
     // we rely on allRefs to not contain duplicates. Let's insert an additional sanity check, just in case
-    val allRefsNames = allRefs.map{_.project}
+    val allRefsNames = normalizedProjectNames(allRefs)
     if (allRefsNames.distinct.size!=allRefsNames.size)
       sys.error(allRefsNames.mkString("Unexpected internal error: found duplicate name in ProjectRefs. List is: ",",",""))
 
@@ -155,15 +159,15 @@ object DependencyAnalysis {
 
       // some debugging won't hurt
       log.info("Dependencies among subprojects:")
-      allProjDeps map { case (s, l) => log.info(s.project + " -> " + l.map { _.project }.mkString(",")) }
+      allProjDeps map { case (s, l) => log.info(normalizedProjectName(s) + " -> " + normalizedProjectNames(l.toSeq).mkString(",")) }
       log.info("Aggregates of subprojects:")
-      allProjAggregates map { case (s, l) => log.info(s.project + " -> " + l.map { _.project }.mkString(",")) }
+      allProjAggregates map { case (s, l) => log.info(normalizedProjectName(s) + " -> " + normalizedProjectNames(l.toSeq).mkString(",")) }
       log.info("Building graph...")
       val allProjGraph = new SubProjGraph(allRefs, allProjDeps, allProjAggregates)
       log.debug("The graph contains:")
       allProjGraph.nodes foreach { n =>
-        log.debug("Node: " + n.value.project)
-        allProjGraph.edges(n) foreach { e => log.debug("edge: " + n.value.project + " to " + e.to.value.project + " (" + e.value + ")") }
+        log.debug("Node: " + normalizedProjectName(n.value))
+        allProjGraph.edges(n) foreach { e => log.debug("edge: " + normalizedProjectName(n.value) + " to " + normalizedProjectName(e.to.value) + " (" + e.value + ")") }
       }
 
       // at this point I have my graph with all the relationships, and a list of "requested" projectRefs.
@@ -174,9 +178,9 @@ object DependencyAnalysis {
 
       log.info("sorting...")
       val allProjSorted = Graphs.safeTopological(allProjGraph)
-      log.debug(allRefs.map { _.project }.mkString("original: ", ", ", ""))
-      log.debug(allProjSorted.map { _.value.project }.mkString("sorted: ", ", ", ""))
-      log.debug("dot: " + Graphs.toDotFile(allProjGraph)({ _.project }))
+      log.debug(normalizedProjectNames(allRefs).mkString("original: ", ", ", ""))
+      log.debug(normalizedProjectNames(allProjSorted.map { _.value}).mkString("sorted: ", ", ", ""))
+      log.debug("dot: " + Graphs.toDotFile(allProjGraph)(normalizedProjectName))
 
       // Excellent. 2) Now we need the set of projects transitively reachable from "requested".
       

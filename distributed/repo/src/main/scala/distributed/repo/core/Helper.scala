@@ -45,7 +45,7 @@ object LocalRepoHelper {
       if !(file.isDirectory || file.getName == "maven-metadata-local.xml")
     } yield {
       val sha = hashing.files sha1 file
-      val name = IO.relativize(localRepo, file) getOrElse file.getName
+      val name = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
       file -> ArtifactSha(sha, name)
     }
 

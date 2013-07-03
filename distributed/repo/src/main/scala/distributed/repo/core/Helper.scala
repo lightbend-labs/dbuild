@@ -39,30 +39,20 @@ object LocalRepoHelper {
     val name = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
     ArtifactSha(sha, name)
   }
-  
-  /**
-   * Creates a new ArtifactSha sequence for each item found
-   * in the locally deployment repository directory.  
-   */
-  protected def makeRawArtifactMetaData(localRepo: java.io.File): Seq[(File, ArtifactSha)] =
-    for {
-      file <- (localRepo.***).get
-      _ = println("Checking file: " + file.getAbsolutePath)
-      if !(file.isDirectory || file.getName == "maven-metadata-local.xml")
-    } yield file -> makeArtifactSha(file, localRepo)
 
-  
   /**
-   * Publishes all files in the localRepo directory by SHA and creates
-   * new ArtifactSha sequence for each item found.  
+   * Publishes all files in the localRepo directory, according to the SHAs calculated
+   * by the build system.
    */
-  protected def publishRawArtifacts(localRepo: File, remote: Repository) =
-    for {
-      (file, a @ ArtifactSha(sha, location)) <- makeRawArtifactMetaData(localRepo)
-      key = makeRawFileKey(sha)
-      _ = remote put (key, file)
-    } yield a
-    
+  protected def publishRawArtifacts(localRepo: File, subproj: String, files: Seq[ArtifactSha], remote: Repository) = {
+    if (subproj != "") println("Checking files for subproject: " + subproj)
+    files foreach {
+      case ArtifactSha(sha, location) =>
+        val key = makeRawFileKey(sha)
+        println("Checking file: " + location)
+        remote put (key, localRepo / location)
+    }
+  }    
     
   protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository): Unit = {
     val key = makeProjectMetaKey(meta.project.uuid)
@@ -72,18 +62,18 @@ object LocalRepoHelper {
       remote put (key, file)
     }
   }
-    
+
   /**
    * Publishes the metadata for a project build.
-   * 
+   *
    * @param project  The repeatable project build, used to generate UUIDs and find dependencies.
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
-  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])],
-      localRepo: File, remote: Repository): ProjectArtifactInfo = {
-    val arts = publishRawArtifacts(localRepo, remote)
-    val info = ProjectArtifactInfo(project, extracted, arts)
+  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[(String, Seq[ArtifactLocation], Seq[ArtifactSha])],
+    localRepo: File, remote: Repository): ProjectArtifactInfo = {
+    extracted foreach { case (subproj, arts, shas) => publishRawArtifacts(localRepo, subproj, shas, remote) }
+    val info = ProjectArtifactInfo(project, extracted)
     publishProjectMetadata(info, remote)
     info
   }
@@ -107,7 +97,7 @@ object LocalRepoHelper {
     val metadata =
       materializeProjectMetadata(uuid, remote) getOrElse (throw new ResolveException(makeProjectMetaKey(uuid), "Could not resolve metadata for " + uuid))
     val results = for {
-      artifact <- metadata.artifactLocations
+      artifact <- metadata.versions.flatMap{_._3}
       key = makeRawFileKey(artifact.sha)
       resolved = remote get key
     } yield f(resolved, artifact)

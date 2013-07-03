@@ -19,13 +19,12 @@ case class ArtifactSha(sha: String, location: String)
 /** This is the metadata a project generates after building.  We can deploy this to our repository as
  * as an immutable piece of data that is used to retrieve artifacts after the build.
  * 
- * Note: As of now this can only be created after running a build and inspecting the deployed artifact files for SHA/relative paths.
+ * Note: The list of artifacts and files/shas is extracted for each subproject by the build system.
  */
 case class ProjectArtifactInfo(
     project: RepeatableProjectBuild,
     // (Subprojects,Relative locations
-    versions: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])],
-    artifactLocations: Seq[ArtifactSha])
+    versions: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])])
   
 /**
  * This represents two pieces of data:

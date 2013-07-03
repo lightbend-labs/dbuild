@@ -83,10 +83,10 @@ object DistributedRunner {
     projects map { p => refs.find(ref => (p == normalizedProjectName(ref, baseDirectory))).get }
   }
 
-  def makeBuildResults(artifacts: Seq[(String,ArtifactMap)], localRepo: File): model.BuildArtifactsOut =
+  def makeBuildResults(artifacts: Seq[(String,ArtifactMap,Seq[String])], localRepo: File): model.BuildArtifactsOut =
     model.BuildArtifactsOut(artifacts, localRepo)
 
-  def printResults(fileName: String, artifacts: Seq[(String,ArtifactMap)], localRepo: File): Unit =
+  def printResults(fileName: String, artifacts: Seq[(String,ArtifactMap,Seq[String])], localRepo: File): Unit =
     IO.write(new File(fileName), writeValue(makeBuildResults(artifacts, localRepo)))
 
   def loadBuildConfig: Option[SbtBuildConfig] =
@@ -434,23 +434,21 @@ object DistributedRunner {
       val (state9, _) =
         Project.extract(state8).runTask(Keys.publish in ref, state8)
 
+      // We extract the set of files published during this step by checking the
+      // current set of files in the repository against the files we had previously
       val previousFiles=previous._1
       val localRepo=config.info.outRepo.getAbsoluteFile
       val currentFiles=(localRepo.***).get.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
-      val newFiles=currentFiles.diff(previousFiles).map {file => IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")}
+      val newFiles=currentFiles.diff(previousFiles).
+        map {file => IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")}
 
       (state9, (currentFiles,(ref.project, artifacts, newFiles)))
     }
 
     val (state3,(files,artifactsAndFiles)) = buildAggregate(buildTestPublish)
 
-    // We extract the set of files published during this step by checking the
-    // current set of files in the repository against the files we already had previously
-    
-    val artifacts=artifactsAndFiles map { t => (t._1,t._2)}
-    println("\n\n\nartifacts: "+artifactsAndFiles+"\n\n\n\n")
-    printResults(resultFile, artifacts, config.info.outRepo)
+    printResults(resultFile, artifactsAndFiles, config.info.outRepo)
     state3
   }
 

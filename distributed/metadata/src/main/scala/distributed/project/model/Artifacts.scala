@@ -24,7 +24,7 @@ case class ArtifactSha(sha: String, location: String)
 case class ProjectArtifactInfo(
     project: RepeatableProjectBuild,
     // (Subprojects,Relative locations
-    versions: Seq[(String,Seq[ArtifactLocation])],
+    versions: Seq[(String,Seq[ArtifactLocation],Seq[String])],
     artifactLocations: Seq[ArtifactSha])
   
 /**
@@ -33,11 +33,17 @@ case class ProjectArtifactInfo(
  * (1) The artifacts that we need to rewire dependencies for
  * (2) The repository in which those artifacts are stored.
  * 
- * Unfortunately, It's currently used to represent both incoming and outgoing
- * artifacts in builds.   We must edit this so that we have explicit
- * "incoming artifacts to rewire" and "outgoing artifacts for publication".
+ * BuildArtifactsIn represents "incoming artifacts to rewire", while
+ * BuildArtifactsOut represents the "outgoing artifacts for publication".
+ * The latter contains a sequence in which each element contains:
+ * - name of a subproject
+ * - artifacts published by that subproject
+ * - corresponding (relative pathnames of) files published by that
+ * subproject to the repository.
+ * If the build system has no subproject support, there will be just
+ * one tuple, where the subproject name is the empty string.
  */
-case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation])], localRepo: File)
+case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation],Seq[String])], localRepo: File)
 case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
 
 

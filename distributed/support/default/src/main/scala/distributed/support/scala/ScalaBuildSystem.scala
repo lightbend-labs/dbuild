@@ -6,6 +6,7 @@ import project.BuildSystem
 import project.model._
 import _root_.java.io.File
 import _root_.sbt.Path._
+import _root_.sbt.IO.relativize
 import logging.Logger
 import sys.process._
 
@@ -52,7 +53,7 @@ object ScalaBuildSystem extends BuildSystem {
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
 
     // Hardcoded results...
-    BuildArtifactsOut(Seq(("",Seq(
+    BuildArtifactsOut(Seq(("", Seq(
       ArtifactLocation(lib, version),
       ArtifactLocation(reflect, version),
       ArtifactLocation(comp, version),
@@ -62,8 +63,10 @@ object ScalaBuildSystem extends BuildSystem {
       ArtifactLocation(scalap, version),
       ArtifactLocation(jline, version),
       ArtifactLocation(partest, version),
-      ArtifactLocation(continuations, version)
-    ))), localRepo)
+      ArtifactLocation(continuations, version)),
+      (localRepo.***).get.filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
+        file => relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
+      })), localRepo)
   }
     
     

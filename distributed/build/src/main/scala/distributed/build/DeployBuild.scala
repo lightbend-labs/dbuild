@@ -93,7 +93,6 @@ object DeployBuild {
           val cache = Repository.default
           val projList = options.projects match {
             case None => build.repeatableBuilds map {b =>  DeployElementProject(b.config.name) }
-            // TODO: must filter out and process DeployElementSubProject items as well
             case Some(list) => list
           }
           log.info("")

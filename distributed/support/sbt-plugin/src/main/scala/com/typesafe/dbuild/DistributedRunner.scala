@@ -49,7 +49,7 @@ object DistributedRunner {
   }
 
   /** Runs a series of commands across projects, aggregating results. */
-  private def runAggregate[Q, T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State) => (State, T)): (State, Q) = {
+  private def runAggregate[Q, T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State, Q) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
@@ -59,7 +59,7 @@ object DistributedRunner {
     newRefs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
         val (state2, next) =
-          f(ref, state)
+          f(ref, state, current)
         state2 -> merge(current, next)
     }
   }
@@ -283,7 +283,7 @@ object DistributedRunner {
   // extract the ModuleRevisionIds of all the subprojects of this dbuild project (as calculated from exclusions, dependencies, etc).
   def getModuleRevisionIds(state: State, projects: Seq[String], log: Logger) =
     runAggregate[Seq[ModuleRevisionId], ModuleRevisionId](state, projects, Seq.empty) { _ :+ _ } {
-      (proj, state) => (state, Project.extract(state).evalTask(Keys.ivyModule in proj, state).dependencyMapping(log)._1)
+      (proj, state, _) => (state, Project.extract(state).evalTask(Keys.ivyModule in proj, state).dependencyMapping(log)._1)
     }._2
     
   // In order to convince sbt to use the scala instance we need, we just generate a fictitious
@@ -402,6 +402,12 @@ object DistributedRunner {
     } println("\t(%s) - %s" format (r.name, r.toString))
   }
 
+  // buildStuff() works by folding over the list of subprojects a sequence of operations: building,
+  // testing, publishing, and file extraction.
+  // The folding passes around the following: (Seq[File],Seq[(String,ArtifactMap,Seq[String])]),
+  // where the first Seq[File] is the set of files present in the publishing repository,
+  // and the second Seq associates the subproject name with the list of artifacts, as well as
+  // the list of actual files published to the repository (stored as a list of relative file names)
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
     val state2 = fixBuildSettings(config, state)
 //    printResolvers(state2)
@@ -409,12 +415,16 @@ object DistributedRunner {
 
     println("Building project...")
     val refs = getProjectRefs(Project.extract(state2))
-    val buildAggregate = runAggregate[Seq[(String,ArtifactMap)],(String,ArtifactMap)](state2, config.info.subproj, Seq.empty)(_ :+ _) _
+    val buildAggregate = runAggregate[(Seq[File],Seq[(String,ArtifactMap,Seq[String])]),
+      (Seq[File],(String,ArtifactMap,Seq[String]))] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
+        case ((oldFiles,oldArts),(newFiles,arts)) => (newFiles,oldArts :+ arts) } _
 
     // If we're measuring, run the build several times.
     val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
-    def buildTestPublish(ref: ProjectRef, state6: State): (State, (String, ArtifactMap)) = {
+    def buildTestPublish(ref: ProjectRef, state6: State, previous:(Seq[File],Seq[(String,ArtifactMap,Seq[String])])):
+      (State, (Seq[File],(String, ArtifactMap, Seq[String]))) = {
+      
       val (state7, artifacts) = buildTask(ref, state6)
       val state8 = if (config.config.runTests) {
         println("Testing: " + ref.project)
@@ -423,11 +433,23 @@ object DistributedRunner {
       println("Publishing: " + ref.project)
       val (state9, _) =
         Project.extract(state8).runTask(Keys.publish in ref, state8)
-      (state9, (ref.project, artifacts))
+
+      val previousFiles=previous._1
+      val localRepo=config.info.outRepo.getAbsoluteFile
+      val currentFiles=(localRepo.***).get.
+        filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
+      val newFiles=currentFiles.diff(previousFiles).map {file => IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")}
+
+      (state9, (currentFiles,(ref.project, artifacts, newFiles)))
     }
 
-    val (state3,artifacts) = buildAggregate(buildTestPublish)
+    val (state3,(files,artifactsAndFiles)) = buildAggregate(buildTestPublish)
+
+    // We extract the set of files published during this step by checking the
+    // current set of files in the repository against the files we already had previously
     
+    val artifacts=artifactsAndFiles map { t => (t._1,t._2)}
+    println("\n\n\nartifacts: "+artifactsAndFiles+"\n\n\n\n")
     printResults(resultFile, artifacts, config.info.outRepo)
     state3
   }

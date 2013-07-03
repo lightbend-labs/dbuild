@@ -24,7 +24,7 @@ case class ArtifactSha(sha: String, location: String)
 case class ProjectArtifactInfo(
     project: RepeatableProjectBuild,
     // (Subprojects,Relative locations
-    versions: Seq[(String,Seq[ArtifactLocation],Seq[String])],
+    versions: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])],
     artifactLocations: Seq[ArtifactSha])
   
 /**
@@ -43,7 +43,7 @@ case class ProjectArtifactInfo(
  * If the build system has no subproject support, there will be just
  * one tuple, where the subproject name is the empty string.
  */
-case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation],Seq[String])])
+case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])])
 case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
 
 

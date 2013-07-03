@@ -9,6 +9,7 @@ import _root_.sbt.Path._
 import _root_.sbt.IO.relativize
 import logging.Logger
 import sys.process._
+import distributed.repo.core.LocalRepoHelper
 
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystem {
@@ -65,7 +66,7 @@ object ScalaBuildSystem extends BuildSystem {
       ArtifactLocation(partest, version),
       ArtifactLocation(continuations, version)),
       (localRepo.***).get.filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
-        file => relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
+        LocalRepoHelper.makeArtifactSha(_,localRepo)
       })))
   }
     

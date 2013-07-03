@@ -33,7 +33,13 @@ object LocalRepoHelper {
     val file = remote get makeBuildMetaKey(uuid)
     Some(readValue[RepeatableDistributedBuild](file))
   }
-    
+
+  def makeArtifactSha(file: File, localRepo: File) = {
+    val sha = hashing.files sha1 file
+    val name = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
+    ArtifactSha(sha, name)
+  }
+  
   /**
    * Creates a new ArtifactSha sequence for each item found
    * in the locally deployment repository directory.  
@@ -43,11 +49,7 @@ object LocalRepoHelper {
       file <- (localRepo.***).get
       _ = println("Checking file: " + file.getAbsolutePath)
       if !(file.isDirectory || file.getName == "maven-metadata-local.xml")
-    } yield {
-      val sha = hashing.files sha1 file
-      val name = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
-      file -> ArtifactSha(sha, name)
-    }
+    } yield file -> makeArtifactSha(file, localRepo)
 
   
   /**
@@ -78,7 +80,7 @@ object LocalRepoHelper {
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
-  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[(String,Seq[ArtifactLocation],Seq[String])],
+  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])],
       localRepo: File, remote: Repository): ProjectArtifactInfo = {
     val arts = publishRawArtifacts(localRepo, remote)
     val info = ProjectArtifactInfo(project, extracted, arts)
@@ -143,7 +145,7 @@ object LocalRepoHelper {
     resolveArtifacts(uuid, remote)((x,y) => x -> y)
     
   /** Checks whether or not a given project (by UUID) is published. */
-  def getPublishedDeps(uuid: String, remote: ReadableRepository):Seq[(String,Seq[ArtifactLocation],Seq[String])] = {
+  def getPublishedDeps(uuid: String, remote: ReadableRepository):Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
     meta.versions

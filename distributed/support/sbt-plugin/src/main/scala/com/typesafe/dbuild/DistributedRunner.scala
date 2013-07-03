@@ -4,6 +4,7 @@ import sbt._
 import distributed.project.model
 import distributed.support.sbt.SbtBuildConfig
 import distributed.project.model.ArtifactLocation
+import distributed.project.model.ArtifactSha
 import distributed.project.model.Utils.{ writeValue, readValue }
 import StateHelpers._
 import DependencyAnalysis.{normalizedProjectNames,normalizedProjectName}
@@ -12,6 +13,8 @@ import NameFixer.fixName
 import java.io.File
 import distributed.repo.core.LocalArtifactMissingException
 import org.apache.ivy.core.module.id.ModuleRevisionId
+import distributed.repo.core.LocalRepoHelper
+
 
 object DistributedRunner {
 
@@ -83,10 +86,10 @@ object DistributedRunner {
     projects map { p => refs.find(ref => (p == normalizedProjectName(ref, baseDirectory))).get }
   }
 
-  def makeBuildResults(artifacts: Seq[(String,ArtifactMap,Seq[String])], localRepo: File): model.BuildArtifactsOut =
+  def makeBuildResults(artifacts: Seq[(String,ArtifactMap,Seq[ArtifactSha])], localRepo: File): model.BuildArtifactsOut =
     model.BuildArtifactsOut(artifacts)
 
-  def printResults(fileName: String, artifacts: Seq[(String,ArtifactMap,Seq[String])], localRepo: File): Unit =
+  def printResults(fileName: String, artifacts: Seq[(String,ArtifactMap,Seq[ArtifactSha])], localRepo: File): Unit =
     IO.write(new File(fileName), writeValue(makeBuildResults(artifacts, localRepo)))
 
   def loadBuildConfig: Option[SbtBuildConfig] =
@@ -407,7 +410,7 @@ object DistributedRunner {
   // The folding passes around the following: (Seq[File],Seq[(String,ArtifactMap,Seq[String])]),
   // where the first Seq[File] is the set of files present in the publishing repository,
   // and the second Seq associates the subproject name with the list of artifacts, as well as
-  // the list of actual files published to the repository (stored as a list of relative file names)
+  // the list of shas of the files published to the repository during this step.
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
     val state2 = fixBuildSettings(config, state)
 //    printResolvers(state2)
@@ -415,15 +418,15 @@ object DistributedRunner {
 
     println("Building project...")
     val refs = getProjectRefs(Project.extract(state2))
-    val buildAggregate = runAggregate[(Seq[File],Seq[(String,ArtifactMap,Seq[String])]),
-      (Seq[File],(String,ArtifactMap,Seq[String]))] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
+    val buildAggregate = runAggregate[(Seq[File],Seq[(String,ArtifactMap,Seq[ArtifactSha])]),
+      (Seq[File],(String,ArtifactMap,Seq[ArtifactSha]))] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
         case ((oldFiles,oldArts),(newFiles,arts)) => (newFiles,oldArts :+ arts) } _
 
     // If we're measuring, run the build several times.
     val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
-    def buildTestPublish(ref: ProjectRef, state6: State, previous:(Seq[File],Seq[(String,ArtifactMap,Seq[String])])):
-      (State, (Seq[File],(String, ArtifactMap, Seq[String]))) = {
+    def buildTestPublish(ref: ProjectRef, state6: State, previous:(Seq[File],Seq[(String,ArtifactMap,Seq[ArtifactSha])])):
+      (State, (Seq[File],(String, ArtifactMap, Seq[ArtifactSha]))) = {
       
       val (state7, artifacts) = buildTask(ref, state6)
       val state8 = if (config.config.runTests) {
@@ -440,10 +443,9 @@ object DistributedRunner {
       val localRepo=config.info.outRepo.getAbsoluteFile
       val currentFiles=(localRepo.***).get.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
-      val newFiles=currentFiles.diff(previousFiles).
-        map {file => IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")}
+      val newFilesShas=currentFiles.diff(previousFiles).map{LocalRepoHelper.makeArtifactSha(_,localRepo)}
 
-      (state9, (currentFiles,(ref.project, artifacts, newFiles)))
+      (state9, (currentFiles,(ref.project, artifacts, newFilesShas)))
     }
 
     val (state3,(files,artifactsAndFiles)) = buildAggregate(buildTestPublish)

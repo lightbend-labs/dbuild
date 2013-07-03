@@ -13,7 +13,7 @@ object BuildArtifactsSpec extends Specification {
           Seq(("x",Seq(
               ArtifactLocation(ProjectRef("p3", "o2"), "1.0"),
               ArtifactLocation(ProjectRef("p3", "o2"), "2.0")
-          ),Seq("a/b.txt")))
+          ),Seq.empty))
         )
       val config = writeValue(data)
       (readValue[BuildArtifactsOut](config) 

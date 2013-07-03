@@ -110,7 +110,6 @@ object LocalRepoHelper {
       }
       subprojs
     }
-
     val artifactFiles = metadata.versions.filter { v => fetch.contains(v._1) }.flatMap { _._3 }
     val results = for {
       artifactFile <- artifactFiles
@@ -140,17 +139,16 @@ object LocalRepoHelper {
    * those specified by the given subproject list. If the list is empty, grab everything.
    */
   def materializePartialProjectRepository(uuid: String, subprojs: Seq[String], remote: ReadableRepository,
-    localRepo: File): (Seq[ArtifactLocation], Seq[String]) = {
+      localRepo: File): (Seq[ArtifactLocation], Seq[String]) = {
     val (meta, _, arts) = resolvePartialArtifacts(uuid, subprojs, remote) { (resolved, artifact) =>
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
-    val info = "Retrieved from project " +
-      meta.project.config.name + " (at: " + (new java.net.URI(meta.project.config.uri)).getFragment + "): " +
-      arts.length + " artifacts"
-    val msg = if (subprojs.isEmpty) Seq(info) else
-      Seq(info, subprojs.mkString("Retrieved from project " +
-        meta.project.config.name + ",  subprojects: ", ", ", ""))
+    val info1 = "Retrieved from project " +
+      meta.project.config.name + " (at: " + (new java.net.URI(meta.project.config.uri)).getFragment + ")"
+    val info2 = ": " + arts.length + " artifacts"
+    val msg = if (subprojs.isEmpty) Seq(info1+info2) else
+      Seq(subprojs.mkString(info1+", subprojects ", ", ", info2))
     (arts, msg)
   }
 

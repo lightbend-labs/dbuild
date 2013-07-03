@@ -107,6 +107,7 @@ optional-extra-build-parameters
    {
     "sbt-version"    : <sbt-version>,
     "projects"       : [ subproj1, subproj2,... ]
+    "exclude"        : [ subproj1, subproj2,... ]
     "run-tests"      : <run-tests>
     "options"        : [ opt1, opt2,... ]
     "commands"       : [ cmd1, cmd2,... ]
@@ -126,13 +127,25 @@ projects
 
      "projects":  ["akka-actor"]
 
-  in order to compile only the "akka-actor" sbt project within Akka. Note: make sure to
-  use double quotes for the subproject names; if you use single quotes, your entry may
-  be interpreted incorrectly, and possibly silently ignored.
+  in order to compile only the "akka-actor" sbt project within Akka. For each
+  of the specified subprojects, dbuild will also add recursively all of the
+  subprojects that are in the same project and that are required dependencies
+  of the specified ones; if the subproject is an sbt aggregate, its components
+  will also be added. If the "projects" clause is not present, all of the
+  subprojects will be included.
+
+  If the project uses sbt's default projects, the actual subproject name may
+  vary over time, and take forms like "default-e3c4f7". In order to refer to
+  sbt's default subproject, you can use the predefined name `"default-sbt-project"`.
+
+exclude
+  Sometimes it may be useful to split a single project into two or more parts.
+  This clause can be used to exclude explicitly some of the subprojects, which
+  can then be compiled in a different project within the same configuration file,
+  using a different project name but using the same uri.
 
 run-tests
   Boolean value: if set to false, the project will be built but no tests will be run.
-
   Normally, each project is built first, then tested; if compilation succeeds but testing
   fails, the dbuild run will abort and no artifacts will be stored into the repository.
   If you set run-tests to false, however, testing for the affected project will be skipped,

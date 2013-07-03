@@ -66,7 +66,7 @@ object ScalaBuildSystem extends BuildSystem {
       ArtifactLocation(continuations, version)),
       (localRepo.***).get.filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
         file => relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
-      })), localRepo)
+      })))
   }
     
     

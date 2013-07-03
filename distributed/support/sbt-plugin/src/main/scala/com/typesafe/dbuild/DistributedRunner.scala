@@ -84,7 +84,7 @@ object DistributedRunner {
   }
 
   def makeBuildResults(artifacts: Seq[(String,ArtifactMap,Seq[String])], localRepo: File): model.BuildArtifactsOut =
-    model.BuildArtifactsOut(artifacts, localRepo)
+    model.BuildArtifactsOut(artifacts)
 
   def printResults(fileName: String, artifacts: Seq[(String,ArtifactMap,Seq[String])], localRepo: File): Unit =
     IO.write(new File(fileName), writeValue(makeBuildResults(artifacts, localRepo)))

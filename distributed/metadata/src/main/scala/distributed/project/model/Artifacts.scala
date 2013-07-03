@@ -43,7 +43,7 @@ case class ProjectArtifactInfo(
  * If the build system has no subproject support, there will be just
  * one tuple, where the subproject name is the empty string.
  */
-case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation],Seq[String])], localRepo: File)
+case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation],Seq[String])])
 case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
 
 

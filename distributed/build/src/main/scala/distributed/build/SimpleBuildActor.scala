@@ -83,14 +83,14 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
           val nextArts = for {
             arts <- fArts
             newArts <- buildProject(tdir, b, log.newNestedLogger(b.config.name))
-          } yield BuildArtifactsOut(arts.artifacts ++ newArts.artifacts, arts.localRepo)
+          } yield BuildArtifactsOut(arts.artifacts ++ newArts.artifacts)
           runBuild(rest, nextArts)
         case _ => fArts
       }
     
     // TODO - REpository management here!!!!
     local.ProjectDirs.userRepoDirFor(build) { localRepo =>      
-      runBuild(build.repeatableBuilds.toList, Future(BuildArtifactsOut(Seq.empty, localRepo)))
+      runBuild(build.repeatableBuilds.toList, Future(BuildArtifactsOut(Seq.empty)))
     }
   }  
   

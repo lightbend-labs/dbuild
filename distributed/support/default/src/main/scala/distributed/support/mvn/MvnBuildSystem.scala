@@ -39,6 +39,6 @@ object MvnBuildSystem extends BuildSystem {
     if(result.hasExceptions()) {
       result.getExceptions.asScala foreach (t => log.trace(t))
     } else log.info("DONE!")
-    BuildArtifactsOut(Seq.empty, null)
+    BuildArtifactsOut(Seq.empty)
   }
 }

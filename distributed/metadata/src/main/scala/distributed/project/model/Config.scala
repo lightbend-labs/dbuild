@@ -111,9 +111,15 @@ object BuildSystemExtras {
 // our simplified version of Either: we use it to group String and DeploySubProjects in a transparent manner
 @JsonSerialize(using = classOf[DeployElementSerializer])
 @JsonDeserialize(using = classOf[DeployElementDeserializer])
-sealed abstract class DeployElement
-case class DeployElementProject(a: String) extends DeployElement
-case class DeployElementSubProject(b: DeploySubProjects) extends DeployElement
+sealed abstract class DeployElement { def name: String }
+case class DeployElementProject(a: String) extends DeployElement {
+  override def toString() = a
+  def name = a
+}
+case class DeployElementSubProject(info: DeploySubProjects) extends DeployElement {
+  override def toString() = info.from+" "+info.publish.mkString("(",",",")")
+  def name = info.from
+}
 
 class DeployElementSerializer extends JsonSerializer[DeployElement] {
   override def serialize(value: DeployElement, g: JsonGenerator, p: SerializerProvider) {

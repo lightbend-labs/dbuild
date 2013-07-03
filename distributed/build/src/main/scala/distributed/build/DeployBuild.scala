@@ -92,17 +92,21 @@ object DeployBuild {
         IO.withTemporaryDirectory { dir =>
           val cache = Repository.default
           val projList = options.projects match {
-            case None => build.repeatableBuilds map { _.config.name }
+            case None => build.repeatableBuilds map {b =>  DeployElementProject(b.config.name) }
             // TODO: must filter out and process DeployElementSubProject items as well
-            case Some(list) => list.collect {case DeployElementProject(s) => s}
+            case Some(list) => list
           }
           log.info("")
-          log.info("Deploying to " + options.uri + ": " + projList.mkString("", ", ", "."))
+          log.info("Deploying to " + options.uri + ": " + projList.mkString("", ", ", ""))
           projList map { proj =>
-            build.repeatableBuilds.find(_.config.name == proj) match {
-              case None => sys.error("Error during deploy: \"" + proj + "\" is not a project name.")
+            build.repeatableBuilds.find(_.config.name == proj.name) match {
+              case None => sys.error("Error during deploy: \"" + proj.name + "\" is not a project name.")
               case Some(p) =>
-                val (arts,msg) = LocalRepoHelper.materializeProjectRepository(p.uuid, cache, dir)
+                val subprojs = proj match {
+                  case DeployElementSubProject(DeploySubProjects(from,publish)) => publish
+                  case DeployElementProject(_) => Seq.empty
+                }
+                val (arts,msg) = LocalRepoHelper.materializePartialProjectRepository(p.uuid, subprojs, cache, dir)
                 msg foreach {log.info(_)}
             }
           }

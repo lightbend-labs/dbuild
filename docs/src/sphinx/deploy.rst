@@ -1,6 +1,8 @@
 Deploying
 =========
 
+.. _section-deploy:
+
 The ``deploy`` section
 ----------------------
 

@@ -418,6 +418,7 @@ object DistributedRunner {
 
     println("Building project...")
     val refs = getProjectRefs(Project.extract(state2))
+    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data
     val buildAggregate = runAggregate[(Seq[File],Seq[(String,ArtifactMap,Seq[ArtifactSha])]),
       (Seq[File],(String,ArtifactMap,Seq[ArtifactSha]))] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
         case ((oldFiles,oldArts),(newFiles,arts)) => (newFiles,oldArts :+ arts) } _
@@ -445,7 +446,7 @@ object DistributedRunner {
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
       val newFilesShas=currentFiles.diff(previousFiles).map{LocalRepoHelper.makeArtifactSha(_,localRepo)}
 
-      (state9, (currentFiles,(ref.project, artifacts, newFilesShas)))
+      (state9, (currentFiles,(normalizedProjectName(ref,baseDirectory), artifacts, newFilesShas)))
     }
 
     val (state3,(files,artifactsAndFiles)) = buildAggregate(buildTestPublish)

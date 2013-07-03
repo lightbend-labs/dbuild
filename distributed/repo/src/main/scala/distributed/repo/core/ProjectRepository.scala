@@ -19,7 +19,7 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
    *   @param localRepo  The location to store artifacts read from the repository.
    *   @return The list of *versioned* artifacts that are now in the local repo, and the project name
    */
-  def materializeArtifactRepository(uuid: String, localRepo: File): (Seq[ArtifactLocation],String) =
+  def materializeArtifactRepository(uuid: String, localRepo: File): (Seq[ArtifactLocation],Seq[String]) =
     LocalRepoHelper.materializeProjectRepository(uuid, remote, localRepo)
     
   /** Checks whether or not a given project (by UUID) is published. 

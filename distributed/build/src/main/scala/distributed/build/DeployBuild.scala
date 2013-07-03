@@ -102,8 +102,8 @@ object DeployBuild {
             build.repeatableBuilds.find(_.config.name == proj) match {
               case None => sys.error("Error during deploy: \"" + proj + "\" is not a project name.")
               case Some(p) =>
-                val (arts,name) = LocalRepoHelper.materializeProjectRepository(p.uuid, cache, dir)
-                log.info("Retrieved from project " + name + ": " + arts.length + " artifacts")
+                val (arts,msg) = LocalRepoHelper.materializeProjectRepository(p.uuid, cache, dir)
+                msg foreach {log.info(_)}
             }
           }
           // dir is staged; time to deploy

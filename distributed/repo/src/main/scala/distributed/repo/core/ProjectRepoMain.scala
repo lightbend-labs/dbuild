@@ -93,7 +93,7 @@ object ProjectRepoMain {
   
   private def printProjects(uuids: Seq[String]): Unit = {
     val meta = uuids map { id => 
-      val (info, _) = projectRepo getProjectInfo id
+      val (info, _, _) = projectRepo getProjectInfo id
       info
     }
     val names = padStrings(meta map (_.project.config.name))
@@ -114,16 +114,15 @@ object ProjectRepoMain {
   }
   
   def printProjectDependencies(uuid:String): Unit = {
-    val (meta, _) = projectRepo.getProjectInfo(uuid)
+    val (meta, _, _) = projectRepo.getProjectInfo(uuid)
     println(" -- Dependencies --")
     for(uuid <- meta.project.transitiveDependencyUUIDs)
       println("    * " + uuid)
   }
   
   def printProjectArtifacts(uuid:String): Unit = {
-    val (meta, _) = projectRepo.getProjectInfo(uuid)
+    val (meta, _, arts) = projectRepo.getProjectInfo(uuid)
     println(" -- Artifacts -- ")
-    val arts = meta.versions.map{_._2}.flatten
     val groups = padStrings(arts map (_.info.organization))
     val names = padStrings(arts map (_.info.name))
     val classifiers = padStrings(arts map (_.info.classifier getOrElse ""))
@@ -144,10 +143,10 @@ object ProjectRepoMain {
   }
   
   def printProjectFiles(uuid: String): Unit = {
-    val (_, arts) = projectRepo.getProjectInfo(uuid)
+    val (_, artFiles,arts) = projectRepo.getProjectInfo(uuid)
     println(" -- Files -- ")
     
-    val groups = arts groupBy { x => x._2.location.take(x._2.location.lastIndexOf('/')) }
+    val groups = artFiles groupBy { x => x._2.location.take(x._2.location.lastIndexOf('/')) }
     for ((dir, arts) <- groups.toSeq.sortBy(_._1)) {
       println("  " + dir)
       printArtifactSeq(arts, true, "    ")

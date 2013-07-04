@@ -8,9 +8,10 @@ import _root_.sbt.Path._
 import logging.Logger
 import distributed.project.model.SbtExtraConfig
 import _root_.java.io.File
+import distributed.project.Defaults
 
 /** Implementation of the SBT build system. */
-class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.ProjectDirs.builddir) extends BuildSystem {
+class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = distributed.project.ProjectDirs.builddir) extends BuildSystem {
   val name: String = "sbt"  
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"

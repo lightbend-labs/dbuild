@@ -1,4 +1,4 @@
-package local
+package distributed.project
 
 import distributed.project.model._
 import java.io.File
@@ -14,7 +14,8 @@ object ProjectDirs {
   val targetDir = new File(builddir, "target")
   val clonesDir = new File(targetDir, "clones")
   val userhome = new File(sys.props("user.home"))
-  val userCache = new File(userhome, ".dbuild/cache")
+  val dbuildDir = new File(userhome, ".dbuild")
+  val userCache = new File(dbuildDir, "cache")
   
   
   def logDir = new File(targetDir, "logs")

@@ -15,6 +15,7 @@ import akka.util.Timeout
 import actorpaterns.forwardingErrorsToFutures
 import sbt.Path._
 import java.io.File
+import distributed.project.ProjectDirs
 
 case class RunDistributedBuild(build: DistributedBuildConfig, target: File, logger: Logger)
 
@@ -76,7 +77,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   // Chain together some Asynch to run this build.
   def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifactsOut] = {
     implicit val ctx = context.system
-    val tdir = local.ProjectDirs.targetDir
+    val tdir = ProjectDirs.targetDir
     def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifactsOut]): Future[BuildArtifactsOut] = 
       builds match {
         case b :: rest =>
@@ -89,7 +90,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       }
     
     // TODO - REpository management here!!!!
-    local.ProjectDirs.userRepoDirFor(build) { localRepo =>      
+    ProjectDirs.userRepoDirFor(build) { localRepo =>      
       runBuild(build.repeatableBuilds.toList, Future(BuildArtifactsOut(Seq.empty)))
     }
   }  

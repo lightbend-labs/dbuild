@@ -28,7 +28,7 @@ class LocalBuildRunner(builder: BuildRunner,
     } 
   
   def runLocalBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifactsOut =
-    local.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
+    distributed.project.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")

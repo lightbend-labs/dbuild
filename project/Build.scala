@@ -62,6 +62,20 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       DmodProject("core")
       dependsOn(dmeta, graph, hashing, logging, drepo)
       dependsOnRemote(sbtIo)
+      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
+        val file = dir / "Defaults.scala"
+        if(!dir.isDirectory) dir.mkdirs()
+        IO.write(file, """
+package distributed.project
+
+object Defaults {
+  val sbtVersion = "%s"
+  val version = "%s"
+  val org = "%s"
+}
+""" format (Dependencies.sbtVersion, version, org))
+        Seq(file)
+      })
     )
   lazy val dprojects = (
       DmodProject("projects")
@@ -79,26 +93,12 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch)
     )
 
-  // Projects relating to supprting various tools in distributed builds.
+  // Projects relating to supporting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dcore, drepo, dmeta)
       dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt)
       settings(SbtSupport.settings:_*)
-      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
-        val file = dir / "Defaults.scala"
-        if(!dir.isDirectory) dir.mkdirs()
-        IO.write(file, """
-package distributed.support.sbt
-
-object Defaults {
-  val sbtVersion = "%s"
-  val version = "%s"
-  val org = "%s"
-}
-""" format (Dependencies.sbtVersion, version, org))
-        Seq(file)
-      })
     ) 
 
   // Distributed SBT plugin

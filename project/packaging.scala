@@ -32,10 +32,14 @@ object Packaging {
 
   
   // TODO - Share functionality with other guy.
-  def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = {
+  def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"repo","distributed.repo.core.SbtRepoMain")
+  def makeDbuildProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"build","distributed.build.SbtBuildMain")
+
+
+  private def makeProps(t: File, src: File, sv: String, v: String, name:String, clazz:String): (File, String) = {
     val tdir = t / "generated-sources"
     if(!tdir.exists) tdir.mkdirs()
-    val tprops = tdir / "drepo.properties"
+    val tprops = tdir / ("d"+name+".properties")
     // TODO - better caching
     if(!tprops.exists) IO.write(tprops, """
 [scala]
@@ -43,9 +47,9 @@ object Packaging {
 
 [app]
   org: com.typesafe.dbuild
-  name: d-repo
+  name: d-%s
   version: %s
-  class: distributed.repo.core.SbtRepoMain
+  class: %s
   cross-versioned: true
   components: xsbti
 
@@ -68,48 +72,8 @@ object Packaging {
   ivy-home: ${user.home}/.dbuild/ivy/
   checksums: ${sbt.checksums-sha1,md5}
   override-build-repos: ${sbt.override.build.repos-false}
-""" format(sv, v))
-    tprops -> "bin/drepo.properties"
+""" format(sv, name, v, clazz))
+    tprops -> ("bin/d"+name+".properties")
   }
-  
 
-  def makeDbuildProps(t: File, src: File, sv: String, v: String): (File, String) = {
-    val tdir = t / "generated-sources"
-    if(!tdir.exists) tdir.mkdirs()
-    val tprops = tdir / "dbuild.properties"
-    // TODO - better caching
-    if(!tprops.exists) IO.write(tprops, """
-[scala]
-  version: %s
-
-[app]
-  org: com.typesafe.dbuild
-  name: d-build
-  version: %s
-  class: distributed.build.SbtBuildMain
-  cross-versioned: true
-  components: xsbti
-
-[repositories]
-  local
-  maven-central
-  sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots
-  java-annoying-cla-shtuff: http://download.java.net/maven/2/
-  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases
-  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  jgit-repo: http://download.eclipse.org/jgit/maven
-  scala-fresh-2.10.x: http://typesafe.artifactoryonline.com/typesafe/scala-fresh-2.10.x/
-
-[boot]
- directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}
-
-[ivy]
-  ivy-home: ${user.home}/.dbuild/ivy/
-  checksums: ${sbt.checksums-sha1,md5}
-  override-build-repos: ${sbt.override.build.repos-false}
-""" format(sv, v))
-    tprops -> "bin/dbuild.properties"
-  }
 }

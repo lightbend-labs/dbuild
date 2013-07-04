@@ -10,7 +10,6 @@ import project.model._
 import distributed.project.model.Utils.readValue
 import distributed.repo.core._
 import distributed.project.model.ClassLoaderMadness
-import distributed.project.ProjectDirs
 
 class LocalBuildMain(repos:List[xsbti.Repository], workingDir: File = ProjectDirs.builddir) {
   // TODO - Pull these via plugins or something...

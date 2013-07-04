@@ -4,7 +4,7 @@ package build
 import project.model._
 import java.io.File
 import sbt.Path._
-import distributed.project.ProjectDirs
+import distributed.repo.core.ProjectDirs
 
 /** Takes a given build configuration and returns a *repeatable* full realizes build
  * configuration.

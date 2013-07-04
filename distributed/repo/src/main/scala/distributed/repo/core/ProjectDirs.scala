@@ -1,4 +1,4 @@
-package distributed.project
+package distributed.repo.core
 
 import distributed.project.model._
 import java.io.File
@@ -11,12 +11,12 @@ import java.io.File
 object ProjectDirs {
   // TODO - Pull from config!
   val builddir = new File(".")
-  val targetDir = new File(builddir, "target")
+  val targetDir = new File(builddir, "target-"+Defaults.version)
   val clonesDir = new File(targetDir, "clones")
   val userhome = new File(sys.props("user.home"))
   val dbuildDir = new File(userhome, ".dbuild")
-  val userCache = new File(dbuildDir, "cache")
-  
+  val userCache = new File(dbuildDir, "cache-"+Defaults.version)
+  val repoCredFile = new File(dbuildDir, "remote.cache.properties")
   
   def logDir = new File(targetDir, "logs")
   

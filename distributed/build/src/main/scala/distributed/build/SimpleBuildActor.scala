@@ -15,7 +15,7 @@ import akka.util.Timeout
 import actorpaterns.forwardingErrorsToFutures
 import sbt.Path._
 import java.io.File
-import distributed.project.ProjectDirs
+import distributed.repo.core.ProjectDirs
 
 case class RunDistributedBuild(build: DistributedBuildConfig, target: File, logger: Logger)
 

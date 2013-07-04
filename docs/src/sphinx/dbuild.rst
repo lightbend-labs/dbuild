@@ -42,7 +42,8 @@ other aspects of the build process.
 
 The build file is written in a JSON format. The file is parsed by using the Typesafe
 `config library <http://github.com/typesafehub/config>`_, therefore the syntax of the file can be simplified
-by using the conventions of that library.
+by using the conventions of that library. The order of items in the configuration file is never relevant,
+unless explicitly mentioned in the documentation.
 
 The top level of the configuration file is:
 

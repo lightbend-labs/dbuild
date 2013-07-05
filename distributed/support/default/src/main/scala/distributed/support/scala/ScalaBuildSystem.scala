@@ -92,6 +92,11 @@ object ScalaBuildSystem extends BuildSystem {
       } yield major.toString+"."+minor.toString+"."+patch.toString
     ) getOrElse sys.error("unable to load scala version number!")
 
+    def detectActorsMigration(baseDir:File) = {
+       val dir1 = baseDir / "src" / "actors-migration" / "scala" / "actors"
+       (dir1 / "Pattern.scala").isFile || (dir1 / "migration" / "Pattern.scala").isFile 
+    }
+    
     // hard-coded
     ExtractedBuildMeta(version, Seq(
       Project("continuations", "org.scala-lang.plugins",
@@ -121,7 +126,7 @@ object ScalaBuildSystem extends BuildSystem {
       Project("scalap", "org.scala-lang",
         Seq(ProjectRef("scalap", "org.scala-lang")),
         Seq(ProjectRef("scala-compiler", "org.scala-lang")))
-    ) ++ (if ((baseDir / "src" / "actors-migration").isDirectory)
+    ) ++ (if (detectActorsMigration(baseDir))
       Seq(Project("scala-actors-migration", "org.scala-lang",
         Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),
         Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))))

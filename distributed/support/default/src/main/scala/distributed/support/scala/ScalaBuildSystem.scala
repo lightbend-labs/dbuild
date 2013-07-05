@@ -106,9 +106,6 @@ object ScalaBuildSystem extends BuildSystem {
       Project("scala-actors", "org.scala-lang",
         Seq(ProjectRef("scala-actors", "org.scala-lang")),
         Seq(ProjectRef("scala-library", "org.scala-lang"))),
-      Project("scala-actors-migration", "org.scala-lang",
-        Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),
-        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))),
       Project("scala-compiler", "org.scala-lang",
         Seq(ProjectRef("scala-compiler", "org.scala-lang")),
         Seq(ProjectRef("scala-reflect", "org.scala-lang"), ProjectRef("jline", "org.scala-lang"))),
@@ -124,6 +121,10 @@ object ScalaBuildSystem extends BuildSystem {
       Project("scalap", "org.scala-lang",
         Seq(ProjectRef("scalap", "org.scala-lang")),
         Seq(ProjectRef("scala-compiler", "org.scala-lang")))
-    ))
+    ) ++ (if ((baseDir / "src" / "actors-migration").isDirectory)
+      Seq(Project("scala-actors-migration", "org.scala-lang",
+        Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))))
+        else Seq.empty))
   }
 }

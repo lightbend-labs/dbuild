@@ -16,7 +16,11 @@ import distributed.project.model.Utils.readValue
 object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
   
-  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = readMeta(dir)
+  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+    val meta=readMeta(dir)
+    log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
+    meta
+  }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
     Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
@@ -36,12 +40,19 @@ object ScalaBuildSystem extends BuildSystem {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
+
+    def artifactDir(repoDir: File, ref: ProjectRef) =
+      ref.organization.split('.').foldLeft(repoDir)(_ / _) / ref.name
+
     // Since this is a real local maven repo, it also contains
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
-    BuildArtifactsOut(Seq(("", scalaProjectRefs(dir) map (ArtifactLocation(_, version)),
-      (localRepo.***).get.filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
-        LocalRepoHelper.makeArtifactSha(_,localRepo)
-      })))
+    val meta=readMeta(dir)
+    BuildArtifactsOut(meta.projects map {
+      proj => (proj.name,proj.artifacts map {ArtifactLocation(_, version)},
+        (proj.artifacts.flatMap(ref => (artifactDir(localRepo,ref).***).get).filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
+          LocalRepoHelper.makeArtifactSha(_,localRepo)
+      })
+    )})
   }
 
   /** Read ExtractedBuildMeta from dbuild-meta.json if present in the scala checkout.
@@ -49,15 +60,16 @@ object ScalaBuildSystem extends BuildSystem {
    */
   private def readMeta(baseDir: File): ExtractedBuildMeta = {
     val dbuildMetaFile = new File(baseDir, "dbuild-meta.json")
-    try readValue[ExtractedBuildMeta](dbuildMetaFile)
+    val readMeta=try readValue[ExtractedBuildMeta](dbuildMetaFile)
     catch { case e:Exception =>
       fallbackMeta(baseDir)
     }
+    // There are no real subprojects in the Scala build;
+    // simulate them by creating one per artifact.
+    // That will enable us to publish individual artifacts
+    // during the deploy stage.
+    readMeta.copy(subproj=readMeta.projects map {_.name})
   }
-
-  private def scalaProjectRefs(baseDir: File) =
-    readMeta(baseDir).projects.flatMap(project => project.artifacts ++ project.dependencies).distinct
-
 
   /** Read version from build.number but fake the rest of the ExtractedBuildMeta.*/
   private def fallbackMeta(baseDir: File): ExtractedBuildMeta = {

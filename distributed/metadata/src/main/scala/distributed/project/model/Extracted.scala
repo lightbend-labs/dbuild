@@ -28,6 +28,6 @@ case class Project(
  * subproj is the list of (sbt or other) subprojects that will have to be compiled,
  * in the right order. It can be empty for build systems that do not support subprojects.
  */
-case class ExtractedBuildMeta(uri: String, version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty) {
-  override def toString = "Build(%s, %s, %s, %s)" format (uri, version, projects.mkString("\n\t", "\n\t", "\n"), subproj.mkString("\n  ",", ","\n"))
+case class ExtractedBuildMeta(version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty) {
+  override def toString = "Build(%s, %s, %s)" format (version, projects.mkString("\n\t", "\n\t", "\n"), subproj.mkString("\n  ",", ","\n"))
 }

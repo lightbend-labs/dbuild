@@ -81,7 +81,7 @@ object ScalaBuildSystem extends BuildSystem {
     ) getOrElse sys.error("unable to load scala version number!")
 
     // hard-coded
-    ExtractedBuildMeta("http://github.com/scala/scala", version, Seq(
+    ExtractedBuildMeta(version, Seq(
       Project("continuations", "org.scala-lang.plugins",
         Seq(ProjectRef("continuations", "org.scala-lang.plugins")),
         Seq.empty),

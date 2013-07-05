@@ -229,7 +229,7 @@ object DependencyAnalysis {
     val Some(version) = Keys.version in currentRef get structure.data
     // return just this version string now; we will append to it more stuff prior to building
 
-    val meta = model.ExtractedBuildMeta(uri, version, deps, normalizedProjectNames(refs)) // return the new list of subprojects as well!
+    val meta = model.ExtractedBuildMeta(version, deps, normalizedProjectNames(refs)) // return the new list of subprojects as well!
     val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
     try output println writeValue(meta)
     finally output.close()

@@ -13,7 +13,6 @@ object PomHelperSpec extends Specification {
             Seq(ProjectConfigAndExtracted(
                 config = ProjectBuildConfig("", "", "", None, None),
                 extracted = ExtractedBuildMeta(
-                  uri = "",
                   version = "",
                   projects = Seq(
                     Project(

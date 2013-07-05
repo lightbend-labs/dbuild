@@ -10,27 +10,13 @@ import _root_.sbt.IO.relativize
 import logging.Logger
 import sys.process._
 import distributed.repo.core.LocalRepoHelper
+import distributed.project.model.Utils.readValue
 
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
   
-  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
-    // TODO - don't HardCode
-    
-    ExtractedBuildMeta("", readScalaVersion(dir),
-        Seq(
-          Project("jline", group, Seq(jline), Seq.empty),
-          Project("scala-library", group, Seq(lib), Seq.empty),
-          Project("scala-reflection", group, Seq(reflect), Seq(lib)),
-          Project("scala-actors", group, Seq(actors), Seq(lib)),
-          Project("scala-actors-migration", group, Seq(actorsMigration), Seq(lib, actors)),
-          Project("scala-swing", group, Seq(swing), Seq(lib)),
-          Project("scala-compiler", group, Seq(comp), Seq(reflect, jline)),
-          Project("scalap", group, Seq(scalap), Seq(comp)),
-          Project("partest", group, Seq(partest), Seq(comp, actors))
-        ))
-  }
+  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = readMeta(dir)
 
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
     Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
@@ -52,54 +38,80 @@ object ScalaBuildSystem extends BuildSystem {
     }
     // Since this is a real local maven repo, it also contains
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
-
-    // Hardcoded results...
-    BuildArtifactsOut(Seq(("", Seq(
-      ArtifactLocation(lib, version),
-      ArtifactLocation(reflect, version),
-      ArtifactLocation(comp, version),
-      ArtifactLocation(actors, version),
-      ArtifactLocation(swing, version),
-      ArtifactLocation(actorsMigration, version),
-      ArtifactLocation(scalap, version),
-      ArtifactLocation(jline, version),
-      ArtifactLocation(partest, version),
-      ArtifactLocation(continuations, version)),
+    BuildArtifactsOut(Seq(("", scalaProjectRefs(dir) map (ArtifactLocation(_, version)),
       (localRepo.***).get.filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
         LocalRepoHelper.makeArtifactSha(_,localRepo)
       })))
   }
-    
-    
-    
-  private def readScalaVersion(baseDir: File): String = {
+
+  /** Read ExtractedBuildMeta from dbuild-meta.json if present in the scala checkout.
+   * Otherwise, fall back to hard-coded defaults.
+   */
+  private def readMeta(baseDir: File): ExtractedBuildMeta = {
+    val dbuildMetaFile = new File(baseDir, "dbuild-meta.json")
+    try readValue[ExtractedBuildMeta](dbuildMetaFile)
+    catch { case e:Exception =>
+      fallbackMeta(baseDir)
+    }
+  }
+
+  private def scalaProjectRefs(baseDir: File) =
+    readMeta(baseDir).projects.flatMap(project => project.artifacts ++ project.dependencies).distinct
+
+
+  /** Read version from build.number but fake the rest of the ExtractedBuildMeta.*/
+  private def fallbackMeta(baseDir: File): ExtractedBuildMeta = {
     val propsFile = new File(baseDir, "build.number")
     import util.control.Exception.catching
-    def loadProps(): Option[_root_.java.util.Properties] = 
+    def loadProps(): Option[_root_.java.util.Properties] =
      catching(classOf[_root_.java.io.IOException]) opt {
       val props = new _root_.java.util.Properties()
       props.load(new _root_.java.io.FileReader(propsFile))
       props
     }
-    val version: Option[String] = for {
-      f <- if (propsFile.exists) Some(propsFile) else None
-      props <- loadProps()
-      major <- Option(props get "version.major")
-      minor <- Option(props get "version.minor")
-      patch <- Option(props get "version.patch")
-    } yield major.toString+"."+minor.toString+"."+patch.toString
-    version getOrElse sys.error("unable to load scala version number!")
-  } 
-    
-  private[this] def group = "org.scala-lang"
-  private[this] def lib = ProjectRef("scala-library", group)
-  private[this] def reflect = ProjectRef("scala-reflect", group)
-  private[this] def actorsMigration = ProjectRef("scala-actors-migration", group)
-  private[this] def actors = ProjectRef("scala-actors", group)
-  private[this] def swing= ProjectRef("scala-swing", group)
-  private[this] def jline = ProjectRef("jline", group)
-  private[this] def comp = ProjectRef("scala-compiler", group)
-  private[this] def scalap = ProjectRef("scalap", group)
-  private[this] def partest = ProjectRef("partest", group)
-  private[this] def continuations = ProjectRef("continuations", group+".plugins")
+
+    val version = (
+      for {
+        f <- if (propsFile.exists) Some(propsFile) else None
+        props <- loadProps()
+        major <- Option(props get "version.major")
+        minor <- Option(props get "version.minor")
+        patch <- Option(props get "version.patch")
+      } yield major.toString+"."+minor.toString+"."+patch.toString
+    ) getOrElse sys.error("unable to load scala version number!")
+
+    // hard-coded
+    ExtractedBuildMeta("http://github.com/scala/scala", version, Seq(
+      Project("continuations", "org.scala-lang.plugins",
+        Seq(ProjectRef("continuations", "org.scala-lang.plugins")),
+        Seq.empty),
+      Project("jline", "org.scala-lang",
+        Seq(ProjectRef("jline", "org.scala-lang")),
+        Seq.empty),
+      Project("partest", "org.scala-lang",
+        Seq(ProjectRef("partest", "org.scala-lang")),
+        Seq(ProjectRef("scala-compiler", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))),
+      Project("scala-actors", "org.scala-lang",
+        Seq(ProjectRef("scala-actors", "org.scala-lang")),
+        Seq(ProjectRef("scala-library", "org.scala-lang"))),
+      Project("scala-actors-migration", "org.scala-lang",
+        Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))),
+      Project("scala-compiler", "org.scala-lang",
+        Seq(ProjectRef("scala-compiler", "org.scala-lang")),
+        Seq(ProjectRef("scala-reflect", "org.scala-lang"), ProjectRef("jline", "org.scala-lang"))),
+      Project("scala-library", "org.scala-lang",
+        Seq(ProjectRef("scala-library", "org.scala-lang")),
+        Seq.empty),
+      Project("scala-reflect", "org.scala-lang",
+        Seq(ProjectRef("scala-reflect", "org.scala-lang")),
+        Seq(ProjectRef("scala-library", "org.scala-lang"))),
+      Project("scala-swing", "org.scala-lang",
+        Seq(ProjectRef("scala-swing", "org.scala-lang")),
+        Seq(ProjectRef("scala-library", "org.scala-lang"))),
+      Project("scalap", "org.scala-lang",
+        Seq(ProjectRef("scalap", "org.scala-lang")),
+        Seq(ProjectRef("scala-compiler", "org.scala-lang")))
+    ))
+  }
 }

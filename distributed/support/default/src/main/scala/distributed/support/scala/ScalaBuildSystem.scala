@@ -52,7 +52,7 @@ object ScalaBuildSystem extends BuildSystem {
     // We then calculate the sha, and package each subproj's results as a BuildSubArtifactsOut.
     val meta=readMeta(dir)
     BuildArtifactsOut(meta.projects map {
-      proj => BuildSubArtifactsOut(proj.name,proj.artifacts map {ArtifactLocation(_, version)},
+      proj => BuildSubArtifactsOut(proj.name,proj.artifacts map {ArtifactLocation(_, version, "")},
         (proj.artifacts.flatMap(ref => (artifactDir(localRepo,ref).***).get).filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
           LocalRepoHelper.makeArtifactSha(_,localRepo)
       })

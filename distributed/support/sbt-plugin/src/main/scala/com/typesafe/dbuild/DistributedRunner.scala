@@ -497,7 +497,7 @@ object DistributedRunner {
           fixScalaVersion2(dbuildDir, repoDir, arts),
           fixInterProjectResolver2bis(modules, log),
           fixScalaBinaryVersions2,
-          fixCrossVersions2,
+//          fixCrossVersions2,
           fixScalaBinaryCheck2) flatMap { _(oldSettings, log) }
   }
   
@@ -570,15 +570,19 @@ object DistributedRunner {
     Keys.commands += setItUp,
     Keys.commands += comment)
 
-  def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File]): Seq[model.ArtifactLocation] =
+  def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
+    cross: CrossVersion, sv: String, sbv: String): Seq[model.ArtifactLocation] = {
+    val crossSuffix = CrossVersion.applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
     } yield model.ArtifactLocation(
       model.ProjectRef(artifact.name, org, artifact.extension, artifact.classifier),
-      version)
-
+      version, crossSuffix)
+  }
+      
   // TODO - We need to publish too....
   def projectSettings: Seq[Setting[_]] = Seq(
-    extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile) map extractArtifactLocations)
+    extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
+      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion) map extractArtifactLocations)
 
 }

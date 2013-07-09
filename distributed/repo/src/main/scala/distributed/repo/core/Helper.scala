@@ -72,7 +72,7 @@ object LocalRepoHelper {
    */
   def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut],
     localRepo: File, remote: Repository): ProjectArtifactInfo = {
-    extracted foreach { case BuildSubArtifactsOut(subproj, arts, shas) => publishRawArtifacts(localRepo, subproj, shas, remote) }
+    extracted foreach { case BuildSubArtifactsOut(subproj, _, shas) => publishRawArtifacts(localRepo, subproj, shas, remote) }
     val info = ProjectArtifactInfo(project, extracted)
     publishProjectMetadata(info, remote)
     info

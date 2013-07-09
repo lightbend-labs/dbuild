@@ -7,7 +7,7 @@ import java.io.File
  * 
  * NOTE: Build time is only in here so we could hack some performance quickly.
  */
-case class ArtifactLocation(info: ProjectRef, version: String, buildTime: Double = 0.0)
+case class ArtifactLocation(info: ProjectRef, version: String, crossSuffix: String, buildTime: Double = 0.0)
 
 /** This class represents an Artifact's SHA (of the file) for unique storage and the 
  * location it has in a maven/ivy/p2 repository.

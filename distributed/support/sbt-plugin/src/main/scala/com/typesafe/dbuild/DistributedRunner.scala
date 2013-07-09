@@ -119,15 +119,7 @@ object DistributedRunner {
         if artifact.info.name == fixName(m.name) || (m.explicitArtifacts map expandName).contains(artifact.info.name)
       } yield artifact).headOption
     findArt map { art =>
-      // println("Updating: " + m + " to: " + art)
-      // TODO - Update our publishing so we don't have a cross versions too.....
-      // TODO - warning: cross-version settings should probably
-      // /not/ be changed in case a new scala version is not specified
-      // (in case scala is not part of the dbuild project file)
-      if (m.explicitArtifacts.isEmpty)
-        m.copy(name = art.info.name, revision = art.version, crossVersion = CrossVersion.Disabled)
-      else
-        m.copy(revision = art.version, crossVersion = CrossVersion.Disabled)
+      m.copy(name = art.info.name+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled)
     } getOrElse m
   }
 

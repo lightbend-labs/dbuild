@@ -28,7 +28,7 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
    * Note: This will resolve artifacts to the local and throw an exception
    * if unable to do so!
    */
-  def getPublishedArtifacts(uuid: String): Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])] = 
+  def getPublishedArtifacts(uuid: String): Seq[BuildSubArtifactsOut] = 
     LocalRepoHelper.getPublishedDeps(uuid, remote)
     
     
@@ -46,6 +46,6 @@ class ProjectRepository(remote: Repository) extends ReadableProjectRepository(re
    * @param extracted The extracted artifacts that this project generates.
    * @param localRepo  The location of all artifacts we should read and send.
    */
-  def publishArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])], localRepo: File): ProjectArtifactInfo =
+  def publishArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut], localRepo: File): ProjectArtifactInfo =
     LocalRepoHelper.publishProjectArtifactInfo(project, extracted, localRepo, remote)
 }

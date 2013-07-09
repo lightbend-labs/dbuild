@@ -10,7 +10,7 @@ object BuildArtifactsSpec extends Specification {
     "parse pretty printed result" in {
       val data = 
         BuildArtifactsOut( 
-          Seq(("x",Seq(
+          Seq(BuildSubArtifactsOut("x",Seq(
               ArtifactLocation(ProjectRef("p3", "o2"), "1.0"),
               ArtifactLocation(ProjectRef("p3", "o2"), "2.0")
           ),Seq.empty))

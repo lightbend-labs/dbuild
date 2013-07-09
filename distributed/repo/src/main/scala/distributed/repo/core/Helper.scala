@@ -70,9 +70,9 @@ object LocalRepoHelper {
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
-  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[(String, Seq[ArtifactLocation], Seq[ArtifactSha])],
+  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut],
     localRepo: File, remote: Repository): ProjectArtifactInfo = {
-    extracted foreach { case (subproj, arts, shas) => publishRawArtifacts(localRepo, subproj, shas, remote) }
+    extracted foreach { case BuildSubArtifactsOut(subproj, arts, shas) => publishRawArtifacts(localRepo, subproj, shas, remote) }
     val info = ProjectArtifactInfo(project, extracted)
     publishProjectMetadata(info, remote)
     info
@@ -103,21 +103,21 @@ object LocalRepoHelper {
     (ProjectArtifactInfo, Seq[T], Seq[ArtifactLocation]) = {
     val metadata =
       materializeProjectMetadata(uuid, remote) getOrElse (throw new ResolveException(makeProjectMetaKey(uuid), "Could not resolve metadata for " + uuid))
-    val fetch = if (subprojs.isEmpty) metadata.versions.map { _._1 } else {
-      val unknown = subprojs.diff(metadata.versions.map { _._1 })
+    val fetch = if (subprojs.isEmpty) metadata.versions.map { _.subName } else {
+      val unknown = subprojs.diff(metadata.versions.map { _.subName })
       if (unknown.nonEmpty) {
         sys.error(unknown.mkString("The following subprojects are unknown: ", ", ", ""))
       }
       subprojs
     }
-    val artifactFiles = metadata.versions.filter { v => fetch.contains(v._1) }.flatMap { _._3 }
+    val artifactFiles = metadata.versions.filter { v => fetch.contains(v.subName) }.flatMap { _.shas }
     val results = for {
       artifactFile <- artifactFiles
       key = makeRawFileKey(artifactFile.sha)
       resolved = remote get key
     } yield f(resolved, artifactFile)
 
-    val artifacts = metadata.versions.filter { v => fetch.contains(v._1) }.flatMap { _._2 }
+    val artifacts = metadata.versions.filter { v => fetch.contains(v.subName) }.flatMap { _.artifacts }
 
     (metadata, results, artifacts)
   }
@@ -164,7 +164,7 @@ object LocalRepoHelper {
     resolveArtifacts(uuid, remote)((x,y) => x -> y)
     
   /** Checks whether or not a given project (by UUID) is published. */
-  def getPublishedDeps(uuid: String, remote: ReadableRepository):Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])] = {
+  def getPublishedDeps(uuid: String, remote: ReadableRepository):Seq[BuildSubArtifactsOut] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
     meta.versions

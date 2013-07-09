@@ -24,26 +24,31 @@ case class ArtifactSha(sha: String, location: String)
 case class ProjectArtifactInfo(
     project: RepeatableProjectBuild,
     // (Subprojects,Relative locations
-    versions: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])])
-  
+    versions: Seq[BuildSubArtifactsOut])
+
 /**
  * This represents two pieces of data:
- * 
+ *
  * (1) The artifacts that we need to rewire dependencies for
  * (2) The repository in which those artifacts are stored.
- * 
+ *
  * BuildArtifactsIn represents "incoming artifacts to rewire", while
  * BuildArtifactsOut represents the "outgoing artifacts for publication".
  * The latter contains a sequence in which each element contains:
  * - name of a subproject
  * - artifacts published by that subproject
- * - corresponding (relative pathnames of) files published by that
- * subproject to the repository.
- * If the build system has no subproject support, there will be just
- * one tuple, where the subproject name is the empty string.
+ * - corresponding shas of files published by that subproject to the repository.
+ * The set of shas and artifacts should be related, in theory; in practice,
+ * the file system is manually inspected, and any additional files that may
+ * have been generated (checksums,additional metadata, etc) are grabbed as well
+ * and turned into shas.
+ * 
+ * If the build system has no subproject support, BuildArtifactsOut will contain
+ * just one element, where the subproject name is the empty string.
  */
-case class BuildArtifactsOut(artifacts: Seq[(String,Seq[ArtifactLocation],Seq[ArtifactSha])])
 case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
+case class BuildArtifactsOut(results: Seq[BuildSubArtifactsOut])
+case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation], shas: Seq[ArtifactSha])
 
 
 /** This represents general information every dbuild must know:

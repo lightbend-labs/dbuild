@@ -124,10 +124,8 @@ object DistributedRunner {
     findArt map { art =>
       // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it will have an extra suffix
       // due to the classifier). Use fixName(m.name) instead.
-      // TODO: is crossSuffix in the right place, if m.name (wrongly) includes a classifier? (some buggy client code does it)
-      val u=m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled)
-//      println("******** from m "+m+"   through art "+art+"      Becomes u "+u)
-      u
+      // TODO: is crossSuffix in the right place, if m.name (wrongly) includes a classifier?
+      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled)
     } getOrElse m
   }
 
@@ -266,6 +264,7 @@ object DistributedRunner {
   // We need to disable the inter-project resolver entirely. Otherwise, sbt will try to build all
   // of the dependent subprojects each time one of the subprojects is built, including some that
   // we may have explicitly excluded (as they are built in a different project, for instance)
+  // (currently unused).
   def fixInterProjectResolver2 =
     fixGeneric2(Keys.projectResolver, "Disabling inter-project resolver") { _ map { _ => new RawRepository(new ProjectResolver("inter-project", Map.empty)) } }
 
@@ -377,20 +376,8 @@ object DistributedRunner {
     import extracted._
     val refs = getProjectRefs(extracted)
     refs foreach { ref =>
-//      println(" PROJECT: "+ref.project)
-//      println("inter-project resolver:")
-//      val resolvers = extracted.runTask(Keys.fullResolvers in ref, state)._2
-//      resolvers.filter(_.name=="inter-project") foreach { r=>
-//        println("\t%s: (%s) - %s" format (ref.project, r.name, r.toString))
-//      }
-//      println("projectResolver:")
       val resolver = extracted.runTask(Keys.projectResolver in ref, state)._2
       println("\tprojectResolver in %s: (%s)" format (ref.project, resolver))
-//      println("inter-project resolver (after the fact):")
-//      val resolvers2 = extracted.runTask(Keys.fullResolvers in ref, state)._2
-//      resolvers2.filter(_.name=="inter-project") foreach { r=>
-//        println("\t%s: (%s) - %s" format (ref.project, r.name, r.toString))
-//      }
     }
   }
 
@@ -414,13 +401,9 @@ object DistributedRunner {
   // the list of shas of the files published to the repository during this step.
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
     val state2 = fixBuildSettings(config, state)
-
 //    printResolvers(state2)
-//    println("-----------Before:")
 //    printPR(state)
-//    println("-----------After:")
 //    printPR(state2)
-//    println("-----------")
 
     println("Building project...")
     val refs = getProjectRefs(Project.extract(state2))
@@ -436,11 +419,11 @@ object DistributedRunner {
       (State, (Seq[File],BuildSubArtifactsOut)) = {
 
       val (_,libDeps) = Project.extract(state6).runTask(Keys.allDependencies in ref, state)
-      println("All Dependencies for project "+ref.project+":")
+      println("All Dependencies for subproject "+ref.project+":")
       libDeps foreach {m=>println("   "+m)}
-      val (_,pRes) = Project.extract(state6).runTask(Keys.projectResolver in ref, state)
-      println("Project Resolver for project "+ref.project+":")
-      println("   "+pRes)
+//      val (_,pRes) = Project.extract(state6).runTask(Keys.projectResolver in ref, state)
+//      println("Project Resolver for project "+ref.project+":")
+//      println("   "+pRes)
 
       val (state7, artifacts) = buildTask(ref, state6)
       val state8 = if (config.config.runTests) {

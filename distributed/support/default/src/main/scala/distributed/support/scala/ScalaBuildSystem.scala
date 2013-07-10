@@ -30,11 +30,9 @@ object ScalaBuildSystem extends BuildSystem {
 
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
     val ec = scalaExpandConfig(project.config)
-//  @JsonProperty("build-number") buildNumber: Option[String] = None,
-//  target: Option[String] = None,
-//  options: Seq[String] = Seq.empty
 
-    // if requested, overwrite build.number
+    // if requested, overwrite build.number. This is unrelated to
+    // the version that is possibly overridden by "set-version".
     ec.buildNumber match {
       case None =>
       case Some(BuildNumber(major,minor,patch,bnum)) => try {
@@ -50,10 +48,16 @@ object ScalaBuildSystem extends BuildSystem {
       }
     }
 
-    val version = input.version // this is the version used for Maven
+    // this is the version used for Maven. It is always read from "build.number",
+    // unless it doesn't exist, in which case the version in "dbuild-meta.json"
+    // is considered (if the file exists). To the version read in this manner, a
+    // dbuild-specific suffix is added. However, if "set-version" is specified, its
+    // value overriddes the information previously extracted from the checkout (including
+    // the dbuild-specific suffix).
+    val version = input.version
     
     Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
-        "-Dmaven.version.number="+version) ++ ec.options, Some(dir)) ! log match {
+        "-Dmaven.version.number="+version) ++ ec.buildOptions, Some(dir)) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
@@ -63,7 +67,7 @@ object ScalaBuildSystem extends BuildSystem {
         "-Dlocal.snapshot.repository="+localRepo.getAbsolutePath,
         "-Dlocal.release.repository="+localRepo.getAbsolutePath,
         "-Dmaven.version.number="+version
-    ), Some(dir / "dists" / "maven" / "latest")) ! log match {
+    ) ++ ec.buildOptions, Some(dir / "dists" / "maven" / "latest")) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
@@ -96,32 +100,37 @@ object ScalaBuildSystem extends BuildSystem {
       fallbackMeta(baseDir)
     }
     // There are no real subprojects in the Scala build;
-    // simulate them by creating one per artifact.
+    // simulate them by creating one subproject per artifact.
     // That will enable us to publish individual artifacts
     // during the deploy stage.
-    readMeta.copy(subproj=readMeta.projects map {_.name})
+    val meta=readMeta.copy(subproj=readMeta.projects map {_.name})
+
+    // override the "dbuild.json" version with the one from "build.number" (if it exists)
+    readBuildNumberFile(baseDir) map {v=>meta.copy(version=v)} getOrElse meta
   }
 
+  def readBuildNumberFile(baseDir: File) = {
+    import util.control.Exception.catching
+    val propsFile = new File(baseDir, "build.number")
+    def loadProps(): Option[_root_.java.util.Properties] =
+      catching(classOf[_root_.java.io.IOException]) opt {
+        val props = new _root_.java.util.Properties()
+        props.load(new _root_.java.io.FileReader(propsFile))
+        props
+      }
+    for {
+      f <- if (propsFile.exists) Some(propsFile) else None
+      props <- loadProps()
+      major <- Option(props get "version.major")
+      minor <- Option(props get "version.minor")
+      patch <- Option(props get "version.patch")
+    } yield major.toString + "." + minor.toString + "." + patch.toString
+  }
+    
   /** Read version from build.number but fake the rest of the ExtractedBuildMeta.*/
   private def fallbackMeta(baseDir: File): ExtractedBuildMeta = {
-    val propsFile = new File(baseDir, "build.number")
-    import util.control.Exception.catching
-    def loadProps(): Option[_root_.java.util.Properties] =
-     catching(classOf[_root_.java.io.IOException]) opt {
-      val props = new _root_.java.util.Properties()
-      props.load(new _root_.java.io.FileReader(propsFile))
-      props
-    }
 
-    val version = (
-      for {
-        f <- if (propsFile.exists) Some(propsFile) else None
-        props <- loadProps()
-        major <- Option(props get "version.major")
-        minor <- Option(props get "version.minor")
-        patch <- Option(props get "version.patch")
-      } yield major.toString+"."+minor.toString+"."+patch.toString
-    ) getOrElse sys.error("unable to load scala version number!")
+    val version = readBuildNumberFile(baseDir) getOrElse sys.error("unable to load scala version number!")
 
     def detectActorsMigration(baseDir:File) = {
        val dir1 = baseDir / "src" / "actors-migration" / "scala" / "actors"

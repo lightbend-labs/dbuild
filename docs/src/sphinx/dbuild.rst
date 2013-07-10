@@ -100,8 +100,13 @@ optional-output-version
 
 optional-extra-build-parameters
   The "extra" component is optional, as are all of its sub-components; it describes additional
-  parameters used while building the project, and its content depends on the build system. At this
-  time it is only used for sbt builds, in which case its structure is:
+  parameters used while building the project, and its content depends on the build system, as
+  detailed below.
+
+sbt-specific options
+--------------------
+
+In this case the "extra" argument is a record with the following content:
 
 .. code-block:: javascript
 
@@ -114,7 +119,7 @@ optional-extra-build-parameters
     "commands"       : [ cmd1, cmd2,... ]
    }
 
-Each of them is optional, and their meaning is:
+Each of these fields is optional; their meaning is:
 
 sbt-version
   A string that specifies the version of sbt that should be used to compile
@@ -163,6 +168,85 @@ commands
   A sequence of sbt commands; they will be executed by sbt before dbuild rearranges
   the project dependencies. These commands can be used, for example, to change settings
   using forms like "set setting := ...".
+
+Scala-specific options
+----------------------
+
+In the case of Scala, the "extra" record is:
+
+.. code-block:: javascript
+
+   {
+    "build-target"   : <build-target>,
+    "build-options"  : [ opt1, opt2,... ]
+    "build-number"   : <build-number>,
+   }
+
+Each of the fields is optional. The are:
+
+build-target
+  The Scala build system will normally generate the files by invoking
+  the target "distpack-maven-opt". If required, a different target can
+  be specified using this option.
+
+build-options
+  A sequence of strings; they will be appended to the ant options when
+  compiling. This option can be used to define additional properties,
+  or to set other flags.
+
+build-number
+  The contents of the file `build.properties` can be overridden by
+  using this option. It is specified as:
+
+  .. code-block:: javascript
+
+     {
+      "major"  : <major>,
+      "minor"  : <minor>,
+      "patch"  : <patch>,
+      "bnum"   : <bnum>,
+     }
+
+
+Scala version numbers
+---------------------
+
+The handling of version numbers in the Scala build system is made
+somewhat more complicated by the variety of ways in which version
+strings are passed to ant while compiling Scala. The combination
+of `build-number`, `set-version` (described above), and `build-options`,
+however, makes it possible to control all the various aspects.
+In detail, this is the way in which versions are handled:
+
+maven.version.number
+  The first version number is the one that is passed to ant via
+  a property called `maven.version.number`. If `set-version` is
+  specified, the corresponding string will be used. If there is
+  no set-version, the version string will be derived from the
+  content of the file `build.number`, in the checked out source
+  tree, with an additional build-specific suffix. If there is no
+  `build.number`, the Scala build system will use instead
+  the version string contained in the file `dbuild.json`, if
+  present, with the build-specific suffix. If both `dbuild.json`
+  and `build.number` exist, the version in `build.number` will
+  be used.
+
+build.number
+  The content of the build.number, independently, will also
+  affect the calculation of some of the version strings used
+  by the Scala ant system. If the extra option `build-option`
+  is used, its content will be used to overwrite the content
+  of the `build.number` file inside the source tree. This
+  replacement will not affect the calculation of `maven.version.number`
+  described above.
+
+other properties
+  The Scala ant build file uses internally other properties; as
+  mentioned previously, they can be set if needed by using the
+  option `build-options`. The main option that is probably of
+  interest is `build.release`; it can be set using:
+  ``build-options:["-Dbuild.release=true"]``
+
 
 The optional section ``deploy`` is described on the next page.
 

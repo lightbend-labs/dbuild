@@ -15,7 +15,13 @@ import distributed.project.model.Utils.readValue
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
-  
+
+  private def scalaExpandConfig(config: ProjectBuildConfig) = config.extra match {
+    case None => ScalaExtraConfig(None,None,Seq.empty) // pick default values
+    case Some(ec:ScalaExtraConfig) => ec
+    case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \""+config.name+"\". Please report")
+  }
+
   def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
     val meta=readMeta(dir)
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
@@ -23,14 +29,35 @@ object ScalaBuildSystem extends BuildSystem {
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
-    Process(Seq("ant", "distpack-maven-opt"), Some(dir)) ! log match {
+    val ec = scalaExpandConfig(project.config)
+//  @JsonProperty("build-number") buildNumber: Option[String] = None,
+//  target: Option[String] = None,
+//  options: Seq[String] = Seq.empty
+
+    // if requested, overwrite build.number
+    ec.buildNumber match {
+      case None =>
+      case Some(BuildNumber(major,minor,patch,bnum)) => try {
+        val p=new _root_.java.io.PrintWriter(dir / "build.number")
+        p.println("version.major="+major)
+        p.println("version.minor="+minor)
+        p.println("version.patch="+patch)
+        p.println("version.bnum="+bnum)
+        p.close
+      } catch {case e:_root_.java.io.IOException =>
+        println("*** Error while overwriting build.number.")
+        throw e
+      }
+    }
+
+    val version = input.version // this is the version used for Maven
+    
+    Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
+        "-Dmaven.version.number="+version) ++ ec.options, Some(dir)) ! log match {
       case 0 => ()
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
-    val version = input.version
-    
-    // Now deliver scala to the remote repo.
-    // TODO - VERSIONING!!!!!!!!!!!!!!!!!!
+
     val localRepo = input.outRepo
     Process(Seq("ant", "deploy.local",
         "-Dlocal.snapshot.repository="+localRepo.getAbsolutePath,

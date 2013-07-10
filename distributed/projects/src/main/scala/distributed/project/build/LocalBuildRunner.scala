@@ -46,7 +46,7 @@ class LocalBuildRunner(builder: BuildRunner,
           val value = build.baseVersion
           (if (value endsWith "-SNAPSHOT") {
             value replace ("-SNAPSHOT", "")
-          } else value) + "-" + build.uuid + "-dbuild"
+          } else value) + "-dbuildx" + build.uuid
         }
       }
       log.info("Running local build: " + build.config + " in directory: " + dir)

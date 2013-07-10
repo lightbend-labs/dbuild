@@ -80,8 +80,28 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
     ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, newData)
   }
 }
+/**
+ * The 'extra' options for the Scala build system are:
+ * build-number: Overwrites the standard build.number, with a custom number
+ *               Note that set-version changes the jar artifact version number,
+ *               while build-number changes the version that Scala reports, for
+ *               example, in the REPL.
+ * build-target: Overrides the standard ant target that is invoked in order to
+ *               generate the artifacts. The default is 'deploy.local', and it
+ *               is not normally changed.
+ * options:      A sequence of additional options that will be passed to ant.
+ *               They can specify properties, or modify in some other way the
+ *               build. These options will be passed after the ones set by
+ *               dbuild, on the command line.
+ * All fields are optional.
+ */
+case class ScalaExtraConfig(
+  @JsonProperty("build-number") buildNumber: Option[BuildNumber],
+  @JsonProperty("build-target") buildTarget: Option[String],
+  options: Seq[String] = Seq.empty
+  ) extends ExtraConfig
 
-case class ScalaExtraConfig extends ExtraConfig
+case class BuildNumber(major:String,minor:String,patch:String,bnum:String)
 
 case class MavenExtraConfig(
   directory: String = "") extends ExtraConfig

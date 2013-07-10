@@ -145,7 +145,7 @@ object LocalRepoHelper {
       IO.copyFile(resolved, file, false)
     }
     val info1 = "Retrieved from project " +
-      meta.project.config.name + " (at: " + (new java.net.URI(meta.project.config.uri)).getFragment + ")"
+      meta.project.config.name + " (commit: " + (new java.net.URI(meta.project.config.uri)).getFragment + ")"
     val info2 = ": " + arts.length + " artifacts"
     val msg = if (subprojs.isEmpty) Seq(info1+info2) else
       Seq(subprojs.mkString(info1+", subprojects ", ", ", info2))

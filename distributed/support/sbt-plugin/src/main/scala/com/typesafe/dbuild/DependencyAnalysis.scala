@@ -104,7 +104,7 @@ object DependencyAnalysis {
       }
     }
     
-    // this will be the list of ProjectRefs that will actually be build, in the right sequence
+    // this will be the list of ProjectRefs that will actually be built, in the right sequence
     val refs = {
       
       import graph._

@@ -300,11 +300,25 @@ object DistributedRunner {
       val scalaHome = dbuildDir / "scala" / ver
       log.info("Preparing Scala binaries: version " + ver)
       generateScalaDir(scalaHome, repoDir, ver)
-      fixGeneric2(Keys.scalaVersion, "Setting Scala version to: " + ver){ _ => ver }(oldSettings, log) ++
-      fixGeneric2(Keys.scalaHome, "Setting Scala home"){ _ => Some(scalaHome) }(oldSettings, log)
+      // I replicate some of the functionality now present in sbt 0.13
+      val blacklist: Set[String] = Set("scala-actors.jar", "scalacheck.jar", "scala-partest.jar", "scala-partest-javaagent.jar", "scalap.jar", "scala-swing.jar")
+      def scalaLib(scalaHome: File): File = new File(scalaHome, "lib")
+      def allJars(scalaHome: File): Seq[File] = IO.listFiles(scalaLib(scalaHome)).filter(f => !blacklist(f.getName))
+      def scalaJar(scalaHome: File, name: String) = new File(scalaLib(scalaHome), name)
+      def compilerJar(scalaHome: File) = scalaJar(scalaHome, "scala-compiler.jar")
+      def libraryJar(scalaHome: File) = scalaJar(scalaHome, "scala-library.jar")
+      //
+      fixGeneric2(Keys.scalaVersion, "Setting Scala version to: " + ver) { _ => ver }(oldSettings, log) ++
+        fixGenericTransform2(Keys.scalaInstance) { s: Setting[Task[ScalaInstance]] =>
+          val sc = s.key.scope
+          Keys.scalaInstance in sc <<= Keys.appConfiguration in sc map { app =>
+            val launcher = app.provider.scalaProvider.launcher
+            ScalaInstance(libraryJar(scalaHome), compilerJar(scalaHome), launcher, allJars(scalaHome): _*)
+          }
+        }("Setting Scala instance")(oldSettings, log)
     }
   }
-
+    
   // get the custom scala version string, if one is present somewhere in the list of artifacts of this build  
   private def customScalaVersion(arts: Seq[distributed.project.model.ArtifactLocation]): Option[String] =
     (for {
@@ -315,12 +329,8 @@ object DistributedRunner {
     } yield artifact.version).headOption
 
   def generateScalaDir(scalaHome: File, repoDir: File, ver: String) = {
-    // sbt uses needs a small set of jars in scalaHome. I only copy those, therefore.
-    val neededJars = Seq("scala-library", "scala-compiler")
-    val optionalJars = Seq("scala-reflect", "jline", "fjbg")
     val org = "org.scala-lang"
-    neededJars foreach retrieveJarFile(scalaHome, repoDir, org, ver, true)
-    optionalJars foreach retrieveJarFile(scalaHome, repoDir, org, ver, false)
+    getJarNames(repoDir, org, ver) foreach retrieveJarFile(scalaHome, repoDir, org, ver, true)
   }
 
   def retrieveJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean)(name: String) = {
@@ -334,6 +344,18 @@ object DistributedRunner {
   def jarFile(repoDir: File, org: String, name: String, version: String) =
     org.split('.').foldLeft(repoDir)(_ / _) / name / version / (name + "-" + version + ".jar")
 
+  def getJarNames(repoDir: File, org: String, version: String) = {
+    val base = org.split('.').foldLeft(repoDir)(_ / _)
+    base.***.get.flatMap {
+      f =>
+        if (f.isDirectory) None else {
+          val path = IO.relativize(base, f).get.split("/")
+          // we need path to be: name / version / (name + "-" + version + ".jar")
+          if (path(1) == version && path(2) == path(0) + "-" + version + ".jar") Some(path(0)) else None
+        }
+    }
+  }
+  
   def fixPGPs2(oldSettings: Seq[Setting[_]], log: Logger) =
     fixGeneric2(Keys.skip, "Disabling PGP signing") { old => old map (_ => true) }(oldSettings.filter {
       _.key.scope.task.toOption match {

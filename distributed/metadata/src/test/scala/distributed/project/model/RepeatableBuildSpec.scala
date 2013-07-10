@@ -15,8 +15,8 @@ object RepeatableDistributedBuildSpec extends Specification {
     
     val sample = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "scala", "uri", None),
-              ExtractedBuildMeta("uri", 
+              ProjectBuildConfig("a", "scala", "uri", None, None),
+              ExtractedBuildMeta("0.1", 
                   Seq(Project(
                     name = "a",
                     organization = "a",
@@ -24,8 +24,8 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "scala", "uri2", None),
-              ExtractedBuildMeta("uri2", 
+              ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None),
+              ExtractedBuildMeta("0.1-test1",
                   Seq(Project(
                     name = "b",
                     organization = "b",
@@ -33,8 +33,8 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "scala", "uri3", None),
-              ExtractedBuildMeta("uri3", 
+              ProjectBuildConfig("c", "scala", "uri3", None, None),
+              ExtractedBuildMeta("0.1",
                   Seq(Project(
                     name = "c",
                     organization = "c",
@@ -42,8 +42,8 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("d", "scala", "uri4", None),
-              ExtractedBuildMeta("uri4", 
+              ProjectBuildConfig("d", "scala", "uri4", None, None),
+              ExtractedBuildMeta("0.1-beta1",
                   Seq(Project(
                     name = "d",
                     organization = "d",
@@ -51,20 +51,20 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("c", "c"), ProjectRef("b", "b"))
                   )))),
         ProjectConfigAndExtracted(
-              ProjectBuildConfig("e", "scala", "uri5", None),
-              ExtractedBuildMeta("uri5", 
+              ProjectBuildConfig("e", "scala", "uri5", None, None),
+              ExtractedBuildMeta("3.0",
                   Seq(Project(
                     name = "e",
                     organization = "e",
                     artifacts = Seq(ProjectRef("e", "e")),
                     dependencies = Seq.empty
                   ))))
-    ))
+    ), None)
     
     val sample2 = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "scala", "uri", None),
-              ExtractedBuildMeta("uri", 
+              ProjectBuildConfig("a", "scala", "uri", None, None),
+              ExtractedBuildMeta("0.1",
                   Seq(Project(
                     name = "a",
                     organization = "a",
@@ -72,8 +72,8 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq.empty)
                   ))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "scala", "uri2", None),
-              ExtractedBuildMeta("uri2", 
+              ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None),
+              ExtractedBuildMeta("0.1-test1",
                   Seq(Project(
                     name = "b",
                     organization = "b",
@@ -81,15 +81,15 @@ object RepeatableDistributedBuildSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "scala", "uri3", None),
-              ExtractedBuildMeta("uri3", 
+              ProjectBuildConfig("c", "scala", "uri3", None, None),
+              ExtractedBuildMeta("0.1",
                   Seq(Project(
                     name = "c",
                     organization = "c",
                     artifacts = Seq(ProjectRef("c", "c")),
                     dependencies = Seq(ProjectRef("a", "a"))
                   ))))
-    ))
+    ), None)
     
     
     "serialize/deserialize" in {

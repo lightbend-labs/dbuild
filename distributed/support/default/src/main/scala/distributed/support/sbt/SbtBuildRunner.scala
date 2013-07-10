@@ -16,7 +16,7 @@ object SbtBuilder {
   def writeRepoFile(repos:List[xsbti.Repository], config: File, repo: File): Unit =
     Repositories.writeRepoFile(repos, config, "build-local" -> repo.toURI.toASCIIString)
 
-  def buildSbtProject(repos:List[xsbti.Repository], runner: SbtRunner)(project: File, config: SbtBuildConfig, log: logging.Logger): BuildArtifacts = {    
+  def buildSbtProject(repos:List[xsbti.Repository], runner: SbtRunner)(project: File, config: SbtBuildConfig, log: logging.Logger): BuildArtifactsOut = {    
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dbuild"
       // TODO - Where should depsfile + repo file be?  
@@ -39,7 +39,7 @@ object SbtBuilder {
             "sbt.ivy.home" -> ivyCache.getAbsolutePath),
         extraArgs = config.config.options
       )(config.config.commands.:+("dbuild-build"):_*)
-      try readValue[BuildArtifacts](resultFile)
+      try readValue[BuildArtifactsOut](resultFile)
       catch { case e:Exception =>
         e.printStackTrace
         sys.error("Failed to generate or load build results!")

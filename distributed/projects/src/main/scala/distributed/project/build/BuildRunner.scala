@@ -16,16 +16,8 @@ trait BuildRunner {
    * @param input Information about artifact read/write repositories and versions.
    * @param log  The log to write to.
    */
-  def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, log: logging.Logger): BuildArtifacts
-  
-  /**
-   * Expands the build options (the 'extra' field) so that the defaults
-   * that apply for this build system are taken into account.
-   * 
-   * @param proj The project configuration that should be expanded
-   */
-  def expandExtraDefaults(proj: ProjectBuildConfig): ProjectBuildConfig
-  
+  def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, log: logging.Logger): BuildArtifactsOut
+    
   /**
    * Determines the appropriate base for a project-specific ".dbuild" directory
    * for a project in "dir", configured according to "config".
@@ -42,12 +34,9 @@ class AggregateBuildRunner(systems: Seq[BuildSystem]) extends BuildRunner {
     systems find (_.name == proj.system) getOrElse sys.error("Could not find build system for " + proj.system)
   }
 
-  def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, log: logging.Logger): BuildArtifacts =
+  def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, log: logging.Logger): BuildArtifactsOut =
     findBuildSystem(b.config).runBuild(b, dir, input, log)
 
-  def expandExtraDefaults(proj: ProjectBuildConfig): ProjectBuildConfig =
-    findBuildSystem(proj).expandDefaults(proj)
-  
   def projectDbuildDir(dir:File, proj: ProjectBuildConfig): File =
     findBuildSystem(proj).projectDbuildDir(dir, proj)
 }

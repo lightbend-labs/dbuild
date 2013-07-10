@@ -14,7 +14,7 @@ class ExtractorActor(e: Extractor) extends Actor {
   // Extract one build at a time...
   def receive: Receive = {
     case ExtractBuildDependencies(build, target, log) => forwardingErrorsToFutures(sender) {
-      log.info("ExtractorActor - Extracting dependencies for: " + build.uri)
+      log.info("Extracting dependencies for project " + build.name + ", " + build.uri)
       sender ! e.extract(target, build, log)
     }
   }

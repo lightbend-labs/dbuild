@@ -9,7 +9,7 @@ case class FilteredByNodesGraph[N,E](g: Graph[N,E], nodes: Set[Node[N]]) extends
 }
 
 
-case class SimpleNode[N,E](value: N) extends Node[N]
+case class SimpleNode[N](value: N) extends Node[N]
 case class EmptyEdge[N](from: Node[N], to: Node[N]) extends Edge[N,Nothing] {
   def value: Nothing = sys.error("Empty edges have no data!")
 }

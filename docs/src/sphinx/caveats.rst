@@ -19,9 +19,8 @@ Limitations
   will show up in the session list as comments, but the session cannot be saved and restored using the
   `session save` command. In case you do, the dbuild settings will just be ignored.
 
-- Cross-versioning is intentionally disabled in all projects during a dbuild run, and as a result of
-  dbuild-setup. This is necessary, as only one specific version of Scala and of the various libraries is
-  tested by dbuild.
+- Each dbuild configuration file must contain one instance of Scala; dbuild has not been tested with
+  configuration files in which an instance of Scala is not present.
 
 |
 

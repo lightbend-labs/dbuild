@@ -20,7 +20,7 @@ class GitProjectResolver extends ProjectResolver {
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
     val uri = new _root_.java.net.URI(config.uri)
     val uriString=UriUtil.dropFragment(uri).toASCIIString
-    val cloneDir=local.ProjectDirs.clonesDir / (hashing sha1 uriString)
+    val cloneDir=distributed.repo.core.ProjectDirs.clonesDir / (hashing sha1 uriString)
 
     // We cache a single git clone for this repository URI (sans fragment),
     // then we re-clone just the local clone. Note that there are never

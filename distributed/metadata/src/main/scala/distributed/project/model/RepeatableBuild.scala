@@ -2,6 +2,7 @@ package distributed.project.model
 
 import graph.Graphs
 import Utils.writeValue
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /** Information on how to build a project.  Consists of both distributed build
  * configuration and extracted information.  Note: That the config in this case
@@ -16,9 +17,22 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  * the totally unique meta-data information for this project.  This
  * also includes all transitive dependencies so all artifacts can be
  * resolved appropriately.
+ * 
+ * We also include the (plain) project version string detected during
+ * extraction. We will later either append to it the UUID of this
+ * RepeatableProjectBuild, or use the explicit string provided in
+ * the "setVersion" of the ProjectBuildConfig (if not None).
+ * 
+ * Also included (if the build system supports subprojects) is the
+ * actual list of subprojects that should be built, in the correct order.
+ * We use this as a payload, since the RepeatableProjectBuild gets
+ * included in the BuildInput, which eventually gets to the build system
+ * via LocalBuildRunner, when the project is eventually built.
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
-                       dependencies: Seq[RepeatableProjectBuild]) {
+                       @JsonProperty("base-version") baseVersion: String,
+                       dependencies: Seq[RepeatableProjectBuild],
+                       subproj: Seq[String]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
   
@@ -36,8 +50,8 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
 /** A distributed build containing projects in *build order*
  *  Also known as the repeatable config. 
  */
-case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config))
+case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted], deployOptions:Option[Seq[DeployOptions]]) {
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), deployOptions)
   def repeatableBuildString = writeValue(this)
   
   /** Our own graph helper for interacting with the build meta information. */
@@ -58,9 +72,26 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
             dep <- (subgraph - head)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
-        val headMeta = RepeatableProjectBuild(head.config, sortedDeps)
+        val headMeta = RepeatableProjectBuild(head.config, head.extracted.version, sortedDeps, head.extracted.subproj)
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
+    // we need to check for duplicates /before/ checking for cycles, otherwise spurious
+    // cycles may be detected, leading to unhelpful error messages
+    // TODO: if model.Project is ever associated with the subproject name, it would be
+    // more appropriate to print the actual subproject name, rather than the Project
+    val generatedArtifacts = builds flatMap { _.extracted.projects }
+    val uniq = generatedArtifacts.distinct
+    if (uniq.size != generatedArtifacts.size) {
+      val conflicting = generatedArtifacts.diff(uniq).distinct
+      val conflictSeq = conflicting map {
+        a =>
+          (builds filter {
+            b => b.extracted.projects contains a
+          } map { _.config.name }).mkString("  " + a.name + "#" + a.organization + ", from:  ", ", ", "")
+      }
+      sys.error(conflictSeq.
+        mkString("\n\nFatal: multiple projects produce the same artifacts. Please exclude them from some of the conflicting projects.\n\n", "\n", "\n"))
+    }
     val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse
     makeMeta(orderedBuilds, Map.empty, Seq.empty)
   }

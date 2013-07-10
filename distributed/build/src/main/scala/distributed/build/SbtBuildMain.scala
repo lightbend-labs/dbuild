@@ -2,7 +2,7 @@ package distributed
 package build
 
 import java.io.File
-import distributed.project.model.{BuildArtifacts,DistributedBuildConfig}
+import distributed.project.model.{BuildArtifactsOut,DistributedBuildConfig}
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.project.model.ClassLoaderMadness
 
@@ -42,11 +42,23 @@ class SbtBuildMain extends xsbti.AppMain {
         if(args.length == 1)
           readValue[DistributedBuildConfig](new File(args(0)))
         else sys.error("Usage: dbuild {build-file}")
+      // Unique names?
+      val allNames=config.projects map {_.name}
+      val uniqueNames=allNames.distinct
+      if (uniqueNames.size != allNames.size) {
+        sys.error("Project names must be unique! Duplicates found: "+(allNames diff uniqueNames).mkString(","))
+      }
+      if (allNames.exists(_.size <3)) {
+        sys.error("Project names must be at least three characters long.")
+      }
       println("Config: " + writeValue(config))
 //      println("Classloader:")
 //      printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(repos, configuration.baseDirectory)
-      try main build config
+      try {
+        main build config
+        println("All done.")
+      }
       finally main.dispose()
       Exit(0)
     } catch {

@@ -1,4 +1,4 @@
-package local
+package distributed.repo.core
 
 import distributed.project.model._
 import java.io.File
@@ -11,25 +11,24 @@ import java.io.File
 object ProjectDirs {
   // TODO - Pull from config!
   val builddir = new File(".")
-  val targetDir = new File(builddir, "target")
+  val targetDir = new File(builddir, "target-"+Defaults.version)
   val clonesDir = new File(targetDir, "clones")
   val userhome = new File(sys.props("user.home"))
-  val userCache = new File(userhome, ".dbuild/cache")
-  
+  val dbuildDir = new File(userhome, ".dbuild")
+  val userCache = new File(dbuildDir, "cache-"+Defaults.version)
+  val repoCredFile = new File(dbuildDir, "remote.cache.properties")
   
   def logDir = new File(targetDir, "logs")
   
   def useProjectExtractionDirectory[A](build: ProjectBuildConfig, tdir: File = targetDir)(f: File => A) = {
     val dir = new File(tdir, "projects")
-    // TODO - just build name?
-    val projdir = new File(dir, build.name)
+    val projdir = new File(dir, build.uuid)
     projdir.mkdirs()
     f(projdir)
   }
   
   def useProjectUniqueBuildDir[A](uuid: String, tdir: File = targetDir)(f: File => A) = {
     val dir = new File(tdir, "project-builds")
-    // TODO - just build name?
     val projdir = new File(dir, uuid)
     projdir.mkdirs()
     f(projdir)

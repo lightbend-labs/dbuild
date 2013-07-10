@@ -3,6 +3,7 @@ package repo
 package core
 
 import java.io.File
+import sbt.Path._
 
 /** Interface for a repository of raw key-value files. */
 trait ReadableRepository {
@@ -17,33 +18,31 @@ trait Repository extends ReadableRepository {
 }
 
 object Repository {
-  
+
   def default: Repository = {
     // Look for repository/credentials file
-    def cacheDir = sysPropsCacheDir orElse defaultUserHomeCacheDir
-    def repoCredFile = cacheDir map (
-        new File(_, "../remote.cache.properties").getCanonicalFile()
-      )
-    def readCredFile(f: File): Option[(String, Credentials)] = {
-      val props = new java.util.Properties
-      sbt.IO.load(props, f)
-      def getProp(name: String): Option[String] =
-        Option(props getProperty name)
-      for {
-        url <- getProp("remote.url")
-        user <- getProp("remote.user")
-        pw <- getProp("remote.password")
-      } yield url -> Credentials(user, pw)
-    }
+    def cacheDir = sysPropsCacheDir getOrElse defaultUserHomeCacheDir
+    def repoCredFile = ProjectDirs.repoCredFile
+
+    def readCredFile(f: File): Option[(String, Credentials)] =
+      if (f.exists) {
+        val props = new java.util.Properties
+        sbt.IO.load(props, f)
+        def getProp(name: String): Option[String] =
+          Option(props getProperty name)
+        for {
+          url <- getProp("remote.url")
+          user <- getProp("remote.user")
+          pw <- getProp("remote.password")
+        } yield url -> Credentials(user, pw)
+      } else None
+
     def remoteRepo =
       for {
-        c <- cacheDir
-        f <- repoCredFile
-        if f.exists
-        (url, credentials) <- readCredFile(f)
-      } yield remote(url, credentials, c)
-    def localRepo = cacheDir map local 
-    remoteRepo orElse localRepo getOrElse sys.error("Unable to initialize default repository.")  
+        (url, credentials) <- readCredFile(repoCredFile)
+      } yield remote(url, credentials, cacheDir)
+    def localRepo = local(cacheDir)
+    remoteRepo getOrElse localRepo
   }
   
   /** Construct a repository that reads from a given URI and stores in a local cache. */
@@ -59,15 +58,11 @@ object Repository {
   def local(cacheDir: File = defaultCacheDir): Repository = 
     new LocalRepository(cacheDir)
   
-  def defaultCacheDir =
-    sysPropsCacheDir orElse defaultUserHomeCacheDir getOrElse sys.error("Could not find default caching directory for dbuild repository.")
+  def defaultCacheDir = sysPropsCacheDir getOrElse defaultUserHomeCacheDir
     
   def sysPropsCacheDir =
     sys.props get "dbuild.cache.dir" map (new File(_))
   
-  def defaultUserHomeDir = sys.props get "user.home" 
-  
-  def defaultUserHomeCacheDir =
-     defaultUserHomeDir map (new File(_, ".dbuild/cache"))
+  def defaultUserHomeCacheDir = ProjectDirs.userCache
        
 }

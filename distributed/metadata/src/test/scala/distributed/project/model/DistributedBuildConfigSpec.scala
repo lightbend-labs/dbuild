@@ -21,8 +21,9 @@ object DistributedBuildConfigSpec extends Specification {
           name = "p1",
           uri = "uri",
           system = "sbt",
+          setVersion = None,
           extra = None
-      ))
+      )), None
     ))
     }
     "parse project" in {
@@ -34,15 +35,26 @@ object DistributedBuildConfigSpec extends Specification {
           name = "p1"
           uri = "uri"
           system = "sbt"
+          set-version = "3.9.43"
           extra = { directory = "ZOMG" }
+    }]
+    deploy = [{
+          uri = "file://localhost:8088/some/path"
+          credentials = "/credentials/file"
+          projects = ["p1","p2",{
+    from:"aaa"
+    publish:["a","b"]
+    }]
     }]
 }""") must equalTo(DistributedBuildConfig(
       Seq(ProjectBuildConfig(
           name = "p1",
           uri = "uri",
           system = "sbt",
+          setVersion = Some("3.9.43"),
           extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
-      ))
+      )),Some(Seq(DeployOptions("file://localhost:8088/some/path",Some("/credentials/file"),
+       Some(Seq(DeployElementProject("p1"),DeployElementProject("p2"),DeployElementSubProject(DeploySubProjects("aaa",Seq("a","b"))))))))
     ))
     }
   }

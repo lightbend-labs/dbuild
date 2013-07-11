@@ -4,18 +4,20 @@ import sbt._
 import distributed.project.model
 import distributed.support.sbt.SbtBuildConfig
 import distributed.project.model.ArtifactLocation
+import distributed.project.model.ArtifactSha
 import distributed.project.model.Utils.{ writeValue, readValue }
 import StateHelpers._
+import DependencyAnalysis.{normalizedProjectNames,normalizedProjectName}
 import DistributedBuildKeys._
 import NameFixer.fixName
 import java.io.File
 import distributed.repo.core.LocalArtifactMissingException
+import org.apache.ivy.core.module.id.ModuleRevisionId
+import distributed.repo.core.LocalRepoHelper
+import distributed.project.model.BuildSubArtifactsOut
+
 
 object DistributedRunner {
-
-  // TODO - Config helper!
-  def isValidProject(projects: Seq[String], ref: ProjectRef): Boolean =
-    projects.isEmpty || (projects exists (_ == ref.project))
 
   def timed[A](f: => Stated[A]): Stated[Long] = {
     val start = java.lang.System.currentTimeMillis
@@ -33,6 +35,7 @@ object DistributedRunner {
   }
 
   def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+    println("Running timed build: "+ref.project)
     val x = Stated(state)
     def cleanBuild(state: Stated[_]) = {
       val cleaned = state runTask Keys.clean
@@ -43,64 +46,51 @@ object DistributedRunner {
     val arts = y.value map (_.copy(buildTime = perf.value))
     (y.state, arts)
   }
-
   def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+    println("Running build: "+ref.project)
     val y = Stated(state).runTask(extractArtifacts in ref)
     (y.state, y.value)
   }
 
-  // TODO - Use a specific key that allows posting other kinds of artifacts.
-  // Maybe also use a platform-specific task such that we can expose
-  // windows artifacts on windows, etc.
-  def buildProject(state: State, config: SbtBuildConfig): (State, ArtifactMap) = {
-    println("Building project")
-    // Stage half the computation, including what we're churning through.
-    val buildAggregate = runAggregate[ArtifactMap](state, config, Seq.empty)(_ ++ _) _
-    // If we're measuring, run the build several times.
-    if (config.config.measurePerformance) buildAggregate(timedBuildProject)
-    else buildAggregate(untimedBuildProject)
-  }
-
-  /** Runs a serious of commands across projects, aggregating results. */
-  private def runAggregate[T](state: State, config: SbtBuildConfig, init: T)(merge: (T, T) => T)(f: (ProjectRef, State) => (State, T)): (State, T) = {
+  /** Runs a series of commands across projects, aggregating results. */
+  private def runAggregate[Q, T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State, Q) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
-    verifySubProjects(config.config.projects, refs)
-    refs.foldLeft[(State, T)](state -> init) {
+    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
+    val refs = getProjectRefs(extracted)
+    // I need a subset of refs, a sequence in the order specified by "project"
+    val newRefs = getSortedProjects(projects, refs, baseDirectory)
+    newRefs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
-        if (isValidProject(config.config.projects, ref)) {
-          val (state2, next) =
-            f(ref, state)
-          state2 -> merge(current, next)
-        } else state -> current // TODO - if a project listed in the build does not exist, or list empty, it should really abort
+        val (state2, next) =
+          f(ref, state, current)
+        state2 -> merge(current, next)
     }
   }
 
   // verify that the requested projects in SbtBuildConfig actually exist
-  def verifySubProjects(requestedProjects: Seq[String], refs: Set[sbt.ProjectRef]): Unit = {
+  def verifySubProjects(requestedProjects: Seq[String], refs: Seq[sbt.ProjectRef], baseDirectory: File): Unit = {
     if (requestedProjects.nonEmpty) {
-      val availableProjects = refs.map(_.project)
+      val uniq=requestedProjects.distinct
+      if (uniq.size != requestedProjects.size) {
+        sys.error("Some subprojects are listed twice: " + (requestedProjects.diff(uniq)).mkString("\"", "\", \"", "\"."))
+      }
+      val availableProjects = normalizedProjectNames(refs,baseDirectory)
       val notAvailable = requestedProjects.toSet -- availableProjects
       if (notAvailable.nonEmpty)
-        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\",\"", "\"."))
-    }
+        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\"."))
+    } else  sys.error("Internal error: subproject list is empty")
   }
 
-  def testProject(state: State, config: SbtBuildConfig): State =
-    if (config.config.runTests) {
-      println("Testing project")
-      val (state2, _) = runAggregate(state, config, List.empty)(_ ++ _) { (proj, state) =>
-        val y = Stated(state).runTask(Keys.test in (proj, Test))
-        (y.state, List.empty)
-      }
-      state2
-    } else state
+  def getSortedProjects(projects: Seq[String], refs: Seq[ProjectRef], baseDirectory: File): Seq[ProjectRef] = {
+    verifySubProjects(projects, refs, baseDirectory)
+    projects map { p => refs.find(ref => (p == normalizedProjectName(ref, baseDirectory))).get }
+  }
 
-  def makeBuildResults(artifacts: ArtifactMap, localRepo: File): model.BuildArtifacts =
-    model.BuildArtifacts(artifacts, localRepo)
+  def makeBuildResults(artifacts: Seq[BuildSubArtifactsOut], localRepo: File): model.BuildArtifactsOut =
+    model.BuildArtifactsOut(artifacts)
 
-  def printResults(fileName: String, artifacts: ArtifactMap, localRepo: File): Unit =
+  def printResults(fileName: String, artifacts: Seq[BuildSubArtifactsOut], localRepo: File): Unit =
     IO.write(new File(fileName), writeValue(makeBuildResults(artifacts, localRepo)))
 
   def loadBuildConfig: Option[SbtBuildConfig] =
@@ -114,6 +104,9 @@ object DistributedRunner {
   // the rematerialized repository, and ask Ivy whether the module can be
   // resolved against that repository. It requires a bit of code, but would
   // be somewhat more general, at least in principle.
+  //
+  // Note: ArtifactLocation at this point does not (should not) contain any
+  // cross version suffix attached to its "name".
   def fixModule(arts: Seq[model.ArtifactLocation])(m: ModuleID): ModuleID = {
       def expandName(a:Artifact) = {
         import a._
@@ -129,18 +122,15 @@ object DistributedRunner {
         if artifact.info.name == fixName(m.name) || (m.explicitArtifacts map expandName).contains(artifact.info.name)
       } yield artifact).headOption
     findArt map { art =>
-      // println("Updating: " + m + " to: " + art)
-      // TODO - Update our publishing so we don't have a cross versions too.....
-      // TODO - warning: cross-version settings should probably
-      // /not/ be changed in case a new scala version is not specified
-      // (in case scala is not part of the dbuild project file)
-      if (m.explicitArtifacts.isEmpty)
-        m.copy(name = art.info.name, revision = art.version, crossVersion = CrossVersion.Disabled)
-      else
-        m.copy(revision = art.version, crossVersion = CrossVersion.Disabled)
+      // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it will have an extra suffix
+      // due to the classifier). Use fixName(m.name) instead.
+      // TODO: is crossSuffix in the right place, if m.name (wrongly) includes a classifier?
+      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled)
     } getOrElse m
   }
 
+  def inNScopes(n:Int) = if(n==1) "in one scope" else "in "+n+" scopes"
+  
   def fixPublishTos2(repoDir: File)(oldSettings: Seq[Setting[_]], log: Logger): Seq[Setting[_]] = {
     val name = "deploy-to-local-repo"
     val mavenRepo = Some(Resolver.file(name, repoDir)(Resolver.mavenStylePatterns))
@@ -167,7 +157,7 @@ object DistributedRunner {
 
     val ptSettings = lastSettingsByScope(oldSettings, Keys.publishTo)
     if (ptSettings.nonEmpty)
-      log.info("Updating publishTo repo in " + ptSettings.length + " scopes")
+      log.info("Updating publishTo repo " + inNScopes(ptSettings.length))
 
     val newSettings1 = {
       ptSettings map { s =>
@@ -182,7 +172,7 @@ object DistributedRunner {
 
     val pmsSettings = lastSettingsByScope(oldSettings ++ newSettings1, Keys.publishMavenStyle)
     if (pmsSettings.nonEmpty)
-      log.info("Found publishMavenStyle in " + pmsSettings.length + " scopes; changing publishTo settings accordingly.")
+      log.info("Found publishMavenStyle " + inNScopes(pmsSettings.length) + "; changing publishTo settings accordingly.")
 
     val newSettings = newSettings1 ++ {
       pmsSettings map { s =>
@@ -221,7 +211,7 @@ object DistributedRunner {
   // applies a generic transformation from Setting[K] (the old one) to another Setting[K] (the new one)
   def fixGenericTransform2[K](k: Scoped)(f: Setting[K] => Setting[K])(msg: String)(oldSettings: Seq[Setting[_]], log: Logger) = {
     val lastSettings = lastSettingsByScope(oldSettings, k)
-    if (lastSettings.nonEmpty) log.info(msg + " in " + lastSettings.length + " scopes")
+    if (lastSettings.nonEmpty) log.info(msg + " " + inNScopes(lastSettings.length))
     lastSettings.asInstanceOf[Seq[Setting[K]]] map f
   }
 
@@ -237,22 +227,23 @@ object DistributedRunner {
   def fixCrossVersions2 =
     fixGeneric2(Keys.crossVersion, "Disabling cross versioning") { _ => CrossVersion.Disabled }
 
+  // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
+  // This is necessary in case some required inter-project dependencies have been explicitly excluded.
   def fixDependencies2(locs: Seq[model.ArtifactLocation]) =
-    fixGeneric2(Keys.libraryDependencies, "Updating library dependencies") { old => old map fixModule(locs) }
+    fixGeneric2(Keys.allDependencies, "Updating dependencies") { _ map { old => old map fixModule(locs) } }
 
   def fixVersions2(config: SbtBuildConfig) =
-    fixGeneric2(Keys.version, "Updating version strings") { value =>
-      (if (value endsWith "-SNAPSHOT") {
-        value replace ("-SNAPSHOT", "")
-      } else value) + "-" + config.info.uuid
-    }
+    fixGeneric2(Keys.version, "Updating version strings") { _ => config.info.version }
 
-  def fixResolvers2(repo: File) =
+  def fixResolvers2(dbuildRepoDir: File) =
     fixGeneric2(Keys.resolvers, "Adding resolvers to retrieve build artifacts") { old =>
       // make sure to add our resolvers at the beginning!
-      Seq("dbuild-local-repo-maven" at ("file:" + repo.getAbsolutePath()),
-        Resolver.file("dbuild-local-repo-ivy", repo)(Patterns("[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"))) ++
-        (old filterNot { r => val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy" })
+      Seq(
+        "dbuild-local-repo-maven" at ("file:" + dbuildRepoDir.getAbsolutePath()),
+        Resolver.file("dbuild-local-repo-ivy", dbuildRepoDir)(Resolver.ivyStylePatterns)) ++
+        (old filterNot { r =>
+          val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy"
+        })
     }
 
   // we want to match against only one and precisely one scala version; therefore any
@@ -270,7 +261,34 @@ object DistributedRunner {
   def fixScalaBinaryCheck2 =
     fixGeneric2(Keys.ivyScala, "Disabling Scala binary checking") { _ map { _.copy(checkExplicit=false) } }
 
+  // We need to disable the inter-project resolver entirely. Otherwise, sbt will try to build all
+  // of the dependent subprojects each time one of the subprojects is built, including some that
+  // we may have explicitly excluded (as they are built in a different project, for instance)
+  // (currently unused).
+  def fixInterProjectResolver2 =
+    fixGeneric2(Keys.projectResolver, "Disabling inter-project resolver") { _ map { _ => new RawRepository(new ProjectResolver("inter-project", Map.empty)) } }
 
+  // alternate version, which only removes the artifacts that are not part
+  // of the selected subprojects. Might be more suitable for setupcmd; in this case,
+  // local-publish-repo should not be added to the list of resolvers.
+  def fixInterProjectResolver2bis(modules: Seq[ModuleRevisionId], log: Logger) =
+    fixGenericTransform2(Keys.projectResolver) { r: Setting[Task[Resolver]] =>
+      val sc = r.key.scope
+      Keys.projectResolver in sc <<= (Keys.projectDescriptors in sc) map {
+        m => 
+          val k=m.filter {
+            case (a,_) => modules exists { b => b.getOrganisation == a.getOrganisation && fixName(b.getName) == fixName(a.getName) }
+          }
+          new RawRepository(new ProjectResolver("inter-project", k))
+      }
+    }("Patching the inter-project resolver") _
+
+  // extract the ModuleRevisionIds of all the subprojects of this dbuild project (as calculated from exclusions, dependencies, etc).
+  def getModuleRevisionIds(state: State, projects: Seq[String], log: Logger) =
+    runAggregate[Seq[ModuleRevisionId], ModuleRevisionId](state, projects, Seq.empty) { _ :+ _ } {
+      (proj, state, _) => (state, Project.extract(state).evalTask(Keys.ivyModule in proj, state).dependencyMapping(log)._1)
+    }._2
+    
   // In order to convince sbt to use the scala instance we need, we just generate a fictitious
   // "lib" directory, like the one that would be generated by ant dist, and set scalaHome to that
   // directory (see ./util/classpath/ScalaInstance.scala in sbt for details)
@@ -282,11 +300,25 @@ object DistributedRunner {
       val scalaHome = dbuildDir / "scala" / ver
       log.info("Preparing Scala binaries: version " + ver)
       generateScalaDir(scalaHome, repoDir, ver)
-      fixGeneric2(Keys.scalaVersion, "Setting Scala version to: " + ver){ _ => ver }(oldSettings, log) ++
-      fixGeneric2(Keys.scalaHome, "Setting Scala home"){ _ => Some(scalaHome) }(oldSettings, log)
+      // I replicate some of the functionality now present in sbt 0.13
+      val blacklist: Set[String] = Set("scala-actors.jar", "scalacheck.jar", "scala-partest.jar", "scala-partest-javaagent.jar", "scalap.jar", "scala-swing.jar")
+      def scalaLib(scalaHome: File): File = new File(scalaHome, "lib")
+      def allJars(scalaHome: File): Seq[File] = IO.listFiles(scalaLib(scalaHome)).filter(f => !blacklist(f.getName))
+      def scalaJar(scalaHome: File, name: String) = new File(scalaLib(scalaHome), name)
+      def compilerJar(scalaHome: File) = scalaJar(scalaHome, "scala-compiler.jar")
+      def libraryJar(scalaHome: File) = scalaJar(scalaHome, "scala-library.jar")
+      //
+      fixGeneric2(Keys.scalaVersion, "Setting Scala version to: " + ver) { _ => ver }(oldSettings, log) ++
+        fixGenericTransform2(Keys.scalaInstance) { s: Setting[Task[ScalaInstance]] =>
+          val sc = s.key.scope
+          Keys.scalaInstance in sc <<= Keys.appConfiguration in sc map { app =>
+            val launcher = app.provider.scalaProvider.launcher
+            ScalaInstance(libraryJar(scalaHome), compilerJar(scalaHome), launcher, allJars(scalaHome): _*)
+          }
+        }("Setting Scala instance")(oldSettings, log)
     }
   }
-
+    
   // get the custom scala version string, if one is present somewhere in the list of artifacts of this build  
   private def customScalaVersion(arts: Seq[distributed.project.model.ArtifactLocation]): Option[String] =
     (for {
@@ -297,12 +329,8 @@ object DistributedRunner {
     } yield artifact.version).headOption
 
   def generateScalaDir(scalaHome: File, repoDir: File, ver: String) = {
-    // sbt uses needs a small set of jars in scalaHome. I only copy those, therefore.
-    val neededJars = Seq("scala-library", "scala-compiler")
-    val optionalJars = Seq("scala-reflect", "jline", "fjbg")
     val org = "org.scala-lang"
-    neededJars foreach retrieveJarFile(scalaHome, repoDir, org, ver, true)
-    optionalJars foreach retrieveJarFile(scalaHome, repoDir, org, ver, false)
+    getJarNames(repoDir, org, ver) foreach retrieveJarFile(scalaHome, repoDir, org, ver, true)
   }
 
   def retrieveJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean)(name: String) = {
@@ -316,6 +344,18 @@ object DistributedRunner {
   def jarFile(repoDir: File, org: String, name: String, version: String) =
     org.split('.').foldLeft(repoDir)(_ / _) / name / version / (name + "-" + version + ".jar")
 
+  def getJarNames(repoDir: File, org: String, version: String) = {
+    val base = org.split('.').foldLeft(repoDir)(_ / _)
+    base.***.get.flatMap {
+      f =>
+        if (f.isDirectory) None else {
+          val path = IO.relativize(base, f).get.split("/")
+          // we need path to be: name / version / (name + "-" + version + ".jar")
+          if (path(1) == version && path(2) == path(0) + "-" + version + ".jar") Some(path(0)) else None
+        }
+    }
+  }
+  
   def fixPGPs2(oldSettings: Seq[Setting[_]], log: Logger) =
     fixGeneric2(Keys.skip, "Disabling PGP signing") { old => old map (_ => true) }(oldSettings.filter {
       _.key.scope.task.toOption match {
@@ -335,32 +375,31 @@ object DistributedRunner {
     dbuildDirectory map { dbuildDir =>
       val repoDir = dbuildDir / "local-repo"
 
-      val refs = getProjectRefs(session.mergeSettings)
+      val refs = getProjectRefs(extracted)
+
+      // config.info.subproj is the list of projects calculated in DependencyAnalysis;
+      // conversely, config.config.projects is the list specified in the
+      // configuration file (in the "extra" section)
+      val modules=getModuleRevisionIds(state, config.info.subproj, log)
 
       def newSettings(oldSettings:Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
-          prepareCompileSettings(log, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings)
+          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings)
 
       newState(state, extracted, newSettings)
 
     } getOrElse {
-      log.error("Key baseDirectory is undefined in ThisBuild: aborting.")
-      state
+      sys.error("Key baseDirectory is undefined in ThisBuild: aborting.")
     }
   }
 
-  def publishProjects(state: State, config: SbtBuildConfig): State = {
-    println("Publishing artifacts")
+  def printPR(state: State): Unit = {
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
-    refs.foldLeft[State](state) {
-      case (state, ref) =>
-        if (isValidProject(config.config.projects, ref)) {
-          val (state2, _) =
-            extracted.runTask(Keys.publish in ref, state)
-          state2
-        } else state
+    val refs = getProjectRefs(extracted)
+    refs foreach { ref =>
+      val resolver = extracted.runTask(Keys.projectResolver in ref, state)._2
+      println("\tprojectResolver in %s: (%s)" format (ref.project, resolver))
     }
   }
 
@@ -368,7 +407,7 @@ object DistributedRunner {
     println("Using resolvers:")
     val extracted = Project.extract(state)
     import extracted._
-    val refs = getProjectRefs(session.mergeSettings)
+    val refs = getProjectRefs(extracted)
     for {
       ref <- refs
       (_, resolvers) = extracted.runTask(Keys.fullResolvers in ref, state)
@@ -376,15 +415,62 @@ object DistributedRunner {
     } println("\t(%s) - %s" format (r.name, r.toString))
   }
 
+  // buildStuff() works by folding over the list of subprojects a sequence of operations: building,
+  // testing, publishing, and file extraction.
+  // The folding passes around the following: (Seq[File],Seq[(String,ArtifactMap,Seq[String])]),
+  // where the first Seq[File] is the set of files present in the publishing repository,
+  // and the second Seq associates the subproject name with the list of artifacts, as well as
+  // the list of shas of the files published to the repository during this step.
   def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
-    // printResolvers(state)
-    val state3 = fixBuildSettings(config, state)
-    val (state4, artifacts) = buildProject(state3, config)
-    testProject(state4, config)
-    // TODO - Use artifacts extracted to deploy!
-    publishProjects(state4, config)
-    printResults(resultFile, artifacts, config.info.outRepo)
-    state4
+    val state2 = fixBuildSettings(config, state)
+//    printResolvers(state2)
+//    printPR(state)
+//    printPR(state2)
+
+    println("Building project...")
+    val refs = getProjectRefs(Project.extract(state2))
+    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data
+    val buildAggregate = runAggregate[(Seq[File],Seq[BuildSubArtifactsOut]),
+      (Seq[File],BuildSubArtifactsOut)] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
+        case ((oldFiles,oldArts),(newFiles,arts)) => (newFiles,oldArts :+ arts) } _
+
+    // If we're measuring, run the build several times.
+    val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
+
+    def buildTestPublish(ref: ProjectRef, state6: State, previous:(Seq[File],Seq[BuildSubArtifactsOut])):
+      (State, (Seq[File],BuildSubArtifactsOut)) = {
+
+      val (_,libDeps) = Project.extract(state6).runTask(Keys.allDependencies in ref, state)
+      println("All Dependencies for subproject "+ref.project+":")
+      libDeps foreach {m=>println("   "+m)}
+//      val (_,pRes) = Project.extract(state6).runTask(Keys.projectResolver in ref, state)
+//      println("Project Resolver for project "+ref.project+":")
+//      println("   "+pRes)
+
+      val (state7, artifacts) = buildTask(ref, state6)
+      val state8 = if (config.config.runTests) {
+        println("Testing: " + ref.project)
+        Project.extract(state7).runTask(Keys.test in (ref, Test), state7)._1
+      } else state7
+      println("Publishing: " + ref.project)
+      val (state9, _) =
+        Project.extract(state8).runTask(Keys.publish in ref, state8)
+
+      // We extract the set of files published during this step by checking the
+      // current set of files in the repository against the files we had previously
+      val previousFiles=previous._1
+      val localRepo=config.info.outRepo.getAbsoluteFile
+      val currentFiles=(localRepo.***).get.
+        filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
+      val newFilesShas=currentFiles.diff(previousFiles).map{LocalRepoHelper.makeArtifactSha(_,localRepo)}
+
+      (state9, (currentFiles,BuildSubArtifactsOut(normalizedProjectName(ref,baseDirectory), artifacts, newFilesShas)))
+    }
+
+    val (state3,(files,artifactsAndFiles)) = buildAggregate(buildTestPublish)
+
+    printResults(resultFile, artifactsAndFiles, config.info.outRepo)
+    state3
   }
 
   /** The implementation of the dbuild-build command. */
@@ -397,36 +483,41 @@ object DistributedRunner {
     results getOrElse state
   }
 
-  def loadBuildArtifacts(readRepo: File, builduuid: String, thisProject: Option[String], log: Logger) = {
+  def loadBuildArtifacts(readRepo: File, builduuid: String, thisProject: String, log: Logger) = {
     import distributed.repo.core._
     val cache = Repository.default
-    val uuids = (for {
-      build <- LocalRepoHelper.readBuildMeta(builduuid, cache).toSeq
-      allProjects = build.repeatableBuilds
-      uuid <- thisProject match {
-        case Some(proj) => for {
-          project <- allProjects.filter(_.config.name == proj)
-          _ = log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
-          uuid <- project.transitiveDependencyUUIDs
-        } yield uuid
-        case None => {
-          log.info("Retrieving all artifacts from " + allProjects.length + " projects")
-          build.repeatableBuilds map { _.uuid }
-        }
-      }
-    } yield uuid).distinct
-    LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids)
+    val project = findRepeatableProjectBuild(builduuid, thisProject, log)
+    log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
+    val uuids = project.transitiveDependencyUUIDs.toSeq
+    (project,LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids))
   }
 
-  private def prepareCompileSettings(log: ConsoleLogger, dbuildDir: File, repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]]) =
+  def findRepeatableProjectBuild(builduuid: String, thisProject: String, log: Logger) = {
+    import distributed.repo.core._
+    log.info("Finding information for project " + thisProject + " in build " + builduuid)
+    val cache = Repository.default
+    val projects = (for {
+      build <- LocalRepoHelper.readBuildMeta(builduuid, cache).toSeq
+      allProjects = build.repeatableBuilds
+      project <- allProjects.filter(_.config.name == thisProject)
+    } yield project) // we know project names are unique
+    if (projects.isEmpty) sys.error("There is no project named "+thisProject+" in build "+builduuid)
+    if (projects.size >1) sys.error("Unexpected internal error; found multiple projects named "+thisProject+" in build "+builduuid)
+    projects.head
+  }
+
+  private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
+      repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]]) = {
     Seq[Fixer](
           fixResolvers2(repoDir),
           fixDependencies2(arts),
           fixScalaVersion2(dbuildDir, repoDir, arts),
-          fixScalaBinaryVersions2,
-          fixCrossVersions2,
+          fixInterProjectResolver2bis(modules, log),
+//          fixScalaBinaryVersions2,
+//          fixCrossVersions2,
           fixScalaBinaryCheck2) flatMap { _(oldSettings, log) }
-
+  }
+  
   private def preparePublishSettings(config: SbtBuildConfig, log: ConsoleLogger, oldSettings: Seq[Setting[_]]) =
     Seq[Fixer](
         fixPublishTos2(config.info.outRepo.getAbsoluteFile),
@@ -455,14 +546,14 @@ object DistributedRunner {
     // is not a task. I could add a wrapper task around the command, though.
 
     // TODO - add help text
-    if (args.length < 1 || args.length > 2) sys.error("Usage: dbuild-setup <builduuid> [<thisProjectInDsbt>]")
+    if (args.length != 2) sys.error("Usage: dbuild-setup <builduuid> <projectNameInDBuild>")
     val builduuid = args(0)
+    val project = args(1)
 
     // The dbuild-setup command accepts a builduuid, and optionally a string that should match the project string
     // of the current sbt project, as specified in the .dbuild project file (which may be arbitrary)
     // If specified, download the dependencies of the specified project; if not specified, download all of the
     // artifacts of all the projects listed under builduuid.
-    val project = if (args.length == 1) None else Some(args(1))
     val extracted = Project.extract(state)
     import extracted._
     val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
@@ -471,12 +562,14 @@ object DistributedRunner {
     // right subdir before entering sbt, in any case, so we should be ok
     dbuildDirectory map { dbuildDir =>
       val repoDir = dbuildDir / "local-repo"
-      val arts = loadBuildArtifacts(repoDir, builduuid, project, log)
+      val (proj,arts) = loadBuildArtifacts(repoDir, builduuid, project, log)
       if (arts.isEmpty) {
-        log.warn("No artifacts are dependencies" + { project map (" of project " + _) getOrElse "" } + " in build " + builduuid)
+        log.warn("No artifacts are dependencies of project " + project + " in build " + builduuid)
         state
-      } else
-        newState(state, extracted, prepareCompileSettings(log, dbuildDir, repoDir, arts, _))
+      } else {
+        val modules=getModuleRevisionIds(state, proj.subproj, log)
+        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _))
+      }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")
       state
@@ -484,7 +577,7 @@ object DistributedRunner {
   }
 
   private def buildIt = Command.command("dbuild-build")(buildCmd)
-  private def setItUp = Command.args("dbuild-setup", "<builduuid> [<thisProjectInDsbt>]")(setupCmd)
+  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(setupCmd)
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
   private def comment = Command.args("//", "// [comments]") { (state, _) => state }
 
@@ -494,15 +587,19 @@ object DistributedRunner {
     Keys.commands += setItUp,
     Keys.commands += comment)
 
-  def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File]): Seq[model.ArtifactLocation] =
+  def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
+    cross: CrossVersion, sv: String, sbv: String): Seq[model.ArtifactLocation] = {
+    val crossSuffix = CrossVersion.applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
     } yield model.ArtifactLocation(
       model.ProjectRef(artifact.name, org, artifact.extension, artifact.classifier),
-      version)
-
+      version, crossSuffix)
+  }
+      
   // TODO - We need to publish too....
   def projectSettings: Seq[Setting[_]] = Seq(
-    extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile) map extractArtifactLocations)
+    extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
+      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion) map extractArtifactLocations)
 
 }

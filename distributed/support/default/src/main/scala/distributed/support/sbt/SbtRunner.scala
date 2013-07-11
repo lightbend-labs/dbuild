@@ -6,6 +6,7 @@ import Path._
 import _root_.distributed.logging.Logger
 import sys.process._
 import distributed.project.model.ExtraConfig
+import distributed.repo.core.Defaults
 
 /** A runner for SBT. 
  * TODO - Make it platform synch safe?

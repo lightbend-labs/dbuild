@@ -15,10 +15,11 @@ object Graphs {
     val sb = new StringBuilder("digraph dependencies {")
     for {
       n <- graph.nodes
+      from = makeName(n.value)
+      _ = sb append (" %s ;" format (from))
       e <- graph.edges(n)
-      from = makeName(e.from.value)
       to = makeName(e.to.value)
-    } sb append ("  %s -> %s;" format (from, to))
+    } sb append (" %s -> %s ;" format (from, to))
     sb append "}"
     sb.toString
   }
@@ -117,7 +118,7 @@ object Graphs {
       if(current.isEmpty) found
       else {
         val head = current.head
-        def spans = g edges n map (_.to)
+        def spans = g edges head map (_.to)
         if(found contains head) findNodes(current.tail, found)
         else findNodes(current.tail ++ spans, found + head)
       }

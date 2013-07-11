@@ -4,14 +4,15 @@ Repositories
 Local and remote
 ----------------
 
-The dbuild tool stores its artifacts and build/project information in a custom repository, which can be
-either local (typically in the ``~/.dbuild/cache`` directory), or remote, in a special Ivy repository that has
-a custom layout.
+The dbuild tool stores across runs some crucial build/project information, and its artifacts, in a special repository
+which has a custom layout. This particular repository is used as a cache, in order to minimize the need for recompilation.
+This special repository can be either local (typically in the ``~/.dbuild/cache`` directory), or remote (hosted in an Ivy
+repository with a custom layout).
 
 At this time, the typical usage of dbuild is with a local repository: this is the default configuration
 and no special setting is required.
 
-However, you may want to experiment with the remote repositories support. The related code is still evolving,
+However, you may want to experiment with the remote metadata repositories support. The related code is still evolving,
 but should be functional at this time. That may be convenient if you would like to run
 dbuild on a Jenkins server, for instance, uploading the results to a shared repository: you can then fetch
 the configurations and artifacts automatically from that remote repository, while debugging using the

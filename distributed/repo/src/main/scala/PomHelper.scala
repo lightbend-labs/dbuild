@@ -5,7 +5,7 @@ import org.apache.maven.model._
 import org.apache.maven.model.io.xpp3.{MavenXpp3Reader, MavenXpp3Writer}
 import project.model.{
   Project => DProject,
-  BuildArtifacts,
+  BuildArtifactsIn,
   ProjectRef,
   ArtifactLocation,
   RepeatableDistributedBuild
@@ -14,7 +14,7 @@ import collection.JavaConverters._
 
 /** A utility to create pom files. */
 object PomHelper {
-  def makePoms(build: RepeatableDistributedBuild, arts: BuildArtifacts): Seq[Model] = {
+  def makePoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn): Seq[Model] = {
     val helper = new PomHelper(arts)
     for {
       b <- build.builds
@@ -22,7 +22,7 @@ object PomHelper {
     } yield helper makePom project
   }
   
-  def makePomStrings(build: RepeatableDistributedBuild, arts: BuildArtifacts): Seq[String] =
+  def makePomStrings(build: RepeatableDistributedBuild, arts: BuildArtifactsIn): Seq[String] =
     makePoms(build, arts) map serialize
     
   def serialize(pom: Model): String = {
@@ -39,7 +39,7 @@ object PomHelper {
   }
 }
 /** A helper to generate pom files. */
-class PomHelper private (arts: BuildArtifacts) {
+class PomHelper private (arts: BuildArtifactsIn) {
   val depVersions: Map[ProjectRef, String] =
     arts.artifacts.map(a => a.info -> a.version)(collection.breakOut)
   

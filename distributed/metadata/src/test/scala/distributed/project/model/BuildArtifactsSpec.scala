@@ -9,15 +9,14 @@ object BuildArtifactsSpec extends Specification {
     
     "parse pretty printed result" in {
       val data = 
-        BuildArtifacts( 
-          Seq(
-              ArtifactLocation(ProjectRef("p3", "o2"), "1.0"),
-              ArtifactLocation(ProjectRef("p3", "o2"), "2.0")
-          ),
-          new java.io.File("repo").getAbsoluteFile
+        BuildArtifactsOut( 
+          Seq(BuildSubArtifactsOut("x",Seq(
+              ArtifactLocation(ProjectRef("p3", "o2"), "1.0", ""),
+              ArtifactLocation(ProjectRef("p3", "o2"), "2.0", "")
+          ),Seq.empty))
         )
       val config = writeValue(data)
-      (readValue[BuildArtifacts](config) 
+      (readValue[BuildArtifactsOut](config) 
           must 
           equalTo(data))
     }

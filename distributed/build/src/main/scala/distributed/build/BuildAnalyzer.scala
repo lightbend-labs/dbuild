@@ -4,6 +4,7 @@ package build
 import project.model._
 import java.io.File
 import sbt.Path._
+import distributed.repo.core.ProjectDirs
 
 /** Takes a given build configuration and returns a *repeatable* full realizes build
  * configuration.
@@ -19,10 +20,10 @@ trait BuildAnalyzer {
 /** Simple implementation that delegates to an extractor. */
 class SimpleBuildAnalyzer(e: project.dependencies.Extractor) extends BuildAnalyzer {
   final def analyze(target: File, config: DistributedBuildConfig, log: logging.Logger): RepeatableDistributedBuild = {
-    val scratchDir = local.ProjectDirs.makeDirForBuild(config, target / "extraction")
+    val scratchDir = ProjectDirs.makeDirForBuild(config, target / "extraction")
     
     val builds = config.projects map (p => e.extract(scratchDir, p, log))
-    RepeatableDistributedBuild(builds)
+    RepeatableDistributedBuild(builds, config.deploy)
   }
 }
 

@@ -3,6 +3,7 @@ package build
 
 import project.model._
 import project.build._
+import DeployBuild._
 import repo.core.{Repository,LocalRepoHelper}
 import project.dependencies.ExtractBuildDependencies
 import logging.Logger
@@ -14,6 +15,7 @@ import akka.util.Timeout
 import actorpaterns.forwardingErrorsToFutures
 import sbt.Path._
 import java.io.File
+import distributed.repo.core.ProjectDirs
 
 case class RunDistributedBuild(build: DistributedBuildConfig, target: File, logger: Logger)
 
@@ -29,23 +31,17 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       // Only each build system knows its own defaults (which may change over time),
       // therefore we have to ask to the build system itself to expand the 'extra' field
       // as appropriate.
+      checkDeployFullBuild(build.deploy)
       val result = for {
-        expandedBuild <- fillDefaults(build)
-        fullBuild <- analyze(expandedBuild, target, log.newNestedLogger(hashing sha1 build))
+        fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
         arts <- runBuild(target, fullBuild, fullLogger)
+        _ = deployFullBuild(fullBuild)
       } yield arts
       result pipeTo listener
     }
   }
-  
-  def fillDefaults(config:DistributedBuildConfig):Future[DistributedBuildConfig] = {
-    implicit val ctx = context.system
-    Future.traverse(config.projects)(fillProjDef) map DistributedBuildConfig.apply
-  }
-  def fillProjDef(proj: ProjectBuildConfig): Future[ProjectBuildConfig] =
-    (builder ? ExpandExtraDefaults(proj)).mapTo[ProjectBuildConfig]
   
   /** Publishing the full build to the repository and logs the output for
    * re-use.
@@ -56,10 +52,16 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     log.info("---==   Repeatable Build Config   ===---")
     log.info(build.repeatableBuildString)
     log.info("---== End Repeatable Build Config ===---")
+    log.info("---== Dependency Information ===---")
+    build.repeatableBuilds foreach { b =>
+      log.info("Project "+ b.config.name)
+      log.info(b.dependencies.map{_.config.name}mkString("  depends on: ", ", ",""))
+    }
+    log.info("---== End Dependency Information ===---")
     LocalRepoHelper.publishBuildMeta(build, repository)
   }
   
-  def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifacts, log: Logger): Unit = 
+  def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn, log: Logger): Unit = 
     try {
       log info "Printing Poms!"
       val poms = repo.PomHelper.makePomStrings(build, arts)
@@ -73,23 +75,23 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   implicit val buildTimeout: Timeout = 4 hours 
 
   // Chain together some Asynch to run this build.
-  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifacts] = {
+  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifactsOut] = {
     implicit val ctx = context.system
-    val tdir = local.ProjectDirs.targetDir
-    def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifacts]): Future[BuildArtifacts] = 
+    val tdir = ProjectDirs.targetDir
+    def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifactsOut]): Future[BuildArtifactsOut] = 
       builds match {
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
             newArts <- buildProject(tdir, b, log.newNestedLogger(b.config.name))
-          } yield BuildArtifacts(arts.artifacts ++ newArts.artifacts, arts.localRepo)
+          } yield BuildArtifactsOut(arts.results ++ newArts.results)
           runBuild(rest, nextArts)
         case _ => fArts
       }
     
     // TODO - REpository management here!!!!
-    local.ProjectDirs.userRepoDirFor(build) { localRepo =>      
-      runBuild(build.repeatableBuilds.toList, Future(BuildArtifacts(Seq.empty, localRepo)))
+    ProjectDirs.userRepoDirFor(build) { localRepo =>      
+      runBuild(build.repeatableBuilds.toList, Future(BuildArtifactsOut(Seq.empty)))
     }
   }  
   
@@ -101,8 +103,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     val builds: Future[Seq[ProjectConfigAndExtracted]] = 
       Future.traverse(config.projects)(extract(tdir, log))
     // We don't have to do ordering here anymore.
-    builds map RepeatableDistributedBuild.apply 
-  } 
+    builds map {RepeatableDistributedBuild(_,config.deploy)}
+  }
 
   // Our Asynchronous API.
   def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ProjectConfigAndExtracted] =
@@ -110,6 +112,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   
   
   // TODO - Repository Knowledge here
-  def buildProject(target: File, build: RepeatableProjectBuild, logger: Logger): Future[BuildArtifacts] =
-    (builder ? RunBuild(target, build, logger)).mapTo[BuildArtifacts]
+  def buildProject(target: File, build: RepeatableProjectBuild, logger: Logger): Future[BuildArtifactsOut] =
+    (builder ? RunBuild(target, build, logger)).mapTo[BuildArtifactsOut]
 }

@@ -18,8 +18,8 @@ class LocalBuildRunner(builder: BuildRunner,
     resolver: ProjectResolver, 
     repository: Repository) {
   
-  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifacts = 
-    try BuildArtifacts(LocalRepoHelper.getPublishedDeps(build.uuid, repository), target)
+  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifactsOut = 
+    try BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository))
     catch {
       case t: RepositoryException => 
         log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)
@@ -27,11 +27,8 @@ class LocalBuildRunner(builder: BuildRunner,
         runLocalBuild(target, build, log)
     } 
   
-  def expandExtraDefaults(proj: ProjectBuildConfig) =
-    builder.expandExtraDefaults(proj)
-
-  def runLocalBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifacts =
-    local.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
+  def runLocalBuild(target: File, build: RepeatableProjectBuild, log: Logger): BuildArtifactsOut =
+    distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
@@ -42,11 +39,20 @@ class LocalBuildRunner(builder: BuildRunner,
       val uuids = build.transitiveDependencyUUIDs.toSeq
       val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
       // TODO - Load this while resolving!
-      val dependencies: BuildArtifacts = BuildArtifacts(artifactLocations, readRepo)
+      val dependencies: BuildArtifactsIn = BuildArtifactsIn(artifactLocations, readRepo)
+      val version = build.config.setVersion match {
+        case Some(v) => v
+        case _ => {
+          val value = build.baseVersion
+          (if (value endsWith "-SNAPSHOT") {
+            value replace ("-SNAPSHOT", "")
+          } else value) + "-dbuildx" + build.uuid
+        }
+      }
       log.info("Running local build: " + build.config + " in directory: " + dir)
-      val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, writeRepo), log)
+      val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo), log)
       // TODO - We pull out just the artifacts published and push them again
-      LocalRepoHelper.publishProjectArtiactInfo(build, results.artifacts, writeRepo, repository)
+      LocalRepoHelper.publishProjectArtifactInfo(build, results.results, writeRepo, repository)
       results
     }
   

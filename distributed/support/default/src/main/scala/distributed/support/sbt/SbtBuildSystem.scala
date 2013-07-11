@@ -8,23 +8,16 @@ import _root_.sbt.Path._
 import logging.Logger
 import distributed.project.model.SbtExtraConfig
 import _root_.java.io.File
+import distributed.repo.core.{Defaults,ProjectDirs}
 
 /** Implementation of the SBT build system. */
-class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.ProjectDirs.builddir) extends BuildSystem {
+class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = ProjectDirs.builddir) extends BuildSystem {
   val name: String = "sbt"  
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"
   final val runner = new SbtRunner(repos, buildBase / "runner")
   final val extractor = new SbtRunner(repos, buildBase / "extractor")
   
-  // expandDefaults is always called as first step; diagnostic should go here.
-  // the others can assume the 'extra' field is of the right type (and will
-  // fail with a match error (internal error) if it is not.
-  override def expandDefaults(config: ProjectBuildConfig): ProjectBuildConfig = {
-    val sc = sbtExpandConfig(config)
-    config.copy(extra=Some(sc))
-  }
-    
   private def sbtExpandConfig(config: ProjectBuildConfig) = config.extra match {
     case None => SbtExtraConfig(sbtVersion = Defaults.sbtVersion) // pick default values
     case Some(ec:SbtExtraConfig) => {
@@ -35,9 +28,9 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.Proje
     }
     case _ => throw new Exception("Internal error: sbt build config options are the wrong type in project \""+config.name+"\". Please report")
   }
-  
+
   override def projectDbuildDir(baseDir: File, config: ProjectBuildConfig): File = {
-    val Some(ec:SbtExtraConfig) = config.extra
+    val ec = sbtExpandConfig(config)
     projectDir(baseDir, ec) / ".dbuild"
   }
 
@@ -50,17 +43,17 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = local.Proje
   }
 
   def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
-    val Some(ec:SbtExtraConfig) = config.extra
+    val ec = sbtExpandConfig(config)
     val projDir = projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log)
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifacts = {
-    val Some(sc:SbtExtraConfig) = project.config.extra
+  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifactsOut = {
+    val ec = sbtExpandConfig(project.config)
     val name = project.config.name
     // TODO - Does this work correctly?
-    val pdir = if(sc.directory.isEmpty) dir else dir / sc.directory
-    val config = SbtBuildConfig(sc, info)
+    val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
+    val config = SbtBuildConfig(ec, info)
     SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log)
   }
 

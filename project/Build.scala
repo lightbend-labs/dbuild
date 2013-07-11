@@ -14,7 +14,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.5.3"
+  def MyVersion: String = "0.6.0"
   
   lazy val root = (
     Project("root", file(".")) 
@@ -72,24 +72,11 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     DmodProject("repo")
     dependsOn(dmeta)
     dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, sbtLaunchInt)
-  )
-  lazy val dbuild = (
-      DmodProject("build")
-      dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt)
-    )
-
-  // Projects relating to supprting various tools in distributed builds.
-  lazy val defaultSupport = (
-      SupportProject("default") 
-      dependsOn(dcore, drepo, dmeta)
-      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt)
-      settings(SbtSupport.settings:_*)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
         val file = dir / "Defaults.scala"
         if(!dir.isDirectory) dir.mkdirs()
         IO.write(file, """
-package distributed.support.sbt
+package distributed.repo.core
 
 object Defaults {
   val sbtVersion = "%s"
@@ -99,6 +86,19 @@ object Defaults {
 """ format (Dependencies.sbtVersion, version, org))
         Seq(file)
       })
+  )
+  lazy val dbuild = (
+      DmodProject("build")
+      dependsOn(dprojects, defaultSupport, drepo, dmeta)
+      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch)
+    )
+
+  // Projects relating to supporting various tools in distributed builds.
+  lazy val defaultSupport = (
+      SupportProject("default") 
+      dependsOn(dcore, drepo, dmeta)
+      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt)
+      settings(SbtSupport.settings:_*)
     ) 
 
   // Distributed SBT plugin
@@ -123,6 +123,7 @@ trait BuildHelper extends Build {
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     resolvers += Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns),
     publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns)),
+    publishArtifact in (Compile, packageSrc) := false,
     publishMavenStyle := false
   )
   

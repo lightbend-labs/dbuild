@@ -26,6 +26,7 @@ Contents
    introduction
    download
    dbuild
+   deploy
    repositories
    plugin
    caveats

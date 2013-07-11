@@ -17,9 +17,9 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
    *   @param uuid  The id of the project to materialize
    *   @param remote  The repository to pull artifacts from.
    *   @param localRepo  The location to store artifacts read from the repository.
-   *   @return The list of *versioned* artifacts that are now in the local repo.
+   *   @return The list of *versioned* artifacts that are now in the local repo, and the project name
    */
-  def materializeArtifactRepository(uuid: String, localRepo: File): Seq[ArtifactLocation] =
+  def materializeArtifactRepository(uuid: String, localRepo: File): (Seq[ArtifactLocation],Seq[String]) =
     LocalRepoHelper.materializeProjectRepository(uuid, remote, localRepo)
     
   /** Checks whether or not a given project (by UUID) is published. 
@@ -28,7 +28,7 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
    * Note: This will resolve artifacts to the local and throw an exception
    * if unable to do so!
    */
-  def getPublishedArtifacts(uuid: String): Seq[ArtifactLocation] = 
+  def getPublishedArtifacts(uuid: String): Seq[BuildSubArtifactsOut] = 
     LocalRepoHelper.getPublishedDeps(uuid, remote)
     
     
@@ -46,6 +46,6 @@ class ProjectRepository(remote: Repository) extends ReadableProjectRepository(re
    * @param extracted The extracted artifacts that this project generates.
    * @param localRepo  The location of all artifacts we should read and send.
    */
-  def publishArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[ArtifactLocation], localRepo: File): ProjectArtifactInfo =
-    LocalRepoHelper.publishProjectArtiactInfo(project, extracted, localRepo, remote)
+  def publishArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut], localRepo: File): ProjectArtifactInfo =
+    LocalRepoHelper.publishProjectArtifactInfo(project, extracted, localRepo, remote)
 }

@@ -441,7 +441,7 @@ object DistributedRunner {
       (State, (Seq[File],BuildSubArtifactsOut)) = {
 
       val (_,libDeps) = Project.extract(state6).runTask(Keys.allDependencies in ref, state)
-      println("All Dependencies for subproject "+ref.project+":")
+      println("All Dependencies for subproject "+normalizedProjectName(ref, baseDirectory)+":")
       libDeps foreach {m=>println("   "+m)}
 //      val (_,pRes) = Project.extract(state6).runTask(Keys.projectResolver in ref, state)
 //      println("Project Resolver for project "+ref.project+":")

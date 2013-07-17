@@ -180,6 +180,7 @@ In the case of Scala, the "extra" record is:
     "build-target"   : <build-target>,
     "build-options"  : [ opt1, opt2,... ]
     "build-number"   : <build-number>,
+    "exclude"        : [ subproj1, subproj2,... ]
    }
 
 Each of the fields is optional. The are:
@@ -207,6 +208,12 @@ build-number
       "bnum"   : <bnum>,
      }
 
+exclude
+  The ant-based Scala build does not support real subprojects. However,
+  dbuild will simulate multiple subprojects based on the artifact names.
+  This "exclude" clause can be used to prevent some artifacts from being
+  published or advertised as available to the rest of the dbuild projects.
+  They will still be built, however.
 
 Scala version numbers
 ---------------------

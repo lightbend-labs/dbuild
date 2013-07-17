@@ -16,6 +16,7 @@ of deploy records, with the following structure:
     "uri"         : <repository-uri>,
     "credentials" : <optional-credentials>,
     "projects"    : [<project1>,<project2>,...]
+    "sign"        : <optional-sign-info>
    }
 
 Within a record:
@@ -60,9 +61,38 @@ certain repository only scala-library and scala-compiler, for example. The synta
     "publish" : [<subproject1>,<subproject2>,...]
    }
 
+sign
+  If this optional section is included the artifacts will be signed with the specified key
+  information before being deployed. The relevant information is supplied as:
+
+.. code-block:: javascript
+
+   {
+    "passphrase"   : <passphrase-file>
+    "id"           : <optional-secret-key-id>
+    "secret-ring"  : <optional-secret-ring-file>
+   }
+
+passphrase
+  This is the only required field: it is the path to a text file that contains the
+  passphrase that should be used for signing.
+
+id
+  If the keyring contains several keys, this field can be used to specify the id of
+  the key that should be used. It must be a 16-characters long hexadecimal string; you
+  can find the necessary id with ``gpg --list-keys --with-colon``.
+
+secret-ring
+  If the file containing your keys is a non-standard location, you can specify the
+  file path here. By default, it will use ``~/.gnupg/secreing.gpg`
+
 
 Using such a sequence of deploy records, it is possible to deploy diffent sets of artifacts to different
-repositories, or to upload the same artifacts to multiple repositories during a single run. For example:
+repositories, or to upload the same artifacts to multiple repositories during a single run. Since signing
+is specified within a deploy record, the same artifacts can be signed with different keys for different
+repositories, during deployment.
+
+For example:
 
 .. code-block:: javascript
 
@@ -80,6 +110,10 @@ repositories, or to upload the same artifacts to multiple repositories during a 
       uri="http://localhost:8088/artifactory/repos/test1"
       credentials="/home/user/.ivy2/.credentials-local"
       projects=["genjavadoc","akka","scala","scala-arm"]
+      sign: {
+        passphrase:"/home/user/.passphrase"
+        id:"0A6C9FC933CA9D7E"
+      }
     }
   ]
 

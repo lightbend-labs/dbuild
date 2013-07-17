@@ -110,10 +110,14 @@ object ScalaBuildSystem extends BuildSystem {
     // Also filter according to the "exclude" list; however,
     // any dependencies on excluded subprojects will be preserved.
     val allSubProjects=readMeta.projects map {_.name}
-    if (exclude.nonEmpty) {
-      
-    }
-    val meta=readMeta.copy(subproj=readMeta.projects map {_.name})
+    val meta = if (exclude.nonEmpty) {
+      val notFound=exclude.diff(allSubProjects)
+      if (notFound.nonEmpty) sys.error(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
+      val subProjects=allSubProjects.diff(exclude)
+      readMeta.copy(subproj=subProjects).copy(projects=readMeta.projects.filter {
+        p => subProjects.contains(p.name)
+      })
+    } else readMeta.copy(subproj=readMeta.projects map {_.name})
 
     // override the "dbuild.json" version with the one from "build.number" (if it exists)
     readBuildNumberFile(baseDir) map {v=>meta.copy(version=v)} getOrElse meta

@@ -134,7 +134,7 @@ object DeployBuild {
               case e: NumberFormatException => println("Not a valid hexadecimal value: " + signOptions.id.get); throw (e)
             }
             if (secretKey==null) sys.error("The key was not found in the pgp keyring.")
-            (dir.***).get.filter(f => !f.isDirectory) foreach { f =>
+            (dir.***).get.filter(f => !f.isDirectory && isNotChecksum(f.getName)) foreach { f =>
               SecretKey(secretKey).sign(f,new File(f.getAbsolutePath()+".asc"),passPhrase.toArray)
             }
           }

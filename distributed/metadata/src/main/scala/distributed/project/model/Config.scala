@@ -34,9 +34,21 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig], deploy: Opt
 /** Deploy information. */
 case class DeployOptions(uri: String, // deploy target
   credentials: Option[String], // path to the credentials file
-  projects: Option[Seq[DeployElement]] // names of the projects that should be deployed
+  projects: Option[Seq[DeployElement]], // names of the projects that should be deployed
+  sign: Option[DeploySignOptions] // signing options
   )
 case class DeploySubProjects(from: String, publish: Seq[String])
+
+/** Signing options.
+ *  secret-ring is the path to the file containing the pgp secret key ring. If not supplied, '~/.gnupg/secring.gpg' is used.
+ *  id is the long key id (the whole 64 bits). If not supplied, the default master key is used.
+ *  passphrase is the path to the file containing the passphrase; there is no interactive option. 
+ */
+case class DeploySignOptions(
+  @JsonProperty("secret-ring") secretRing: Option[String],
+  id: Option[String],
+  passphrase: String
+  )
 
 /**
  * Configuration used for SBT and other builds.
@@ -98,7 +110,8 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
 case class ScalaExtraConfig(
   @JsonProperty("build-number") buildNumber: Option[BuildNumber],
   @JsonProperty("build-target") buildTarget: Option[String],
-  @JsonProperty("build-options") buildOptions: Seq[String] = Seq.empty
+  @JsonProperty("build-options") buildOptions: Seq[String] = Seq.empty,
+  exclude: Seq[String] = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 
 case class BuildNumber(major:String,minor:String,patch:String,bnum:String)

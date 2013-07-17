@@ -90,7 +90,7 @@ object Defaults {
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch)
+      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch, gpgLib)
     )
 
   // Projects relating to supporting various tools in distributed builds.

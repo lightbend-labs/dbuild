@@ -12,7 +12,7 @@ object Dependencies {
 
   val specs2         = "org.specs2" %% "specs2" % "1.10" % "test"
 
-  val dispatch       = "net.databinder" % "dispatch-http_2.9.1" % "0.8.6"
+  val dispatch       = "net.databinder" %% "dispatch-http" % "0.8.10"
 
   val sbtIo          = "org.scala-sbt" % "io" % sbtVersion
   val sbtLogging     = "org.scala-sbt" % "logging" % sbtVersion
@@ -30,4 +30,6 @@ object Dependencies {
   val jackson        = "com.fasterxml.jackson.core" % "jackson-annotations" % "2.1.4"
   val aws            = "com.amazonaws" % "aws-java-sdk" % "1.3.29"
   val uriutil        = "org.eclipse.equinox" % "org.eclipse.equinox.common" % "3.6.0.v20100503"
+
+  val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.1"
 }

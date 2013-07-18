@@ -108,7 +108,7 @@ object DistributedRunner {
   // Note: ArtifactLocation at this point does not (should not) contain any
   // cross version suffix attached to its "name" field; therefore, we apply
   // fixName() only to the ModuleID we are trying to rewrite right now.
-  def fixModule(arts: Seq[model.ArtifactLocation])(m: ModuleID): ModuleID = {
+  def fixModule(arts: Seq[model.ArtifactLocation], crossVersion: String, log: Logger)(m: ModuleID): ModuleID = {
       def expandName(a:Artifact) = {
         import a._
         classifier match {
@@ -135,8 +135,30 @@ object DistributedRunner {
       m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled, explicitArtifacts=Seq.empty)
     } getOrElse {
       // TODO: here I should discover whether there are libDeps of the kind:
-      // "a" % "b_someScalaVer" % "ver" (cross disabled, therefore)
-      // and I should FORCIBLY replace the cross suffix according to the global build option "cross-version"
+      // "a" % "b_someScalaVer" % "ver" (cross disabled, therefore), or
+      // other cross-versioned dependencies that we have been unable to fix.
+      // That means we either miss a project in our config, or that we
+      // explicitly need such a lax resolution in this case
+      // (and we should get a warning about the circumstance anyway).
+      if (m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) {
+        // If we are here, it means that this is a library dependency that is required,
+        // that refers to an artifact that is not provided by any project in this build,
+        // and that needs a certain Scala version (range) in order to work as intended.
+        // We check crossVersion: if it requires the correspondence to be exact, we fail;
+        // otherwise we just print a warning and leave Ivy to fail if need be.
+        val msg = "**** Missing dependency: the library " + m.organization + "#" + fixName(m.name) +
+          " is not provided by any project in this configuration file."
+        crossVersion match {
+          case "binaryFull" | "disabled" | "full" =>
+            log.error(msg)
+            log.error("Please add the corresponding project to the build file (or use \"build-options:{cross-version:standard}\" to ignore).")
+            sys.error("Required dependency not found")
+          case "standard" =>
+            log.warn(msg)
+            log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+          case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+        }
+      }
       m
     }
   }
@@ -291,8 +313,8 @@ object DistributedRunner {
 
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
-  def fixDependencies2(locs: Seq[model.ArtifactLocation]) =
-    fixGeneric2(Keys.allDependencies, "Updating dependencies") { _ map { old => old map fixModule(locs) } }
+  def fixDependencies2(locs: Seq[model.ArtifactLocation], crossVersion: String, log: Logger) =
+    fixGeneric2(Keys.allDependencies, "Updating dependencies") { _ map { old => old map fixModule(locs, crossVersion, log) } }
 
   def fixVersions2(config: SbtBuildConfig) =
     fixGeneric2(Keys.version, "Updating version strings") { _ => config.info.version }
@@ -565,7 +587,7 @@ object DistributedRunner {
       repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion:String) = {
     Seq[Fixer](
           fixResolvers2(repoDir),
-          fixDependencies2(arts),
+          fixDependencies2(arts, crossVersion, log),
           fixScalaVersion2(dbuildDir, repoDir, arts),
           fixInterProjectResolver2bis(modules, log),
           fixCrossVersions2(crossVersion),

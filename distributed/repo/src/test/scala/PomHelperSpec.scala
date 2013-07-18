@@ -23,7 +23,7 @@ object PomHelperSpec extends Specification {
                     )
                   )
                 )
-            )), None
+            )), None, None
           )
       val arts = BuildArtifactsIn(Seq(
         ArtifactLocation(ProjectRef("scala-arm", "com.jsuereth"), "1.2", "_2.10")    

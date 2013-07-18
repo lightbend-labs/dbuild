@@ -23,7 +23,9 @@ object ScalaBuildSystem extends BuildSystem {
   }
 
   def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
-    val meta=readMeta(dir)
+    val ec = scalaExpandConfig(config)
+    val meta=readMeta(dir, ec.exclude)
+    val projects=meta.projects map {_.name}
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     meta
   }
@@ -55,7 +57,11 @@ object ScalaBuildSystem extends BuildSystem {
     // value overriddes the information previously extracted from the checkout (including
     // the dbuild-specific suffix).
     val version = input.version
-    
+
+    val meta=readMeta(dir, ec.exclude)
+    log.info("Building project: "+input.projectName)
+    log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
+
     Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
         "-Dmaven.version.number="+version) ++ ec.buildOptions, Some(dir)) ! log match {
       case 0 => ()
@@ -81,7 +87,6 @@ object ScalaBuildSystem extends BuildSystem {
     // Since we know the repository format, and the list of "subprojects", we grab
     // the files corresponding to each one of them right from the relevant subdirectory.
     // We then calculate the sha, and package each subproj's results as a BuildSubArtifactsOut.
-    val meta=readMeta(dir)
     BuildArtifactsOut(meta.projects map {
       proj => BuildSubArtifactsOut(proj.name,proj.artifacts map {ArtifactLocation(_, version, "")},
         (proj.artifacts.flatMap(ref => (artifactDir(localRepo,ref).***).get).filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
@@ -92,8 +97,10 @@ object ScalaBuildSystem extends BuildSystem {
 
   /** Read ExtractedBuildMeta from dbuild-meta.json if present in the scala checkout.
    * Otherwise, fall back to hard-coded defaults.
+   * Also, exclude any subprojects listed in the "exclude" list; they will still
+   * be listed, but will not be published or advertised as available.
    */
-  private def readMeta(baseDir: File): ExtractedBuildMeta = {
+  private def readMeta(baseDir: File, exclude: Seq[String]): ExtractedBuildMeta = {
     val dbuildMetaFile = new File(baseDir, "dbuild-meta.json")
     val readMeta=try readValue[ExtractedBuildMeta](dbuildMetaFile)
     catch { case e:Exception =>
@@ -103,7 +110,17 @@ object ScalaBuildSystem extends BuildSystem {
     // simulate them by creating one subproject per artifact.
     // That will enable us to publish individual artifacts
     // during the deploy stage.
-    val meta=readMeta.copy(subproj=readMeta.projects map {_.name})
+    // Also filter according to the "exclude" list; however,
+    // any dependencies on excluded subprojects will be preserved.
+    val allSubProjects=readMeta.projects map {_.name}
+    val meta = if (exclude.nonEmpty) {
+      val notFound=exclude.diff(allSubProjects)
+      if (notFound.nonEmpty) sys.error(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
+      val subProjects=allSubProjects.diff(exclude)
+      readMeta.copy(subproj=subProjects).copy(projects=readMeta.projects.filter {
+        p => subProjects.contains(p.name)
+      })
+    } else readMeta.copy(subproj=readMeta.projects map {_.name})
 
     // override the "dbuild.json" version with the one from "build.number" (if it exists)
     readBuildNumberFile(baseDir) map {v=>meta.copy(version=v)} getOrElse meta

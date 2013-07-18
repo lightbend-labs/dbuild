@@ -8,9 +8,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * configuration and extracted information.  Note: That the config in this case
  * should be the "repeatable" SCM uris and full information such that we can
  * generate repeatable builds from this information.
+ * Note that the global build options are not included, therefore this is not
+ * the entire information that can guarantee a unique build.
  */
 case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: ExtractedBuildMeta)
-    
 
 /** This class represents *ALL* IMMUTABLE information about a project such
  * that we can generate a unique and recreatable UUID in which to store
@@ -32,7 +33,8 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
                        @JsonProperty("base-version") baseVersion: String,
                        dependencies: Seq[RepeatableProjectBuild],
-                       subproj: Seq[String]) {
+                       subproj: Seq[String],
+                       buildOptions: GlobalBuildOptions) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
   
@@ -50,8 +52,9 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
 /** A distributed build containing projects in *build order*
  *  Also known as the repeatable config. 
  */
-case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted], deployOptions:Option[Seq[DeployOptions]]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), deployOptions)
+case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
+    deployOptions:Option[Seq[DeployOptions]], buildOptions: Option[GlobalBuildOptions]) {
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), deployOptions, buildOptions)
   def repeatableBuildString = writeValue(this)
   
   /** Our own graph helper for interacting with the build meta information. */
@@ -72,7 +75,9 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted], de
             dep <- (subgraph - head)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
-        val headMeta = RepeatableProjectBuild(head.config, head.extracted.version, sortedDeps, head.extracted.subproj)
+        val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
+            sortedDeps, head.extracted.subproj,
+            buildOptions getOrElse GlobalBuildOptions()) // pick defaults if no GlobalBuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     // we need to check for duplicates /before/ checking for cycles, otherwise spurious

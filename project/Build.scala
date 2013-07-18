@@ -14,7 +14,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.6.0"
+  def MyVersion: String = "0.6.1"
   
   lazy val root = (
     Project("root", file(".")) 
@@ -90,7 +90,7 @@ object Defaults {
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch)
+      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch, gpgLib)
     )
 
   // Projects relating to supporting various tools in distributed builds.

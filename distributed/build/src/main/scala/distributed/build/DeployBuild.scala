@@ -11,6 +11,9 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.Protocol
+import dispatch.classic.{Logger =>_,_}
+import com.jsuereth.pgp.{PGP,SecretKey}
+import org.bouncycastle.openpgp.{PGPSecretKeyRingCollection,PGPSecretKeyRing}
 
 object DeployBuild {
 
@@ -109,6 +112,33 @@ object DeployBuild {
                 msg foreach {log.info(_)}
             }
           }
+
+          // Are we signing? If so, proceed
+          options.sign foreach { signOptions =>
+            val secretRingFile = signOptions.secretRing map {new File(_)} getOrElse (ProjectDirs.userhome / ".gnupg" / "secring.gpg")
+            PGP.init
+            val passPhrase = {
+              val passPhraseFile = io.Source.fromFile(signOptions.passphrase)
+              val p=passPhraseFile.getLines.next
+              passPhraseFile.close()
+              p
+            }
+            val secretKey = try signOptions.id match {
+              case Some(keyID) =>
+                log.info("Signing with key: "+keyID)
+                new PGPSecretKeyRingCollection(new java.io.FileInputStream(secretRingFile)).getSecretKey(new java.math.BigInteger(keyID, 16).longValue)
+              case None =>
+                log.info("Signing with default key...")
+                new PGPSecretKeyRing(new java.io.FileInputStream(secretRingFile)).getSecretKey
+            } catch {
+              case e: NumberFormatException => println("Not a valid hexadecimal value: " + signOptions.id.get); throw (e)
+            }
+            if (secretKey==null) sys.error("The key was not found in the pgp keyring.")
+            (dir.***).get.filter(f => !f.isDirectory && isNotChecksum(f.getName)) foreach { f =>
+              SecretKey(secretKey).sign(f,new File(f.getAbsolutePath()+".asc"),passPhrase.toArray)
+            }
+          }
+
           // dir is staged; time to deploy
           val uri = new _root_.java.net.URI(options.uri)
           uri.getScheme match {

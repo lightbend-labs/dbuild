@@ -22,6 +22,9 @@ Limitations
 - Each dbuild configuration file must contain one instance of Scala; dbuild has not been tested with
   configuration files in which an instance of Scala is not present.
 
+- There is no locking. If you run more than one dbuild at the same time on the same machine, rather
+  bad things may happen.
+
 |
 
 (back to :doc:`the index <index>`)

@@ -59,7 +59,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("e", "e")),
                     dependencies = Seq.empty
                   ))))
-    ), None)
+    ), None, None)
     
     val sample2 = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
@@ -89,7 +89,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                     artifacts = Seq(ProjectRef("c", "c")),
                     dependencies = Seq(ProjectRef("a", "a"))
                   ))))
-    ), None)
+    ), None, None)
     
     
     "serialize/deserialize" in {

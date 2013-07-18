@@ -103,7 +103,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     val builds: Future[Seq[ProjectConfigAndExtracted]] = 
       Future.traverse(config.projects)(extract(tdir, log))
     // We don't have to do ordering here anymore.
-    builds map {RepeatableDistributedBuild(_,config.deploy)}
+    builds map {RepeatableDistributedBuild(_, config.deploy, config.buildOptions)}
   }
 
   // Our Asynchronous API.

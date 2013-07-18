@@ -106,7 +106,8 @@ object DistributedRunner {
   // be somewhat more general, at least in principle.
   //
   // Note: ArtifactLocation at this point does not (should not) contain any
-  // cross version suffix attached to its "name".
+  // cross version suffix attached to its "name" field; therefore, we apply
+  // fixName() only to the ModuleID we are trying to rewrite right now.
   def fixModule(arts: Seq[model.ArtifactLocation])(m: ModuleID): ModuleID = {
       def expandName(a:Artifact) = {
         import a._
@@ -124,8 +125,14 @@ object DistributedRunner {
     findArt map { art =>
       // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it will have an extra suffix
       // due to the classifier). Use fixName(m.name) instead.
-      // TODO: is crossSuffix in the right place, if m.name (wrongly) includes a classifier?
-      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled)
+      // Note2: in case of a classifier, there is a hack to make it match even
+      // if the requested library has an explicit matching name and no classifier;
+      // this is required by one of the test projects. So we match in that way as
+      // well (see above m.explicitArtifacts contains...). Further, in the rewritten
+      // ModuleID we remove the explicitArtifacts, otherwise the original name (that
+      // does not contain a cross-version suffix) takes over. It's all rather hackish,
+      // admittedly, but it does work in the end.
+      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled, explicitArtifacts=Seq.empty)
     } getOrElse m
   }
 
@@ -230,18 +237,18 @@ object DistributedRunner {
         fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
           val sc = s.key.scope
           Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
-        }("Setting cross versioning to binaryFull") _
+        }("Setting Scala binary version to full") _
       case "standard" => { (_:Seq[Setting[_]],_:Logger) => Seq.empty }
       case "disabled" =>
-        fixGeneric2(Keys.crossVersion, "Disabling cross versioning") { _ => CrossVersion.Disabled }
+        fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => CrossVersion.Disabled }
       case "full" =>
-        fixGeneric2(Keys.crossVersion, "Setting cross versioning to full") { _ => CrossVersion.full }
+        fixGeneric2(Keys.crossVersion, "Setting cross version to full") { _ => CrossVersion.full }
       case "binary" => { (s:Seq[Setting[_]],l:Logger) => 
-        fixGeneric2(Keys.crossVersion, "Setting cross versioning to binary") { _ => CrossVersion.binary } (s,l) ++
+        fixGeneric2(Keys.crossVersion, "Setting cross version to binary") { _ => CrossVersion.binary } (s,l) ++
         fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
           val sc = s.key.scope
           Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc apply CrossVersion.binaryScalaVersion
-        }("Setting Scala binary version to full") (s,l)
+        }("Setting Scala binary version to Binary") (s,l)
       }
       case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
     }

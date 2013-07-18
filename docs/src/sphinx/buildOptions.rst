@@ -42,15 +42,19 @@ cross-version
 
   The available options are:
 
-  "disabled"
-    This is the default. All cross-version suffixes will be disabled, and each project
-    will be published with just a dbuild-specific version suffix (unless "set-version" is used).
-
+  "full"
+    This is the default. Every sbt-based project is changed so that the full Scala version string
+    is used as a cross-version suffix, including those projects that would normally have cross
+    versioning disabled.
+ 
   "standard"
     Each project will compile with its own natural cross-version suffix.
     This setting is necessary when releasing, usually in conjunction with "set-version",
     in order to make sure that the standard suffix is used while publishing.
 
+  "disabled"
+    All cross-version suffixes will be disabled, and each project will be published with
+    just a dbuild-specific version suffix (unless "set-version" is used).
 
   "binaryFull"
     The sbt projects that publish artifacts using the "Binary" cross-version setting are
@@ -58,10 +62,6 @@ cross-version
     that do not use the Binary cross-version setting will be unaffected. This options works
     by forcing sbt's scalaBinaryVersion setting to scalaVersion.
 
-  "full"
-    Every sbt-based project is changed so that the full Scala version string is used as a cross-
-    version suffix, including those projects that would normally have cross versioning disabled.
- 
   "binary"
     As above, except the sbt projects are changed to use sbt's "Binary" setting. That includes
     even the projects that would normally have cross-version disabled or set to full.

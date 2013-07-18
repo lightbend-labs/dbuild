@@ -29,7 +29,9 @@ case class ProjectBuildConfigShadow(name: String,
   extra: JsonNode = null)
 
 /** The initial configuration for a build. */
-case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig], deploy: Option[Seq[DeployOptions]])
+case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
+  deploy: Option[Seq[DeployOptions]],
+  @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions])
 
 /** Deploy information. */
 case class DeployOptions(uri: String, // deploy target
@@ -186,3 +188,12 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
   }
 }
 
+/**
+ * These are options that affect all of the projects, but must not affect extraction:
+ * extraction fully relies on the fact that the project is fully described by the 
+ * ProjectBuildConfig record.
+ * Conversely, these options can affect the building stage; a copy of the record is
+ * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
+ * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
+ */
+case class GlobalBuildOptions()

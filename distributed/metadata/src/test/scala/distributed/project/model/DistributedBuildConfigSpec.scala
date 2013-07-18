@@ -23,7 +23,7 @@ object DistributedBuildConfigSpec extends Specification {
           system = "sbt",
           setVersion = None,
           extra = None
-      )), None
+      )), None, None
     ))
     }
     "parse project" in {
@@ -54,7 +54,7 @@ object DistributedBuildConfigSpec extends Specification {
           setVersion = Some("3.9.43"),
           extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
       )),Some(Seq(DeployOptions("file://localhost:8088/some/path",Some("/credentials/file"),
-       Some(Seq(DeployElementProject("p1"),DeployElementProject("p2"),DeployElementSubProject(DeploySubProjects("aaa",Seq("a","b"))))),None)))
+       Some(Seq(DeployElementProject("p1"),DeployElementProject("p2"),DeployElementSubProject(DeploySubProjects("aaa",Seq("a","b"))))),None))), None
     ))
     }
   }

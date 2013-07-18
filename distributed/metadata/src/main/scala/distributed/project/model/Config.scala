@@ -196,13 +196,22 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
  * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
  * 
- * - cross-suffix can be either "full" or "normal" (default "full"). It affects scalaBinaryVersion.
- *   - If "full", then the entire Scala version will be appended as a suffix. This is very important
- *     when using dbuild during development, as it ensures that the dependencies in use will only be
- *     those compiled against that exact version of Scala.
- *   - If "normal", each project will compile with its own suffix (typically _2.10 for 2.10.x).
- *     This is the settings that should be used when releasing, typically in conjunction with "set-version".
+ * - cross-version controls the crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
+ *   - "disabled" (the default option): All cross-version suffixes will be disabled, and each project
+ *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
+ *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x).
+ *     This settings normally must be used when releasing, typically in conjunction with "set-version".
+ *   - "binaryFull": The sbt projects that publish artifacts using the "Binary" cross-version setting are
+ *     forced to use the full Scala version string in place of a shortened version (like "_2.10"). The other
+ *     projects will be unaffected. This is done by forcing scalaBinaryVersion to scalaVersion.
+ *   - "full": All of the sbt projects are changed so that the full Scala version string is used as a cross-
+ *     version suffix, even those that would normally have cross versioning disabled.
+ *   - "binary": As above, but all sbt projects are changed to use the "Binary" setting, even those that
+ *     would normally have cross-version disabled or set to full. The ScalaBinaryVersion of all projects
+ *     is reset to the sbt default mechanism.
+ *   "full" and "binary" are mostly included for testing, as they are of limited practical use.
+ *     
  */
 case class GlobalBuildOptions(
-    @JsonProperty("cross-suffix") crossSuffix:String = "full"
+    @JsonProperty("cross-version") crossVersion:String = "disabled"
   )

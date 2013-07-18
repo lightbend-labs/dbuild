@@ -224,8 +224,40 @@ object DistributedRunner {
 
   type Fixer = (Seq[Setting[_]], Logger) => Seq[Setting[_]]
 
-  def fixCrossVersions2 =
-    fixGeneric2(Keys.crossVersion, "Disabling cross versioning") { _ => CrossVersion.Disabled }
+  def fixCrossVersions2(crossVersion: String) =
+    crossVersion match {
+      case "binaryFull" =>
+        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
+          val sc = s.key.scope
+          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
+        }("Setting cross versioning to binaryFull") _
+      case "standard" => { (_:Seq[Setting[_]],_:Logger) => Seq.empty }
+      case "disabled" =>
+        fixGeneric2(Keys.crossVersion, "Disabling cross versioning") { _ => CrossVersion.Disabled }
+      case "full" =>
+        fixGeneric2(Keys.crossVersion, "Setting cross versioning to full") { _ => CrossVersion.full }
+      case "binary" => { (s:Seq[Setting[_]],l:Logger) => 
+        fixGeneric2(Keys.crossVersion, "Setting cross versioning to binary") { _ => CrossVersion.full } (s,l) ++
+        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
+          val sc = s.key.scope
+          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc apply CrossVersion.binaryScalaVersion
+        }("Setting Scala binary version to full") (s,l)
+      }
+      case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+    }
+
+  // we want to match against only one and precisely one scala version; therefore any
+  // binary compatibility lookup machinery must be disabled
+  def fixScalaBinaryVersions2(crossSuffix: String) =
+    crossSuffix match {
+      case "full" =>
+        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
+          val sc = s.key.scope
+          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
+        }("Setting Scala binary version to full") _
+      case "normal" => { (_:Seq[Setting[_]],_:Logger) => Seq.empty }
+    }
+  
 
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
@@ -246,19 +278,6 @@ object DistributedRunner {
         })
     }
 
-  // we want to match against only one and precisely one scala version; therefore any
-  // binary compatibility lookup machinery must be disabled
-  def fixScalaBinaryVersions2(crossSuffix: String) =
-    crossSuffix match {
-      case "full" =>
-        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
-          val sc = s.key.scope
-          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
-        }("Setting Scala binary version to full") _
-      case "normal" => { (_:Seq[Setting[_]],_:Logger) => Seq.empty }
-      case _ => sys.error("Unrecognized option \"" + crossSuffix + "\" in cross-suffix")
-    }
-  
   // sbt will try to check the scala binary version we use in this project (the full version,
   // including suffixes) against what Ivy reports as the version of the scala library (which is
   // a shortened version). That generates tons of warnings; in order to disable that, we set
@@ -389,7 +408,7 @@ object DistributedRunner {
 
       def newSettings(oldSettings:Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
-          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings, config.buildOptions.crossSuffix)
+          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings, config.buildOptions.crossVersion)
 
       newState(state, extracted, newSettings)
 
@@ -512,14 +531,13 @@ object DistributedRunner {
   }
 
   private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
-      repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossSuffix:String) = {
+      repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion:String) = {
     Seq[Fixer](
           fixResolvers2(repoDir),
           fixDependencies2(arts),
           fixScalaVersion2(dbuildDir, repoDir, arts),
           fixInterProjectResolver2bis(modules, log),
-          fixScalaBinaryVersions2(crossSuffix),
-//          fixCrossVersions2,
+          fixCrossVersions2(crossVersion),
           fixScalaBinaryCheck2) flatMap { _(oldSettings, log) }
   }
   
@@ -573,7 +591,7 @@ object DistributedRunner {
         state
       } else {
         val modules=getModuleRevisionIds(state, proj.subproj, log)
-        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _, proj.buildOptions.crossSuffix))
+        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _, proj.buildOptions.crossVersion))
       }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")

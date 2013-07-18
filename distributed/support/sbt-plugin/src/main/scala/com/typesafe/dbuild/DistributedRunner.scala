@@ -108,7 +108,7 @@ object DistributedRunner {
   // Note: ArtifactLocation at this point does not (should not) contain any
   // cross version suffix attached to its "name" field; therefore, we apply
   // fixName() only to the ModuleID we are trying to rewrite right now.
-  def fixModule(arts: Seq[model.ArtifactLocation], crossVersion: String, log: Logger)(m: ModuleID): ModuleID = {
+  def fixModule(arts: Seq[model.ArtifactLocation], crossVersion: String, log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
       def expandName(a:Artifact) = {
         import a._
         classifier match {
@@ -139,8 +139,10 @@ object DistributedRunner {
       // other cross-versioned dependencies that we have been unable to fix.
       // That means we either miss a project in our config, or that we
       // explicitly need such a lax resolution in this case
-      // (and we should get a warning about the circumstance anyway).
-      if (m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) {
+      // (and we should get a warning about that circumstance anyway).
+      if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) &&
+          // Do not inspect the artifacts that we are building right at this time:
+          fixName(m.name)!=currentName && m.organization!=currentOrg) {
         // If we are here, it means that this is a library dependency that is required,
         // that refers to an artifact that is not provided by any project in this build,
         // and that needs a certain Scala version (range) in order to work as intended.
@@ -309,13 +311,18 @@ object DistributedRunner {
         }("Setting Scala binary version to full") _
       case "normal" => { (_:Seq[Setting[_]],_:Logger) => Seq.empty }
     }
-  
 
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
   def fixDependencies2(locs: Seq[model.ArtifactLocation], crossVersion: String, log: Logger) =
-    fixGeneric2(Keys.allDependencies, "Updating dependencies") { _ map { old => old map fixModule(locs, crossVersion, log) } }
+    fixGenericTransform2(Keys.allDependencies) { r: Setting[Task[Seq[sbt.ModuleID]]] =>
+      val sc = r.key.scope
+      Keys.allDependencies in sc <<= (Keys.allDependencies in sc, Keys.name in sc, Keys.organization in sc) map { (old, n, o) =>
+        old map fixModule(locs, crossVersion, log, n, o)
+      }
+    }("Updating dependencies") _
 
+    
   def fixVersions2(config: SbtBuildConfig) =
     fixGeneric2(Keys.version, "Updating version strings") { _ => config.info.version }
 

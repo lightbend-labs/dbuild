@@ -237,7 +237,7 @@ object DistributedRunner {
       case "full" =>
         fixGeneric2(Keys.crossVersion, "Setting cross versioning to full") { _ => CrossVersion.full }
       case "binary" => { (s:Seq[Setting[_]],l:Logger) => 
-        fixGeneric2(Keys.crossVersion, "Setting cross versioning to binary") { _ => CrossVersion.full } (s,l) ++
+        fixGeneric2(Keys.crossVersion, "Setting cross versioning to binary") { _ => CrossVersion.binary } (s,l) ++
         fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
           val sc = s.key.scope
           Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc apply CrossVersion.binaryScalaVersion

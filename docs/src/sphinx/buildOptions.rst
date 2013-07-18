@@ -6,7 +6,7 @@ Global build options
 The ``build-options`` section
 -----------------------------
 
-Some additional options can affect the global operation of dbuild during the building stage;
+Some additional options can modify the behavior of dbuild during the building stage;
 these options have an effect on all projects. They are specified in the "build-options"
 section, which is entirely optional and lives at the same level as the "deploy" and
 "projects" sections. Its structure is currently:
@@ -17,24 +17,22 @@ section, which is entirely optional and lives at the same level as the "deploy" 
     "cross-version"  : <cross-version-level>
    }
 
-The options are:
 
 cross-version
-  Controls the way in which the various sbt-based projects will use the cross-versioning
-  facility, appending a version suffix to the artifact id. This is of importance in two
-  main cases.
+  This option controls the way in which the various sbt-based projects will use the cross-version
+  facility, which appends a Scala version suffix to the artifact id. Consider the following two cases.
 
-  If a dbuild configuration file has a project that has required Scala-based dependency,
-  and the dependency is not included, sbt will try to resolve it against the standard
-  Maven repositories. During development and testing, therefore, it is useful to set the
-  cross-version level to a more strict level, so that sbt will only look for versions
-  that have been compiled with the exact same version of Scala we are interested in, and
-  fail otherwise.
+  1. If a dbuild configuration file includes a project that has a Scala-based dependent project,
+     but the dependency is not included, sbt may try to resolve the dependency against an external
+     Maven repositories, built with a different version of Scala. This is undesirable during
+     the development and testing of a new Scala version, as the aim is to compile all of the
+     dependencies against the same new version of Scala. Dbuild, in this case, is able to
+     enforce the policy that all the dependencies must use the exact same version of scala:
+     compilation will fail with an informative message otherwise.
 
-  Conversely, when releasing, we want to set the version numbers of the various projects
-  (using the "set-version" option), and leave the cross versioning level to whatever each
-  project specifies, so that the published artifacts follow the same scheme that
-  each project would normally use.
+  2. Conversely, when releasing, it is desirable to preserve the same cross-version policy
+     that the various projects normally use. In this case, we can ask dbuild not to adjust
+     cross-versioning, so that the published artifacts follow their native publishing scheme.
 
   This option can therefore control how strict or lax the cross-version suffix should be
   during building, and how sbt will look for alternatives in case of dependencies that
@@ -42,30 +40,37 @@ cross-version
 
   The available options are:
 
-  "full"
-    This is the default. Every sbt-based project is changed so that the full Scala version string
-    is used as a cross-version suffix, including those projects that would normally have cross
-    versioning disabled.
- 
-  "standard"
+  disabled
+    This is the default setting, and it will be used if a "build-options" section is not
+    specified. The cross-version suffixes are disabled, and each project is published
+    using just a single version, which contains a dbuild-specific version suffix
+    (unless "set-version" is used).
+    The library dependencies that refer to Scala projects that are not included in this build
+    configuration, and which have "binary" or "full" CrossVersion, will be adjusted;
+    as a result, missing dependent projects will be detected.
+
+  standard
     Each project will compile with its own natural cross-version suffix.
     This setting is necessary when releasing, usually in conjunction with "set-version",
     in order to make sure that the standard suffix is used while publishing.
 
-  "disabled"
-    All cross-version suffixes will be disabled, and each project will be published with
-    just a dbuild-specific version suffix (unless "set-version" is used).
+  full
+    Similar to "disabled", except the full Scala version string is used as a
+    cross-version suffix while publishing (even for those projects that would normally
+    have cross-version disabled). Missing dependent projects will be detected.
 
-  "binaryFull"
+  binaryFull
     The sbt projects that publish artifacts using the "Binary" cross-version setting are
-    forced to use the full Scala version string in place of a shortened version ("_2.10"). The projects
-    that do not use the Binary cross-version setting will be unaffected. This options works
-    by forcing sbt's scalaBinaryVersion setting to scalaVersion.
+    forced to use the full Scala version string in place of a shortened version ("_2.10");
+    however, the projects that publish without cross-version will remain unchanged.
+    Missing dependent projects will be detected. This option exists mainly for testing,
+    and is not intended for regular use.
 
-  "binary"
-    As above, except the sbt projects are changed to use sbt's "Binary" setting. That includes
-    even the projects that would normally have cross-version disabled or set to full.
-    The ScalaBinaryVersion of all projects is reset to the default sbt scala binary
-    compatibility model.
+In practice, you can omit the "build-options" section entirely during normal use, and
+just add the following if you are releasing using "set-version":
+
+.. code-block:: javascript
+
+   build-options:{cross-version:standard}
 
 *Next:* :doc:`repositories`.

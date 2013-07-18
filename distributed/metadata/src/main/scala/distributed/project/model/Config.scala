@@ -197,21 +197,28 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
  * 
  * - cross-version controls the crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
- *   - "full" (default option): All of the sbt projects are changed so that the full Scala version string
- *     is used as a cross-version suffix, even those that would normally have cross versioning disabled.
- *   - "disabled": All cross-version suffixes will be disabled, and each project
+ *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
  *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
- *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x).
- *     This settings normally must be used when releasing, typically in conjunction with "set-version".
- *   - "binaryFull": The sbt projects that publish artifacts using the "Binary" cross-version setting are
- *     forced to use the full Scala version string in place of a shortened version (like "_2.10"). The other
- *     projects will be unaffected. This is done by forcing scalaBinaryVersion to scalaVersion.
- *   - "binary": As above, but all sbt projects are changed to use the "Binary" setting, even those that
- *     would normally have cross-version disabled or set to full. The ScalaBinaryVersion of all projects
- *     is reset to the sbt default mechanism.
- *   "full" and "binary" are mostly included for testing, as they are of limited practical use.
- *     
+ *     However, the library dependencies that refer to Scala projects that are not included in this build
+ *     configuration, and that have "binary" or "full" CrossVersion will have their scala version set to
+ *     the full scala version string: as a result, missing dependent projects will be detected.
+ *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x, for example).
+ *     Further, library dependencies that refer to Scala projects that are not included in this build
+ *     configuration will not be rewritten: they might end up being fetched from Maven if a compatible
+ *     version is found. 
+ *     This settings must be used when releasing, typically in conjunction with "set-version", in order
+ *     to make sure cross-versioning works as it would in the original projects.
+ *   - "full": Similar in concept to "disabled", except the all the sbt projects are changed so that
+ *     the full Scala version string is used as a cross-version suffix (even those that would normally
+ *     have cross-version disabled). Missing dependent projects will be detected.
+ *   - "binaryFull": It is a bit of a hybrid between standard and full. This option will cause
+ *     the projects that would normally publish with a binary suffix (like "_2.10") to publish using the
+ *     full scala version string instead. The projects that have cross building disabled, however, will be
+ *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
+ * 
+ * In practice, do not include a "build-options" section at all in normal use, and just add "{cross-version:standard}"
+ * if you are planning to release using "set-version".
  */
 case class GlobalBuildOptions(
-    @JsonProperty("cross-version") crossVersion:String = "full"
+    @JsonProperty("cross-version") crossVersion:String = "disabled"
   )

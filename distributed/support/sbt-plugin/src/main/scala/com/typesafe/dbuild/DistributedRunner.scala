@@ -133,7 +133,12 @@ object DistributedRunner {
       // does not contain a cross-version suffix) takes over. It's all rather hackish,
       // admittedly, but it does work in the end.
       m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled, explicitArtifacts=Seq.empty)
-    } getOrElse m
+    } getOrElse {
+      // TODO: here I should discover whether there are libDeps of the kind:
+      // "a" % "b_someScalaVer" % "ver" (cross disabled, therefore)
+      // and I should FORCIBLY replace the cross suffix according to the global build option "cross-version"
+      m
+    }
   }
 
   def inNScopes(n:Int) = if(n==1) "in one scope" else "in "+n+" scopes"
@@ -231,28 +236,46 @@ object DistributedRunner {
 
   type Fixer = (Seq[Setting[_]], Logger) => Seq[Setting[_]]
 
-  def fixCrossVersions2(crossVersion: String) =
+  // There are two parts in dealing with cross-versions.
+  // 1) Keys.crossVersion will affect how the projects are published
+  // 2) Keys.scalaBinaryVersion will impact on how dependencies that are
+  //    declared as '%%', with no further CrossVersion qualification,
+  //    are resolved.
+  // 1) can be: standard, full, disabled (or forcing "binary", which is not very useful in this context)
+  // 2) can be: standard (whatever it is in the projects), or full (<<= scalaVersion),
+  //    or forced to Binary (again, not very useful).
+  //    If a dependency is explicit in the form "a" % "b_someScalaVer" % "ver",
+  //    and the corresponding project is not in the dbuild config file, however, I will be
+  //    unable to discover that it is missing (unless I do some further postprocessing,
+  //    by stripping the suffix and comparing the names).
+  // The combinations are:
+  // "standard" -> 1 and 2 set to standard (nothing is done)
+  // "full" -> 1 and 2 both set to full
+  // "disabled" -> 1 set to disabled, 2 set to full
+  // "binaryFull" -> 2 set to full, 1 left alone (aka: it will publish full the projects that normally would
+  //                 publish as binary; it will publish the others as they are; it will discover missing libs)
+  //                 (this is for testing only).
+  def fixCrossVersions2(crossVersion: String) = {
+    val scalaBinaryFull =
+      fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
+        val sc = s.key.scope
+        Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
+      }("Setting Scala binary version to full") _
+
     crossVersion match {
-      case "binaryFull" =>
-        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
-          val sc = s.key.scope
-          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
-        }("Setting Scala binary version to full") _
-      case "standard" => { (_:Seq[Setting[_]],_:Logger) => Seq.empty }
-      case "disabled" =>
-        fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => CrossVersion.Disabled }
-      case "full" =>
-        fixGeneric2(Keys.crossVersion, "Setting cross version to full") { _ => CrossVersion.full }
-      case "binary" => { (s:Seq[Setting[_]],l:Logger) => 
-        fixGeneric2(Keys.crossVersion, "Setting cross version to binary") { _ => CrossVersion.binary } (s,l) ++
-        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
-          val sc = s.key.scope
-          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc apply CrossVersion.binaryScalaVersion
-        }("Setting Scala binary version to Binary") (s,l)
+      case "binaryFull" => scalaBinaryFull
+      case "standard" => { (_: Seq[Setting[_]], _: Logger) => Seq.empty }
+      case "disabled" => { (s: Seq[Setting[_]], l: Logger) =>
+        fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => CrossVersion.Disabled }(s, l) ++
+          scalaBinaryFull(s, l)
+      }
+      case "full" => { (s: Seq[Setting[_]], l: Logger) =>
+        fixGeneric2(Keys.crossVersion, "Setting cross version to full") { _ => CrossVersion.full }(s, l) ++
+          scalaBinaryFull(s, l)
       }
       case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
     }
-
+  }
   // we want to match against only one and precisely one scala version; therefore any
   // binary compatibility lookup machinery must be disabled
   def fixScalaBinaryVersions2(crossSuffix: String) =

@@ -195,5 +195,14 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  * Conversely, these options can affect the building stage; a copy of the record is
  * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
  * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
+ * 
+ * - cross-suffix can be either "full" or "normal" (default "full"). It affects scalaBinaryVersion.
+ *   - If "full", then the entire Scala version will be appended as a suffix. This is very important
+ *     when using dbuild during development, as it ensures that the dependencies in use will only be
+ *     those compiled against that exact version of Scala.
+ *   - If "normal", each project will compile with its own suffix (typically _2.10 for 2.10.x).
+ *     This is the settings that should be used when releasing, typically in conjunction with "set-version".
  */
-case class GlobalBuildOptions()
+case class GlobalBuildOptions(
+    @JsonProperty("cross-suffix") crossSuffix:String = "full"
+  )

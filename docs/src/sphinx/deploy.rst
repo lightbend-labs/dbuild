@@ -19,7 +19,7 @@ of deploy records, with the following structure:
     "sign"        : <optional-sign-info>
    }
 
-Within a record:
+Within each record:
 
 repository-uri
   A string specifying the URI of the desired repository; it can be written either with or
@@ -79,12 +79,12 @@ passphrase
 
 id
   If the keyring contains several keys, this field can be used to specify the id of
-  the key that should be used. It must be a 16-characters long hexadecimal string; you
-  can find the necessary id with ``gpg --list-keys --with-colon``.
+  the key that should be used. It must be a 16-characters hexadecimal string; you
+  can find the necessary value by using ``gpg --list-keys --with-colon``.
 
 secret-ring
   If the file containing your keys is a non-standard location, you can specify the
-  file path here. By default, it will use ``~/.gnupg/secreing.gpg`
+  file path here. By default, it will use ``~/.gnupg/secring.gpg``
 
 
 Using such a sequence of deploy records, it is possible to deploy diffent sets of artifacts to different
@@ -129,4 +129,4 @@ For example:
   may be the result of some unexpected build anomaly, or it may be caused by a failure while uploading the artifact
   files to the repository server.
 
-*Next:* :doc:`repositories`.
+*Next:* :doc:`buildOptions`.

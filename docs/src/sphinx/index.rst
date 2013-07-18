@@ -27,6 +27,7 @@ Contents
    download
    dbuild
    deploy
+   buildOptions
    repositories
    plugin
    caveats

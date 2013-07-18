@@ -50,9 +50,12 @@ The top level of the configuration file is:
 .. code-block:: javascript
 
    {"projects": [ <dbuild_project1>, <dbuild_project2>,...],
-    "deploy":   [ <dbuild_deploy1>, <dbuild_deploy2>,...]}
+    "deploy":   [ <dbuild_deploy1>, <dbuild_deploy2>,...],
+    "build-options": <global-build-options>
+   }
 
-Each of the dbuild projects has the structure:
+Only the "projects" section is required; the others are entirely optional. Each of the projects in
+the dbuild "projects" section has this structure:
 
 .. code-block:: javascript
 
@@ -66,17 +69,17 @@ Each of the dbuild projects has the structure:
 
 Within a project description:
 
-project-name
+name
   A string identifying the software project. This can be arbitrary, and is only used within dbuild,
   although you will want to use something meaningful, like "akka" for Akka, or "scala-arm" for the
   Scala ARM project.
 
-build-system
+system
   A string that describes the build mechanism used by this software project. Valid values are currently
   "scala" (custom for the Scala project) and "sbt"; additional mechanisms will be added soon (Maven
   support is in the works). If not specified, "sbt" is assumed.
 
-source-repository-uri
+uri
   A string pointing to the source repository for this project. It can be git-based (if the uri begins
   with ``git://`` or ends with ``.git``), or svn (schemes ``http://``, ``https://``, ``svn://``, only
   if an svn repository is detected). Further formats may be added at a later time.
@@ -92,13 +95,15 @@ source-repository-uri
   exact version or commit in case if specified . If no prefix is added, dbuild will fetch the most recent
   version in git master, or svn head.
 
-optional-output-version
+set-version
   This component is optional, and normally not used. During compilation, dbuild will automatically
   generate a version string that is used for the various artifacts that are produced by each
   project. However, in case you need to obtain artifacts with a specific version string, you can
-  override the default value by specifying a specific version string here.
+  override the default value by specifying a specific version string here. If you are planning to
+  use this feature in order to release artifact, then you also need to set the option "cross-version"
+  to "standard", as explained in the section :ref:`section-build-options`.
 
-optional-extra-build-parameters
+extra
   The "extra" component is optional, as are all of its sub-components; it describes additional
   parameters used while building the project, and its content depends on the build system, as
   detailed below.

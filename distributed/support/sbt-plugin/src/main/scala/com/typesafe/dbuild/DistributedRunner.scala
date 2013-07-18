@@ -481,9 +481,10 @@ object DistributedRunner {
 //    printPR(state)
 //    printPR(state2)
 
-    println("Building project...")
+    println("Building project: "+config.info.projectName)
     val refs = getProjectRefs(Project.extract(state2))
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data
+    println(config.info.subproj.mkString("These subprojects will be built: ", ", ", ""))
     val buildAggregate = runAggregate[(Seq[File],Seq[BuildSubArtifactsOut]),
       (Seq[File],BuildSubArtifactsOut)] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
         case ((oldFiles,oldArts),(newFiles,arts)) => (newFiles,oldArts :+ arts) } _

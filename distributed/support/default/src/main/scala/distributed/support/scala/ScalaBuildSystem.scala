@@ -57,7 +57,11 @@ object ScalaBuildSystem extends BuildSystem {
     // value overriddes the information previously extracted from the checkout (including
     // the dbuild-specific suffix).
     val version = input.version
-    
+
+    val meta=readMeta(dir, ec.exclude)
+    log.info("Building project: "+input.projectName)
+    log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
+
     Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
         "-Dmaven.version.number="+version) ++ ec.buildOptions, Some(dir)) ! log match {
       case 0 => ()
@@ -83,8 +87,6 @@ object ScalaBuildSystem extends BuildSystem {
     // Since we know the repository format, and the list of "subprojects", we grab
     // the files corresponding to each one of them right from the relevant subdirectory.
     // We then calculate the sha, and package each subproj's results as a BuildSubArtifactsOut.
-    val meta=readMeta(dir, ec.exclude)
-    log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     BuildArtifactsOut(meta.projects map {
       proj => BuildSubArtifactsOut(proj.name,proj.artifacts map {ArtifactLocation(_, version, "")},
         (proj.artifacts.flatMap(ref => (artifactDir(localRepo,ref).***).get).filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {

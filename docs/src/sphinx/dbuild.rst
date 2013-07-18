@@ -40,10 +40,12 @@ The central part of the build tool operation revolves around the build configura
 in detail which software projects are involved in the build, which version of each should be used, and many
 other aspects of the build process.
 
-The build file is written in a JSON format. The file is parsed by using the Typesafe
-`config library <http://github.com/typesafehub/config>`_, therefore the syntax of the file can be simplified
-by using the conventions of that library. The order of items in the configuration file is never relevant,
-unless explicitly mentioned in the documentation.
+The build file is written in a JSON format. The file is parsed by using the Typesafe config library,
+therefore the syntax of the file can be simplified by using the conventions of that library: double
+quotes and commas may be omitted, variable substitution is available, and other facilities are
+available. Please refer to the `config library <http://github.com/typesafehub/config>`_ guide for further
+details. The order of items in the configuration file is never relevant, unless explicitly
+mentioned in the documentation.
 
 The top level of the configuration file is:
 

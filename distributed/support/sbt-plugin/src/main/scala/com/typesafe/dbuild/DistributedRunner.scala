@@ -106,8 +106,9 @@ object DistributedRunner {
   // be somewhat more general, at least in principle.
   //
   // Note: ArtifactLocation at this point does not (should not) contain any
-  // cross version suffix attached to its "name".
-  def fixModule(arts: Seq[model.ArtifactLocation])(m: ModuleID): ModuleID = {
+  // cross version suffix attached to its "name" field; therefore, we apply
+  // fixName() only to the ModuleID we are trying to rewrite right now.
+  def fixModule(arts: Seq[model.ArtifactLocation], crossVersion: String, log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
       def expandName(a:Artifact) = {
         import a._
         classifier match {
@@ -124,9 +125,44 @@ object DistributedRunner {
     findArt map { art =>
       // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it will have an extra suffix
       // due to the classifier). Use fixName(m.name) instead.
-      // TODO: is crossSuffix in the right place, if m.name (wrongly) includes a classifier?
-      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled)
-    } getOrElse m
+      // Note2: in case of a classifier, there is a hack to make it match even
+      // if the requested library has an explicit matching name and no classifier;
+      // this is required by one of the test projects. So we match in that way as
+      // well (see above m.explicitArtifacts contains...). Further, in the rewritten
+      // ModuleID we remove the explicitArtifacts, otherwise the original name (that
+      // does not contain a cross-version suffix) takes over. It's all rather hackish,
+      // admittedly, but it does work in the end.
+      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled, explicitArtifacts=Seq.empty)
+    } getOrElse {
+      // TODO: here I should discover whether there are libDeps of the kind:
+      // "a" % "b_someScalaVer" % "ver" (cross disabled, therefore), or
+      // other cross-versioned dependencies that we have been unable to fix.
+      // That means we either miss a project in our config, or that we
+      // explicitly need such a lax resolution in this case
+      // (and we should get a warning about that circumstance anyway).
+      if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) &&
+          // Do not inspect the artifacts that we are building right at this time:
+          fixName(m.name)!=currentName && m.organization!=currentOrg) {
+        // If we are here, it means that this is a library dependency that is required,
+        // that refers to an artifact that is not provided by any project in this build,
+        // and that needs a certain Scala version (range) in order to work as intended.
+        // We check crossVersion: if it requires the correspondence to be exact, we fail;
+        // otherwise we just print a warning and leave Ivy to fail if need be.
+        val msg = "**** Missing dependency: the library " + m.organization + "#" + fixName(m.name) +
+          " is not provided by any project in this configuration file."
+        crossVersion match {
+          case "binaryFull" | "disabled" | "full" =>
+            log.error(msg)
+            log.error("Please add the corresponding project to the build file (or use \"build-options:{cross-version:standard}\" to ignore).")
+            sys.error("Required dependency not found")
+          case "standard" =>
+            log.warn(msg)
+            log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+          case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+        }
+      }
+      m
+    }
   }
 
   def inNScopes(n:Int) = if(n==1) "in one scope" else "in "+n+" scopes"
@@ -224,14 +260,69 @@ object DistributedRunner {
 
   type Fixer = (Seq[Setting[_]], Logger) => Seq[Setting[_]]
 
-  def fixCrossVersions2 =
-    fixGeneric2(Keys.crossVersion, "Disabling cross versioning") { _ => CrossVersion.Disabled }
+  // There are two parts in dealing with cross-versions.
+  // 1) Keys.crossVersion will affect how the projects are published
+  // 2) Keys.scalaBinaryVersion will impact on how dependencies that are
+  //    declared as '%%', with no further CrossVersion qualification,
+  //    are resolved.
+  // 1) can be: standard, full, disabled (or forcing "binary", which is not very useful in this context)
+  // 2) can be: standard (whatever it is in the projects), or full (<<= scalaVersion),
+  //    or forced to Binary (again, not very useful).
+  //    If a dependency is explicit in the form "a" % "b_someScalaVer" % "ver",
+  //    and the corresponding project is not in the dbuild config file, however, I will be
+  //    unable to discover that it is missing (unless I do some further postprocessing,
+  //    by stripping the suffix and comparing the names).
+  // The combinations are:
+  // "standard" -> 1 and 2 set to standard (nothing is done)
+  // "full" -> 1 and 2 both set to full
+  // "disabled" -> 1 set to disabled, 2 set to full
+  // "binaryFull" -> 2 set to full, 1 left alone (aka: it will publish full the projects that normally would
+  //                 publish as binary; it will publish the others as they are; it will discover missing libs)
+  //                 (this is for testing only).
+  def fixCrossVersions2(crossVersion: String) = {
+    val scalaBinaryFull =
+      fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
+        val sc = s.key.scope
+        Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
+      }("Setting Scala binary version to full") _
+
+    crossVersion match {
+      case "binaryFull" => scalaBinaryFull
+      case "standard" => { (_: Seq[Setting[_]], _: Logger) => Seq.empty }
+      case "disabled" => { (s: Seq[Setting[_]], l: Logger) =>
+        fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => CrossVersion.Disabled }(s, l) ++
+          scalaBinaryFull(s, l)
+      }
+      case "full" => { (s: Seq[Setting[_]], l: Logger) =>
+        fixGeneric2(Keys.crossVersion, "Setting cross version to full") { _ => CrossVersion.full }(s, l) ++
+          scalaBinaryFull(s, l)
+      }
+      case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+    }
+  }
+  // we want to match against only one and precisely one scala version; therefore any
+  // binary compatibility lookup machinery must be disabled
+  def fixScalaBinaryVersions2(crossSuffix: String) =
+    crossSuffix match {
+      case "full" =>
+        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
+          val sc = s.key.scope
+          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
+        }("Setting Scala binary version to full") _
+      case "normal" => { (_:Seq[Setting[_]],_:Logger) => Seq.empty }
+    }
 
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
-  def fixDependencies2(locs: Seq[model.ArtifactLocation]) =
-    fixGeneric2(Keys.allDependencies, "Updating dependencies") { _ map { old => old map fixModule(locs) } }
+  def fixDependencies2(locs: Seq[model.ArtifactLocation], crossVersion: String, log: Logger) =
+    fixGenericTransform2(Keys.allDependencies) { r: Setting[Task[Seq[sbt.ModuleID]]] =>
+      val sc = r.key.scope
+      Keys.allDependencies in sc <<= (Keys.allDependencies in sc, Keys.name in sc, Keys.organization in sc) map { (old, n, o) =>
+        old map fixModule(locs, crossVersion, log, n, o)
+      }
+    }("Updating dependencies") _
 
+    
   def fixVersions2(config: SbtBuildConfig) =
     fixGeneric2(Keys.version, "Updating version strings") { _ => config.info.version }
 
@@ -245,14 +336,6 @@ object DistributedRunner {
           val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy"
         })
     }
-
-  // we want to match against only one and precisely one scala version; therefore any
-  // binary compatibility lookup machinery must be disabled
-  def fixScalaBinaryVersions2 =
-    fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
-      val sc = s.key.scope
-      Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
-    }("Setting Scala binary version") _
 
   // sbt will try to check the scala binary version we use in this project (the full version,
   // including suffixes) against what Ivy reports as the version of the scala library (which is
@@ -384,7 +467,7 @@ object DistributedRunner {
 
       def newSettings(oldSettings:Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
-          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings)
+          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings, config.buildOptions.crossVersion)
 
       newState(state, extracted, newSettings)
 
@@ -427,9 +510,10 @@ object DistributedRunner {
 //    printPR(state)
 //    printPR(state2)
 
-    println("Building project...")
+    println("Building project: "+config.info.projectName)
     val refs = getProjectRefs(Project.extract(state2))
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data
+    println(config.info.subproj.mkString("These subprojects will be built: ", ", ", ""))
     val buildAggregate = runAggregate[(Seq[File],Seq[BuildSubArtifactsOut]),
       (Seq[File],BuildSubArtifactsOut)] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
         case ((oldFiles,oldArts),(newFiles,arts)) => (newFiles,oldArts :+ arts) } _
@@ -441,7 +525,7 @@ object DistributedRunner {
       (State, (Seq[File],BuildSubArtifactsOut)) = {
 
       val (_,libDeps) = Project.extract(state6).runTask(Keys.allDependencies in ref, state)
-      println("All Dependencies for subproject "+ref.project+":")
+      println("All Dependencies for subproject "+normalizedProjectName(ref, baseDirectory)+":")
       libDeps foreach {m=>println("   "+m)}
 //      val (_,pRes) = Project.extract(state6).runTask(Keys.projectResolver in ref, state)
 //      println("Project Resolver for project "+ref.project+":")
@@ -507,14 +591,13 @@ object DistributedRunner {
   }
 
   private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
-      repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]]) = {
+      repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion:String) = {
     Seq[Fixer](
           fixResolvers2(repoDir),
-          fixDependencies2(arts),
+          fixDependencies2(arts, crossVersion, log),
           fixScalaVersion2(dbuildDir, repoDir, arts),
           fixInterProjectResolver2bis(modules, log),
-//          fixScalaBinaryVersions2,
-//          fixCrossVersions2,
+          fixCrossVersions2(crossVersion),
           fixScalaBinaryCheck2) flatMap { _(oldSettings, log) }
   }
   
@@ -568,7 +651,7 @@ object DistributedRunner {
         state
       } else {
         val modules=getModuleRevisionIds(state, proj.subproj, log)
-        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _))
+        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _, proj.buildOptions.crossVersion))
       }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")

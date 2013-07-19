@@ -4,6 +4,7 @@ package core
 
 import java.io.File
 import sbt.IO
+import dispatch.classic._
 
 /** A cached remote repository. */
 class CachedRemoteReadableRepository(cacheDir: File, uri: String) extends ReadableRepository {
@@ -60,7 +61,7 @@ object Remote {
    // TODO - Discover mime type from file extension if necessary, or just send
    // as binary always.
    val sender = 
-     url(uri).PUT.as(cred.user,cred.pw) <<< (file, "application/octet-stream")
+    url(uri).PUT.as(cred.user,cred.pw) <<< (file, "application/octet-stream")
     // TODO - output to logger.
     Http(sender >>> System.out)
   }

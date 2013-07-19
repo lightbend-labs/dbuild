@@ -53,7 +53,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = ProjectDirs
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
-    val config = SbtBuildConfig(ec, info)
+    val config = SbtBuildConfig(ec, info, project.buildOptions)
     SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log)
   }
 

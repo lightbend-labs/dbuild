@@ -1,0 +1,211 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>dbuild: Introduction &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.6.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Download and Setup" href="download.html" />
+    <link rel="prev" title="dbuild" href="index.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/distributed-build">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">dbuild: Introduction</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="download.html">Download and Setup</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="index.html">dbuild</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.6.1">Version 0.6.1</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="dbuild-introduction">
+<h1>dbuild: Introduction<a class="headerlink" href="#dbuild-introduction" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="terminology">
+<h2>Terminology<a class="headerlink" href="#terminology" title="Permalink to this headline">¶</a></h2>
+<p>Since there are many layers involved, it is useful to introduce first the terminology used in the rest
+of this guide.</p>
+<dl class="docutils">
+<dt>dbuild build</dt>
+<dd>A configuration file, and related build process, that builds a set of independent software projects
+(for instance Scala, Akka, Scalacheck) to make sure that they all work together.</dd>
+<dt>dbuild project</dt>
+<dd>It is one software projects in a dbuild build. A dbuild project can be based on sbt or (in the future)
+on Maven, or other tools. Hence, an entire sbt build (which can contain multiple sbt projects) counts
+as just one dbuild project.</dd>
+</dl>
+</div>
+<div class="section" id="a-quick-example">
+<h2>A quick example<a class="headerlink" href="#a-quick-example" title="Permalink to this headline">¶</a></h2>
+<p>Let's assume we want to make sure that a specific branch or commit of
+<a class="reference external" href="http://github.com/jsuereth/sperformance">sperformance</a> works with a specific branch or commit
+of <a class="reference external" href="http://github.com/scala/scala">scala</a>.</p>
+<p>A suitable build configuration file is:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">&quot;projects&quot;</span><span class="o">:</span><span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nx">name</span><span class="o">:</span>  <span class="s2">&quot;scala&quot;</span><span class="p">,</span>
+    <span class="nx">system</span><span class="o">:</span> <span class="s2">&quot;scala&quot;</span><span class="p">,</span>
+    <span class="nx">uri</span><span class="o">:</span>    <span class="s2">&quot;git://github.com/scala/scala.git#2.10.x&quot;</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="nx">name</span><span class="o">:</span>   <span class="s2">&quot;sperformance&quot;</span><span class="p">,</span>
+    <span class="nx">system</span><span class="o">:</span> <span class="s2">&quot;sbt&quot;</span><span class="p">,</span>
+    <span class="nx">uri</span><span class="o">:</span>    <span class="s2">&quot;git://github.com/jsuereth/sperformance.git#community&quot;</span>
+  <span class="p">}</span>
+<span class="p">]}</span>
+</pre></div>
+</div>
+<p>We will put this into a file called <tt class="docutils literal"><span class="pre">test.dbuild</span></tt>. The line &quot;system&quot; specifies the build mechanism used to build each of the
+projects (a custom &quot;scala&quot; build system for scala, and &quot;sbt&quot; for sperformance). Let's download dbuild, and try it out (the
+exact download instructions and other details are in the following pages):</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="o">[</span>...download and unzip dbuild...<span class="o">]</span>
+<span class="nv">$ </span><span class="nb">cd </span>dbuild
+<span class="nv">$ </span><span class="o">[</span>...edit test.dbuild...<span class="o">]</span>
+<span class="nv">$ </span>bin/dbuild test.dbuild
+</pre></div>
+</div>
+<p>Now dbuild will download, parse, and build in turn scala and sperformance, from the branches
+&quot;2.10.x&quot; and &quot;community&quot; respectively. You can also specify a commit hash, in place of the branch.</p>
+<p>It is important to notice that here sperformance will be forced to use the scala version that
+you specify, overriding its normal build settings. In case the build file contains many different projects,
+each of them will be tweaked on-the-fly, in order to use the exact combination of branches/commits that you
+specified in the configuration file.</p>
+<p>dbuild will keep an index of the actual commit ids (git hashes, svn versions, etc) used during that particular
+run: the same configuration can later be reproduced again, and prepared for debugging.</p>
+<p>At the end of the build, all the of generated artifacts and other information on the build will be stored
+in a local repository, contained in your <tt class="docutils literal"><span class="pre">~/.dbuild/cache</span></tt> directory. If the build ends successfully, you know
+that all the network of inter-dependent projects you specified builds together as desired.</p>
+</div>
+<div class="section" id="what-if-the-build-fails">
+<h2>What if the build fails?<a class="headerlink" href="#what-if-the-build-fails" title="Permalink to this headline">¶</a></h2>
+<p>This being a testing tool, at some point it is inevitable that one of the projects will fail to build,
+possibly affecting some other projects listed in the dbuild file. It is quite easy to use the information
+generated by dbuild in order to debug the failed combination.</p>
+<p>During the dbuild run, you will see two lines like:</p>
+<div class="highlight-text"><div class="highlight"><pre>[info] ---==  RepeatableBuild ==---
+[info]  uuid = 48baab8156458005cb2e0569e8e8c2c39221d56e
+</pre></div>
+</div>
+<p>The uuid uniquely identifies the tested combination of projects and commits. Let us assume that
+sperformance failed, and that we want to debug it. We can use the sbt plugin as follows (more details at <a class="reference internal" href="plugin.html"><em>The sbt plugin</em></a>):</p>
+<div class="highlight-text"><div class="highlight"><pre>$ git clone -b community http://github.com/jsuereth/sperformance.git
+$ cd sperformance
+$ sbt
+[info] Set current project to sperformance (in build file:/home/cunei/i/sperformance/)
+&gt; dbuild-setup 48baab8156458005cb2e0569e8e8c2c39221d56e
+[info] Retrieving dependencies for 26a265808a6abe8e8451a9f0b43d6dc02176ed16 scala
+[info] Retrieving dependencies for 9fc2901cdc4f1e4ce4209bfad5dfbf02633fcd5f sperformance
+[info] Retrieved from project 26a265808a6abe8e8451a9f0b43d6dc02176ed16: 10 artifacts
+[info] Updating dependencies...
+[info] Adding resolvers to retrieve build artifacts in 1 scopes
+[info] Updating library dependencies in 2 scopes
+[info] Setting Scala version to: 2.10.2-20130320-161312-2f3a7fa417 in 2 scopes
+[info] Disabling cross building in 2 scopes
+[info] Preparing Scala binaries: version 2.10.2-20130320-161312-2f3a7fa417
+[info] Setting Scala home in 1 scopes
+[info] Set current project to sperformance (in build file:/home/cunei/i/sperformance/)
+&gt;
+</pre></div>
+</div>
+<p>At this point, all the dependencies of sperformance are exactly as they were during the multi-project dbuild run,
+and the code can be debugged.</p>
+<p>We will see in the following pages how to download and set up dbuild and the dbuild sbt plugin, and the various
+options and features available.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">dbuild is currently under active development, and should still be considered experimental.
+New features and improvements will be introduced in the coming months: the syntax and other details of
+the tool may change over time.</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="download.html"><em>Download and Setup</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">dbuild: Introduction</a><ul>
+<li><a class="reference internal" href="#terminology">Terminology</a></li>
+<li><a class="reference internal" href="#a-quick-example">A quick example</a></li>
+<li><a class="reference internal" href="#what-if-the-build-fails">What if the build fails?</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

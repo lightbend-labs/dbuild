@@ -65,23 +65,62 @@ object DeployBuild {
     !(path.endsWith(".sha1") || path.endsWith(".md5"))
 
   def deployStuff[T](options: DeployOptions, dir: File, log: Logger, init: Creds => T,
-    message: (Logger, String) => Unit, deploy: (T, Creds, File, java.net.URI) => Unit) {
+    message: (Logger, String) => Unit, deploy: (T, Creds, String, File, java.net.URI) => Unit) {
     val Some(credsFile) = options.credentials
     val credentials = loadCreds(credsFile)
     val handler = init(credentials)
     val targetBaseURI = new java.net.URI(options.uri)
-    // First, we upload the main files,
+    //
+    // We have to upload files in a certain order, in order to comply with
+    // the requirements of Artifactory concerning the upload of -SNAPSHOT artifacts.
+    // In particular, whenever there are a .pom and a .jar with the same name, and
+    // other artifacts in the same group, these artifacts get the same id only if:
+    // - the jar is uploaded first
+    // - the pom is uploaded immediately afterward
+    // - then the remaining artifacts are uploaded
+    // - finally, the checksums are uploaded after the main artifacts
+    //
+
+    val allFiles=(dir.***).get.filter(f => !f.isDirectory)
+    val poms=allFiles.filter(f=>f.getName.endsWith("-SNAPSHOT.pom"))
+    //
+    // we fold over the poms, reducing the set of files until we are left with just
+    // the files that are not in any pom-containing directory. Meanwhile, we accumulate
+    // the snapshot files in the right order, for each pom
+    val (remainder,newSeq)=poms.foldLeft((allFiles,Seq[File]())){ case ((fileSeq,newSeq),pom) =>
+      val pomFile=pom.getCanonicalFile()
+      val thisDir=pomFile.getParentFile()
+      if (thisDir==null) sys.error("Unexpected: file has not parent in deploy")
+      // select the files in this directory (but not in subdirectories)
+      val theseFiles=(thisDir.***).get.filter(f => !f.isDirectory && f.getCanonicalFile().getParentFile()==thisDir)
+      // if there is a matching jar, upload the jar first
+      val jarFile=new java.io.File(pomFile.getCanonicalPath().replaceAll("\\.[^\\.]*$", ".jar"))
+      val thisSeq=if (theseFiles contains jarFile) {
+        val rest=theseFiles.diff(Seq(jarFile,pomFile)).partition(f => isNotChecksum(f.getName))
+        Seq(jarFile,pomFile)++rest._1++rest._2
+      } else {
+        // no jar?? upload the pom first anyway
+        val rest=theseFiles.diff(Seq(pomFile)).partition(f => isNotChecksum(f.getName))
+        Seq(pomFile)++rest._1++rest._2
+      }
+      //
+      (fileSeq.diff(theseFiles),newSeq++thisSeq)
+    }
+
+    // We need in any case to upload the main files first,
     // and only afterwards we can upload md5 and sha1 files
     // (otherwise we get 404 errors from Artifactory)
     // Note that a 409 error means the checksum calculated on
     // the server does not match the checksum we are trying to upload
-    val sorted = (dir.***).get.filter(f => !f.isDirectory).partition(f => isNotChecksum(f.getName))
-    (sorted._1 ++ sorted._2) foreach { file =>
+    val split=remainder.partition(f => isNotChecksum(f.getName))
+    val ordered=newSeq++split._1++split._2
+
+    ordered foreach { file =>
       val relative = IO.relativize(dir,file) getOrElse sys.error("Internal error in relative paths creation during deployment. Please report.")
       message(log, relative)
       // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
       val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
-      deploy(handler, credentials, file, targetURI)
+      deploy(handler, credentials, relative, file, targetURI)
     }
   }
 
@@ -157,11 +196,17 @@ object DeployBuild {
                     log.info("Deploying: " + relative)
                   else
                     log.info("Verifying checksum: " + relative)
-                }, { (_, credentials, file, uri) =>
+                }, { (_, credentials, relative, file, uri) =>
                   import dispatch._
                   val sender =
                     url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
-                  (new Http with NoLogging)(sender >|)
+                  val response=(new Http with NoLogging)(sender >- { str =>
+                   Utils.readSomePath[ArtifactoryResponse](str)
+                 })
+                 if (response!=None && response.get.path!=None) {
+                   val out=response.get.path.get.replaceFirst("^/","")
+                   if (out!=relative) log.info("Uploaded : "+out)
+                 }
                 })
 
             case "s3" =>
@@ -172,7 +217,7 @@ object DeployBuild {
               }, { (log, relative) =>
                 if (isNotChecksum(relative))
                   log.info("Uploading: " + relative)
-              }, { (client, credentials, file, uri) =>
+              }, { (client, credentials, _, file, uri) =>
                 // putObject() will automatically calculate an MD5, upload, and compare with the response
                 // from the server. Any upload failure results in an exception; so no need to process
                 // the sha1/md5 here.
@@ -185,3 +230,5 @@ object DeployBuild {
     }
   }
 }
+// Response from Artifactory
+case class ArtifactoryResponse(path:Option[String])

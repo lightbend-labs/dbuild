@@ -31,7 +31,7 @@ One important case, however, is the customization of the resolvers list: you can
 ``[repositories]`` stanza in this properties file, adding or removing resolvers as needed. The list
 specified in this properties file will completely override the normal list of library resolvers,
 for all of the projects invoked by dbuild. By specifying here a local Artifactory cache, for instance,
-the artifactory resolution can be made considerably faster.
+the artifacts resolution can be made considerably faster.
 
 The build configuration file
 ----------------------------

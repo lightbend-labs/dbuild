@@ -123,16 +123,28 @@ object DistributedRunner {
         if artifact.info.name == fixName(m.name) || (m.explicitArtifacts map expandName).contains(artifact.info.name)
       } yield artifact).headOption
     findArt map { art =>
-      // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it will have an extra suffix
+      // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it may have an extra suffix
       // due to the classifier). Use fixName(m.name) instead.
       // Note2: in case of a classifier, there is a hack to make it match even
       // if the requested library has an explicit matching name and no classifier;
       // this is required by one of the test projects. So we match in that way as
-      // well (see above m.explicitArtifacts contains...). Further, in the rewritten
-      // ModuleID we remove the explicitArtifacts, otherwise the original name (that
-      // does not contain a cross-version suffix) takes over. It's all rather hackish,
-      // admittedly, but it does work in the end.
-      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled, explicitArtifacts=Seq.empty)
+      // well (see above m.explicitArtifacts contains...)
+      m.copy(name = fixName(m.name)+art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled, explicitArtifacts=
+          // More hacking: the explicit artifact did not originally contain the crossSuffix; if we leave it in place as-is, the name in the
+          // explicit artifact takes over, and fixName(m.name)+art.crossSuffix gets ignored. Conversely, if we remove the explicit artifact
+          // in order to make the name (with crossSuffic) match, we may lose a classifier specified in the initial explicit artifact, with the
+          // result of matching against the wrong artifact. The only solution is rewriting the explicitArtifacts adequately.
+        m.explicitArtifacts.map{a =>
+          if (expandName(a)==art.info.name && a.classifier.nonEmpty)
+            // this means, for example, that the explicitArtifact is "compiler-interface" with classifier "bin", while art.info.name is
+            // "compiler-interface-bin". This is made more complicated by the crossSuffix, as just adding the suffix would mean the
+            // explicitArtifact is "compiler-interface_2.11", classifier bin, therefore "compiler-interface_2.11-bin", while
+            // art.info.name is "compiler-interface-bin_2.11". Oops. We fix that by appending the suffix to the /classifier/ instead,
+            // in order to make things somehow work.
+            a.copy(classifier=Some(fixName(a.classifier.get)+art.crossSuffix))
+          else
+            a}
+      )
     } getOrElse {
       // TODO: here I should discover whether there are libDeps of the kind:
       // "a" % "b_someScalaVer" % "ver" (cross disabled, therefore), or

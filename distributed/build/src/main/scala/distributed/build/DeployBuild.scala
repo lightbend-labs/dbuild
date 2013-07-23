@@ -205,7 +205,7 @@ object DeployBuild {
                  })
                  if (response!=None && response.get.path!=None) {
                    val out=response.get.path.get.replaceFirst("^/","")
-                   if (out!=relative) log.info("Uploaded : "+out)
+                   if (out!=relative) log.info("Deployed:  "+out)
                  }
                 })
 

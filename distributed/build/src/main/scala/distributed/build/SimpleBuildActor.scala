@@ -49,9 +49,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   def publishFullBuild(build: RepeatableDistributedBuild, log: Logger): Unit = {
     log.info("---==  RepeatableBuild ==---")
     log.info(" uuid = " + build.uuid)
-    log.info("---==   Repeatable Build Config   ===---")
-    log.info(build.repeatableBuildString)
-    log.info("---== End Repeatable Build Config ===---")
+    log.debug("---==   Repeatable Build Config   ===---")
+    log.debug(build.repeatableBuildString)
+    log.debug("---== End Repeatable Build Config ===---")
     log.info("---== Dependency Information ===---")
     build.repeatableBuilds foreach { b =>
       log.info("Project "+ b.config.name)

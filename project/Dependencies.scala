@@ -15,6 +15,7 @@ object Dependencies {
   val dispatch       = "net.databinder" %% "dispatch-http" % "0.8.10"
 
   val sbtIo          = "org.scala-sbt" % "io" % sbtVersion
+  val sbtIvy         = "org.scala-sbt" % "ivy" % sbtVersion
   val sbtLogging     = "org.scala-sbt" % "logging" % sbtVersion
   val sbtCollections     = "org.scala-sbt" % "collections" % sbtVersion
   val sbtLaunchInt   = "org.scala-sbt" % "launcher-interface" % sbtVersion % "provided"
@@ -32,4 +33,5 @@ object Dependencies {
   val uriutil        = "org.eclipse.equinox" % "org.eclipse.equinox.common" % "3.6.0.v20100503"
 
   val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.1"
+  val javaMail       = "javax.mail" % "mail" % "1.4.7"
 }

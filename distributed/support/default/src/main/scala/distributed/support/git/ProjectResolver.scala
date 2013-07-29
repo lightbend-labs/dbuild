@@ -12,9 +12,9 @@ import project.resolve.ProjectResolver
 class GitProjectResolver extends ProjectResolver {
   def canResolve(config: ProjectBuildConfig): Boolean = {
     val uri = new _root_.java.net.URI(config.uri)    
-    (uri.getScheme == "git") || (uri.getPath endsWith ".git") || ((uri.getScheme == "file") &&
+    (uri.getPath!=null) && ((uri.getScheme == "git") || (uri.getPath endsWith ".git") || ((uri.getScheme == "file") &&
       (new _root_.java.io.File(uri.getPath()) / ".git").exists
-    )
+    ))
   }
 
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {

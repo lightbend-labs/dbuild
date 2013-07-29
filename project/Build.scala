@@ -97,7 +97,7 @@ object Defaults {
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dcore, drepo, dmeta)
-      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt)
+      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt, sbtIvy, javaMail)
       settings(SbtSupport.settings:_*)
     ) 
 

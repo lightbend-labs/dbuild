@@ -20,6 +20,7 @@ object DeployBuild {
   // first, a proper sanity check
   def checkDeployFullBuild(deployOptions: Option[Seq[DeployOptions]]) = {
     deployOptions map { optionsSeq =>
+      // TODO: get a different logger (ConsoleLogger prints escape sequences)
       val log = sbt.ConsoleLogger()
       optionsSeq foreach { options =>
         val uri = new _root_.java.net.URI(options.uri)

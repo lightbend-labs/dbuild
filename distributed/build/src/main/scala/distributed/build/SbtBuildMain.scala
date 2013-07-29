@@ -34,7 +34,6 @@ class SbtBuildMain extends xsbti.AppMain {
   
   def run(configuration: xsbti.AppConfiguration) =
     try {
-      val repos = configuration.provider.scalaProvider.launcher.ivyRepositories.toList
       println("Starting dbuild...")
       val args = configuration.arguments
       println("Args (" + (configuration.arguments mkString ",") + ")")
@@ -54,7 +53,7 @@ class SbtBuildMain extends xsbti.AppMain {
       println("Config: " + writeValue(config))
 //      println("Classloader:")
 //      printClassLoaders(getClass.getClassLoader)
-      val main = new LocalBuildMain(repos, configuration.baseDirectory)
+      val main = new LocalBuildMain(configuration)
       try {
         main build config
         println("All done.")

@@ -118,6 +118,13 @@ case class ScalaExtraConfig(
 
 case class BuildNumber(major:String,minor:String,patch:String,bnum:String)
 
+case class IvyExtraConfig(
+    sources: Boolean=false,
+    javadoc: Boolean=false,
+    @JsonProperty("main-jar") mainJar: Boolean=true,
+    classifiers: Seq[String]=Seq.empty
+    ) extends ExtraConfig
+
 case class MavenExtraConfig(
   directory: String = "") extends ExtraConfig
 
@@ -140,6 +147,7 @@ object BuildSystemExtras {
   val buildSystems: Map[String, java.lang.Class[_ <: ExtraConfig]] = Map(
     "sbt" -> classOf[SbtExtraConfig],
     "scala" -> classOf[ScalaExtraConfig],
+    "ivy" -> classOf[IvyExtraConfig],
     "maven" -> classOf[MavenExtraConfig])
 }
 

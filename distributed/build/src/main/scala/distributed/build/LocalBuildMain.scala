@@ -11,16 +11,18 @@ import distributed.project.model.Utils.readValue
 import distributed.repo.core._
 import distributed.project.model.ClassLoaderMadness
 
-class LocalBuildMain(repos:List[xsbti.Repository], workingDir: File = ProjectDirs.builddir) {
-  // TODO - Pull these via plugins or something...
+class LocalBuildMain(configuration:xsbti.AppConfiguration) {
+  val launcher = configuration.provider.scalaProvider.launcher
+  val repos = launcher.ivyRepositories.toList
   val targetDir = ProjectDirs.targetDir
-  // Maybe even read global config for each module...
   val resolvers = Seq(
       new support.git.GitProjectResolver, 
-      new support.svn.SvnProjectResolver)
+      new support.svn.SvnProjectResolver,
+      new support.ivy.IvyProjectResolver(repos))
   val buildSystems: Seq[project.BuildSystem] = 
     Seq(new support.sbt.SbtBuildSystem(repos, targetDir),
         support.scala.ScalaBuildSystem,
+        new support.ivy.IvyBuildSystem(repos, targetDir),
         support.mvn.MvnBuildSystem)
   
   // Gymnastics for classloader madness

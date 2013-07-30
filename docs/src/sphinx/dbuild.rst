@@ -77,16 +77,16 @@ name
   Scala ARM project.
 
 system
-  A string that describes the build mechanism used by this software project. Valid values are currently
-  "scala" (custom for the Scala project) and "sbt"; additional mechanisms will be added soon (Maven
+  A string that describes the build system used by this software project. Valid values are currently
+  "scala" (custom for the Scala project), "sbt", and "ivy"; additional mechanisms will be added soon (Maven
   support is in the works). If not specified, "sbt" is assumed.
 
 uri
   A string pointing to the source repository for this project. It can be git-based (if the uri begins
   with ``git://`` or ends with ``.git``), or svn (schemes ``http://``, ``https://``, ``svn://``, only
-  if an svn repository is detected). Further formats may be added at a later time.
+  if an svn repository is detected). Other source repository formats may be added in the future.
 
-  The uri string may optionally be prefixed with a ``'#'`` and either a commit hash, an svn version, or a
+  The uri may optionally be prefixed with a ``'#'`` and either a commit hash, an svn version, or a
   branch name. For example:
 
   .. code-block:: javascript
@@ -261,8 +261,64 @@ other properties
   interest is `build.release`; it can be set using:
   ``build-options:["-Dbuild.release=true"]``
 
+Ivy-specific options
+--------------------
 
-The optional section ``deploy`` is described on the next page.
+The Ivy build system works like a regular build mechanism, but rather than compiling
+the needed dependency from a source repository, it asks directly a Maven/Ivy repository
+for the requested binary code. Although that rather defeats the point of compiling all
+code using the same Scala version, it can be nonetheless quite useful in the case in
+which only a specific binary is available, for example in case of libraries that are
+proprietary and closed-source, or that are currently unmaintained.
+
+The ``uri`` field follows the syntax "ivy:organization#name;revision". For example:
+
+.. code-block:: javascript
+
+  {
+    name:   ivytest
+    system: ivy
+    uri:   "ivy:org.scala-sbt#compiler-interface;0.12.4"
+  }
+
+If cross-versions are in use, the Scala version suffix must be explicitly added to the name,
+for example: "ivy:org.specs2#specs2_2.10;1.12.3". The ``set-version`` option is unsupported,
+and should not be used. The "extra" options are the following:
+
+.. code-block:: javascript
+
+   {
+    "main-jar"    : <true-or-false>
+    "sources"     : <true-or-false>
+    "javadoc"     : <true-or-false>
+    "artifacts"   : [ art1, art2,... ]
+   }
+
+All the fields are optional. The specification of an artifact is:
+
+.. code-block:: javascript
+
+   {
+    "classifier"  : <classifier>
+    "type"        : <type>
+    "ext"         : <extension>
+   }
+
+The option ``main-jar`` controls whether the default binary jar is fetched from the
+repository, and it is true by default. The options ``sources`` grabs the source jar, and the
+option ``javadoc`` the documentation jar; both options are false by default. The field
+``artifact`` can be used to retrieve only specific artifacts from the module.
+
+The three properties of the artifact specification are optional, and map directly to
+the components of the Ivy resolution pattern. If no property ``classifier`` is present,
+or if it is the empty string, the classifier will remain unspecified. The fields
+``type`` and ``ext``, if omitted, will default to the string "jar". For example, the
+source jar of a module can also be obtained by specifying an artifact in which
+the classifier is "sources", the type is "src", and the file extension is "jar".
+
+In the case in which ``main-jar`` is explicitly set to false, and no other artifact is
+requested, the build system will retrieve the default set of artifacts specified
+by the module pom or ivy.xml.
 
 *Next:* :doc:`deploy`.
 

@@ -41,16 +41,16 @@ case class DeployOptions(uri: String, // deploy target
   )
 case class DeploySubProjects(from: String, publish: Seq[String])
 
-/** Signing options.
+/**
+ * Signing options.
  *  secret-ring is the path to the file containing the pgp secret key ring. If not supplied, '~/.gnupg/secring.gpg' is used.
  *  id is the long key id (the whole 64 bits). If not supplied, the default master key is used.
- *  passphrase is the path to the file containing the passphrase; there is no interactive option. 
+ *  passphrase is the path to the file containing the passphrase; there is no interactive option.
  */
 case class DeploySignOptions(
   @JsonProperty("secret-ring") secretRing: Option[String],
   id: Option[String],
-  passphrase: String
-  )
+  passphrase: String)
 
 /**
  * Configuration used for SBT and other builds.
@@ -116,14 +116,18 @@ case class ScalaExtraConfig(
   exclude: Seq[String] = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 
-case class BuildNumber(major:String,minor:String,patch:String,bnum:String)
+case class BuildNumber(major: String, minor: String, patch: String, bnum: String)
 
 case class IvyExtraConfig(
-    sources: Boolean=false,
-    javadoc: Boolean=false,
-    @JsonProperty("main-jar") mainJar: Boolean=true,
-    classifiers: Seq[String]=Seq.empty
-    ) extends ExtraConfig
+  sources: Boolean = false,
+  javadoc: Boolean = false,
+  @JsonProperty("main-jar") mainJar: Boolean = true,
+  artifacts: Seq[IvyArtifact] = Seq.empty) extends ExtraConfig
+
+case class IvyArtifact(
+  classifier: String = "",
+  @JsonProperty("type") typ: String = "jar",
+  ext: String = "jar")
 
 case class MavenExtraConfig(
   directory: String = "") extends ExtraConfig
@@ -160,7 +164,7 @@ case class DeployElementProject(a: String) extends DeployElement {
   def name = a
 }
 case class DeployElementSubProject(info: DeploySubProjects) extends DeployElement {
-  override def toString() = info.from+" "+info.publish.mkString("(",",",")")
+  override def toString() = info.from + " " + info.publish.mkString("(", ",", ")")
   def name = info.from
 }
 
@@ -187,7 +191,7 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
     val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
     val jp = generic.traverse()
     jp.nextToken()
-    def valueAs[T](cls:Class[T])=cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
+    def valueAs[T](cls: Class[T]) = cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     if (generic.isTextual()) {
       DeployElementProject(valueAs(classOf[String]))
     } else {
@@ -198,12 +202,12 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
 
 /**
  * These are options that affect all of the projects, but must not affect extraction:
- * extraction fully relies on the fact that the project is fully described by the 
+ * extraction fully relies on the fact that the project is fully described by the
  * ProjectBuildConfig record.
  * Conversely, these options can affect the building stage; a copy of the record is
  * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
  * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
- * 
+ *
  * - cross-version controls the crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
  *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
  *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
@@ -213,7 +217,7 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x, for example).
  *     Further, library dependencies that refer to Scala projects that are not included in this build
  *     configuration will not be rewritten: they might end up being fetched from Maven if a compatible
- *     version is found. 
+ *     version is found.
  *     This settings must be used when releasing, typically in conjunction with "set-version", in order
  *     to make sure cross-versioning works as it would in the original projects.
  *   - "full": Similar in concept to "disabled", except the all the sbt projects are changed so that
@@ -223,10 +227,9 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  *     the projects that would normally publish with a binary suffix (like "_2.10") to publish using the
  *     full scala version string instead. The projects that have cross building disabled, however, will be
  *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
- * 
+ *
  * In practice, do not include a "build-options" section at all in normal use, and just add "{cross-version:standard}"
  * if you are planning to release using "set-version".
  */
 case class GlobalBuildOptions(
-    @JsonProperty("cross-version") crossVersion:String = "disabled"
-  )
+  @JsonProperty("cross-version") crossVersion: String = "disabled")

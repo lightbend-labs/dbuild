@@ -51,42 +51,27 @@ object IvyMachinery {
         modRevId, /*force*/ true, /*changing*/ modRevId.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ transitive && mainJar)
       // if !mainJar and no other source/javadoc/classifier, will pick default artifact (usually the jar)
 
-      def addArtifact(classifier: String, config: String = "default") = {
+      def addArtifact(classifier: String, typ: String = "jar", ext: String = "jar", config: String = "default") = {
         val classif = new java.util.HashMap[String, String]()
-        if (classifier != "jar") classif.put("m:classifier", config)
-        // the default mapping is *->*, so no need to introduce additional configs
-
+        if (classifier != "") classif.put("m:classifier", classifier)
         val art = new org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(
           dd,
           modRevId.getName,
-          classifier, "jar", null, classif)
+          typ, ext, null, classif)
         art.addConfiguration(config)
         dd.addDependencyArtifact(config, art)
       }
 
-      // this will /only/ pick the sources, and not the main jar
-      if (sources) {
-        addArtifact("src", "sources")
-        md.addConfiguration(new org.apache.ivy.core.module.descriptor.Configuration("sources"))
-      }
-      if (javadoc) {
-        addArtifact("doc", "javadoc")
-        md.addConfiguration(new org.apache.ivy.core.module.descriptor.Configuration("javadoc"))
-      }
-      if (mainJar) addArtifact("jar", "default")
-      classifiers foreach { addArtifact(_, "default") }
+      if (sources) addArtifact("sources", "src")
+      if (javadoc) addArtifact("javadoc", "doc")
+      if (mainJar) addArtifact("", "jar")
+      artifacts foreach { a => addArtifact(a.classifier, a.typ, a.ext) }
       md.addDependency(dd)
 
       //creates an ivy configuration file
       XmlModuleDescriptorWriter.write(md, ivyFile)
       scala.io.Source.fromFile(ivyFile).getLines foreach { s => log.debug(s) }
-      //     val confs = Array[String]("default","sources","doc")
-      //      val confs = Array[String]("sources")
-      val confs = md.getConfigurations map { _.getName }
-      val getConfs = if (!mainJar && classifiers.isEmpty)
-        confs.diff(Seq("default"))
-      else confs
-      val resolveOptions = new ResolveOptions().setConfs(getConfs)
+      val resolveOptions = new ResolveOptions().setConfs(Array("default"))
       //init resolve report
       val report: ResolveReport = theIvy.resolve(ivyFile.toURL(), resolveOptions);
       if (report.hasError) sys.error("Ivy resolution failure")

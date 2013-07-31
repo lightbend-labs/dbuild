@@ -84,15 +84,16 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
     // cycles may be detected, leading to unhelpful error messages
     // TODO: if model.Project is ever associated with the subproject name, it would be
     // more appropriate to print the actual subproject name, rather than the Project
-    val generatedArtifacts = builds flatMap { _.extracted.projects }
+    val generatedArtifacts = builds flatMap { _.extracted.projects } map {a => (a.organization,a.name)}
     val uniq = generatedArtifacts.distinct
     if (uniq.size != generatedArtifacts.size) {
       val conflicting = generatedArtifacts.diff(uniq).distinct
       val conflictSeq = conflicting map {
         a =>
           (builds filter {
-            b => b.extracted.projects contains a
-          } map { _.config.name }).mkString("  " + a.name + "#" + a.organization + ", from:  ", ", ", "")
+            b =>
+              b.extracted.projects.exists(p => p.organization == a._1 && p.name == a._2)
+          } map { _.config.name }).mkString("  " + a._1 + "#" + a._2 + ", from:  ", ", ", "")
       }
       sys.error(conflictSeq.
         mkString("\n\nFatal: multiple projects produce the same artifacts. Please exclude them from some of the conflicting projects.\n\n", "\n", "\n"))

@@ -407,21 +407,24 @@ object DistributedRunner {
 
   def generateScalaDir(scalaHome: File, repoDir: File, ver: String) = {
     val org = "org.scala-lang"
-    getJarNames(repoDir, org, ver) foreach retrieveJarFile(scalaHome, repoDir, org, ver, true)
+    // in theory we could even have a mixture of scala-library, scala-compiler, etc, in Ivy and/or Maven
+    // format. So we need to try both
+    getMavenJarNames(repoDir, org, ver) foreach retrieveMavenJarFile(scalaHome, repoDir, org, ver, true)
+    getIvyJarNames(repoDir, org, ver) foreach retrieveIvyJarFile(scalaHome, repoDir, org, ver, true)
   }
 
-  def retrieveJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean)(name: String) = {
-    try IO.copyFile(jarFile(repoDir, org, name, version), scalaHome / "lib" / (name + ".jar"), false)
+  def retrieveMavenJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean)(name: String) = {
+    try IO.copyFile(mavenJarFile(repoDir, org, name, version), scalaHome / "lib" / (name + ".jar"), false)
     catch {
       case e: Exception => if (needed)
-        throw new LocalArtifactMissingException("Could not find needed jar in local repo: " + name + "-" + version + ".jar", e.getMessage)
+        throw new LocalArtifactMissingException("Could not find needed jar in local maven repo: " + name + "-" + version + ".jar", e.getMessage)
     }
   }
 
-  def jarFile(repoDir: File, org: String, name: String, version: String) =
+  def mavenJarFile(repoDir: File, org: String, name: String, version: String) =
     org.split('.').foldLeft(repoDir)(_ / _) / name / version / (name + "-" + version + ".jar")
 
-  def getJarNames(repoDir: File, org: String, version: String) = {
+  def getMavenJarNames(repoDir: File, org: String, version: String) = {
     val base = org.split('.').foldLeft(repoDir)(_ / _)
     base.***.get.flatMap {
       f =>
@@ -429,6 +432,29 @@ object DistributedRunner {
           val path = IO.relativize(base, f).get.split("/")
           // we need path to be: name / version / (name + "-" + version + ".jar")
           if (path(1) == version && path(2) == path(0) + "-" + version + ".jar") Some(path(0)) else None
+        }
+    }
+  }
+  
+  def retrieveIvyJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean)(name: String) = {
+    try IO.copyFile(ivyJarFile(repoDir, org, name, version), scalaHome / "lib" / (name + ".jar"), false)
+    catch {
+      case e: Exception => if (needed)
+        throw new LocalArtifactMissingException("Could not find needed jar in local Ivy repo: " + name + ".jar", e.getMessage)
+    }
+  }
+
+  def ivyJarFile(repoDir: File, org: String, name: String, version: String) =
+    repoDir / org / name / version / "jars" / (name + ".jar")
+
+  def getIvyJarNames(repoDir: File, org: String, version: String) = {
+    val base = repoDir / org
+    base.***.get.flatMap {
+      f =>
+        if (f.isDirectory) None else {
+          val path = IO.relativize(base, f).get.split("/")
+          // we need path to be: name / version / "jars" / (name + ".jar")
+          if (path(1) == version && path(3) == path(0) + ".jar" && path(2) == "jars") Some(path(0)) else None
         }
     }
   }

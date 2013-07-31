@@ -164,13 +164,13 @@ object ScalaBuildSystem extends BuildSystem {
         Seq.empty),
       Project("scala-partest", "org.scala-lang",
         Seq(ProjectRef("scala-partest", "org.scala-lang")),
-        Seq(ProjectRef("scala-compiler", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))),
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-compiler", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))),
       Project("scala-actors", "org.scala-lang",
         Seq(ProjectRef("scala-actors", "org.scala-lang")),
         Seq(ProjectRef("scala-library", "org.scala-lang"))),
       Project("scala-compiler", "org.scala-lang",
         Seq(ProjectRef("scala-compiler", "org.scala-lang")),
-        Seq(ProjectRef("scala-reflect", "org.scala-lang"), ProjectRef("jline", "org.scala-lang"))),
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-reflect", "org.scala-lang"), ProjectRef("jline", "org.scala-lang"))),
       Project("scala-library", "org.scala-lang",
         Seq(ProjectRef("scala-library", "org.scala-lang")),
         Seq.empty),
@@ -182,7 +182,7 @@ object ScalaBuildSystem extends BuildSystem {
         Seq(ProjectRef("scala-library", "org.scala-lang"))),
       Project("scalap", "org.scala-lang",
         Seq(ProjectRef("scalap", "org.scala-lang")),
-        Seq(ProjectRef("scala-compiler", "org.scala-lang")))
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-compiler", "org.scala-lang")))
     ) ++ (if (detectActorsMigration(baseDir))
       Seq(Project("scala-actors-migration", "org.scala-lang",
         Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),

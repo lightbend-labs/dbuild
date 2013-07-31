@@ -43,6 +43,9 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
     val firstNode = nodes(0)
     val first = firstNode.getModuleId
+    val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
+    if (deps.nonEmpty) log.info("Dependencies of project "+config.name+":")
+    deps foreach { d => log.info("  " + d) }
     val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
       firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
       nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))

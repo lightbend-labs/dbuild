@@ -15,17 +15,19 @@ object DependencyAnalysis {
     (Vector[model.Project]() /: refs) { (dependencies, ref) =>
       val name = fixName(extracted.get(Keys.name in ref))
       val organization = extracted.get(Keys.organization in ref)
-      
+
       // Project dependencies (TODO - Custom task for this...)
       val (_, pdeps) = extracted.runTask(Keys.projectDependencies in ref, state)
       val ldeps = extracted.get(Keys.libraryDependencies in ref)
       def artifactsNoEmpty(name: String, arts: Seq[Artifact]) =
-        if(!arts.isEmpty) arts
+        if (!arts.isEmpty) arts
         else Seq(Artifact(name))
-      val deps = for {
+      val deps = (for {
         d <- (pdeps ++ ldeps)
         a <- artifactsNoEmpty(d.name, d.explicitArtifacts)
-      } yield model.ProjectRef(fixName(a.name), d.organization, a.extension, a.classifier)
+      } yield model.ProjectRef(fixName(a.name), d.organization, a.extension, a.classifier)) :+
+        model.ProjectRef("scala-compiler", "org.scala-lang", "jar", None)
+        // the scala-compiler is always needed for the sbt build system!
       
       // Project Artifacts
       val artifacts = for {
@@ -37,7 +39,7 @@ object DependencyAnalysis {
         name,
         organization,
         artifacts,
-        deps)
+        deps.distinct)
     }
 
 

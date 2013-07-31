@@ -80,7 +80,7 @@ object IvyMachinery {
 
       //creates an ivy configuration file
       XmlModuleDescriptorWriter.write(md, ivyFile)
-      scala.io.Source.fromFile(ivyFile).getLines foreach { s => log.debug(s) }
+      //scala.io.Source.fromFile(ivyFile).getLines foreach { s => log.debug(s) }
       val resolveOptions = new ResolveOptions().setConfs(Array("default"))
       resolveOptions.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
       val report: ResolveReport = theIvy.resolve(ivyFile.toURL(), resolveOptions)

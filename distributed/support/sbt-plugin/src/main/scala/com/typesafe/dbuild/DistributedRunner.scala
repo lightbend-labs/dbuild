@@ -34,24 +34,6 @@ object DistributedRunner {
     result map (_ / n.toDouble)
   }
 
-  def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
-    println("Running timed build: "+ref.project)
-    val x = Stated(state)
-    def cleanBuild(state: Stated[_]) = {
-      val cleaned = state runTask Keys.clean
-      timed(cleaned runTask (Keys.compile in Compile))
-    }
-    val perf = averageOf(10)(x)(cleanBuild)
-    val y = perf.runTask(extractArtifacts in ref)
-    val arts = y.value map (_.copy(buildTime = perf.value))
-    (y.state, arts)
-  }
-  def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
-    println("Running build: "+ref.project)
-    val y = Stated(state).runTask(extractArtifacts in ref)
-    (y.state, y.value)
-  }
-
   /** Runs a series of commands across projects, aggregating results. */
   private def runAggregate[Q, T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State, Q) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
@@ -525,6 +507,25 @@ object DistributedRunner {
     println("Building project: "+config.info.projectName)
     val refs = getProjectRefs(Project.extract(state2))
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data
+
+    def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+      println("Running timed build: " + normalizedProjectName(ref, baseDirectory))
+      val x = Stated(state)
+      def cleanBuild(state: Stated[_]) = {
+        val cleaned = state runTask Keys.clean
+        timed(cleaned runTask (Keys.compile in Compile))
+      }
+      val perf = averageOf(10)(x)(cleanBuild)
+      val y = perf.runTask(extractArtifacts in ref)
+      val arts = y.value map (_.copy(buildTime = perf.value))
+      (y.state, arts)
+    }
+    def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+      println("Running build: " + normalizedProjectName(ref, baseDirectory))
+      val y = Stated(state).runTask(extractArtifacts in ref)
+      (y.state, y.value)
+    }
+
     println(config.info.subproj.mkString("These subprojects will be built: ", ", ", ""))
     val buildAggregate = runAggregate[(Seq[File],Seq[BuildSubArtifactsOut]),
       (Seq[File],BuildSubArtifactsOut)] (state2, config.info.subproj, (Seq.empty, Seq.empty)) {
@@ -545,10 +546,10 @@ object DistributedRunner {
 
       val (state7, artifacts) = buildTask(ref, state6)
       val state8 = if (config.config.runTests) {
-        println("Testing: " + ref.project)
+        println("Testing: " + normalizedProjectName(ref, baseDirectory))
         Project.extract(state7).runTask(Keys.test in (ref, Test), state7)._1
       } else state7
-      println("Publishing: " + ref.project)
+      println("Publishing: " + normalizedProjectName(ref, baseDirectory))
       val (state9, _) =
         Project.extract(state8).runTask(Keys.publish in ref, state8)
 

@@ -82,7 +82,7 @@ object IvyMachinery {
       XmlModuleDescriptorWriter.write(md, ivyFile)
       scala.io.Source.fromFile(ivyFile).getLines foreach { s => log.debug(s) }
       val resolveOptions = new ResolveOptions().setConfs(Array("default"))
-      // resolveOptions.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
+      resolveOptions.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
       val report: ResolveReport = theIvy.resolve(ivyFile.toURL(), resolveOptions)
       if (report.hasError) sys.error("Ivy resolution failure")
 
@@ -99,8 +99,9 @@ object IvyMachinery {
       ivyxmlDir match {
         case Some(dir) =>
 
-          val md2 = DefaultModuleDescriptor.newDefaultInstance(modRevId)
+          val md2 = DefaultModuleDescriptor.newBasicInstance(modRevId,new java.util.Date())
           val ro = new org.apache.ivy.core.retrieve.RetrieveOptions
+          ro.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
           ro.setConfs(Array("default"))
           theIvy.retrieve(outer, (dir / ivyPattern).getCanonicalPath, ro)
           md2.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")

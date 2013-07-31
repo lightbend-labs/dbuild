@@ -51,6 +51,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   }
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): BuildArtifactsOut = {
+    checkDependencies(project, baseDir, input, log)
+
     val version = input.version
     val localRepo = input.outRepo
     // operateIvy() will deliver ivy.xml directly in the outRepo, the other artifacts will follow below
@@ -94,5 +96,65 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) })))
     log.debug(q.toString)
     q
+  }
+
+  private def checkDependencies(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): Unit = {
+    // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
+    // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
+    import scala.collection.JavaConversions._
+    import project.buildOptions.crossVersion
+    val arts = input.artifacts.artifacts
+    // I need to get my dependencies, again, and I'd rather not re-resolve using Ivy again.
+    // I should try to get again the extraction info, instead. The only problem is that
+    // the extraction info can only be gathered via the extract() in Extractor, which is
+    // nested into three or four levels of indirections, via enclosing actors. So that is
+    // not really viable, as it's really hard to get to it from here. So we can't cache. TODO: try and fix?
+    val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log)
+    val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
+    val firstNode = nodes(0)
+    val first = firstNode.getModuleId
+    val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
+
+    // let's check.
+    def currentName = fixName(first.getName)
+    def currentOrg = first.getOrganisation
+    log.info("All Dependencies for project " + project.config.name + ":")
+    deps foreach { a =>
+      // This is simplified version of the code in DistributedRunner
+      def findArt: Option[ArtifactLocation] =
+        (for {
+          artifact <- arts.view
+          if artifact.info.organization == a.getModuleRevisionId.getOrganisation
+          if fixName(artifact.info.name) == fixName(a.getName)
+          if artifact.info.extension == a.getExt
+        } yield artifact).headOption
+      findArt map { art =>
+        log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + " --> " +
+          art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version)
+      } getOrElse {
+        if (a.getName != fixName(a.getName) &&
+          // Do not inspect the artifacts that we are building right at this time:
+          (fixName(a.getName) != currentName || a.getModuleRevisionId.getOrganisation != currentOrg)) {
+          // If we are here, it means that this is a library dependency that is required,
+          // that refers to an artifact that is not provided by any project in this build,
+          // and that needs a certain Scala version (range) in order to work as intended.
+          // We check crossVersion: if it requires the correspondence to be exact, we fail;
+          // otherwise we just print a warning and leave Ivy to fail if need be.
+          val msg = "**** Missing dependency: the library " + a.getModuleRevisionId.getOrganisation + "#" + fixName(a.getName) +
+            " is not provided by any project in this configuration file."
+          crossVersion match {
+            case "binaryFull" | "disabled" | "full" =>
+              log.error(msg)
+              log.error("Please add the corresponding project to the build file (or use \"build-options:{cross-version:standard}\" to ignore).")
+              sys.error("Required dependency not found")
+            case "standard" =>
+              log.warn(msg)
+              log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+            case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+          }
+        }
+        log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + ";" + a.getModuleRevisionId.getRevision)
+      }
+    }
   }
 }

@@ -9,7 +9,7 @@ import distributed.project.model.Utils.{ writeValue, readValue }
 import StateHelpers._
 import DependencyAnalysis.{normalizedProjectNames,normalizedProjectName}
 import DistributedBuildKeys._
-import NameFixer.fixName
+import distributed.support.NameFixer.fixName
 import java.io.File
 import distributed.repo.core.LocalArtifactMissingException
 import org.apache.ivy.core.module.id.ModuleRevisionId

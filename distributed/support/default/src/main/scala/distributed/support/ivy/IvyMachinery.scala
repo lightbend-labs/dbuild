@@ -19,6 +19,12 @@ import org.apache.ivy.plugins.parser.xml.XmlModuleDescriptorWriter
 import ivy.core.module.id.{ ModuleId, ModuleRevisionId }
 import ivy.core.resolve.{ ResolveEngine, ResolveOptions }
 import ivy.core.report.ResolveReport
+import sbt.FileRepository
+import org.apache.ivy.core.retrieve.RetrieveOptions
+import org.apache.ivy.core.deliver.DeliverOptions
+import distributed.support.sbt.Repositories.ivyPattern
+import org.apache.ivy.core.resolve.IvyNode
+import org.apache.ivy.core.module.descriptor.Configuration
 
 object IvyMachinery {
   private def ivyExpandConfig(config: ProjectBuildConfig) = config.extra match {
@@ -27,7 +33,9 @@ object IvyMachinery {
     case _ => throw new Exception("Internal error: ivy build config options are the wrong type in project \"" + config.name + "\". Please report")
   }
 
-  def operateIvy(config: ProjectBuildConfig, baseDir: File, repos: List[xsbti.Repository], log: Logger, transitive: Boolean = true): ResolveReport = {
+  // ivyxml will receive the ivy.xml that can be use to deploy
+  def operateIvy(config: ProjectBuildConfig, baseDir: File, repos: List[xsbti.Repository], log: Logger,
+    ivyxmlDir: Option[File] = None, transitive: Boolean = true): ResolveReport = {
     log.info("Running Ivy to extract project info: " + config.name)
     val extra = ivyExpandConfig(config)
     import extra._
@@ -40,12 +48,14 @@ object IvyMachinery {
     val settings = new IvySettings()
     settings.setDefaultIvyUserDir(ivyHome)
     addResolvers(settings, ivyHome, repos)
+    settings.setDefaultCacheArtifactPattern(ivyPattern)
+    val cache = settings.getDefaultCache()
     val theIvy = Ivy.newInstance(settings)
     theIvy.getLoggerEngine.pushLogger(new IvyLoggerInterface(log))
     sbt.IO.withTemporaryFile("ivy", ".xml") { ivyFile =>
-      val md = DefaultModuleDescriptor.newDefaultInstance(ModuleRevisionId.newInstance("dbuild-ivy", "dbuild-ivy", "working"))
+      val outer = ModuleRevisionId.newInstance("dbuild-ivy", "dbuild-ivy", "working")
+      val md = DefaultModuleDescriptor.newDefaultInstance(outer)
       md.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")
-
       val modRevId = ModuleRevisionId.parse(module)
       val dd = new DefaultDependencyDescriptor(md,
         modRevId, /*force*/ true, /*changing*/ modRevId.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ transitive && mainJar)
@@ -72,9 +82,68 @@ object IvyMachinery {
       XmlModuleDescriptorWriter.write(md, ivyFile)
       scala.io.Source.fromFile(ivyFile).getLines foreach { s => log.debug(s) }
       val resolveOptions = new ResolveOptions().setConfs(Array("default"))
-      //init resolve report
-      val report: ResolveReport = theIvy.resolve(ivyFile.toURL(), resolveOptions);
+      // resolveOptions.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
+      val report: ResolveReport = theIvy.resolve(ivyFile.toURL(), resolveOptions)
       if (report.hasError) sys.error("Ivy resolution failure")
+
+      import scala.collection.JavaConversions._
+      val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]]
+      if (nodes.isEmpty) {
+        sys.error("Unexpected Ivy error: no nodes after resolve. Please report.")
+      }
+      val firstNode = nodes.get(0)
+      if (!firstNode.isLoaded) {
+        sys.error("Unexpected Ivy error: node not loaded (" + firstNode.getModuleId + ")")
+      }
+
+      ivyxmlDir match {
+        case Some(dir) =>
+
+          val md2 = DefaultModuleDescriptor.newDefaultInstance(modRevId)
+          val ro = new org.apache.ivy.core.retrieve.RetrieveOptions
+          ro.setConfs(Array("default"))
+          theIvy.retrieve(outer, (dir / ivyPattern).getCanonicalPath, ro)
+          md2.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")
+          firstNode.getAllArtifacts() foreach { a =>
+            val classifier=Option(a.getAttributes().get("classifier").asInstanceOf[String])
+            // th test below is to avoid duplication of the main jar in the generated ivy.xml.
+            // if you manage to remove the default jar from md2, (hence the default config),
+            // remove this test as well.
+            if (a.getType!="jar" || a.getExt!="jar" || classifier!=None) {
+              val configs=(a.getConfigurations() :+ (classifier match {
+              case Some("sources") => "sources"
+              case Some("javadoc") => "javadoc"
+              case _ => "default" // TODO: fetch configs better?
+            })).distinct
+             configs foreach { c =>
+               println(a+"---"+c)
+             md2.addConfiguration(new Configuration(c))
+             md2.addArtifact(c, a) }
+            }
+          }
+          resolveOptions.setRefresh(true)
+          theIvy.resolve(md2, resolveOptions)
+
+          // TODO: there is always a reference to a main jar in the xml.
+          // This is incorrect (but how to get rid of it?)
+          val deo = new org.apache.ivy.core.deliver.DeliverOptions
+          deo.setValidate(true)
+          deo.setConfs(md2.getConfigurations() map {_.getName()})
+          deo.setPubdate(new java.util.Date())
+          theIvy.deliver(modRevId, modRevId.getRevision, (dir / ivyPattern).getCanonicalPath, deo)
+/*
+          val pat = new java.util.LinkedList[String]()
+          pat.add((cache / ivyPattern).getCanonicalPath)
+          val po = new org.apache.ivy.core.publish.PublishOptions
+          po.setOverwrite(true)
+          po.setHaltOnMissing(true)
+          po.setUpdate(true)
+          po.setExtraArtifacts(firstNode.getAllArtifacts)
+          theIvy.publish(modRevId, pat, "local", po)
+*/
+        case None =>
+      }
+
       report
     }
   }

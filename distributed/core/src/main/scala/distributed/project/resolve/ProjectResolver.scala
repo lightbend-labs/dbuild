@@ -24,13 +24,14 @@ trait ProjectResolver {
 
 /** Helper that uses all known project resolvers. */
 class AggregateProjectResolver(resolvers: Seq[ProjectResolver]) extends ProjectResolver {
-  def canResolve(config: ProjectBuildConfig): Boolean = 
-    resolvers exists (_ canResolve config)
-  def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig = {
+  def findResolver(config: ProjectBuildConfig) = {
     resolvers find (_ canResolve config) match {
-      case Some(r) => r.resolve(config, dir, log)
+      case Some(r) => r
       case _       => sys.error("Could not find a resolver for: " + config.name)
     }
   }
-  
+  def canResolve(config: ProjectBuildConfig): Boolean = 
+    resolvers exists (_ canResolve config)
+  def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig =
+    findResolver(config).resolve(config, dir, log)
 }

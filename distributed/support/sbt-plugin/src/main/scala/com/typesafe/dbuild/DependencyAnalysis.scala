@@ -3,7 +3,7 @@ package com.typesafe.dbuild
 import sbt._
 import distributed.project.model
 import StateHelpers._
-import NameFixer.fixName
+import distributed.support.NameFixer.fixName
 import distributed.project.model.Utils.writeValue
 import DistributedRunner.{getSortedProjects,verifySubProjects}
 

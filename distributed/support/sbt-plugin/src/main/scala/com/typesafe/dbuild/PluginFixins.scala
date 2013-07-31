@@ -1,6 +1,7 @@
 package com.typesafe.dbuild
 
 import sbt._
+import distributed.support.NameFixer
 
 object PluginFixins {
   case class PluginId(group: String, name: String)

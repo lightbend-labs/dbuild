@@ -409,56 +409,53 @@ object DistributedRunner {
     val org = "org.scala-lang"
     // in theory we could even have a mixture of scala-library, scala-compiler, etc, in Ivy and/or Maven
     // format. So we need to try both
-    getMavenJarNames(repoDir, org, ver) foreach retrieveMavenJarFile(scalaHome, repoDir, org, ver, true)
-    getIvyJarNames(repoDir, org, ver) foreach retrieveIvyJarFile(scalaHome, repoDir, org, ver, true)
+    getMavenJarNames(repoDir, org, ver) foreach retrieveJarFile(scalaHome, repoDir, org, ver, true, mavenJarFile)
+    getIvyJarNames(repoDir, org, ver) foreach retrieveJarFile(scalaHome, repoDir, org, ver, true, ivyJarFile)
   }
 
-  def retrieveMavenJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean)(name: String) = {
-    try IO.copyFile(mavenJarFile(repoDir, org, name, version), scalaHome / "lib" / (name + ".jar"), false)
-    catch {
-      case e: Exception => if (needed)
-        throw new LocalArtifactMissingException("Could not find needed jar in local maven repo: " + name + "-" + version + ".jar", e.getMessage)
-    }
-  }
+  def getIvyJarNames(repoDir: File, org: String, version: String) =
+    getJarNames(ivyBase(repoDir,org), version, ivyMatch)
+  
+  def getMavenJarNames(repoDir: File, org: String, version: String) =
+    getJarNames(mavenBase(repoDir,org), version, mavenMatch)
 
   def mavenJarFile(repoDir: File, org: String, name: String, version: String) =
-    org.split('.').foldLeft(repoDir)(_ / _) / name / version / (name + "-" + version + ".jar")
+    mavenBase(repoDir, org) / name / version / (name + "-" + version + ".jar")
 
-  def getMavenJarNames(repoDir: File, org: String, version: String) = {
-    val base = org.split('.').foldLeft(repoDir)(_ / _)
+  def ivyJarFile(repoDir: File, org: String, name: String, version: String) =
+    ivyBase(repoDir, org) / name / version / "jars" / (name + ".jar")
+
+  def mavenBase(repoDir: File, org: String) = org.split('.').foldLeft(repoDir)(_ / _)
+  def ivyBase(repoDir: File, org: String) = repoDir / org
+
+  // we need path to be: name / version / (name + "-" + version + ".jar")
+  def mavenMatch(path: Array[String], version: String) =
+    path(1) == version && path(2) == path(0) + "-" + version + ".jar"
+  // we need path to be: name / version / "jars" / (name + ".jar")
+  def ivyMatch(path: Array[String], version: String) =
+    path(1) == version && path(3) == path(0) + ".jar" && path(2) == "jars"
+
+  def getJarNames(base:File, version: String, matchPath:( Array[String], String) => Boolean) = {
     base.***.get.flatMap {
       f =>
         if (f.isDirectory) None else {
           val path = IO.relativize(base, f).get.split("/")
           // we need path to be: name / version / (name + "-" + version + ".jar")
-          if (path(1) == version && path(2) == path(0) + "-" + version + ".jar") Some(path(0)) else None
+          if (matchPath(path,version)) Some(path(0)) else None
         }
     }
   }
-  
-  def retrieveIvyJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean)(name: String) = {
-    try IO.copyFile(ivyJarFile(repoDir, org, name, version), scalaHome / "lib" / (name + ".jar"), false)
+
+  def retrieveJarFile(scalaHome: File, repoDir: File, org: String, version: String, needed: Boolean,
+      jarFile: (File, String, String, String) => File)(name: String) = {
+    try IO.copyFile(jarFile(repoDir, org, name, version), scalaHome / "lib" / (name + ".jar"), false)
     catch {
       case e: Exception => if (needed)
-        throw new LocalArtifactMissingException("Could not find needed jar in local Ivy repo: " + name + ".jar", e.getMessage)
+        throw new LocalArtifactMissingException("Could not find needed jar in local repo: " + name + "-" + version + ".jar", e.getMessage)
     }
   }
 
-  def ivyJarFile(repoDir: File, org: String, name: String, version: String) =
-    repoDir / org / name / version / "jars" / (name + ".jar")
 
-  def getIvyJarNames(repoDir: File, org: String, version: String) = {
-    val base = repoDir / org
-    base.***.get.flatMap {
-      f =>
-        if (f.isDirectory) None else {
-          val path = IO.relativize(base, f).get.split("/")
-          // we need path to be: name / version / "jars" / (name + ".jar")
-          if (path(1) == version && path(3) == path(0) + ".jar" && path(2) == "jars") Some(path(0)) else None
-        }
-    }
-  }
-  
   def fixPGPs2(oldSettings: Seq[Setting[_]], log: Logger) =
     fixGeneric2(Keys.skip, "Disabling PGP signing") { old => old map (_ => true) }(oldSettings.filter {
       _.key.scope.task.toOption match {

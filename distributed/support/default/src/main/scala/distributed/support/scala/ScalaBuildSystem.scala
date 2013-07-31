@@ -120,7 +120,7 @@ object ScalaBuildSystem extends BuildSystem {
       readMeta.copy(subproj=subProjects).copy(projects=readMeta.projects.filter {
         p => subProjects.contains(p.name)
       })
-    } else readMeta.copy(subproj=readMeta.projects map {_.name})
+    } else readMeta.copy(subproj=allSubProjects)
 
     // override the "dbuild.json" version with the one from "build.number" (if it exists)
     readBuildNumberFile(baseDir) map {v=>meta.copy(version=v)} getOrElse meta

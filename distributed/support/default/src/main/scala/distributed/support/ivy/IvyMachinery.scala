@@ -108,25 +108,24 @@ object IvyMachinery {
           ro.setConfs(Array("default"))
           theIvy.retrieve(outer, (dir / ivyPattern).getCanonicalPath, ro)
 
-          val md2 = DefaultModuleDescriptor.newBasicInstance(modRevId,new java.util.Date())
+          val md2 = new DefaultModuleDescriptor(modRevId, "release", new java.util.Date())
           md2.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")
           firstNode.getAllArtifacts() foreach { a =>
-            val classifier=Option(a.getAttributes().get("classifier").asInstanceOf[String])
-            // th test below is to avoid duplication of the main jar in the generated ivy.xml.
-            // if you manage to remove the default jar from md2, (hence the default config),
-            // remove this test as well.
-            if (a.getType!="jar" || a.getExt!="jar" || classifier!=None) {
-              val configs=(a.getConfigurations() :+ (classifier match {
+            val classifier = Option(a.getAttributes().get("classifier").asInstanceOf[String])
+            val configs = (a.getConfigurations() :+ (classifier match {
               case Some("sources") => "sources"
               case Some("javadoc") => "javadoc"
               case _ => "default" // TODO: fetch configs better?
             })).distinct
-             configs foreach { c =>
-             md2.addConfiguration(new Configuration(c))
-             md2.addArtifact(c, a) }
+            configs foreach { c =>
+              md2.addConfiguration(new Configuration(c))
+              md2.addArtifact(c, a)
             }
           }
-          deps foreach { case (d,rewritten) =>
+          // needed? probably not.
+          // md2.addConfiguration(new Configuration("provided",Configuration.Visibility.PUBLIC,"",Array[String](),false,null))
+          deps foreach {
+            case (d, rewritten) =>
             val mrid = d.getModuleRevisionId()
             val depDesc = new DefaultDependencyDescriptor(md2,
               mrid, /*force*/ rewritten, /*changing*/ mrid.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ true)
@@ -140,6 +139,7 @@ object IvyMachinery {
             md2.addDependency(depDesc)
           }
           resolveOptions.setRefresh(true)
+          resolveOptions.setConfs(md2.getConfigurations map(_.getName))
           theIvy.resolve(md2, resolveOptions)
 
           // TODO: there is always a reference to a main jar in the xml.

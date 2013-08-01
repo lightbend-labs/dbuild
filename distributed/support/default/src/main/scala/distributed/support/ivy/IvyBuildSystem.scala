@@ -45,7 +45,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val firstNode = nodes(0)
     val first = firstNode.getModuleId
     val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
-    if (deps.nonEmpty) log.info("Dependencies of project "+config.name+":")
+    if (deps.nonEmpty) log.info("Dependencies of project " + config.name + ":")
     deps foreach { d => log.info("  " + d) }
     val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
       firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
@@ -55,7 +55,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   }
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): BuildArtifactsOut = {
-    val rewrittenDeps=checkDependencies(project, baseDir, input, log)
+    val rewrittenDeps = checkDependencies(project, baseDir, input, log)
 
     val version = input.version
     val localRepo = input.outRepo
@@ -103,7 +103,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   }
 
   // mark with true the artifacts that have been rewritten, and should escape Ivy's resolution/conflict management
-  private def checkDependencies(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): Seq[(Artifact,Boolean)] = {
+  private def checkDependencies(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): Seq[(Artifact, Boolean)] = {
     // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
     // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
     import scala.collection.JavaConversions._
@@ -116,54 +116,71 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
     val firstNode = nodes(0)
     val first = firstNode.getModuleId
-    val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
+    val deps = nodes.drop(1).filter(_.isLoaded).map { n =>
+      (n.getAllRealCallers.map(_.getModuleRevisionId.getModuleId).contains(first), // is direct dependency?
+        n.getAllArtifacts.toSeq)
+    }
+
+    //    println("all deps:")
+    //    deps foreach println
+    //    println("first is "+first)
+    //    println("immediate deps:")
+    //    nodes.drop(1) foreach { n =>
+    //      val callers=n.getAllRealCallers() map (_.getModuleRevisionId.getModuleId)
+    //      println(n+" has callers "+callers.mkString(","))
+    //      if (callers contains first) println(n)
+    //    }
 
     // let's check.
     def currentName = fixName(first.getName)
     def currentOrg = first.getOrganisation
     log.info("All Dependencies for project " + project.config.name + ":")
-    deps map { a =>
-      // This is simplified version of the code in DistributedRunner
-      def findArt: Option[ArtifactLocation] =
-        (for {
-          artifact <- arts.view
-          if artifact.info.organization == a.getModuleRevisionId.getOrganisation
-          if fixName(artifact.info.name) == fixName(a.getName)
-          if artifact.info.extension == a.getExt
-        } yield artifact).headOption
-      findArt map { art =>
-        log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + " --> " +
-          art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version)
-          val da1=DefaultArtifact.cloneWithAnotherName(a, art.info.name + art.crossSuffix)
-          val mrid=ModuleRevisionId.newInstance(art.info.organization, art.info.name + art.crossSuffix,
-              a.getModuleRevisionId.getBranch, art.version,
-              a.getModuleRevisionId.getExtraAttributes)
-          val da2=DefaultArtifact.cloneWithAnotherMrid(da1, mrid)
-          (da2,true)
-      } getOrElse {
-        if (a.getName != fixName(a.getName) &&
-          // Do not inspect the artifacts that we are building right at this time:
-          (fixName(a.getName) != currentName || a.getModuleRevisionId.getOrganisation != currentOrg)) {
-          // If we are here, it means that this is a library dependency that is required,
-          // that refers to an artifact that is not provided by any project in this build,
-          // and that needs a certain Scala version (range) in order to work as intended.
-          // We check crossVersion: if it requires the correspondence to be exact, we fail;
-          // otherwise we just print a warning and leave Ivy to fail if need be.
-          val msg = "**** Missing dependency: the library " + a.getModuleRevisionId.getOrganisation + "#" + fixName(a.getName) +
-            " is not provided by any project in this configuration file."
-          crossVersion match {
-            case "binaryFull" | "disabled" | "full" =>
-              log.error(msg)
-              log.error("Please add the corresponding project to the build file (or use \"build-options:{cross-version:standard}\" to ignore).")
-              sys.error("Required dependency not found")
-            case "standard" =>
-              log.warn(msg)
-              log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
-            case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+    deps flatMap {
+      case (direct, as) => as flatMap { a =>
+        // This is simplified version of the code in DistributedRunner
+        def findArt: Option[ArtifactLocation] =
+          (for {
+            artifact <- arts.view
+            if artifact.info.organization == a.getModuleRevisionId.getOrganisation
+            if fixName(artifact.info.name) == fixName(a.getName)
+            if artifact.info.extension == a.getExt
+          } yield artifact).headOption
+        findArt map { art =>
+          log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + " --> " +
+            art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version +
+            (if (direct) "" else " (transitive)"))
+          val da1 = DefaultArtifact.cloneWithAnotherName(a, art.info.name + art.crossSuffix)
+          val mrid = ModuleRevisionId.newInstance(art.info.organization, art.info.name + art.crossSuffix,
+            a.getModuleRevisionId.getBranch, art.version,
+            a.getModuleRevisionId.getExtraAttributes)
+          val da2 = DefaultArtifact.cloneWithAnotherMrid(da1, mrid)
+          if (direct) Some((da2, true)) else None
+        } getOrElse {
+          if (a.getName != fixName(a.getName) &&
+            // Do not inspect the artifacts that we are building right at this time:
+            (fixName(a.getName) != currentName || a.getModuleRevisionId.getOrganisation != currentOrg)) {
+            // If we are here, it means that this is a library dependency that is required,
+            // that refers to an artifact that is not provided by any project in this build,
+            // and that needs a certain Scala version (range) in order to work as intended.
+            // We check crossVersion: if it requires the correspondence to be exact, we fail;
+            // otherwise we just print a warning and leave Ivy to fail if need be.
+            val msg = "**** Missing dependency: the library " + a.getModuleRevisionId.getOrganisation + "#" + fixName(a.getName) +
+              " is not provided by any project in this configuration file."
+            crossVersion match {
+              case "binaryFull" | "disabled" | "full" =>
+                log.error(msg)
+                log.error("Please add the corresponding project to the build file (or use \"build-options:{cross-version:standard}\" to ignore).")
+                sys.error("Required dependency not found")
+              case "standard" =>
+                log.warn(msg)
+                log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+              case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+            }
           }
+          log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + ";" + a.getModuleRevisionId.getRevision +
+            (if (direct) "" else " (transitive)"))
+          if (direct) Some((a, false)) else None
         }
-        log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + ";" + a.getModuleRevisionId.getRevision)
-        (a,false)
       }
     }
   }

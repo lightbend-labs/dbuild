@@ -103,11 +103,12 @@ object IvyMachinery {
       ivyxmlDir match {
         case Some(dir) =>
 
-          val md2 = DefaultModuleDescriptor.newBasicInstance(modRevId,new java.util.Date())
           val ro = new org.apache.ivy.core.retrieve.RetrieveOptions
           ro.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
           ro.setConfs(Array("default"))
           theIvy.retrieve(outer, (dir / ivyPattern).getCanonicalPath, ro)
+
+          val md2 = DefaultModuleDescriptor.newBasicInstance(modRevId,new java.util.Date())
           md2.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")
           firstNode.getAllArtifacts() foreach { a =>
             val classifier=Option(a.getAttributes().get("classifier").asInstanceOf[String])
@@ -121,13 +122,11 @@ object IvyMachinery {
               case _ => "default" // TODO: fetch configs better?
             })).distinct
              configs foreach { c =>
-               println(a+"---"+c)
              md2.addConfiguration(new Configuration(c))
              md2.addArtifact(c, a) }
             }
           }
           deps foreach { case (d,rewritten) =>
-            // transitive could also be false, as we have the full transitive dependency list anyway.
             val mrid = d.getModuleRevisionId()
             val depDesc = new DefaultDependencyDescriptor(md2,
               mrid, /*force*/ rewritten, /*changing*/ mrid.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ true)

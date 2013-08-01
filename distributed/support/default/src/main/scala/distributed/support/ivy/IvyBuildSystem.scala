@@ -63,8 +63,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   }
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): BuildArtifactsOut = {
+    log.debug("BuildInput is: "+input)
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)
-    log.info("Building project: "+input.projectName)
     val version = input.version
     val localRepo = input.outRepo
     // operateIvy() will deliver ivy.xml directly in the outRepo, the other artifacts will follow below
@@ -78,7 +78,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val trimName = fixName(name)
       val cross = if (trimName != name) name.substring(trimName.length) else ""
       val classifier = Option(a.getExtraAttributes.get("classifier").asInstanceOf[String])
-      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), mr.getRevision, cross)
+      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/, cross)
     }
 
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq

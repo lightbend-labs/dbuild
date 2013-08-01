@@ -57,7 +57,8 @@ object IvyMachinery {
     log.debug("requested module is: " + module)
     val settings = new IvySettings()
     settings.setDefaultIvyUserDir(ivyHome)
-    addResolvers(settings, ivyHome, repos)
+    val dbuildRepoDir = baseDir / ".dbuild" / "local-repo"
+    addResolvers(settings, ivyHome, repos, dbuildRepoDir)
     settings.setDefaultCacheArtifactPattern(ivyPattern)
     val cache = settings.getDefaultCache()
     val theIvy = Ivy.newInstance(settings)
@@ -150,29 +151,34 @@ object IvyMachinery {
           val ro = new org.apache.ivy.core.retrieve.RetrieveOptions
           ro.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
           ro.setConfs(allConfigs)
-          theIvy.retrieve(outer, (dir / ivyPattern).getCanonicalPath, ro)
-
+          val destPattern="[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)"+publishVersion+"/[type]s/[artifact](-[classifier]).[ext]"
+          //theIvy.retrieve(outer, (dir / ivyPattern).getCanonicalPath, ro)
+          theIvy.retrieve(outer, (dir / destPattern).getCanonicalPath, ro)
           def guessConfigurations(a:Artifact) = {
             val classifier = Option(a.getExtraAttributes().get("classifier").asInstanceOf[String])
             log.debug("Extra Attributes for "+a+" is "+a.getExtraAttributes)
-            (a.getConfigurations() :+ (classifier match {
-              case Some("sources") => "sources"
-              case Some("javadoc") => "docs"
-              case None if a.getType=="jar" && a.getExt=="jar" => "compile"
-              case _ => "default" // TODO: fetch configs better?
+            (a.getConfigurations() ++ (classifier match {
+              case Some("sources") => Seq("sources")
+              case Some("javadoc") => Seq("docs")
+              // if someone asks for the default config, give them the jar
+              case None if a.getType=="jar" && a.getExt=="jar" => Seq("compile","default")
+              case _ => Seq("default") // TODO: fetch configs better?
             })).distinct
           }
           // TODO: in order to support set-version, you need the line below, plus doing some
           // magic with retrieve(), above, in order to copy the files with the right pattern
           // (for example, replacing the revision portion in the ivyPattern with the new version)
-          val modRevIdpublish = modRevId//ModuleRevisionId.newInstance(modRevId,publishVersion)
+          // val modRevIdpublish = modRevId
+          val modRevIdpublish = ModuleRevisionId.newInstance(modRevId,publishVersion)
           val md2 = new DefaultModuleDescriptor(modRevIdpublish, "release", new java.util.Date())
           md2.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")
+          // the default config should not be necessary, but some projects rely on it being present (for instance org.scala-sbt#boot-scala;1.0)
+          md2.addConfiguration(new Configuration("default",Configuration.Visibility.PUBLIC,"",Array[String](),false,null))
           firstNode.getAllArtifacts() foreach { a =>
             val configs = guessConfigurations(a)
             configs foreach { c =>
               md2.addConfiguration(new Configuration(c))
-              md2.addArtifact(c, a)
+              md2.addArtifact(c, a) // it should not be necessary to patch the version here
               log.debug("Adding artifact: " + a + " in conf "+c)
             }
           }
@@ -193,7 +199,9 @@ object IvyMachinery {
                 art.addConfiguration(c)
                 depDesc.addDependencyArtifact(c, art)
               }
-              if (dConfigs contains "compile") depDesc.addDependencyConfiguration("compile", "default(compile)")
+              if (dConfigs contains "compile") {
+                depDesc.addDependencyConfiguration("compile", "default(compile)")
+              }
               // no mapping for other dependencies
               //dConfigs.diff(Seq("compile")) foreach { c =>
               //  depDesc.addDependencyConfiguration(c, c)
@@ -325,13 +333,24 @@ object IvyMachinery {
     }
   def includeRepo(repo: xsbti.Repository) = !(isMavenLocal(repo))
 
-  def addResolvers(settings: IvySettings, ivyHome: File, repos: List[xsbti.Repository]) {
+  def localIvyRepoResolver(dbuildRepoDir: String) =
+    {
+      val resolver = new FileSystemResolver
+      resolver.setName("dbuild-local-repo-ivy")
+      resolver.addIvyPattern(dbuildRepoDir + "/" + LocalIvyPattern)
+      resolver.addArtifactPattern(dbuildRepoDir + "/" + LocalArtifactPattern)
+      resolver
+    }
+
+  def addResolvers(settings: IvySettings, ivyHome: File, repos: List[xsbti.Repository], dbuildRepoDir:File) {
     val newDefault = new ChainResolver {
       override def locate(artifact: Artifact) =
         if (hasImplicitClassifier(artifact)) null else super.locate(artifact)
     }
     newDefault.setName("redefined-public")
-    if (repos.isEmpty) sys.error("No repositories defined in ivy build system (internal error).")
+    newDefault.add(mavenResolver("dbuild-local-repo-maven","file:" + dbuildRepoDir.getCanonicalPath()))
+    newDefault.add(localIvyRepoResolver(dbuildRepoDir.getCanonicalPath))
+//    if (repos.isEmpty) sys.error("No repositories defined in ivy build system (internal error).")
     for (repo <- repos if includeRepo(repo)) {
       val ivyRepo = toIvy(repo, ivyHome)
       ivyRepo.setDescriptor(BasicResolver.DESCRIPTOR_REQUIRED)

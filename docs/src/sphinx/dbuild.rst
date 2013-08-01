@@ -282,8 +282,8 @@ The ``uri`` field follows the syntax "ivy:organization#name;revision". For examp
   }
 
 If cross-versions are in use, the Scala version suffix must be explicitly added to the name,
-for example: "ivy:org.specs2#specs2_2.10;1.12.3". The ``set-version`` option is unsupported,
-and should not be used. The "extra" options are the following:
+for example: "ivy:org.specs2#specs2_2.10;1.12.3". The ``set-version`` option is currently
+unsupported, and should not be used. The "extra" options are the following:
 
 .. code-block:: javascript
 
@@ -291,7 +291,7 @@ and should not be used. The "extra" options are the following:
     "main-jar"    : <true-or-false>
     "sources"     : <true-or-false>
     "javadoc"     : <true-or-false>
-    "artifacts"   : [ art1, art2,... ]
+    "artifacts"   : [ <art1>, <art2>,... ]
    }
 
 All the fields are optional. The specification of an artifact is:
@@ -302,6 +302,7 @@ All the fields are optional. The specification of an artifact is:
     "classifier"  : <classifier>
     "type"        : <type>
     "ext"         : <extension>
+    "configs"     : [<conf1>, <conf2>,... ]>
    }
 
 The option ``main-jar`` controls whether the default binary jar is fetched from the
@@ -309,16 +310,15 @@ repository, and it is true by default. The options ``sources`` grabs the source 
 option ``javadoc`` the documentation jar; both options are false by default. The field
 ``artifact`` can be used to retrieve only specific artifacts from the module.
 
-The three properties of the artifact specification are optional, and map directly to
+The four properties of the artifact specification are optional, and map directly to
 the components of the Ivy resolution pattern. If no property ``classifier`` is present,
 or if it is the empty string, the classifier will remain unspecified. The fields
-``type`` and ``ext``, if omitted, will default to the string "jar". For example, the
-source jar of a module can also be obtained by specifying an artifact in which
-the classifier is "sources", the type is "src", and the file extension is "jar".
-
-In the case in which ``main-jar`` is explicitly set to false, and no other artifact is
-requested, the build system will retrieve the default set of artifacts specified
-by the module pom or ivy.xml.
+``type`` and ``ext``, if omitted, will default to the string "jar". The field
+``configs`` can optionally be used to specify one or more Ivy configuration; if missing,
+the configuration ``default`` will be used. For example, the javadoc jar of a module
+can also be obtained by specifying an artifact in which the classifier is
+"javadoc", the type is "doc", the file extension is "jar", and the configuration
+is "docs".
 
 *Next:* :doc:`deploy`.
 

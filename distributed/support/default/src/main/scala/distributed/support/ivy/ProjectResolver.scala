@@ -33,7 +33,7 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
     val revision = modRevId.getRevision
     if (revision.endsWith("-SNAPSHOT")) {
       val report = IvyMachinery.operateIvy(config, baseDir, repos, log, transitive = false)
-      // We abuse the "set-version" field to store a date string, in order to identify
+      // We use the snapshotMarker field to store a date string, in order to identify
       // uniquely this particular snapshot. The string is not actively used, but
       // it gets included in the hash calculation, making it unique
       val dateFormat = new MailDateFormat()
@@ -51,7 +51,7 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
       // into the actual com.typesafe.sbt#incremental-compiler;0.13.0-on-2.10.2-for-IDE-20130725.100115-3
       val newModRevId = new ModuleRevisionId(modRevId.getModuleId, modRevId.getBranch, newRevision)
       log.info("The resolved SNAPSHOT is: " + newModRevId + ", published on: " + date)
-      config.copy(setVersion = Some(date))
+      config.copy(extra=Some(IvyMachinery.ivyExpandConfig(config).copy(snapshotMarker = Some(date))))
     } else config
   }
 }

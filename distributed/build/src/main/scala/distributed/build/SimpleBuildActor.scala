@@ -83,6 +83,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         case b :: rest =>
           val nextArts = for {
             arts <- fArts
+            _ = log.info("Building project: " + b.config.name)
             newArts <- buildProject(tdir, b, log.newNestedLogger(b.config.name))
           } yield BuildArtifactsOut(arts.results ++ newArts.results)
           runBuild(rest, nextArts)

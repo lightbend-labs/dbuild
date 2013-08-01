@@ -527,7 +527,6 @@ object DistributedRunner {
 //    printPR(state)
 //    printPR(state2)
 
-    println("Building project: "+config.info.projectName)
     val refs = getProjectRefs(Project.extract(state2))
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data
 

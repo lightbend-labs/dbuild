@@ -17,7 +17,7 @@ object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
 
   private def scalaExpandConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => ScalaExtraConfig(None,None,Seq.empty) // pick default values
+    case None => ScalaExtraConfig(None,None,Seq.empty,Seq.empty) // pick default values
     case Some(ec:ScalaExtraConfig) => ec
     case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \""+config.name+"\". Please report")
   }
@@ -59,7 +59,6 @@ object ScalaBuildSystem extends BuildSystem {
     val version = input.version
 
     val meta=readMeta(dir, ec.exclude)
-    log.info("Building project: "+input.projectName)
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
 
     Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",

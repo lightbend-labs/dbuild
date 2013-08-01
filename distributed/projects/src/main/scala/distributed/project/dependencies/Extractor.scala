@@ -29,7 +29,7 @@ class Extractor(
       // resolution again.
       // TODO - This should be configurable!
       cachedExtractOr(config, logger) {
-        logger.debug("Extracting Dependencies for: " + build.name)
+        logger.info("Extracting dependencies for: " + build.name)
         val deps = dependencyExtractor.extract(build, dir, logger)      
         logger.debug("Dependencies = " + writeValue(deps))
         cacheExtract(config, deps)

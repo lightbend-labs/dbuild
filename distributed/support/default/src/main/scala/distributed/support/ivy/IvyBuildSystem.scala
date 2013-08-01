@@ -33,34 +33,43 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
 
   def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
     val report = IvyMachinery.operateIvy(config, baseDir, repos, log)
-    val modRevId = report.getAllArtifactsReports()(0).getArtifact.getModuleRevisionId
-    val module = modRevId.getModuleId()
-    import scala.collection.JavaConversions._
-    def artifactToProjectRef(a: Artifact) = {
-      val m = a.getModuleRevisionId.getModuleId
-      val tpe = a.getType
-      ProjectRef(fixName(m.getName), m.getOrganisation, a.getExt, if (tpe != "jar") Some(tpe) else None)
+    val artifactReports = report.getAllArtifactsReports()
+    if (artifactReports.isEmpty) {
+      log.warn("**** Warning: no artifacts found in project " + config.name)
+      val module = config.uri.substring(4)
+      val modRevId = ModuleRevisionId.parse(module)
+      ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
+    } else {
+      val modRevId = artifactReports(0).getArtifact.getModuleRevisionId
+      val module = modRevId.getModuleId()
+      import scala.collection.JavaConversions._
+      def artifactToProjectRef(a: Artifact) = {
+        val m = a.getModuleRevisionId.getModuleId
+        val tpe = a.getType
+        ProjectRef(fixName(m.getName), m.getOrganisation, a.getExt, if (tpe != "jar") Some(tpe) else None)
+      }
+      val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
+      val firstNode = nodes(0)
+      val first = firstNode.getModuleId
+      val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
+      if (deps.nonEmpty) log.info("Dependencies of project " + config.name + ":")
+      deps foreach { d => log.info("  " + d) }
+      val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
+        firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
+        nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))
+      log.debug(q.toString)
+      q
     }
-    val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
-    val firstNode = nodes(0)
-    val first = firstNode.getModuleId
-    val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
-    if (deps.nonEmpty) log.info("Dependencies of project " + config.name + ":")
-    deps foreach { d => log.info("  " + d) }
-    val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
-      firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
-      nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))
-    log.debug(q.toString)
-    q
   }
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): BuildArtifactsOut = {
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)
-
+    log.info("Building project: "+input.projectName)
     val version = input.version
     val localRepo = input.outRepo
     // operateIvy() will deliver ivy.xml directly in the outRepo, the other artifacts will follow below
-    val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log, transitive = false, ivyxmlDir = Some(localRepo), deps = rewrittenDeps)
+    val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log, transitive = false, ivyxmlDir = Some(localRepo), deps = rewrittenDeps,
+        publishVersion = version)
     import scala.collection.JavaConversions._
     def artifactToArtifactLocation(a: Artifact) = {
       val mr = a.getModuleRevisionId
@@ -78,23 +87,6 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val ivyArts = (firstNode.getAllArtifacts.toSeq map { _.getModuleRevisionId }).distinct.flatMap { report.getArtifactsReports(_) } map { _.getLocalFile }
     val ivyRepo = baseDir / ".ivy2" / "cache"
 
-    /*
-  
-    val localArts = try {
-      ivyArts map { ivyFile =>
-        val relative = IO.relativize(ivyRepo, ivyFile) getOrElse sys.error("Internal error, not in Ivy cache: " + ivyFile.getAbsolutePath)
-        val localFile = localRepo / relative
-        IO.copyFile(ivyFile, localFile, false)
-        localFile
-      }
-    } catch {
-      case e: Exception => throw new LocalArtifactMissingException("Unexpected Internal error while copying Ivy artifact to local repo", e.getMessage)
-    }
-   
-*/
-    //localRepo.***.get foreach println
-    //println("--")
-    //ivyRepo.***.get foreach println
     val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("",
       publishArts,
       localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) })))
@@ -120,7 +112,31 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       (n.getAllRealCallers.map(_.getModuleRevisionId.getModuleId).contains(first), // is direct dependency?
         n.getAllArtifacts.toSeq)
     }
-
+/*
+    nodes.drop(1).filter(_.isLoaded) foreach { n =>
+      println("ciao "+n)
+      n.getAllArtifacts() foreach {a => println("  "+a)}
+      if (n.getAllArtifacts() exists { a =>
+        a.getModuleRevisionId().getName()=="jansi" && a.getModuleRevisionId().getOrganisation()=="org.fusesource.jansi"
+        }) {
+      println("ciao!")
+      println("This node contains org.fusesource.jansi#jansi: "+n)
+      val arts=n.getAllArtifacts()
+      println("The artifacts it contains are: ")
+      arts foreach {a => println("  "+a)}
+      println("The getConfsToFetch of the node are: ")
+      n.getConfsToFetch() foreach {c => println("  "+c)}
+      println("The getConfigurations(\"default\") of the node are: ")
+      n.getConfigurations("default") foreach {c => println("  "+c)}
+      arts foreach { a =>
+        println("for artifact "+a+" the configs are:")
+        a.getConfigurations() foreach {c => println("  "+c)}
+      }
+      println("basta")
+      sys.exit(9)
+      }
+    }
+*/
     //    println("all deps:")
     //    deps foreach println
     //    println("first is "+first)

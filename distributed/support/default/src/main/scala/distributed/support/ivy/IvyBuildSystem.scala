@@ -22,6 +22,7 @@ import ivy.core.resolve.{ ResolveEngine, ResolveOptions }
 import ivy.core.report.ResolveReport
 import org.apache.ivy.core.resolve.IvyNode
 import distributed.support.NameFixer.fixName
+import org.apache.ivy.core.module.descriptor.DefaultArtifact
 
 /** Implementation of the Scala  build system. workingDir is the "target" general dbuild dir */
 class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystem {
@@ -54,12 +55,12 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   }
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): BuildArtifactsOut = {
-    checkDependencies(project, baseDir, input, log)
+    val rewrittenDeps=checkDependencies(project, baseDir, input, log)
 
     val version = input.version
     val localRepo = input.outRepo
     // operateIvy() will deliver ivy.xml directly in the outRepo, the other artifacts will follow below
-    val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log, ivyxmlDir = Some(localRepo), transitive = false)
+    val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log, transitive = false, ivyxmlDir = Some(localRepo), deps = rewrittenDeps)
     import scala.collection.JavaConversions._
     def artifactToArtifactLocation(a: Artifact) = {
       val mr = a.getModuleRevisionId
@@ -101,17 +102,16 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     q
   }
 
-  private def checkDependencies(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): Unit = {
+  // mark with true the artifacts that have been rewritten, and should escape Ivy's resolution/conflict management
+  private def checkDependencies(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): Seq[(Artifact,Boolean)] = {
     // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
     // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
     import scala.collection.JavaConversions._
     import project.buildOptions.crossVersion
     val arts = input.artifacts.artifacts
-    // I need to get my dependencies, again, and I'd rather not re-resolve using Ivy again.
-    // I should try to get again the extraction info, instead. The only problem is that
-    // the extraction info can only be gathered via the extract() in Extractor, which is
-    // nested into three or four levels of indirections, via enclosing actors. So that is
-    // not really viable, as it's really hard to get to it from here. So we can't cache. TODO: try and fix?
+    // I need to get my dependencies again during build; although in theory I could pass
+    // this information to here from extraction, in practice I just run Ivy once more
+    // to extract it here again, so that additional artifact-related details are available.
     val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log)
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
     val firstNode = nodes(0)
@@ -122,7 +122,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     def currentName = fixName(first.getName)
     def currentOrg = first.getOrganisation
     log.info("All Dependencies for project " + project.config.name + ":")
-    deps foreach { a =>
+    deps map { a =>
       // This is simplified version of the code in DistributedRunner
       def findArt: Option[ArtifactLocation] =
         (for {
@@ -134,6 +134,12 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       findArt map { art =>
         log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + " --> " +
           art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version)
+          val da1=DefaultArtifact.cloneWithAnotherName(a, art.info.name + art.crossSuffix)
+          val mrid=ModuleRevisionId.newInstance(art.info.organization, art.info.name + art.crossSuffix,
+              a.getModuleRevisionId.getBranch, art.version,
+              a.getModuleRevisionId.getExtraAttributes)
+          val da2=DefaultArtifact.cloneWithAnotherMrid(da1, mrid)
+          (da2,true)
       } getOrElse {
         if (a.getName != fixName(a.getName) &&
           // Do not inspect the artifacts that we are building right at this time:
@@ -157,6 +163,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
           }
         }
         log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + ";" + a.getModuleRevisionId.getRevision)
+        (a,false)
       }
     }
   }

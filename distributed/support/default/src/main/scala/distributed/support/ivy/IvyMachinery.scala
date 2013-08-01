@@ -25,6 +25,7 @@ import org.apache.ivy.core.deliver.DeliverOptions
 import distributed.support.sbt.Repositories.ivyPattern
 import org.apache.ivy.core.resolve.IvyNode
 import org.apache.ivy.core.module.descriptor.Configuration
+import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
 
 object IvyMachinery {
   private def ivyExpandConfig(config: ProjectBuildConfig) = config.extra match {
@@ -33,9 +34,10 @@ object IvyMachinery {
     case _ => throw new Exception("Internal error: ivy build config options are the wrong type in project \"" + config.name + "\". Please report")
   }
 
-  // ivyxml will receive the ivy.xml that can be use to deploy
+  // ivyxmlDir and deps are only used when creating the ivy.xml file, which only happens when
+  // ivyxmlDir is Some(dir). 
   def operateIvy(config: ProjectBuildConfig, baseDir: File, repos: List[xsbti.Repository], log: Logger,
-    ivyxmlDir: Option[File] = None, transitive: Boolean = true): ResolveReport = {
+    transitive: Boolean = true, ivyxmlDir: Option[File] = None, deps: Seq[(Artifact,Boolean)]=Seq.empty): ResolveReport = {
     log.info("Running Ivy to extract project info: " + config.name)
     val extra = ivyExpandConfig(config)
     import extra._
@@ -64,7 +66,7 @@ object IvyMachinery {
       def addArtifact(classifier: String, typ: String = "jar", ext: String = "jar", config: String = "default") = {
         val classif = new java.util.HashMap[String, String]()
         if (classifier != "") classif.put("m:classifier", classifier)
-        val art = new org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(
+        val art = new DefaultDependencyArtifactDescriptor(
           dd,
           modRevId.getName,
           typ, ext, null, classif)
@@ -96,6 +98,8 @@ object IvyMachinery {
         sys.error("Unexpected Ivy error: node not loaded (" + firstNode.getModuleId + ")")
       }
 
+      
+      // should we publish an ivy.xml? Do so if ivyxmlDir is not None
       ivyxmlDir match {
         case Some(dir) =>
 
@@ -122,6 +126,20 @@ object IvyMachinery {
              md2.addArtifact(c, a) }
             }
           }
+          deps foreach { case (d,rewritten) =>
+            // transitive could also be false, as we have the full transitive dependency list anyway.
+            val mrid = d.getModuleRevisionId()
+            val depDesc = new DefaultDependencyDescriptor(md2,
+              mrid, /*force*/ rewritten, /*changing*/ mrid.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ true)
+            log.debug("Adding dependency: " + d)
+            val art = new DefaultDependencyArtifactDescriptor(
+              depDesc,
+              d.getName,
+              d.getType, d.getExt, null, d.getExtraAttributes)
+            art.addConfiguration("default")
+            depDesc.addDependencyArtifact("default", art)
+            md2.addDependency(depDesc)
+          }
           resolveOptions.setRefresh(true)
           theIvy.resolve(md2, resolveOptions)
 
@@ -132,6 +150,10 @@ object IvyMachinery {
           deo.setConfs(md2.getConfigurations() map {_.getName()})
           deo.setPubdate(new java.util.Date())
           theIvy.deliver(modRevId, modRevId.getRevision, (dir / ivyPattern).getCanonicalPath, deo)
+          dir.***.get.foreach {
+            f => if (f.getName=="ivy.xml")
+              scala.io.Source.fromFile(f).getLines foreach { s => log.debug(s) }
+          }
 /*
           val pat = new java.util.LinkedList[String]()
           pat.add((cache / ivyPattern).getCanonicalPath)
@@ -139,6 +161,7 @@ object IvyMachinery {
           po.setOverwrite(true)
           po.setHaltOnMissing(true)
           po.setUpdate(true)
+          po.getSrcIvyPattern(....)
           po.setExtraArtifacts(firstNode.getAllArtifacts)
           theIvy.publish(modRevId, pat, "local", po)
 */

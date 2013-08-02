@@ -376,7 +376,6 @@ object DistributedRunner {
     customScalaVersion(locs).toSeq flatMap { ver =>
       log.info("Preparing Scala binaries: scala-library version " + ver)
       val scalaArts = locs.filter(_.info.organization == "org.scala-lang")
-      scalaArts foreach { a => log.info(a.toString) }
       val scalaHomeSha = hashing sha1 (scalaArts map { _.version })
       val scalaHome = dbuildDir / "scala" / scalaHomeSha
       generateScalaDir(repoDir, scalaArts, scalaHome)

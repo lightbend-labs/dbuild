@@ -97,6 +97,8 @@ object IvyMachinery {
       if (mainJar) addArtifact("", "jar", configs = Seq("compile"))
       artifacts foreach { a => addArtifact(a.classifier, a.typ, a.ext, configs = a.configs) }
       val allConfigs=dd.getAllDependencyArtifacts().flatMap(arts => arts.getConfigurations()).distinct 
+      // do /not/ add "default" by default, otherwise the default mapping *->* will drag in also optional libraries,
+      // which we do not want (unless explicitly requested)
       allConfigs foreach { c =>
         md.addConfiguration(new Configuration(c))
       }
@@ -201,11 +203,12 @@ object IvyMachinery {
               }
               if (dConfigs contains "compile") {
                 depDesc.addDependencyConfiguration("compile", "default(compile)")
+                depDesc.addDependencyConfiguration("default", "default(compile)")
               }
               // no mapping for other dependencies
-              //dConfigs.diff(Seq("compile")) foreach { c =>
-              //  depDesc.addDependencyConfiguration(c, c)
-              //}
+//              dConfigs.diff(Seq("compile")) foreach { c =>
+//                depDesc.addDependencyConfiguration(c, c)
+//              }
               md2.addDependency(depDesc)
           }
           resolveOptions.setRefresh(true)

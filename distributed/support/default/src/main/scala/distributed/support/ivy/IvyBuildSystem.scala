@@ -23,6 +23,7 @@ import ivy.core.report.ResolveReport
 import org.apache.ivy.core.resolve.IvyNode
 import distributed.support.NameFixer.fixName
 import org.apache.ivy.core.module.descriptor.DefaultArtifact
+import distributed.support.ivy.IvyMachinery.PublishIvyInfo
 
 /** Implementation of the Scala  build system. workingDir is the "target" general dbuild dir */
 class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystem {
@@ -96,8 +97,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     q
   }
 
-  // mark with true the artifacts that have been rewritten, and should escape Ivy's resolution/conflict management
-  private def checkDependencies(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): Seq[(Artifact, Boolean)] = {
+  private def checkDependencies(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): Seq[PublishIvyInfo] = {
     // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
     // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
     import scala.collection.JavaConversions._
@@ -113,7 +113,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val first = firstNode.getModuleId
     val deps = nodes.drop(1).filter(_.isLoaded).map { n =>
       (n.getAllRealCallers.map(_.getModuleRevisionId.getModuleId).contains(first), // is direct dependency?
-        n.getAllArtifacts.toSeq)
+       n.getConfigurations("optional").nonEmpty, // is the dependency optional?
+       n.getAllArtifacts.toSeq)
     }
 
     // let's check.
@@ -124,7 +125,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     else
       log.info("All dependencies for project " + project.config.name + ":")
     deps flatMap {
-      case (direct, as) => as flatMap { a =>
+      case (direct, optional, as) => as flatMap { a =>
         // This is simplified version of the code in DistributedRunner
         def findArt: Option[ArtifactLocation] =
           (for {
@@ -133,17 +134,21 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
             if fixName(artifact.info.name) == fixName(a.getName)
             if artifact.info.extension == a.getExt
           } yield artifact).headOption
+        def printIvyDependency(someArt: Option[ArtifactLocation]) {
+          log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + ";" + a.getModuleRevisionId.getRevision +
+            (someArt map { art => " --> " + art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version } getOrElse "") +
+            (if (direct) "" else " (transitive)") + (if (optional) " (optional)" else ""))
+        }
         findArt map { art =>
-          log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + " --> " +
-            art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version +
-            (if (direct) "" else " (transitive)"))
+          printIvyDependency(Some(art))
           val da1 = DefaultArtifact.cloneWithAnotherName(a, art.info.name + art.crossSuffix)
           val mrid = ModuleRevisionId.newInstance(art.info.organization, art.info.name + art.crossSuffix,
             a.getModuleRevisionId.getBranch, art.version,
             a.getModuleRevisionId.getExtraAttributes)
           val da2 = DefaultArtifact.cloneWithAnotherMrid(da1, mrid)
-          if (direct) Some((da2, true)) else None
+          if (direct) Some(PublishIvyInfo(da2, rewritten = true, optional = optional)) else None
         } getOrElse {
+          printIvyDependency(None)
           if (a.getName != fixName(a.getName) &&
             // Do not inspect the artifacts that we are building right at this time:
             (fixName(a.getName) != currentName || a.getModuleRevisionId.getOrganisation != currentOrg)) {
@@ -156,18 +161,31 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
               " is not provided by any project in this configuration file."
             crossVersion match {
               case "binaryFull" | "disabled" | "full" =>
-                log.error(msg)
-                log.error("Please add the corresponding project to the build file (or use \"build-options:{cross-version:standard}\" to ignore).")
-                sys.error("Required dependency not found")
+                if (optional) {
+                  log.warn(msg)
+                  log.warn("This dependency is marked optional, and may be not actually in use; continuing...")
+                  log.warn("If another project does request this optional dependency, an unspecified version")
+                  log.warn("will be retrieved from the external repositories. In order to control which version")
+                  log.warn("is used, you may want to add this dependency to the dbuild configuration file.")
+                } else {
+                  log.error(msg)
+                  log.error("In order to control which version is used, please add the corresponding project to the build file")
+                  log.error("(or use \"build-options:{cross-version:standard}\" to ignore (not recommended)).")
+                  sys.error("Required dependency not found")
+                }
               case "standard" =>
                 log.warn(msg)
-                log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+                if (optional) {
+                  log.warn("The dependency is marked optional, and may be not actually in use. If another project requests")
+                  log.warn("this optional dependency, however, it will be retrieved from the external repositories.")
+                } else {
+                  log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+                }
+                log.warn("In order to control which version is used, you may want to add this dependency to the dbuild configuration file.")
               case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
             }
           }
-          log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + ";" + a.getModuleRevisionId.getRevision +
-            (if (direct) "" else " (transitive)"))
-          if (direct) Some((a, false)) else None
+          if (direct) Some(PublishIvyInfo(a, rewritten = false, optional = optional)) else None
         }
       }
     }

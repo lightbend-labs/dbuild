@@ -43,7 +43,7 @@ object IvyMachinery {
     modRevId: ModuleRevisionId, allConfigs: Array[String])
 
   def resolveIvy(config: ProjectBuildConfig, baseDir: File, repos: List[xsbti.Repository], log: Logger,
-    transitive: Boolean = true): ResolveResponse = {
+    transitive: Boolean = true, useOptional: Boolean = true): ResolveResponse = {
     log.info("Running Ivy to extract project info: " + config.name)
     val extra = ivyExpandConfig(config)
     import extra._
@@ -83,23 +83,18 @@ object IvyMachinery {
         }
       }
 
-      // In order to support optional dependencies, I should resolve once again, in a separate run
-      // using only the "optional" configuration; the returned artifacts (if any) need to be added
-      // below, in stage 2, to the "optional" configuration.
-      //              val opt=new Configuration("optional")
-      //              md.addConfiguration(opt)
-      //              dd.addDependencyConfiguration("optional","optional")
-
       if (sources) addArtifact("sources", "src", configs = Seq("sources"))
       if (javadoc) addArtifact("javadoc", "doc", configs = Seq("javadoc"))
       if (mainJar) addArtifact("", "jar", configs = Seq("compile"))
       artifacts foreach { a => addArtifact(a.classifier, a.typ, a.ext, configs = a.configs) }
-      val allConfigs = dd.getAllDependencyArtifacts().flatMap(arts => arts.getConfigurations()).distinct
+      val configs = dd.getAllDependencyArtifacts().flatMap(arts => arts.getConfigurations())
+      // In order to support optional dependencies, I need to resolve using also
+      // the "optional" configuration; the returned artifacts (if any) need to be added
+      // below, during publishing, to the "optional" Ivy configuration.
+      val allConfigs = if (useOptional) configs :+ "optional" else configs
       // do /not/ add "default" by default, otherwise the default mapping *->* will drag in also optional libraries,
       // which we do not want (unless explicitly requested)
-      allConfigs foreach { c =>
-        md.addConfiguration(new Configuration(c))
-      }
+      allConfigs foreach {c=>md.addConfiguration(new Configuration(c))}
       if (allConfigs contains "compile") {
         dd.addDependencyConfiguration("compile", "default(compile)")
       }
@@ -136,9 +131,10 @@ object IvyMachinery {
       log.debug("Report:")
       nodes foreach { n =>
         log.debug("Node: " + n + (if (n.isLoaded) " (loaded)" else " (not loaded)"))
+        log.debug("is optional: " + n.getConfigurations("optional").nonEmpty)
         if (n.isLoaded) {
           log.debug("Artifacts:")
-          n.getAllArtifacts() foreach { a => log.debug("  " + a) }
+          n.getAllArtifacts() foreach { a => log.debug("  " + a+" configs:"+a.getConfigurations.mkString(",")) }
         }
       }
 
@@ -146,9 +142,11 @@ object IvyMachinery {
     }
   }
 
+  case class PublishIvyInfo(art: Artifact, rewritten: Boolean, optional: Boolean)
+  
   // publishIvy works by first retrieving the resolved artifacts (only the artifacts we need to republish, hence transitive is false
   // in the resolve whose report we use here). Then, we generate the ixy.xml.
-  def publishIvy(response: ResolveResponse, ivyxmlDir: File, deps: Seq[(Artifact, Boolean)], publishVersion: String, log: Logger) = {
+  def publishIvy(response: ResolveResponse, ivyxmlDir: File, deps: Seq[PublishIvyInfo], publishVersion: String, log: Logger) = {
     val ResolveResponse(theIvy: Ivy, report, resolveOptions, modRevId, allConfigs) = response
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]]
     val firstNode = nodes.get(0)
@@ -193,13 +191,14 @@ object IvyMachinery {
         log.debug("Adding artifact: " + a + " in conf " + c)
       }
     }
+    md2.addConfiguration(new Configuration("provided", Configuration.Visibility.PUBLIC, "", Array[String](), false, null))
+    md2.addConfiguration(new Configuration("optional", Configuration.Visibility.PUBLIC, "", Array[String](), false, null))
     deps foreach {
-      case (d, rewritten) =>
+      case PublishIvyInfo(d, rewritten, optional) =>
         val mrid = d.getModuleRevisionId()
         val depDesc = new DefaultDependencyDescriptor(md2,
           mrid, /*force*/ rewritten, /*changing*/ mrid.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ true)
-        log.debug("Adding dependency: " + d + ", which has extra attrs: " + d.getExtraAttributes())
-        log.debug(" and configurations: " + d.getConfigurations.mkString(","))
+        log.debug("Adding dependency: " + d + ", which has extra attrs: " + d.getExtraAttributes()+" and configurations: " + d.getConfigurations.mkString(","))
         val art = new DefaultDependencyArtifactDescriptor(
           depDesc,
           d.getName,
@@ -210,20 +209,25 @@ object IvyMachinery {
           art.addConfiguration(c)
           depDesc.addDependencyArtifact(c, art)
         }
-        if (dConfigs contains "compile") {
+        // TODO: the choice of configuration mappings may possibly need
+        // some additional tweaking
+        if (optional) {
+          depDesc.addDependencyConfiguration("optional", "default(compile)")
+        } else if (dConfigs contains "compile") {
           depDesc.addDependencyConfiguration("compile", "default(compile)")
           depDesc.addDependencyConfiguration("default", "default(compile)")
         }
-        // no mapping for other dependencies
-        //              dConfigs.diff(Seq("compile")) foreach { c =>
-        //                depDesc.addDependencyConfiguration(c, c)
-        //              }
+        // no mapping for other dependencies, otherwise it would mean
+        // for example that when I grab the source of this module, I also
+        // grab the source dependencies from the dependencies,
+        // which clearly doesn't make sense.
+        // dConfigs.diff(Seq("compile")) foreach { c =>
+        //  depDesc.addDependencyConfiguration(c, c)
+        // }
         md2.addDependency(depDesc)
     }
     resolveOptions.setRefresh(true)
     val md2configs = md2.getConfigurations map (_.getName)
-    md2.addConfiguration(new Configuration("provided", Configuration.Visibility.PUBLIC, "", Array[String](), false, null))
-    md2.addConfiguration(new Configuration("optional", Configuration.Visibility.PUBLIC, "", Array[String](), false, null))
     if (md2configs contains "compile") {
       md2.addConfiguration(new Configuration("runtime", Configuration.Visibility.PUBLIC, "", Array[String]("compile"), true, null))
       md2.addConfiguration(new Configuration("test", Configuration.Visibility.PUBLIC, "", Array[String]("compile"), true, null))

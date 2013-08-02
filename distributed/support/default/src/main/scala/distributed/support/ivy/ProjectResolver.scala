@@ -32,7 +32,8 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
     val modRevId = ModuleRevisionId.parse(module)
     val revision = modRevId.getRevision
     if (revision.endsWith("-SNAPSHOT")) {
-      val report = IvyMachinery.operateIvy(config, baseDir, repos, log, transitive = false)
+      val response = IvyMachinery.resolveIvy(config, baseDir, repos, log, transitive = false)
+      val report = response.report
       // We use the snapshotMarker field to store a date string, in order to identify
       // uniquely this particular snapshot. The string is not actively used, but
       // it gets included in the hash calculation, making it unique

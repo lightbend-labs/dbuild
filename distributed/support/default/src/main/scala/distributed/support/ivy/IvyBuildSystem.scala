@@ -32,7 +32,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   val dbuildIvyHome = (distributed.repo.core.ProjectDirs.dbuildDir / ".ivy2").getAbsolutePath
 
   def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
-    val report = IvyMachinery.operateIvy(config, baseDir, repos, log)
+    val response = IvyMachinery.resolveIvy(config, baseDir, repos, log)
+    val report = response.report
     val artifactReports = report.getAllArtifactsReports()
     if (artifactReports.isEmpty) {
       log.warn("**** Warning: no artifacts found in project " + config.name)
@@ -67,9 +68,9 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)
     val version = input.version
     val localRepo = input.outRepo
-    // operateIvy() will deliver ivy.xml directly in the outRepo, the other artifacts will follow below
-    val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log, transitive = false, ivyxmlDir = Some(localRepo), deps = rewrittenDeps,
-        publishVersion = version)
+    // this is transitive = false, only used to retrieve the jars that should be republished later
+    val response = IvyMachinery.resolveIvy(project.config, baseDir, repos, log, transitive = false)
+    val report = response.report
     import scala.collection.JavaConversions._
     def artifactToArtifactLocation(a: Artifact) = {
       val mr = a.getModuleRevisionId
@@ -87,6 +88,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val ivyArts = (firstNode.getAllArtifacts.toSeq map { _.getModuleRevisionId }).distinct.flatMap { report.getArtifactsReports(_) } map { _.getLocalFile }
     val ivyRepo = baseDir / ".ivy2" / "cache"
 
+    IvyMachinery.publishIvy(response, localRepo, rewrittenDeps, version, log)
     val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("",
       publishArts,
       localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) })))
@@ -104,7 +106,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     // I need to get my dependencies again during build; although in theory I could pass
     // this information to here from extraction, in practice I just run Ivy once more
     // to extract it here again, so that additional artifact-related details are available.
-    val report = IvyMachinery.operateIvy(project.config, baseDir, repos, log)
+    val response = IvyMachinery.resolveIvy(project.config, baseDir, repos, log)
+    val report = response.report
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
     val firstNode = nodes(0)
     val first = firstNode.getModuleId

@@ -1,14 +1,5 @@
 package graph
 
-
-/** A Graph filtered to only contain a subset of the original nodes. */
-case class FilteredByNodesGraph[N,E](g: Graph[N,E], nodes: Set[Node[N]]) extends Graph[N,E] {
-  assert((nodes -- g.nodes).isEmpty)
-  def edges(n: Nd): Seq[Ed] = 
-    g edges n filter { e => (nodes contains e.to) && (nodes contains e.from) }
-}
-
-
 case class SimpleNode[N](value: N) extends Node[N]
 case class EmptyEdge[N](from: Node[N], to: Node[N]) extends Edge[N,Nothing] {
   def value: Nothing = sys.error("Empty edges have no data!")

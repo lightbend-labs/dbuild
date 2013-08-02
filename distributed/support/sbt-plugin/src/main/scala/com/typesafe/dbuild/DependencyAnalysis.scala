@@ -179,10 +179,10 @@ object DependencyAnalysis {
       // 1) safeTopological() will check for cycles
 
       log.info("sorting...")
-      val allProjSorted = Graphs.safeTopological(allProjGraph)
+      val allProjSorted = allProjGraph.safeTopological
       log.debug(normalizedProjectNames(allRefs).mkString("original: ", ", ", ""))
       log.debug(normalizedProjectNames(allProjSorted.map { _.value}).mkString("sorted: ", ", ", ""))
-      log.debug("dot: " + Graphs.toDotFile(allProjGraph)(normalizedProjectName))
+      log.debug("dot: " + allProjGraph.toDotFile(normalizedProjectName))
 
       // Excellent. 2) Now we need the set of projects transitively reachable from "requested".
       
@@ -196,7 +196,7 @@ object DependencyAnalysis {
         result
       } else {
         val needed = requested.foldLeft(Set[Node[ProjectRef]]()) { (set, node) =>
-          set ++ Graphs.subGraphFrom(allProjGraph)(allProjGraph.nodeMap(node))
+          set ++ allProjGraph.subGraphFrom(allProjGraph.nodeMap(node))
         } map { _.value }
 
         // In the end, our final sorted list (prior to explicit exclusions) is:

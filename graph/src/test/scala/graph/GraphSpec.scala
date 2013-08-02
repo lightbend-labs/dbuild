@@ -37,50 +37,50 @@ object GraphSpec extends Specification {
   import GraphData._
   "Graphs.isCyclic" should {
     "detect full cycles" in {
-      Graphs.isCyclic(cyclic) must beTrue
+      cyclic.isCyclic must beTrue
     }
     "detect partial cycles" in {
-      Graphs.isCyclic(cyclic2) must beTrue
+      cyclic2.isCyclic must beTrue
     }
     "Not detect cycles when there are none" in {
-      Graphs.isCyclic(acyclic) must beFalse
+      acyclic.isCyclic must beFalse
     }
     "Handle empty" in {
-      Graphs.isCyclic(emptyGraph) must beFalse
+      emptyGraph.isCyclic must beFalse
     }
   }
   
   "Graphs.topologicalSort" should {
     "sort topologically" in {
-      val result = Graphs.topological(acyclic)
+      val result = acyclic.topological
       (result indexOf n1) must beGreaterThan(result indexOf n3)
     }
     "fail on lack of bottom nodes" in {
-      Graphs.topological(cyclic) must throwAn[Exception]
+      cyclic.topological must throwAn[Exception]
     }
     "doesn't fail on empty" in {
-      Graphs.topological[Nothing, Nothing](emptyGraph) must equalTo(Seq.empty)
+      (emptyGraph).topological must equalTo(Seq.empty)
     }
   }
   "Graphs.safeTopologicalSort" should {
     "sort topologically" in {
-      val result = Graphs.safeTopological(acyclic)
+      val result = acyclic.safeTopological
       (result indexOf n1) must beGreaterThan(result indexOf n3)
     }
     "fail on full cycles" in {
-      Graphs.topological(cyclic) must throwAn[Exception]
+      cyclic.topological must throwAn[Exception]
     }
     "fail on partial cycles" in {
-      Graphs.safeTopological(cyclic2) must throwAn[Exception]
+      cyclic2.safeTopological must throwAn[Exception]
     }
   }
   "Graphs.subGraphFrom" should {
     "return the node passed" in {
-      val result = Graphs.subGraphFrom(acyclic)(n1)
+      val result = acyclic.subGraphFrom(n1)
       result must equalTo(Set(n1))
     }
     "find subgraphs" in {
-      val result = Graphs.subGraphFrom(acyclic)(n3)
+      val result = acyclic.subGraphFrom(n3)
       result must equalTo(Set(n1, n3))
     }
   }

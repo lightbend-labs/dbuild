@@ -1,6 +1,5 @@
 package distributed.project.model
 
-import graph.Graphs
 import Utils.writeValue
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -69,7 +68,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
         // Pull out current repeatable config for a project.
         val head = remaining.head
         val node = graph.nodeFor(head) getOrElse sys.error("O NOES -- TODO better graph related puke message")
-        val subgraph = Graphs.subGraphFrom(graph)(node) map (_.value)
+        val subgraph = graph.subGraphFrom(node) map (_.value)
         val dependencies = 
           for {
             dep <- (subgraph - head)
@@ -98,7 +97,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
       sys.error(conflictSeq.
         mkString("\n\nFatal: multiple projects produce the same artifacts. Please exclude them from some of the conflicting projects.\n\n", "\n", "\n"))
     }
-    val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse
+    val orderedBuilds = (graph.safeTopological map (_.value)).reverse
     makeMeta(orderedBuilds, Map.empty, Seq.empty)
   }
     

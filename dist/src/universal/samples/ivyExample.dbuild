@@ -1,0 +1,57 @@
+{"projects":[
+  {
+    name:  scala-compiler
+    system: ivy
+    uri:    "ivy:org.scala-lang#scala-compiler;2.10.2"
+    extra: { sources: true }
+  }, {
+    name:  scala-reflect
+    system: ivy
+    uri:    "ivy:org.scala-lang#scala-reflect;2.10.2"
+  }, {
+    name:  scala-library
+    system: ivy
+    uri:    "ivy:org.scala-lang#scala-library;2.10.2"
+  }, {
+    name:  scala-actors
+    system: ivy
+    uri:    "ivy:org.scala-lang#scala-actors;2.10.2"
+  }, {
+    name:  jline
+    system: ivy
+    uri:    "ivy:org.scala-lang#jline;2.10.2"
+  }, {
+    name:   "scalacheck",
+    uri:    "git://github.com/rickynils/scalacheck.git#1.10.1"
+  }, {
+    name:   "sbinary",
+    uri:    "git://github.com/harrah/sbinary.git#bdc555afbbb7657b4a9def7ae342d53881be2e2d"
+    extra: { projects: ["core"] }
+  }, {
+    name:   "sbt",
+    uri:    "git://github.com/sbt/sbt.git#f4a3904a4724dcd1fb8c8cd315c6b2f416bda3a3"
+    extra: {
+      projects: ["compiler-interface",
+                 "classpath","logging","io","control","classfile",
+                 "process","relation","interface","persist","api",
+                 "compiler-integration","incremental-compiler","compile","launcher-interface"
+                ],
+      run-tests: false
+    }
+  }, {
+    name:   "sbt-republish",
+    uri:    "http://github.com/typesafehub/sbt-republish.git#2dc7afb6c84e5a55eb0ff7677343c6c301a38aeb",
+    set-version: "0.13.0-on-2.10.3-SNAPSHOT-for-IDE-SNAPSHOT"
+  }, {
+    name:   "zinc",
+    uri:    "https://github.com/typesafehub/zinc.git#f5912305a08fed3750f5ea7e77bc1efc27424f2a"
+  }, {
+    name: specs2
+    system: ivy
+    uri: "ivy:org.specs2#specs2_2.10;1.12.3"
+  }, {
+    name: specs2-scalaz-core
+    system: ivy
+    uri: "ivy:org.specs2#specs2-scalaz-core_2.10.0-RC3;6.0.1"
+  }
+]}

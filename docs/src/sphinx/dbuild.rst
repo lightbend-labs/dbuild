@@ -282,8 +282,7 @@ The ``uri`` field follows the syntax "ivy:organization#name;revision". For examp
   }
 
 If cross-versions are in use, the Scala version suffix must be explicitly added to the name,
-for example: "ivy:org.specs2#specs2_2.10;1.12.3". The ``set-version`` option is currently
-unsupported, and should not be used. The "extra" options are the following:
+for example: "ivy:org.specs2#specs2_2.10;1.12.3". The "extra" options are the following:
 
 .. code-block:: javascript
 

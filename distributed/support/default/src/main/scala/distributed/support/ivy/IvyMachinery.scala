@@ -153,8 +153,9 @@ object IvyMachinery {
           val ro = new org.apache.ivy.core.retrieve.RetrieveOptions
           ro.setLog(org.apache.ivy.core.LogOptions.LOG_DOWNLOAD_ONLY)
           ro.setConfs(allConfigs)
+          // we use a modified retrieve pattern, in order to store artifacts in the proper place, according to
+          // the desired destination target version number
           val destPattern="[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)"+publishVersion+"/[type]s/[artifact](-[classifier]).[ext]"
-          //theIvy.retrieve(outer, (dir / ivyPattern).getCanonicalPath, ro)
           theIvy.retrieve(outer, (dir / destPattern).getCanonicalPath, ro)
           def guessConfigurations(a:Artifact) = {
             val classifier = Option(a.getExtraAttributes().get("classifier").asInstanceOf[String])
@@ -162,15 +163,11 @@ object IvyMachinery {
             (a.getConfigurations() ++ (classifier match {
               case Some("sources") => Seq("sources")
               case Some("javadoc") => Seq("javadoc")
-              // if someone asks for the default config, give them the jar
+              // if someone asks for the default or compile configs, give them the jar
               case None if a.getType=="jar" && a.getExt=="jar" => Seq("compile","default")
               case _ => Seq("default") // TODO: fetch configs better?
             })).distinct
           }
-          // TODO: in order to support set-version, you need the line below, plus doing some
-          // magic with retrieve(), above, in order to copy the files with the right pattern
-          // (for example, replacing the revision portion in the ivyPattern with the new version)
-          // val modRevIdpublish = modRevId
           val modRevIdpublish = ModuleRevisionId.newInstance(modRevId,publishVersion)
           val md2 = new DefaultModuleDescriptor(modRevIdpublish, "release", new java.util.Date())
           md2.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")

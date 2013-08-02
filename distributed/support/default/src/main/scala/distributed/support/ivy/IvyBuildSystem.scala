@@ -116,7 +116,10 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     // let's check.
     def currentName = fixName(first.getName)
     def currentOrg = first.getOrganisation
-    log.info("All Dependencies for project " + project.config.name + ":")
+    if (deps.isEmpty)
+      log.info("No dependencies in project " + project.config.name)
+    else
+      log.info("All dependencies for project " + project.config.name + ":")
     deps flatMap {
       case (direct, as) => as flatMap { a =>
         // This is simplified version of the code in DistributedRunner

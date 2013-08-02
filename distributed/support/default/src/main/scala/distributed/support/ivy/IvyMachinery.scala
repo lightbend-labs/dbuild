@@ -93,7 +93,7 @@ object IvyMachinery {
 //              dd.addDependencyConfiguration("optional","optional")
 
       if (sources) addArtifact("sources", "src", configs = Seq("sources"))
-      if (javadoc) addArtifact("javadoc", "doc", configs = Seq("docs"))
+      if (javadoc) addArtifact("javadoc", "doc", configs = Seq("javadoc"))
       if (mainJar) addArtifact("", "jar", configs = Seq("compile"))
       artifacts foreach { a => addArtifact(a.classifier, a.typ, a.ext, configs = a.configs) }
       val allConfigs=dd.getAllDependencyArtifacts().flatMap(arts => arts.getConfigurations()).distinct 
@@ -161,7 +161,7 @@ object IvyMachinery {
             log.debug("Extra Attributes for "+a+" is "+a.getExtraAttributes)
             (a.getConfigurations() ++ (classifier match {
               case Some("sources") => Seq("sources")
-              case Some("javadoc") => Seq("docs")
+              case Some("javadoc") => Seq("javadoc")
               // if someone asks for the default config, give them the jar
               case None if a.getType=="jar" && a.getExt=="jar" => Seq("compile","default")
               case _ => Seq("default") // TODO: fetch configs better?

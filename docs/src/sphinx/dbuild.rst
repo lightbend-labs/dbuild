@@ -317,7 +317,7 @@ or if it is the empty string, the classifier will remain unspecified. The fields
 the configuration ``default`` will be used. For example, the javadoc jar of a module
 can also be obtained by specifying an artifact in which the classifier is
 "javadoc", the type is "doc", the file extension is "jar", and the configuration
-is "docs".
+is "javadoc".
 
 *Next:* :doc:`deploy`.
 

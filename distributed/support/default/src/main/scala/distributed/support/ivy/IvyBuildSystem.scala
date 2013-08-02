@@ -112,40 +112,6 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       (n.getAllRealCallers.map(_.getModuleRevisionId.getModuleId).contains(first), // is direct dependency?
         n.getAllArtifacts.toSeq)
     }
-/*
-    nodes.drop(1).filter(_.isLoaded) foreach { n =>
-      println("ciao "+n)
-      n.getAllArtifacts() foreach {a => println("  "+a)}
-      if (n.getAllArtifacts() exists { a =>
-        a.getModuleRevisionId().getName()=="jansi" && a.getModuleRevisionId().getOrganisation()=="org.fusesource.jansi"
-        }) {
-      println("ciao!")
-      println("This node contains org.fusesource.jansi#jansi: "+n)
-      val arts=n.getAllArtifacts()
-      println("The artifacts it contains are: ")
-      arts foreach {a => println("  "+a)}
-      println("The getConfsToFetch of the node are: ")
-      n.getConfsToFetch() foreach {c => println("  "+c)}
-      println("The getConfigurations(\"default\") of the node are: ")
-      n.getConfigurations("default") foreach {c => println("  "+c)}
-      arts foreach { a =>
-        println("for artifact "+a+" the configs are:")
-        a.getConfigurations() foreach {c => println("  "+c)}
-      }
-      println("basta")
-      sys.exit(9)
-      }
-    }
-*/
-    //    println("all deps:")
-    //    deps foreach println
-    //    println("first is "+first)
-    //    println("immediate deps:")
-    //    nodes.drop(1) foreach { n =>
-    //      val callers=n.getAllRealCallers() map (_.getModuleRevisionId.getModuleId)
-    //      println(n+" has callers "+callers.mkString(","))
-    //      if (callers contains first) println(n)
-    //    }
 
     // let's check.
     def currentName = fixName(first.getName)

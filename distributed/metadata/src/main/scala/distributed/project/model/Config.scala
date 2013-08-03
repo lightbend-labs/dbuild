@@ -18,6 +18,7 @@ case class ProjectBuildConfig(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
+  notifications: Seq[Notification] = Seq.empty,
   extra: Option[ExtraConfig]) {
   def uuid = hashing sha1 this
 }
@@ -26,9 +27,12 @@ case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
+  notifications: Seq[Notification] = Seq.empty,
   extra: JsonNode = null)
 
-/** The initial configuration for a build. */
+/** The initial configuration for a build. Note that the global notification
+ *  options are not included, as they have no effect on the actual build,
+ *  or its repeatability */
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   deploy: Option[Seq[DeployOptions]],
   @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions])
@@ -91,7 +95,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, newData)
+    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.notifications, newData)
   }
 }
 /**
@@ -239,3 +243,23 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  */
 case class GlobalBuildOptions(
   @JsonProperty("cross-version") crossVersion: String = "disabled")
+
+  
+case class NotificationOptions(
+  @JsonProperty("email-options") emailOptions: Option[EmailOptions],
+  notifications: Seq[Notification] = Seq.empty)
+
+case class EmailOptions(
+    templates: Seq[EmailTemplates] = Seq.empty
+)
+
+case class EmailTemplates(
+    subject:String,
+    body:String
+)
+
+abstract class Notification
+case class EmailNotification(
+    recipient: String,
+    template: String
+)

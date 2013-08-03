@@ -6,7 +6,7 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
   // find the strongly connected components of size greater than one
   def cycles = tarjan.filter(_.size>1)
   
-  def isCyclic: Boolean = cycles.nonEmpty
+  lazy val isCyclic = cycles.nonEmpty
     
   /** Generates a digraph DOT file using a given DAG. */  
   def toDotFile(nodeNames: N => String): String = {
@@ -27,6 +27,7 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
   /** A Graph filtered to only contain a subset of the original nodes. */
   case class FilteredByNodesGraph(nodes: Set[Node[N]]) extends Graph[N,E] {
     assert((nodes -- Graph.this.nodes).isEmpty)
+    // todo: memoize
     def edges(n: Nd): Seq[Ed] =
       Graph.this.edges(n) filter { e => (nodes contains e.to) && (nodes contains e.from) }
   }
@@ -130,4 +131,25 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
     findNodes(Seq(n), Set.empty)
   }
 
+  
+  /**
+   * Traverses a graph beginning from the leaves, passing some state from
+   * the leaves to their parent, and collecting the results.
+   * The function f() will receive the node and the results of its immediate children only.
+   */
+  def traverse[State](f: (Seq[State], N) => State): Seq[State] = {
+    // progressively reduces the graph (sub), accumulating results
+    def subTraverse(sub: Graph[N,E], results:scala.collection.immutable.ListMap[Node[N],State]): Seq[State] = {
+      def getLeaf = sub.nodes find (sub.edges(_).isEmpty)
+      getLeaf match {
+        case None => results.values.toSeq
+        case Some(leaf) =>
+            val out = f(edges(leaf).map(e=>results(e.to)),leaf.value)
+            val newGraph = sub.FilteredByNodesGraph(sub.nodes - leaf)
+            val newResults = results + (leaf -> out)
+            subTraverse(newGraph, newResults)
+      }
+    }
+    subTraverse(this, scala.collection.immutable.ListMap[Node[N],State]())
+  }
 }

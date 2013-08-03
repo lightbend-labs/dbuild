@@ -78,22 +78,23 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildArtifactsOut] = {
     implicit val ctx = context.system
     val tdir = ProjectDirs.targetDir
-    def runBuild(builds: List[RepeatableProjectBuild], fArts: Future[BuildArtifactsOut]): Future[BuildArtifactsOut] = 
-      builds match {
-        case b :: rest =>
-          val nextArts = for {
-            arts <- fArts
-            outProjects = (build.builds find {_.config.name == b.config.name}).
-               getOrElse(sys.error("Internal Error: no Extracted data for "+b.config.name)).extracted.projects
-            newArts <- buildProject(tdir, b, outProjects, log.newNestedLogger(b.config.name))
-          } yield BuildArtifactsOut(arts.results ++ newArts.results)
-          runBuild(rest, nextArts)
-        case _ => fArts
-      }
-    
+    def runBuild(builds: RepeatableDistributedBuild): Seq[Future[BuildArtifactsOut]] =
+      builds.graph.traverse { (a: Seq[Future[BuildArtifactsOut]], p: ProjectConfigAndExtracted) =>
+        val outProjects = p.extracted.projects
+        val b = builds.buildMap(p.config.name)
+        for {
+          newArts <- buildProject(tdir, b, outProjects, log.newNestedLogger(b.config.name))
+        } yield BuildArtifactsOut(newArts.results)
+      }(Some((a,b)=>a.config.name < b.config.name))
+
     // TODO - REpository management here!!!!
-    ProjectDirs.userRepoDirFor(build) { localRepo =>      
-      runBuild(build.repeatableBuilds.toList, Future(BuildArtifactsOut(Seq.empty)))
+    ProjectDirs.userRepoDirFor(build) { localRepo =>
+      // we go from a Seq[Future[BuildArtifactsOut(Seq[Arts])]] to a Future[BuildArtifactsOut(Seq[Arts])]
+      Future.sequence(runBuild(build)) map { s =>
+        BuildArtifactsOut(s.flatMap {
+          case BuildArtifactsOut(arts) => arts
+        })
+      }
     }
   }  
   

@@ -4,8 +4,7 @@ package graph
 abstract class Graph[N,E] extends GraphCore[N,E] {
 
   // find the strongly connected components of size greater than one
-  def cycles = tarjan.filter(_.size>1)
-  
+  lazy val cycles = tarjan.filter(_.size>1)
   lazy val isCyclic = cycles.nonEmpty
     
   /** Generates a digraph DOT file using a given DAG. */  
@@ -78,16 +77,19 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
     scc.toSet
   }
 
-  def safeTopological: Seq[Node[N]] = {
-    val c = cycles
-    if (c.nonEmpty)
+  def checkCycles() = {
+    if (isCyclic)
       // I have no access to logging here, so I have to
       // create a long error message instead
-      sys.error((c map { comp: Set[Node[N]] =>
+      sys.error((cycles map { comp: Set[Node[N]] =>
         comp mkString ("Found a cycle among the following:\n\n", "\n", "\n")
       }).mkString + "The graph is not acyclic.")
-    else
-      topological
+
+  }
+
+  def safeTopological: Seq[Node[N]] = {
+    checkCycles()
+    topological
   }
   
   /** Returns a topological ordering of a graph, or the
@@ -131,25 +133,29 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
     findNodes(Seq(n), Set.empty)
   }
 
-  
   /**
    * Traverses a graph beginning from the leaves, passing some state from
-   * the leaves to their parent, and collecting the results.
-   * The function f() will receive the node and the results of its immediate children only.
+   * the leaves to their parent, and collecting the results in visiting order.
+   * The function f() will receive the node and the results of all its direct and remote children.
+   * The optional sort function will be used to sort children's results before passing them up.
    */
-  def traverse[State](f: (Seq[State], N) => State): Seq[State] = {
+  def traverse[State](f: (Seq[State], N) => State)(sort: Option[(N, N) => Boolean] = None): Seq[State] = {
     // progressively reduces the graph (sub), accumulating results
-    def subTraverse(sub: Graph[N,E], results:scala.collection.immutable.ListMap[Node[N],State]): Seq[State] = {
+    def subTraverse(sub: Graph[N, E], results: scala.collection.immutable.ListMap[Node[N], State]): Seq[State] = {
       def getLeaf = sub.nodes find (sub.edges(_).isEmpty)
       getLeaf match {
         case None => results.values.toSeq
         case Some(leaf) =>
-            val out = f(edges(leaf).map(e=>results(e.to)),leaf.value)
-            val newGraph = sub.FilteredByNodesGraph(sub.nodes - leaf)
-            val newResults = results + (leaf -> out)
-            subTraverse(newGraph, newResults)
+          val children = (subGraphFrom(leaf) - leaf).toSeq
+          // edges(leaf).map(e=>results(e.to)) for immediate children only
+          val sorted = sort.map(s => children.sortWith((a, b) => s(a.value, b.value))) getOrElse children
+          val out = f(sorted.map(results), leaf.value)
+          val newGraph = sub.FilteredByNodesGraph(sub.nodes - leaf)
+          val newResults = results + (leaf -> out)
+          subTraverse(newGraph, newResults)
       }
     }
-    subTraverse(this, scala.collection.immutable.ListMap[Node[N],State]())
+    checkCycles()
+    subTraverse(this, scala.collection.immutable.ListMap[Node[N], State]())
   }
 }

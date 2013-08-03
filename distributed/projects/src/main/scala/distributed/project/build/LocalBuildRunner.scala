@@ -26,17 +26,17 @@ class LocalBuildRunner(builder: BuildRunner,
         if (build.config.name=="jline")
           sys.error("I don't like jline")
 
-        BuildSuccess(BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)), true)
+        BuildCached(build.config.name,BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
       } catch {
         case t: RepositoryException =>
           log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)
           log.trace(t)
-          BuildSuccess(runLocalBuild(target, build, outProjects, log), false)
+          BuildSuccess(build.config.name,runLocalBuild(target, build, outProjects, log))
       }
     } catch {
       case t =>
         log.trace(t)
-        BuildFailed(t.getMessage)
+        BuildFailed(build.config.name,t.getMessage)
     }
   }
   

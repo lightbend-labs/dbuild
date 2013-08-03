@@ -49,7 +49,8 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
 }
 
 /** A distributed build containing projects in *build order*
- *  Also known as the repeatable config. 
+ *  Also known as the repeatable config. Note that notifications
+ *  are not included, as they have no effect on builds. 
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
     deployOptions:Option[Seq[DeployOptions]], buildOptions: Option[GlobalBuildOptions]) {

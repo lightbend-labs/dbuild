@@ -23,7 +23,8 @@ class Extractor(
   def extract(tdir: File, build: ProjectBuildConfig, logger: logging.Logger): ProjectConfigAndExtracted = 
     distributed.repo.core.ProjectDirs.useProjectExtractionDirectory(build, tdir) { dir =>
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
-      val config = resolver.resolve(build, dir, logger)
+      // we also remove the notification section, as it has no effect on builds or their repeatability
+      val config = resolver.resolve(build, dir, logger).copy(notifications=Seq.empty)
       logger.debug("Repeatable Config: " + writeValue(config))
       // Here, we attempt to cache our extracted dependencies rather than do
       // resolution again.

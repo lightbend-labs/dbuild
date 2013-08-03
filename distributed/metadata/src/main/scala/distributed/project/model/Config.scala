@@ -31,11 +31,12 @@ case class ProjectBuildConfigShadow(name: String,
   extra: JsonNode = null)
 
 /** The initial configuration for a build. Note that the global notification
- *  options are not included, as they have no effect on the actual build,
- *  or its repeatability */
+ *  options are not included in the repeatable config, as notifications have
+ *  no effect on the actual build, or its repeatability */
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   deploy: Option[Seq[DeployOptions]],
-  @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions])
+  @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions],
+  @JsonProperty("notification-options") notificationOptions: NotificationOptions=NotificationOptions())
 
 /** Deploy information. */
 case class DeployOptions(uri: String, // deploy target
@@ -243,23 +244,103 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  */
 case class GlobalBuildOptions(
   @JsonProperty("cross-version") crossVersion: String = "disabled")
-
   
+
+/**
+ * This section is used to notify users, by using some notification system.
+ */
 case class NotificationOptions(
-  @JsonProperty("email-options") emailOptions: Option[EmailOptions],
-  notifications: Seq[Notification] = Seq.empty)
-
-case class EmailOptions(
-    templates: Seq[EmailTemplates] = Seq.empty
+  templates: Seq[NotificationTemplate] = Seq.empty,
+  notifications: Seq[Notification] = Seq(Notification("console",ConsoleNotification()))
 )
-
-case class EmailTemplates(
-    subject:String,
-    body:String
+/** 
+ *  A notification template; for notification systems that require short messages,
+ *  use only the subject line. It is a template because variable
+ *  substitution may occur before printing.
+ *  It can have three components:
+ *  1) A short summary (<50 characters), with a short message of what went wrong.
+ *     It is required, and is suitable, for instance, for a short console report
+ *     or as an email subject line.
+ *  2) A slightly longer summary (<110 characters), suitable for SMS, Tweets, etc.
+ *     It should be self-contained in terms of information. Defaults to the short summary.
+ *  3) A long body with a more complete description. Defaults to an empty string. 
+ *  An Id is also present, and is used to match against the (optional) template
+ *  requested in the notification. 
+ */
+case class NotificationTemplate(
+    id: String,
+    summary:String,
+    short:Option[String] = None,
+    long:String = ""
 )
+case class Notification(
+    kind:String,
+    notification:NotificationKind,
+    /** if None, default to the one from the outcome */
+    template: Option[String] = None,
+    /** sequence of BuildOutcome IDs */
+    when:Seq[String]=Seq.empty
+    ) {
+  /**
+   * It calls template(), if None, then get
+   * the default template from the outcome, else
+   * search in the list of defined templates (in NotificationOptions)
+   * for one matching the one requested; if no short, replace with summary.
+   * Return the result.
+   * definedTemplates are those the user wrote in the configuration file
+   */
+  def resolveTemplate(outcome: BuildOutcome, definedTemplates: Seq[NotificationTemplate]): NotificationTemplate = {
+    val templ = template match {
+      case None => outcome.defaultTemplate
+      case Some(t) => definedTemplates.find(_.id == t) getOrElse sys.error("The requested notification template \""+t+"\" was not found.")
+    }
+    templ.short match {
+      case Some(_) => templ
+      case None => templ.copy(short=Some(templ.summary))
+    }
+  }
 
-abstract class Notification
+}
+abstract class NotificationKind
+
+/**
+ * We could embed send() into NotificationKind, but:
+ * 1) too much logic would end up in the low-level metadata package
+ * 2) we would not have access to higher-level context
+ * Therefore the actual send() is implemented in a twin class higher up in dbuild.
+ * We also offer an opportunity to the NotificationKinds to do something once before all the
+ * notifications are sent, and something afterward. Only the notification kinds that
+ * are actually used in the configuration file will be called.
+ */
+abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T]) {
+  def before() = {}
+  def after() = {}
+  /**
+   * Send the notification using the template templ (do not use the one from outcome when implementing).
+   *  If the notification fails, return Some(errorMessage).
+   */
+  def send(n: T, templ: NotificationTemplate, outcome: BuildOutcome): Option[String]
+
+  // service code: the client calls the version below, which redispatches to send(), which is implemented in subclasses.
+  // unfortunately, NotificationKinds are referred to by String IDs, so we can't be totally type safe
+  def notify(n: NotificationKind, templ: NotificationTemplate, outcome: BuildOutcome): Option[String] = {
+    // I have to make it work on 2.9 as well
+    if (m.erasure.isInstance(n)) send(n.asInstanceOf[T], templ, outcome) else
+      sys.error("Internal error: " + this.getClass.getName + " received a " + n.getClass.getName + ". Please report.")
+  }
+}
+
 case class EmailNotification(
-    recipient: String,
-    template: String
-)
+    to: Seq[String] = Seq.empty,
+    cc: Seq[String] = Seq.empty,
+    bcc: Seq[String] = Seq.empty
+) extends NotificationKind
+
+case class ConsoleNotification(
+) extends NotificationKind
+
+object NotificationKind {
+  val kinds: Map[String, java.lang.Class[_ <: NotificationKind]] = Map(
+    "console" -> classOf[ConsoleNotification],
+    "email" -> classOf[EmailNotification])
+}

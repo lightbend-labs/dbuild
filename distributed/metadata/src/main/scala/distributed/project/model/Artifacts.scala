@@ -50,21 +50,6 @@ case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
 case class BuildArtifactsOut(results: Seq[BuildSubArtifactsOut])
 case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation], shas: Seq[ArtifactSha])
 
-/**
- * The outcome of a build
- */
-sealed abstract class BuildOutcome
-case class BuildSuccess(artsOut: BuildArtifactsOut, cached: Boolean) extends BuildOutcome {
-  override def toString() = "BuildSuccess(<arts>,"+(if (cached) "cached)" else "built)")
-}
-sealed abstract class BuildFailure extends BuildOutcome
-// this build failed
-case class BuildFailed(cause: String) extends BuildFailure
-// could not run; dependency failed
-case class BuildDidNotRun(outcomes: Seq[(RepeatableProjectBuild, BuildOutcome)]) extends BuildFailure {
-  override def toString() = "BuildDidNotRun("+outcomes.map{o=>"("+o._1.config.name+","+o._2+")"}
-}
-
 
 /** This represents general information every dbuild must know:
  * What artifacts are coming in (from metadata) and where to

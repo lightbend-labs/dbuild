@@ -15,10 +15,17 @@ trait ProjectResolver {
    * type of project.
    */
   def canResolve(config: ProjectBuildConfig): Boolean
-  /** Resolves a remote project into the given local directory.
+  /**
+   * Resolves a remote project into the given local directory.
    * Returns a new repeatable Scm configuration that can be used
    * to retrieve the *exact* same code retrieved by this resolve call.
+   * Returns a modified ProjectBuildConfig, in which for example the
+   * branch name has been replaced by a hash, or other transformations
+   * have occurred in virtue of Resolver's knowledge.
    */
+  // TODO: it would be nice it resolve() could also return a Boolean
+  // informing the caller of whether the checkout changed (this is a
+  // bit tricky to detect with the current git resolver, however)
   def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig
 }
 

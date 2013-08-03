@@ -36,10 +36,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
-        arts <- runBuild(target, fullBuild, fullLogger)
-        _ = printReport(arts, fullLogger)
+        outcomes <- runBuild(target, fullBuild, fullLogger)
         _ = deployFullBuild(fullBuild)
-      } yield arts
+        notifications = new Notifications(build, log)
+        _ = notifications.sendNotifications(outcomes)
+      } yield outcomes
       result pipeTo listener
     }
   }
@@ -62,22 +63,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     LocalRepoHelper.publishBuildMeta(build, repository)
   }
 
-  def printReport(outcomes: Seq[(RepeatableProjectBuild, BuildOutcome)], log: Logger) = {
-    log.info("---==  Execution Report ==---")
-    outcomes foreach {
-      case (project, outcome) =>
-        val msg = "Project " + project.config.name + ": " + (outcome match {
-          case BuildSuccess(info, false) => "SUCCESS"
-          case BuildSuccess(info, true) => "SUCCESS (did not need to be rebuilt)"
-          case BuildFailed(cause) => "**** FAILED **** --- compilation failed: "+cause
-          case BuildDidNotRun(outs) => "DID NOT RUN (stuck on broken dependency: " +
-            (outs.filter { case (_,_:BuildFailed) => true; case _ => false }).map{_._1.config.name}.mkString(",") + ")"
-        })
-        log.info(msg)
-    }
-    log.info("---==  End Execution Report ==---")
-  }
-
   def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn, log: Logger): Unit = 
     try {
       log info "Printing Poms!"
@@ -92,19 +77,19 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   implicit val buildTimeout: Timeout = 4 hours
 
   // Chain together some Asynch to run this build.
-  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[Seq[(RepeatableProjectBuild, BuildOutcome)]] = {
+  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[Seq[BuildOutcome]] = {
     implicit val ctx = context.system
     val tdir = ProjectDirs.targetDir
-    type State = Future[(RepeatableProjectBuild, BuildOutcome)]
+    type State = Future[BuildOutcome]
     def runBuild(builds: RepeatableDistributedBuild): Seq[State] =
       builds.graph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
         val b = builds.buildMap(p.config.name)
         Future.sequence(children) flatMap { outcomes =>
-          if (outcomes exists { case (_, _: BuildFailure) => true; case (_, _: BuildSuccess) => false }) {
-            Future((b, BuildDidNotRun(outcomes)))
+          if (outcomes exists { case _: BuildBad => true; case _ => false }) {
+            Future(BuildBrokenDependency(b.config.name,outcomes))
           } else {
             val outProjects = p.extracted.projects
-            buildProject(tdir, b, outProjects, log.newNestedLogger(b.config.name)) map { (b, _) }
+            buildProject(tdir, b, outProjects, log.newNestedLogger(b.config.name))
           }
         }
       }(Some((a, b) => a.config.name < b.config.name))

@@ -17,15 +17,24 @@ import sbt.Path._
 class LocalBuildRunner(builder: BuildRunner, 
     resolver: ProjectResolver, 
     repository: Repository) {
-  
-  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildArtifactsOut = 
-    try BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository))
-    catch {
-      case t: RepositoryException => 
-        log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)
+
+  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildOutcome = {
+    // TODO: catch errors, and generate a BuildFailure if needed
+    try {
+      try {
+        BuildSuccess(BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)), true)
+      } catch {
+        case t: RepositoryException =>
+          log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)
+          log.trace(t)
+          BuildSuccess(runLocalBuild(target, build, outProjects, log), false)
+      }
+    } catch {
+      case t =>
         log.trace(t)
-        runLocalBuild(target, build, outProjects, log)
-    } 
+        BuildFailed(t.getMessage)
+    }
+  }
   
   def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildArtifactsOut =
     distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>

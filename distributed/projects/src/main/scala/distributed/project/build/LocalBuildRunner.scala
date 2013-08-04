@@ -22,10 +22,6 @@ class LocalBuildRunner(builder: BuildRunner,
     // TODO: catch errors, and generate a BuildFailure if needed
     try {
       try {
-
-        if (build.config.name == "jline")
-          sys.error("I don't like jline")
-
         BuildCached(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
       } catch {
         case t: RepositoryException =>

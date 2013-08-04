@@ -19,19 +19,14 @@ sealed abstract class BuildOutcome {
 
   /** The default notification template; see Notification for further details. */
   def defaultTemplate(): NotificationTemplate = NotificationTemplate("",
-    (if (project == "") "The dbuild result is-----------" else "Project " + project.padTo(23,"-").mkString) + ": " + defaultSummary,
+    "${notifications.vars.padded-project-description}: ${notifications.vars.status}",
     None,
-    Some("Report from the dbuild run"+(if (project == "") "" else "for project "+project)+":\n${notifications.vars.subprojects-report}"))
+    Some("Report from the dbuild run for ${notifications.vars.project-description}:\n${notifications.vars.subprojects-report}>>> ${notifications.vars.padded-project-description}: ${notifications.vars.status}"))
 
   // the utility methods below are used to build the default template, and are used in the substitutions,
   // but are /not/ part of any template per se.
-  /** Default summary string. This is the only string that you should define here, all the rest goes in the template.  */
-  def defaultSummary(): String
-  /** A report that concatenates the summaries of subprojects, using their default template, and the summary of this project */
-  def subprojectsReport: String = {
-    def get(o: BuildOutcome) = o.defaultTemplate.summary
-    (outcomes.map(get) :+ (">>> " + get(this))).mkString("", "\n", "\n")
-  }
+  /** A short status string. This is the only string that you should define in a BuildOutcome, all the rest goes in the template.  */
+  def status(): String
 }
 
 sealed abstract class BuildGood extends BuildOutcome {
@@ -45,26 +40,26 @@ sealed abstract class BuildBad extends BuildOutcome {
 /** We rebuilt the project, and all was ok. */
 case class BuildSuccess(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
   override def toString() = "BuildSuccess(" + project + ",<arts>)"
-  def defaultSummary() = "SUCCESS (project rebuilt ok)"
+  def status() = "SUCCESS (project rebuilt ok)"
   override def whenIDs: Seq[String] = super.whenIDs :+ "success"
 }
 
 /** It was not necessary to re-run this build, as nothing changed. */
 case class BuildCached(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
   override def toString() = "BuildCached(" + project + "<arts>)"
-  def defaultSummary() = "SUCCESS (was unchanged, not rebuilt)"
+  def status() = "SUCCESS (was unchanged, not rebuilt)"
   override def whenIDs: Seq[String] = super.whenIDs :+ "cached"
 }
 
 /** This build was attempted, but an error condition occurred while executing it. */
 case class BuildFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends BuildBad {
-  def defaultSummary() = "FAILED (cause: " + cause+")"
+  def status() = "FAILED (cause: " + cause + ")"
   override def whenIDs: Seq[String] = super.whenIDs :+ "failed"
 }
 
 /** One or more of this project dependencies are broken, therefore we could not build. */
 case class BuildBrokenDependency(project: String, outcomes: Seq[BuildOutcome]) extends BuildBad {
-  def defaultSummary() = "DID NOT RUN (stuck on broken dependency: " +
+  def status() = "DID NOT RUN (stuck on broken dependency: " +
     (outcomes.filter { case _: BuildFailed => true; case _ => false }).map { _.project }.mkString(",") + ")"
   override def whenIDs: Seq[String] = super.whenIDs :+ "depBroken"
 }
@@ -76,7 +71,10 @@ case class Substitution(template: ResolvedTemplate, notifications: SubstitutionN
 case class SubstitutionNotifications(vars: SubstitutionVars)
 case class SubstitutionVars(
   @JsonProperty("project-name") projectName: String,
-  @JsonProperty("subprojects-report") subprojectsReport: String)
+  @JsonProperty("subprojects-report") subprojectsReport: String,
+  @JsonProperty("project-description") projectDescription: String,
+  @JsonProperty("padded-project-description") paddedProjectDescription: String,
+  status: String)
 // they become:     ${notifications.vars.project-name}, etc.
 
 /**
@@ -93,15 +91,31 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
   // becomes "abc"${X}"def". We manually build a JSON string with *that* modified string, and finally we
   // read it again using HOCON. At this point, thankfully, we have our full expansion, both with the variables
   // in the SubstitutionVars, as well as all the environment vars. Phew!
-  private val expanded = {
-    val notifVars = SubstitutionNotifications(SubstitutionVars(projectName = outcome.project, subprojectsReport = outcome.subprojectsReport))
-    def escaped(s: String) = StringEscapeUtils.escapeJava(s)
-    def preparedForReplacement(s: String) = escaped(s).replaceAll("(\\$\\{.*?\\})", "\"$1\"")
-    def expand(s: String) = parseString("{key:\"" + preparedForReplacement(s) + "\",notifications:" + writeValue(notifVars) + "}").resolve.getString("key")
-    ResolvedTemplate(templ.id, expand(templ.summary), expand(templ.short), expand(templ.long))
+  /** A report that concatenates the summaries of subprojects, using the same template */
+  lazy val subprojectsReport: String = {
+    def get(o: BuildOutcome) = new TemplateFormatter(templ, o).summary
+    outcome.outcomes.map(get).mkString("", "\n", "\n")
   }
-  def summary = expanded.summary
-  def short = expanded.short
-  def long = expanded.long
-  def id = expanded.id
+  val paddedProjectDescription =
+    if (outcome.project == "") "The dbuild result is-----------" else "Project " + (outcome.project.padTo(23, "-").mkString)
+
+  private val notifVars = SubstitutionNotifications(
+    SubstitutionVars(projectName = outcome.project,
+      subprojectsReport = subprojectsReport,
+      status = outcome.status,
+      projectDescription = if (outcome.project != "") "project " + outcome.project else "this build configuration",
+      paddedProjectDescription = paddedProjectDescription))
+  private def escaped(s: String) = StringEscapeUtils.escapeJava(s)
+  private def preparedForReplacement(s: String) = escaped(s).replaceAll("(\\$\\{.*?\\})", "\"$1\"")
+  private def expand(s: String) =
+    parseString("{key:\"" + preparedForReplacement(s) + "\",notifications:" + writeValue(notifVars) + "}").resolve.getString("key")
+
+  val summary = expand(templ.summary)
+  val short = expand(templ.short)
+  lazy val long = expand(templ.long)
+  val id = templ.id
+  // Note: each time a template is instantiated, the subproject report calls recursively summary() on
+  // all subprojects, and in order to initialize their substitution, their own subproject reports are generated
+  // recursively; then it is all thrown away and all starts again with the next notification. The lazy vals
+  // above avoid most of this recursion; the code does works even without laziness, in any case.
 }

@@ -18,25 +18,25 @@ class LocalBuildRunner(builder: BuildRunner,
     resolver: ProjectResolver, 
     repository: Repository) {
 
-  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildOutcome = {
+  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger): BuildOutcome = {
     // TODO: catch errors, and generate a BuildFailure if needed
     try {
       try {
-        
-        if (build.config.name=="jline")
+
+        if (build.config.name == "jline")
           sys.error("I don't like jline")
 
-        BuildCached(build.config.name,BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
+        BuildCached(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
       } catch {
         case t: RepositoryException =>
           log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)
           log.trace(t)
-          BuildSuccess(build.config.name,runLocalBuild(target, build, outProjects, log))
+          BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects, log))
       }
     } catch {
       case t =>
         log.trace(t)
-        BuildFailed(build.config.name,t.getMessage)
+        BuildFailed(build.config.name, children, t.getMessage)
     }
   }
   

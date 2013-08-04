@@ -244,42 +244,53 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  */
 case class GlobalBuildOptions(
   @JsonProperty("cross-version") crossVersion: String = "disabled")
-  
 
 /**
  * This section is used to notify users, by using some notification system.
  */
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
-  notifications: Seq[Notification] = Seq(Notification("console",ConsoleNotification()))
-)
+  notifications: Seq[Notification] = Seq(Notification("console", ConsoleNotification(), when = "always")))
 /** 
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable
  *  substitution may occur before printing.
  *  It can have three components:
- *  1) A short summary (<50 characters), with a short message of what went wrong.
+ *  1) A summary (<50 characters), with a short message of what went wrong.
  *     It is required, and is suitable, for instance, for a short console report
  *     or as an email subject line.
- *  2) A slightly longer summary (<110 characters), suitable for SMS, Tweets, etc.
+ *  2) A slightly longer short summary (<110 characters), suitable for SMS, Tweets, etc.
  *     It should be self-contained in terms of information. Defaults to the short summary.
- *  3) A long body with a more complete description. Defaults to an empty string. 
+ *  3) A long body with a more complete description. Defaults to the short message. 
  *  An Id is also present, and is used to match against the (optional) template
- *  requested in the notification. 
+ *  requested in the notification.
  */
 case class NotificationTemplate(
     id: String,
     summary:String,
     short:Option[String] = None,
-    long:String = ""
+    long:Option[String] = None
 )
+
+/**
+ * The NotificationTemplate is first resolved against the notification,
+ * obtaining a ResolvedTemplate, then expanded by a formatter, obtaining
+ * a TemplateFormatter, which can be used by the send() routine.
+ */
+case class ResolvedTemplate(
+    id: String,
+    summary:String,
+    short:String,
+    long:String
+)
+
 case class Notification(
     kind:String,
     notification:NotificationKind,
+    /** This id should match one of the BuildOutcome Ids */
+    when:String,
     /** if None, default to the one from the outcome */
-    template: Option[String] = None,
-    /** sequence of BuildOutcome IDs */
-    when:Seq[String]=Seq.empty
+    template: Option[String] = None
     ) {
   /**
    * It calls template(), if None, then get
@@ -289,18 +300,25 @@ case class Notification(
    * Return the result.
    * definedTemplates are those the user wrote in the configuration file
    */
-  def resolveTemplate(outcome: BuildOutcome, definedTemplates: Seq[NotificationTemplate]): NotificationTemplate = {
+  def resolveTemplate(outcome: BuildOutcome, definedTemplates: Seq[NotificationTemplate]): ResolvedTemplate = {
     val templ = template match {
       case None => outcome.defaultTemplate
       case Some(t) => definedTemplates.find(_.id == t) getOrElse sys.error("The requested notification template \""+t+"\" was not found.")
     }
-    templ.short match {
-      case Some(_) => templ
-      case None => templ.copy(short=Some(templ.summary))
+    val short = templ.short match {
+      case Some(s) => s
+      case None => templ.summary
     }
+    val long = templ.long match {
+      case Some(l) => l
+      case None => short
+    }
+    ResolvedTemplate(templ.id,templ.summary,short,long)
   }
-
 }
+
+
+
 abstract class NotificationKind
 
 /**
@@ -319,11 +337,11 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
    * Send the notification using the template templ (do not use the one from outcome when implementing).
    *  If the notification fails, return Some(errorMessage).
    */
-  def send(n: T, templ: NotificationTemplate, outcome: BuildOutcome): Option[String]
+  def send(n: T, templ: TemplateFormatter, outcome: BuildOutcome): Option[String]
 
   // service code: the client calls the version below, which redispatches to send(), which is implemented in subclasses.
   // unfortunately, NotificationKinds are referred to by String IDs, so we can't be totally type safe
-  def notify(n: NotificationKind, templ: NotificationTemplate, outcome: BuildOutcome): Option[String] = {
+  def notify(n: NotificationKind, templ: TemplateFormatter, outcome: BuildOutcome): Option[String] = {
     // I have to make it work on 2.9 as well
     if (m.erasure.isInstance(n)) send(n.asInstanceOf[T], templ, outcome) else
       sys.error("Internal error: " + this.getClass.getName + " received a " + n.getClass.getName + ". Please report.")
@@ -331,6 +349,7 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
 }
 
 case class EmailNotification(
+    from: String,
     to: Seq[String] = Seq.empty,
     cc: Seq[String] = Seq.empty,
     bcc: Seq[String] = Seq.empty

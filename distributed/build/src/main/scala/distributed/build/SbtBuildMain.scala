@@ -34,7 +34,7 @@ class SbtBuildMain extends xsbti.AppMain {
   
   def run(configuration: xsbti.AppConfiguration) =
     try {
-      println("Starting dbuild...")
+    println("Starting dbuild...")
       val args = configuration.arguments
       println("Args (" + (configuration.arguments mkString ",") + ")")
       val config = 

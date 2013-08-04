@@ -7,7 +7,7 @@ object Dependencies {
   val sbtVersion = "0.12.4"
   val mvnVersion = "3.0.4"
 
-  val typesafeConfig = "com.typesafe" % "config" % "0.4.1"
+  val typesafeConfig = "com.typesafe" % "config" % "1.0.2"
   val akkaActor      = "com.typesafe.akka" % "akka-actor" % akkaVersion
 
   val specs2         = "org.specs2" %% "specs2" % "1.10" % "test"
@@ -34,4 +34,5 @@ object Dependencies {
 
   val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.1"
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
+  val commonsLang    = "commons-lang" % "commons-lang" % "2.6"
 }

@@ -250,7 +250,7 @@ case class GlobalBuildOptions(
  */
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
-  notifications: Seq[Notification] = Seq(Notification("console", None, when = "always")))
+  notifications: Seq[Notification] = Seq(Notification("console", None, when = Seq("always"))))
 /** 
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable
@@ -287,8 +287,9 @@ case class ResolvedTemplate(
 case class Notification(
     kind:String,
     send:Option[NotificationKind],
-    /** This id should match one of the BuildOutcome Ids */
-    when:String,
+    /** One of these IDs must match one of the BuildOutcome
+     *  IDs for the notification to be sent. */
+    when:Seq[String]=Seq("always"),
     /** if None, default to the one from the outcome */
     template: Option[String] = None
     ) {

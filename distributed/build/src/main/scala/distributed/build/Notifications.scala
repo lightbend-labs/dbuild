@@ -43,7 +43,7 @@ class Notifications(build: DistributedBuildConfig, log: Logger) {
     usedNotificationKindIds foreach { allContexts(_).before }
     def processOneNotification(n: Notification, outcome: BuildOutcome) = {
       val resolvedTempl = n.resolveTemplate(outcome, definedTemplates)
-      if (outcome.whenIDs contains n.when) {
+      if (outcome.whenIDs.intersect(n.when).nonEmpty) {
         val formatter=new TemplateFormatter(resolvedTempl, outcome)
         allContexts(n.kind).notify(n.send, formatter, outcome) map (log.warn(_))
       }

@@ -2,6 +2,10 @@ package distributed
 package build
 
 import java.io.File
+import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import distributed.project.model.{BuildArtifactsOut,DistributedBuildConfig}
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.project.model.ClassLoaderMadness
@@ -55,7 +59,17 @@ class SbtBuildMain extends xsbti.AppMain {
 //      printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(configuration)
       try {
-        main build config
+        def time[A](f: => A) = {
+          val s = System.nanoTime
+          val ret = f
+          val t = System.nanoTime - s
+          val time = new Date(t / 1000000L)
+          val sdf = new SimpleDateFormat("HH'h' mm'm' ss's'") // .SSS
+          sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
+          println("Build took: " + sdf.format(time))
+          ret
+        }
+        time { main build config }
         println("All done.")
       }
       finally main.dispose()

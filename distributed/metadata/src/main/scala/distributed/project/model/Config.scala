@@ -30,13 +30,15 @@ case class ProjectBuildConfigShadow(name: String,
   notifications: Seq[Notification] = Seq.empty,
   extra: JsonNode = null)
 
-/** The initial configuration for a build. Note that the global notification
+/**
+ * The initial configuration for a build. Note that the global notification
  *  options are not included in the repeatable config, as notifications have
- *  no effect on the actual build, or its repeatability */
+ *  no effect on the actual build, or its repeatability
+ */
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   deploy: Option[Seq[DeployOptions]],
   @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions],
-  @JsonProperty("notification-options") notificationOptions: NotificationOptions=NotificationOptions())
+  @JsonProperty("notification-options") notificationOptions: NotificationOptions = NotificationOptions())
 
 /** Deploy information. */
 case class DeployOptions(uri: String, // deploy target
@@ -251,7 +253,7 @@ case class GlobalBuildOptions(
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
   notifications: Seq[Notification] = Seq(Notification("console", None, when = Seq("always"))))
-/** 
+/**
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable
  *  substitution may occur before printing.
@@ -261,16 +263,15 @@ case class NotificationOptions(
  *     or as an email subject line.
  *  2) A slightly longer short summary (<110 characters), suitable for SMS, Tweets, etc.
  *     It should be self-contained in terms of information. Defaults to the short summary.
- *  3) A long body with a more complete description. Defaults to the short message. 
+ *  3) A long body with a more complete description. Defaults to the short message.
  *  An Id is also present, and is used to match against the (optional) template
  *  requested in the notification.
  */
 case class NotificationTemplate(
-    id: String,
-    summary:String,
-    short:Option[String] = None,
-    long:Option[String] = None
-)
+  id: String,
+  summary: String,
+  short: Option[String] = None,
+  long: Option[String] = None)
 
 /**
  * The NotificationTemplate is first resolved against the notification,
@@ -278,21 +279,22 @@ case class NotificationTemplate(
  * a TemplateFormatter, which can be used by the send() routine.
  */
 case class ResolvedTemplate(
-    id: String,
-    summary:String,
-    short:String,
-    long:String
-)
+  id: String,
+  summary: String,
+  short: String,
+  long: String)
 
+@JsonDeserialize(using = classOf[NotificationDeserializer])
 case class Notification(
-    kind:String,
-    send:Option[NotificationKind],
-    /** One of these IDs must match one of the BuildOutcome
-     *  IDs for the notification to be sent. */
-    when:Seq[String]=Seq("always"),
-    /** if None, default to the one from the outcome */
-    template: Option[String] = None
-    ) {
+  kind: String,
+  send: Option[NotificationKind],
+  /**
+   * One of these IDs must match one of the BuildOutcome
+   *  IDs for the notification to be sent.
+   */
+  when: Seq[String] = Seq("always"),
+  /** if None, default to the one from the outcome */
+  template: Option[String] = None) {
   /**
    * It calls template(), if None, then get
    * the default template from the outcome, else
@@ -304,7 +306,7 @@ case class Notification(
   def resolveTemplate(outcome: BuildOutcome, definedTemplates: Seq[NotificationTemplate]): ResolvedTemplate = {
     val templ = template match {
       case None => outcome.defaultTemplate
-      case Some(t) => definedTemplates.find(_.id == t) getOrElse sys.error("The requested notification template \""+t+"\" was not found.")
+      case Some(t) => definedTemplates.find(_.id == t) getOrElse sys.error("The requested notification template \"" + t + "\" was not found.")
     }
     val short = templ.short match {
       case Some(s) => s
@@ -314,13 +316,60 @@ case class Notification(
       case Some(l) => l
       case None => short
     }
-    ResolvedTemplate(templ.id,templ.summary,short,long)
+    ResolvedTemplate(templ.id, templ.summary, short, long)
+  }
+}
+// We need this shadow class for serialization/deserialization to work
+// It must be kept in sync with Notification.
+case class NotificationShadow(
+  kind: String,
+  send: JsonNode = null,
+  when: Seq[String] = Seq("always"),
+  template: Option[String] = None)
+
+/**
+ * The descriptor of options for each notification mechanism;
+ * subclasses are ConsoleNotification, EmailNotification, etc.
+ */
+@JsonSerialize(using = classOf[NotificationKindSerializer])
+abstract class NotificationKind
+
+class NotificationKindSerializer extends JsonSerializer[NotificationKind] {
+  override def serialize(value: NotificationKind, g: JsonGenerator, p: SerializerProvider) {
+    val cfg = p.getConfig()
+    val tf = cfg.getTypeFactory()
+    val jt = tf.constructType(value.getClass)
+    ScalaTypeSig(cfg.getTypeFactory, jt) match {
+      case Some(sts) if sts.isCaseClass =>
+        // the "true" below is for options.caseClassSkipNulls
+        (new CaseClassSerializer(jt, sts.annotatedAccessors, true)).serialize(value.asInstanceOf[Product], g, p)
+      case _ => throw new Exception("Internal error while serializing NotificationKind. Please report.")
+    }
   }
 }
 
+class NotificationDeserializer extends JsonDeserializer[Notification] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): Notification = {
+    val notificationKinds = NotificationKind.kinds
 
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[NotificationShadow]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[NotificationShadow]
 
-abstract class NotificationKind
+    if (generic == null) throw new Exception("Cannot deserialize notification: no value found")
+
+    val from = generic.send
+    val kind = generic.kind
+    if (!(notificationKinds.contains(kind))) throw new Exception("Notification kind \"" + kind + "\" is unknown.")
+    val newData = if (from == null) None else Some({
+      val cls = notificationKinds(kind)
+      val jp = from.traverse()
+      jp.nextToken()
+      cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
+    })
+    Notification(kind, newData, generic.when, generic.template)
+  }
+}
 
 /**
  * We could embed send() into NotificationKind, but:
@@ -343,33 +392,32 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
    * The NotificationKind record (identified by the label 'send' in the notification record)
    * is optional; if the user does not specify it, some default is necessary.
    * If there is not acceptable default, this method can throw an exception or otherwise
-   * issue a message and abort. 
+   * issue a message and abort.
    */
   protected def defaultOptions: T
-  
+
   /**
    * The client code calls notify(), which redispatches to send(), implemented in subclasses.
    */
   def notify(n: Option[NotificationKind], templ: TemplateFormatter, outcome: BuildOutcome): Option[String] = {
-    // unfortunately, NotificationKinds are referred to by String IDs, so we have to check manually
-    // (the code must work on 2.9 as well)
-    if (m.erasure.isInstance(n)) n match {
-      case Some(nk:T)  => send(nk, templ, outcome)
+    n match {
       case None => send(defaultOptions, templ, outcome)
-    } else
-      sys.error("Internal error: " + this.getClass.getName + " received a " + n.getClass.getName + ". Please report.")
+      case Some(no) =>
+        // NotificationKinds are referred to by String IDs, so we have to check manually
+        // (the code must work on 2.9 as well)
+        if (m.erasure.isInstance(n)) send(n.asInstanceOf[T], templ, outcome) else
+          sys.error("Internal error: " + this.getClass.getName + " received a " + n.getClass.getName + ". Please report.")
+    }
   }
 }
 
 case class EmailNotification(
-    to: Seq[String] = Seq.empty,
-    cc: Seq[String] = Seq.empty,
-    bcc: Seq[String] = Seq.empty,
-    from: Option[String] = None
-) extends NotificationKind
+  to: Seq[String] = Seq.empty,
+  cc: Seq[String] = Seq.empty,
+  bcc: Seq[String] = Seq.empty,
+  from: Option[String] = None) extends NotificationKind
 
-case class ConsoleNotification(
-) extends NotificationKind
+case class ConsoleNotification() extends NotificationKind
 
 object NotificationKind {
   val kinds: Map[String, java.lang.Class[_ <: NotificationKind]] = Map(

@@ -9,10 +9,6 @@ import org.eclipse.core.runtime.SubProgressMonitor
 
 class ConsoleNotificationContext(log: Logger) extends NotificationContext[ConsoleNotification] {
   def defaultOptions = ConsoleNotification()
-  override def before() =
-    log.info("---==  Execution Report ==---")
-  override def after() =
-    log.info("---==  End Execution Report ==---")
   def send(n: ConsoleNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     templ.long.split("\n").foreach(log.info(_))
     None

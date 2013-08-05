@@ -135,7 +135,7 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
 
   /**
    * Traverses a graph beginning from the leaves, passing some state from
-   * the leaves to their parent, and collecting the results in visiting order.
+   * the leaves to their parent, and collecting the results in the order nodes were visited.
    * The function f() will receive the node and the results of all its direct and remote children.
    * The optional sort function will be used to sort children's results before passing them up.
    */

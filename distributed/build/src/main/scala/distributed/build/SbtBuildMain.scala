@@ -63,10 +63,12 @@ class SbtBuildMain extends xsbti.AppMain {
           val s = System.nanoTime
           val ret = f
           val t = System.nanoTime - s
+          // Braindead SimpleDateFormat messes up 'S' format
           val time = new Date(t / 1000000L)
-          val sdf = new SimpleDateFormat("HH'h' mm'm' ss's'") // .SSS
+          val tenths = (t / 100000000L) % 10L
+          val sdf = new SimpleDateFormat("HH'h' mm'm' ss'.'")
           sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
-          println("Build took: " + sdf.format(time))
+          println("Build took: " + sdf.format(time) + tenths + "s")
           ret
         }
         time { main build config }

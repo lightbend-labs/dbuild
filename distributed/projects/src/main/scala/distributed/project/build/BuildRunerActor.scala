@@ -20,6 +20,7 @@ class BuildRunnerActor(builder: LocalBuildRunner) extends Actor {
       forwardingErrorsToFutures(sender) {
         log info ("--== Building %s ==--" format(build.config.name))
         sender ! builder.checkCacheThenBuild(target, build, outProjects, children, log)
+        log info ("--== End Building %s ==--" format(build.config.name))
       }
   }   
 }

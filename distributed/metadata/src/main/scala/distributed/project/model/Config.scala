@@ -23,7 +23,7 @@ case class ProjectBuildConfig(name: String,
   def uuid = hashing sha1 this
 }
 
-case class ProjectBuildConfigShadow(name: String,
+private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
@@ -321,7 +321,7 @@ case class Notification(
 }
 // We need this shadow class for serialization/deserialization to work
 // It must be kept in sync with Notification.
-case class NotificationShadow(
+private case class NotificationShadow(
   kind: String,
   send: JsonNode = null,
   when: Seq[String] = Seq("always"),

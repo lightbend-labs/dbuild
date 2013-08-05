@@ -21,7 +21,7 @@ sealed abstract class BuildOutcome {
   def defaultTemplate(): NotificationTemplate = NotificationTemplate("",
     "${notifications.vars.padded-project-description}: ${notifications.vars.status}",
     None,
-    Some("Report from the dbuild run for ${notifications.vars.project-description}:\n${notifications.vars.subprojects-report}>>> ${notifications.vars.padded-project-description}: ${notifications.vars.status}"))
+    Some("---==  Execution Report ==---\nReport from the dbuild run for ${notifications.vars.project-description}:\n${notifications.vars.subprojects-report}>>> ${notifications.vars.padded-project-description}: ${notifications.vars.status}\n---==  End Execution Report ==---"))
 
   // the utility methods below are used to build the default template, and are used in the substitutions,
   // but are /not/ part of any template per se.

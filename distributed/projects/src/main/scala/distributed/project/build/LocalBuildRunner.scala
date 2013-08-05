@@ -22,7 +22,7 @@ class LocalBuildRunner(builder: BuildRunner,
     // TODO: catch errors, and generate a BuildFailure if needed
     try {
       try {
-        BuildCached(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
+        BuildUnchanged(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
       } catch {
         case t: RepositoryException =>
           log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)

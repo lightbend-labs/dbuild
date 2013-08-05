@@ -45,10 +45,10 @@ case class BuildSuccess(project: String, outcomes: Seq[BuildOutcome], artsOut: B
 }
 
 /** It was not necessary to re-run this build, as nothing changed. */
-case class BuildCached(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
+case class BuildUnchanged(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
   override def toString() = "BuildCached(" + project + "<arts>)"
-  def status() = "SUCCESS (was unchanged, not rebuilt)"
-  override def whenIDs: Seq[String] = super.whenIDs :+ "cached"
+  def status() = "SUCCESS (unchanged, not rebuilt)"
+  override def whenIDs: Seq[String] = super.whenIDs :+ "unchanged"
 }
 
 /** This build was attempted, but an error condition occurred while executing it. */

@@ -250,7 +250,7 @@ case class GlobalBuildOptions(
  */
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
-  notifications: Seq[Notification] = Seq(Notification("console", ConsoleNotification(), when = "always")))
+  notifications: Seq[Notification] = Seq(Notification("console", None, when = "always")))
 /** 
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable
@@ -286,7 +286,7 @@ case class ResolvedTemplate(
 
 case class Notification(
     kind:String,
-    notification:NotificationKind,
+    send:Option[NotificationKind],
     /** This id should match one of the BuildOutcome Ids */
     when:String,
     /** if None, default to the one from the outcome */
@@ -337,22 +337,34 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
    * Send the notification using the template templ (do not use the one from outcome when implementing).
    *  If the notification fails, return Some(errorMessage).
    */
-  def send(n: T, templ: TemplateFormatter, outcome: BuildOutcome): Option[String]
-
-  // service code: the client calls the version below, which redispatches to send(), which is implemented in subclasses.
-  // unfortunately, NotificationKinds are referred to by String IDs, so we can't be totally type safe
-  def notify(n: NotificationKind, templ: TemplateFormatter, outcome: BuildOutcome): Option[String] = {
-    // I have to make it work on 2.9 as well
-    if (m.erasure.isInstance(n)) send(n.asInstanceOf[T], templ, outcome) else
+  protected def send(n: T, templ: TemplateFormatter, outcome: BuildOutcome): Option[String]
+  /**
+   * The NotificationKind record (identified by the label 'send' in the notification record)
+   * is optional; if the user does not specify it, some default is necessary.
+   * If there is not acceptable default, this method can throw an exception or otherwise
+   * issue a message and abort. 
+   */
+  protected def defaultOptions: T
+  
+  /**
+   * The client code calls notify(), which redispatches to send(), implemented in subclasses.
+   */
+  def notify(n: Option[NotificationKind], templ: TemplateFormatter, outcome: BuildOutcome): Option[String] = {
+    // unfortunately, NotificationKinds are referred to by String IDs, so we have to check manually
+    // (the code must work on 2.9 as well)
+    if (m.erasure.isInstance(n)) n match {
+      case Some(nk:T)  => send(nk, templ, outcome)
+      case None => send(defaultOptions, templ, outcome)
+    } else
       sys.error("Internal error: " + this.getClass.getName + " received a " + n.getClass.getName + ". Please report.")
   }
 }
 
 case class EmailNotification(
-    from: String,
     to: Seq[String] = Seq.empty,
     cc: Seq[String] = Seq.empty,
-    bcc: Seq[String] = Seq.empty
+    bcc: Seq[String] = Seq.empty,
+    from: Option[String] = None
 ) extends NotificationKind
 
 case class ConsoleNotification(

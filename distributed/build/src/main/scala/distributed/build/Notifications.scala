@@ -8,6 +8,7 @@ import org.eclipse.core.runtime.SubProgressMonitor
 // Do not add any text to them, before or after: the entire text must be definable using the templates only.
 
 class ConsoleNotificationContext(log: Logger) extends NotificationContext[ConsoleNotification] {
+  def defaultOptions = ConsoleNotification()
   override def before() =
     log.info("---==  Execution Report ==---")
   override def after() =
@@ -19,6 +20,7 @@ class ConsoleNotificationContext(log: Logger) extends NotificationContext[Consol
 }
 
 class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNotification] {
+  def defaultOptions = EmailNotification()
   def send(n: EmailNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     log.info("Sending to " + n.to + " the outcome of project " + outcome.project + " using template " + templ.id)
     None
@@ -43,7 +45,7 @@ class Notifications(build: DistributedBuildConfig, log: Logger) {
       val resolvedTempl = n.resolveTemplate(outcome, definedTemplates)
       if (outcome.whenIDs contains n.when) {
         val formatter=new TemplateFormatter(resolvedTempl, outcome)
-        allContexts(n.kind).notify(n.notification, formatter, outcome) map (log.warn(_))
+        allContexts(n.kind).notify(n.send, formatter, outcome) map (log.warn(_))
       }
     }
     // send per-project notifications:

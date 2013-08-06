@@ -18,12 +18,14 @@ class LocalBuildMain(configuration:xsbti.AppConfiguration) {
   val resolvers = Seq(
       new support.git.GitProjectResolver, 
       new support.svn.SvnProjectResolver,
-      new support.ivy.IvyProjectResolver(repos))
+      new support.ivy.IvyProjectResolver(repos),
+      new support.nil.NilProjectResolver)
   val buildSystems: Seq[project.BuildSystem] = 
     Seq(new support.sbt.SbtBuildSystem(repos, targetDir),
         support.scala.ScalaBuildSystem,
         new support.ivy.IvyBuildSystem(repos, targetDir),
-        support.mvn.MvnBuildSystem)
+        support.mvn.MvnBuildSystem,
+        support.nil.NilBuildSystem)
   
   // Gymnastics for classloader madness
 

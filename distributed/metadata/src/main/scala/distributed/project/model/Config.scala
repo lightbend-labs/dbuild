@@ -213,8 +213,16 @@ object BuildSystemExtras {
     "sbt" -> classOf[SbtExtraConfig],
     "scala" -> classOf[ScalaExtraConfig],
     "ivy" -> classOf[IvyExtraConfig],
-    "maven" -> classOf[MavenExtraConfig])
+    "maven" -> classOf[MavenExtraConfig],
+    "nil" -> classOf[NilExtraConfig])
 }
+
+/** configuration for the Nil build system */
+case class NilExtraConfig(
+  /** add the dependencies here, in some fashion to be decided */
+  deps: Seq[String] = Seq.empty
+) extends ExtraConfig
+
 
 // our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner
 @JsonSerialize(using = classOf[SelectorElementSerializer])

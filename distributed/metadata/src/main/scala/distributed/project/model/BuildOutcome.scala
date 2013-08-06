@@ -19,9 +19,9 @@ sealed abstract class BuildOutcome {
 
   /** The default notification template; see Notification for further details. */
   def defaultTemplate(): NotificationTemplate = NotificationTemplate("",
-    "${notifications.vars.padded-project-description}: ${notifications.vars.status}",
+    "${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}",
     None,
-    Some("---==  Execution Report ==---\nReport from the dbuild run for ${notifications.vars.project-description}:\n${notifications.vars.subprojects-report}>>> ${notifications.vars.padded-project-description}: ${notifications.vars.status}\n---==  End Execution Report ==---"))
+    Some("---==  Execution Report ==---\nReport from the dbuild run for ${dbuild.template-vars.project-description}:\n${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}\n---==  End Execution Report ==---"))
 
   // the utility methods below are used to build the default template, and are used in the substitutions,
   // but are /not/ part of any template per se.
@@ -30,45 +30,49 @@ sealed abstract class BuildOutcome {
 }
 
 sealed abstract class BuildGood extends BuildOutcome {
-  override def whenIDs: Seq[String] = super.whenIDs :+ "good"
+  override def whenIDs: Seq[String] = "good" +: super.whenIDs
   def artsOut: BuildArtifactsOut
 }
 sealed abstract class BuildBad extends BuildOutcome {
-  override def whenIDs: Seq[String] = super.whenIDs :+ "bad"
+  override def whenIDs: Seq[String] = "bad" +: super.whenIDs
 }
 
 /** We rebuilt the project, and all was ok. */
 case class BuildSuccess(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
+  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
   override def toString() = "BuildSuccess(" + project + ",<arts>)"
   def status() = "SUCCESS (project rebuilt ok)"
-  override def whenIDs: Seq[String] = super.whenIDs :+ "success"
+  override def whenIDs: Seq[String] = "success" +: super.whenIDs
 }
 
 /** It was not necessary to re-run this build, as nothing changed. */
 case class BuildUnchanged(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
+  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
   override def toString() = "BuildCached(" + project + "<arts>)"
   def status() = "SUCCESS (unchanged, not rebuilt)"
-  override def whenIDs: Seq[String] = super.whenIDs :+ "unchanged"
+  override def whenIDs: Seq[String] = "unchanged" +: super.whenIDs
 }
 
 /** This build was attempted, but an error condition occurred while executing it. */
 case class BuildFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends BuildBad {
+  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
   def status() = "FAILED (cause: " + cause + ")"
-  override def whenIDs: Seq[String] = super.whenIDs :+ "failed"
+  override def whenIDs: Seq[String] = "failed" +: super.whenIDs
 }
 
 /** One or more of this project dependencies are broken, therefore we could not build. */
 case class BuildBrokenDependency(project: String, outcomes: Seq[BuildOutcome]) extends BuildBad {
+  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
+  def withOutcome(o:BuildOutcome) = copy(outcomes = o +: outcomes)
   def status() = "DID NOT RUN (stuck on broken dependency: " +
     (outcomes.filter { case _: BuildFailed => true; case _ => false }).map { _.project }.mkString(",") + ")"
-  override def whenIDs: Seq[String] = super.whenIDs :+ "depBroken"
+  override def whenIDs: Seq[String] = "depBroken" +: super.whenIDs
 }
 
 /**
  * Utility classes, used to perform variable substitutions
  */
-case class Substitution(template: ResolvedTemplate, notifications: SubstitutionNotifications)
-case class SubstitutionNotifications(vars: SubstitutionVars)
+case class SubstitutionNotifications(@JsonProperty("template-vars") vars: SubstitutionVars)
 case class SubstitutionVars(
   @JsonProperty("project-name") projectName: String,
   @JsonProperty("subprojects-report") subprojectsReport: String,
@@ -108,7 +112,7 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
   private def escaped(s: String) = StringEscapeUtils.escapeJava(s)
   private def preparedForReplacement(s: String) = escaped(s).replaceAll("(\\$\\{.*?\\})", "\"$1\"")
   private def expand(s: String) =
-    parseString("{key:\"" + preparedForReplacement(s) + "\",notifications:" + writeValue(notifVars) + "}").resolve.getString("key")
+    parseString("{key:\"" + preparedForReplacement(s) + "\",dbuild:" + writeValue(notifVars) + "}").resolve.getString("key")
 
   val summary = expand(templ.summary)
   val short = expand(templ.short)

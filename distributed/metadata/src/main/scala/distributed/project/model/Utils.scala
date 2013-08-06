@@ -29,11 +29,10 @@ object Utils {
           val s2=if (l1-o1>margin) {
             s1.substring(0, o1+margin-3)+"..."
           } else s1
-          println(s2)
-          println(" "*o1+"^")
-          if (e.getMessage().startsWith("Can not deserialize instance of java.lang.String"))
-            println("A string may have been found in place of an array, somewhere in this object.")
-          throw e
+          val m1="\n"+s2+"\n"+" "*o1+"^"
+          val m2=if (e.getMessage().startsWith("Can not deserialize instance of java.lang.String"))
+            m1+"\nA string may have been found in place of an array, somewhere in this object" else m1
+          throw new JsonMappingException(e.getMessage.split("\n")(0)+m2,e.getCause)
       }
     }
   def readValue[T](f:File)(implicit m: Manifest[T])=readValueT[T](parseFile(f))

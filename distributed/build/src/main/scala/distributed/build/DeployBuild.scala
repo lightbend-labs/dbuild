@@ -171,7 +171,7 @@ object DeployBuild {
                 log.info("Signing with default key...")
                 new PGPSecretKeyRing(new java.io.FileInputStream(secretRingFile)).getSecretKey
             } catch {
-              case e: NumberFormatException => println("Not a valid hexadecimal value: " + signOptions.id.get); throw (e)
+              case e: NumberFormatException => throw new Exception("Not a valid hexadecimal value: " + signOptions.id.get,e)
             }
             if (secretKey==null) sys.error("The key was not found in the pgp keyring.")
             (dir.***).get.filter(f => !f.isDirectory && isNotChecksum(f.getName)) foreach { f =>

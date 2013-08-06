@@ -12,7 +12,7 @@ import akka.pattern.{ask,pipe}
 import akka.dispatch.{Future,Futures}
 import akka.util.duration._
 import akka.util.Timeout
-import actorpaterns.forwardingErrorsToFutures
+import actorpatterns.forwardingErrorsToFutures
 import sbt.Path._
 import java.io.File
 import distributed.repo.core.ProjectDirs

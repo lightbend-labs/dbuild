@@ -4,7 +4,7 @@ package dependencies
 
 import akka.actor.Actor
 import model.ProjectBuildConfig
-import actorpaterns.forwardingErrorsToFutures
+import actorpatterns.forwardingErrorsToFutures
 import _root_.java.io.File
 import distributed.project.controller.{Controlled, Done}
 

@@ -1,6 +1,6 @@
 package distributed.project.controller
 
-import akka.actor.{Actor,Props,ActorRef,ActorContext}
+import akka.actor.{ Actor, Props, ActorRef, ActorContext }
 import scala.collection.mutable.Queue
 import akka.routing.SmallestMailboxRouter
 import akka.actor.actorRef2Scala
@@ -13,7 +13,7 @@ import akka.actor.actorRef2Scala
  * all of its jobs immediately, one CPU core would remain pointlessly idle. Instead, Controller implements a
  * straightforward semaphore, by which BuildRunnerActors/ExtractorActors will only receive a message when
  * there is an actual core available.
- * 
+ *
  * Send your requests to the Controller as if you were sending them to the wrapped actor. The wrapped actor
  * will receive from the Controller a Controlled(msg,from) request, where "from" is the original sender; the
  * response, wrapped into a Done(msg,from) where from is the same found in the Controlled(), is to be sent
@@ -27,20 +27,22 @@ class Controller(capacity: Int, wrapped: Props, name: String) extends Actor {
   private val queue = new Queue[Controlled]
 
   def receive = {
-    case m: Done => {
-      m.dest ! m.msg
-      if (queue.isEmpty)
-        available = available + 1
-      else
-        target ! queue.dequeue
-    }
-    case m: Any => {
-      val c = Controlled(m, sender)
-      if (available > 0) {
-        available = available - 1
-        target ! c
-      } else
-        queue.enqueue(c)
+    actorpatterns.forwardingErrorsToFutures(sender) {
+      case m: Done => {
+        m.dest ! m.msg
+        if (queue.isEmpty)
+          available = available + 1
+        else
+          target ! queue.dequeue
+      }
+      case m: Any => {
+        val c = Controlled(m, sender)
+        if (available > 0) {
+          available = available - 1
+          target ! c
+        } else
+          queue.enqueue(c)
+      }
     }
   }
 }

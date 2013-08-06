@@ -33,7 +33,7 @@ class Extractor(
         logger.info("Extracting dependencies for: " + build.name)
         val deps = dependencyExtractor.extract(build, dir, logger)      
         logger.debug("Dependencies = " + writeValue(deps))
-        cacheExtract(config, deps)
+        cacheExtract(config, deps, logger)
         ProjectConfigAndExtracted(config, deps)
       }
     }
@@ -41,10 +41,10 @@ class Extractor(
     private def makeExtractKey(config: ProjectBuildConfig) = 
       "meta/extract/" + config.uuid
   
-    private def cacheExtract(config: ProjectBuildConfig, extract: ExtractedBuildMeta): Unit =
+    private def cacheExtract(config: ProjectBuildConfig, extract: ExtractedBuildMeta, logger: logging.Logger): Unit =
       IO.withTemporaryFile("extract", config.uuid) { file =>
         IO.write(file, writeValue(extract))
-        println("Putting extraction information into: " + repository)
+        logger.debug("Putting extraction information into: " + repository)
         repository.put(makeExtractKey(config), file)
       }
 

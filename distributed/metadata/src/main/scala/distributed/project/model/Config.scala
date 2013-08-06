@@ -415,6 +415,15 @@ case class EmailNotification(
   to: Seq[String] = Seq.empty,
   cc: Seq[String] = Seq.empty,
   bcc: Seq[String] = Seq.empty,
+  /**
+   * If you want to send to a specific smtp gateway,
+   * specify it here; else, messages will be sent to localhost.
+   */
+  smtp: Option[String] = None,
+  /**
+   * The default sender is the account under which dbuild
+   * is running right now (user@hostname). Else, specify it here.
+   */
   from: Option[String] = None) extends NotificationKind
 
 case class ConsoleNotification() extends NotificationKind

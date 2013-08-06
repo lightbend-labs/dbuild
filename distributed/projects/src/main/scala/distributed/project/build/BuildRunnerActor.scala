@@ -6,7 +6,7 @@ import model._
 import logging.Logger
 import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
-import actorpaterns.forwardingErrorsToFutures
+import actorpatterns.forwardingErrorsToFutures
 import java.io.File
 import distributed.repo.core._
 import sbt.IO

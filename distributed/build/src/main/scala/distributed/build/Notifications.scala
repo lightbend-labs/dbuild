@@ -3,6 +3,10 @@ package distributed.build
 import distributed.project.model._
 import distributed.logging.Logger
 import org.eclipse.core.runtime.SubProgressMonitor
+import java.util.Properties
+import java.util.Date
+import javax.mail._
+import internet._
 
 // Note: when implementing send(), only use templ.long, templ.short, and templ.summary (and templ.id for diagnostics only).
 // Do not add any text to them, before or after: the entire text must be definable using the templates only.
@@ -18,7 +22,24 @@ class ConsoleNotificationContext(log: Logger) extends NotificationContext[Consol
 class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNotification] {
   def defaultOptions = EmailNotification()
   def send(n: EmailNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
+    val props  = new Properties();
+    props.put("mail.smtp.host", "my-mail-server")
+    val session = Session.getInstance(props, null)
     log.info("Sending to " + n.to + " the outcome of project " + outcome.project + " using template " + templ.id)
+    try {
+        val msg = new MimeMessage(session)
+        msg.setFrom(new InternetAddress("me@example.com"))
+        msg.setRecipients(Message.RecipientType.TO,
+                          "you@example.com");
+        msg.setSubject("JavaMail hello world example")
+        msg.setSentDate(new Date())
+        msg.setText("Hello, world!\n");
+        Transport.send(msg, Array(new InternetAddress("me@example.com"), new InternetAddress("my-password")))
+    } catch {
+        case mex:MessagingException =>
+        log.error("ERROR SENDING to " + n.to + " the outcome of project " + outcome.project + " using template " + templ.id)
+        log.error(mex.toString)
+    }
     None
   }
 }

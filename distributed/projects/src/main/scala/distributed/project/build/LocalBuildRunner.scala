@@ -6,7 +6,7 @@ import model._
 import logging.Logger
 import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
-import actorpaterns.forwardingErrorsToFutures
+import actorpatterns.forwardingErrorsToFutures
 import java.io.File
 import distributed.repo.core._
 import sbt.Path._
@@ -19,7 +19,6 @@ class LocalBuildRunner(builder: BuildRunner,
     repository: Repository) {
 
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger): BuildOutcome = {
-    // TODO: catch errors, and generate a BuildFailure if needed
     try {
       try {
         BuildUnchanged(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
@@ -94,7 +93,7 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Running local build: " + build.config + " in directory: " + dir)
       val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), log)
       // TODO - We pull out just the artifacts published and push them again
-      LocalRepoHelper.publishProjectArtifactInfo(build, results.results, writeRepo, repository)
+      LocalRepoHelper.publishProjectArtifactInfo(build, results.results, writeRepo, repository, log)
       results
     }
   

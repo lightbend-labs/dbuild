@@ -44,7 +44,8 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
 abstract class ProjectBasedOptions {
   def projects: Seq[SelectorElement]
 
-  /** From its list of selected projects, which may include '.' for the root, and
+  /**
+   * From its list of selected projects, which may include '.' for the root, and
    *  the BuildOutcome of the root, expand the definition in order to select an
    *  appropriate subset of the root children.
    *  If '.' is present as a project, return the list of all the children.
@@ -54,29 +55,29 @@ abstract class ProjectBasedOptions {
    *  project/subproject requests exist for the same project name, combine them together.
    *  NOTE: there is no assumption that the project names in the various request actually exist.
    */
-  def expandedProjectList(outcome: BuildOutcome):Set[SelectorElement] = {
-    def reqFromNames(n:Set[String]):Set[SelectorElement] = n map SelectorProject
+  def expandedProjectList(outcome: BuildOutcome): Set[SelectorElement] = {
+    def reqFromNames(n: Set[String]): Set[SelectorElement] = n map SelectorProject
     // let's split the requests by type
-    val projReqs = projects.collect{case p:SelectorProject=>p}.toSet
-    val subProjReqs = projects.collect{case p:SelectorSubProjects=>p}.toSet
+    val projReqs = projects.collect { case p: SelectorProject => p }.toSet
+    val subProjReqs = projects.collect { case p: SelectorSubProjects => p }.toSet
 
     if (projReqs.exists(_.name == "."))
-        // found "." as a project: return all children, ignore the rest
-    		reqFromNames(outcome.outcomes.map(_.project).toSet)
+      // found "." as a project: return all children, ignore the rest
+      reqFromNames(outcome.outcomes.map(_.project).toSet)
     else {
       // list of names of projects mentioned in subprojects from root
-      val fromDot = subProjReqs.filter(_.name == ".").flatMap{p:SelectorSubProjects=>p.info.publish}
+      val fromDot = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
       // are you kidding me?
       if (fromDot.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
       // ok, this is the complete list of full project requests
-      val allProjReqs:Set[SelectorElement] = reqFromNames(fromDot) ++ projReqs
+      val allProjReqs: Set[SelectorElement] = reqFromNames(fromDot) ++ projReqs
       // remove the subproj requests that are already in the full proj set.
-      val restSubProjReqs = subProjReqs.filterNot{p=>allProjReqs.map{_.name}.contains(p.name)}
+      val restSubProjReqs = subProjReqs.filterNot { p => allProjReqs.map { _.name }.contains(p.name) }
       // and now we flatten together those with the same 'from'
       val allSubProjReqsMap = restSubProjReqs.groupBy(_.name).toSet
-      val allSubProjReq:Set[SelectorElement] = allSubProjReqsMap map {
-        case(name,seq) => SelectorSubProjects(SubProjects(name,seq.map{_.info.publish}.flatten.toSeq))
-        }
+      val allSubProjReq: Set[SelectorElement] = allSubProjReqsMap map {
+        case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.publish }.flatten.toSeq))
+      }
       val reqs = allSubProjReq ++ allProjReqs
       println(reqs)
       reqs
@@ -274,7 +275,7 @@ class SelectorElementDeserializer extends JsonDeserializer[SelectorElement] {
  * options that do not impact on the repeatability of the build inside the projects section; instead,
  * place them in a separate section, specifying the list of projects to which they apply (like deploy
  * and notifications).
- * 
+ *
  * At the moment, this section contains only the option "cross-version, which controls the
  * crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
  *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
@@ -341,15 +342,47 @@ case class ResolvedTemplate(
 
 @JsonDeserialize(using = classOf[NotificationDeserializer])
 case class Notification(
-  kind: String,
+  /** the kind of notification. Default is "email" */
+  kind: String = "email",
+  /**
+   * kind-specific arguments. Optional, but some
+   *  notification kinds (notably email) may require it.
+   */
   send: Option[NotificationKind],
   /**
    * One of these IDs must match one of the BuildOutcome
-   *  IDs for the notification to be sent.
+   *  IDs for the notification to be sent. The default is
+   *  when = [bad,success], which will send a message on every
+   *  failure, and on the first success whenever there
+   *  is a change in code or dependencies.
    */
-  when: Seq[String] = Seq("always"),
+  when: Seq[String] = Seq("bad", "success"),
   /** if None, default to the one from the outcome */
-  template: Option[String] = None) {
+  template: Option[String] = None,
+  /**
+   * Names of the projects relevant to this notification.
+   *  Default: ".", meaning that a notification will be
+   *  sent with the status for the root build. If multiple
+   *  projects are listed, a report will be sent for each
+   *  of the projects (to the same recipient) (if the 'when'
+   *  selector applies); that may be of use if a single recipient
+   *  is used for two or more projects that do not depend on
+   *  one another.
+   *  dbuild is able to build a list automatically
+   *  if a single string is specified.
+   */
+  projects: Seq[SelectorElement] = Seq(SelectorProject("."))) extends ProjectBasedOptions {
+  /*
+ *  example:
+  
+  notification-options.notifications = [{
+    projects: [jline]
+    send.to: ["antonio.cunei@typesafe.com"]
+  },{
+    projects: [scala-compiler]
+    send.to: ["joshua.suereth@typesafe.com"]
+  }]
+*/
   /**
    * It calls template(), if None, then get
    * the default template from the outcome, else
@@ -377,10 +410,11 @@ case class Notification(
 // We need this shadow class for serialization/deserialization to work
 // It must be kept in sync with Notification.
 private case class NotificationShadow(
-  kind: String,
+  kind: String = "email",
   send: JsonNode = null,
-  when: Seq[String] = Seq("always"),
-  template: Option[String] = None)
+  when: Seq[String] = Seq("bad", "success"),
+  template: Option[String] = None,
+  projects: Seq[SelectorElement])
 
 /**
  * The descriptor of options for each notification mechanism;
@@ -415,6 +449,30 @@ class NotificationDeserializer extends JsonDeserializer[Notification] {
 
     val from = generic.send
     val kind = generic.kind
+
+    // The code commented here could be used to parse in an even more flexible way the
+    // list of projects: if a lonely string is encountered where an array is expected,
+    // turn it automagically into an array.
+    // Just change generic.project in the Shadow into a JsonNode, and use this routine
+    // to obtain the result for building the new Notification()
+    /*
+    def flexSelectorDeserializeStringArray(fctx: DeserializationContext, node: JsonNode) = {
+      if (node == null) // if not present, I default to the empty seq. Does that mean I can never
+        // use the regular defaults ??? Well, sure I can: I just need a different constructor
+        // for Notification(), below, so that its default is used instead if this is null.
+        Seq[SelectorElement]()
+      val ftf = fctx.getConfig.getTypeFactory()
+      val fjpp = node.traverse()
+      fjpp.nextToken()
+      def valueAs[T](cls: Class[T]) = cls.cast(ctx.findContextualValueDeserializer(ftf.constructType(cls), null).deserialize(fjpp, fctx))
+      val parsedProjects: Seq[SelectorElement] =
+        if (node.isTextual) { // a lonely string
+          Seq[SelectorElement](SelectorProject(valueAs(classOf[String])))
+        } else {
+          valueAs(classOf[Array[SelectorElement]])
+        }
+    }
+    */
     if (!(notificationKinds.contains(kind))) throw new Exception("Notification kind \"" + kind + "\" is unknown.")
     val newData = if (from == null) None else Some({
       val cls = notificationKinds(kind)
@@ -422,7 +480,7 @@ class NotificationDeserializer extends JsonDeserializer[Notification] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    Notification(kind, newData, generic.when, generic.template)
+    Notification(kind, newData, generic.when, generic.template, generic.projects)
   }
 }
 
@@ -466,6 +524,10 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
   }
 }
 
+/**
+ * All the addresses can be in standard RFC 822 format, either "here@there.com", or
+ * "Hello Myself <here@there.com>".
+ */
 case class EmailNotification(
   to: Seq[String] = Seq.empty,
   cc: Seq[String] = Seq.empty,

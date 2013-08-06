@@ -18,7 +18,6 @@ case class ProjectBuildConfig(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
-  notifications: Seq[Notification] = Seq.empty,
   extra: Option[ExtraConfig]) {
   def uuid = hashing sha1 this
 }
@@ -27,7 +26,6 @@ private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
-  notifications: Seq[Notification] = Seq.empty,
   extra: JsonNode = null)
 
 /**
@@ -148,7 +146,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.notifications, newData)
+    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, newData)
   }
 }
 /**

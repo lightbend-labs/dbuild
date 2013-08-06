@@ -22,7 +22,6 @@ object DistributedBuildConfigSpec extends Specification {
           uri = "uri",
           system = "sbt",
           setVersion = None,
-          notifications = Seq.empty,
           extra = None
       )), None, None
     ))
@@ -53,7 +52,6 @@ object DistributedBuildConfigSpec extends Specification {
           uri = "uri",
           system = "sbt",
           setVersion = Some("3.9.43"),
-          notifications = Seq.empty,
           extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
       )),Some(Seq(DeployOptions("file://localhost:8088/some/path",Some("/credentials/file"),
        Seq(SelectorProject("p1"),SelectorProject("p2"),SelectorSubProjects(SubProjects("aaa",Seq("a","b")))),None))), None

@@ -103,7 +103,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
           // "." is the name of the root project
           BuildFailed(".", outcomes, "one or more projects failed")
         else {
-          BuildSuccess("",outcomes,BuildArtifactsOut(Seq.empty))
+          BuildSuccess(".",outcomes,BuildArtifactsOut(Seq.empty))
         }
       }
     }

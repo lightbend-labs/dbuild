@@ -149,9 +149,7 @@ object DeployBuild {
           try IO.withTemporaryDirectory { dir =>
             val cache = Repository.default
             // let's expand "."
-            val projList = (if (options.projects.exists(_.name == ".")) (
-              outcome.outcomes.map { o => SelectorProject(o.project) } ++ options.projects.filterNot(_.name == "."))
-            else options.projects).distinct
+            val projList = options.expandedProjectList(outcome)
 
             val selected = projList.map { depl =>
               build.repeatableBuilds.find(_.config.name == depl.name) match {
@@ -167,8 +165,8 @@ object DeployBuild {
                 outcome.isInstanceOf[BuildGood]
             }
 
-            def logDepl(elems: Seq[(SelectorElement, RepeatableProjectBuild)]) =
-              ": " + elems.map(_._1.name).mkString("", ", ", "")
+            def logDepl(elems: Set[(SelectorElement, RepeatableProjectBuild)]) =
+              ": " + elems.map(_._1.name).toSeq.sorted.mkString("", ", ", "")
             if (good.nonEmpty) log.info("Deploying" + logDepl(good))
             if (bad.nonEmpty) log.warn("Currently broken, hence not deployed" + logDepl(bad))
 

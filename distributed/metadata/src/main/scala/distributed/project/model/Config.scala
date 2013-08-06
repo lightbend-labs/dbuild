@@ -40,6 +40,50 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions],
   @JsonProperty("notification-options") notificationOptions: NotificationOptions = NotificationOptions())
 
+/** a generic options section that relies on a list of projects/subprojects */
+abstract class ProjectBasedOptions {
+  def projects: Seq[SelectorElement]
+
+  /** From its list of selected projects, which may include '.' for the root, and
+   *  the BuildOutcome of the root, expand the definition in order to select an
+   *  appropriate subset of the root children.
+   *  If '.' is present as a project, return the list of all the children.
+   *  If '.' is present in a subproject definition, consider the list of
+   *  subprojects as children (they are the subprojects of root, in a sense).
+   *  Combine that list with the of remaining requested projects. If multiple
+   *  project/subproject requests exist for the same project name, combine them together.
+   *  NOTE: there is no assumption that the project names in the various request actually exist.
+   */
+  def expandedProjectList(outcome: BuildOutcome):Set[SelectorElement] = {
+    def reqFromNames(n:Set[String]):Set[SelectorElement] = n map SelectorProject
+    // let's split the requests by type
+    val projReqs = projects.collect{case p:SelectorProject=>p}.toSet
+    val subProjReqs = projects.collect{case p:SelectorSubProjects=>p}.toSet
+
+    if (projReqs.exists(_.name == "."))
+        // found "." as a project: return all children, ignore the rest
+    		reqFromNames(outcome.outcomes.map(_.project).toSet)
+    else {
+      // list of names of projects mentioned in subprojects from root
+      val fromDot = subProjReqs.filter(_.name == ".").flatMap{p:SelectorSubProjects=>p.info.publish}
+      // are you kidding me?
+      if (fromDot.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
+      // ok, this is the complete list of full project requests
+      val allProjReqs:Set[SelectorElement] = reqFromNames(fromDot) ++ projReqs
+      // remove the subproj requests that are already in the full proj set.
+      val restSubProjReqs = subProjReqs.filterNot{p=>allProjReqs.map{_.name}.contains(p.name)}
+      // and now we flatten together those with the same 'from'
+      val allSubProjReqsMap = restSubProjReqs.groupBy(_.name).toSet
+      val allSubProjReq:Set[SelectorElement] = allSubProjReqsMap map {
+        case(name,seq) => SelectorSubProjects(SubProjects(name,seq.map{_.info.publish}.flatten.toSeq))
+        }
+      val reqs = allSubProjReq ++ allProjReqs
+      println(reqs)
+      reqs
+    }
+  }
+}
+
 /** Deploy information. */
 case class DeployOptions(
   /** deploy target */
@@ -49,7 +93,7 @@ case class DeployOptions(
   /** names of the projects that should be deployed. Default: ".", meaning all */
   projects: Seq[SelectorElement] = Seq(SelectorProject(".")),
   /** signing options */
-  sign: Option[DeploySignOptions])
+  sign: Option[DeploySignOptions]) extends ProjectBasedOptions
 /** used to select subprojects from one project */
 case class SubProjects(from: String, publish: Seq[String])
 

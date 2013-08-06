@@ -10,7 +10,7 @@ import actorpatterns.forwardingErrorsToFutures
 import java.io.File
 import distributed.repo.core._
 import sbt.IO
-import distributed.project.controller.{Controlled, Done}
+import distributed.project.controller.{Controller, Controlled, Done}
 
 case class RunBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger)
 
@@ -18,7 +18,7 @@ case class RunBuild(target: File, build: RepeatableProjectBuild, outProjects: Se
 class BuildRunnerActor(builder: LocalBuildRunner) extends Actor {
   def receive = {
     case Controlled(RunBuild(target, build, outProjects, children, log),from) => 
-      forwardingErrorsToFutures(from) {
+      Controller.forwardingErrorsToFuturesControlled(sender, from) {
         log info ("--== Building %s ==--" format(build.config.name))
         sender ! Done(builder.checkCacheThenBuild(target, build, outProjects, children, log), from)
         log info ("--== End Building %s ==--" format(build.config.name))

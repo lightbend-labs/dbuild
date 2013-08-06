@@ -51,4 +51,13 @@ case class Done(msg: Any, dest: ActorRef)
 object Controller {
   def apply(context: ActorContext, wrapped: Props, name: String, capacity: Int): ActorRef =
     context.actorOf(Props(new Controller(capacity, wrapped, name)), "Controller-" + name)
+    
+  // Similar to the one in actorpatterns, but wraps the reply into a Done()
+  @inline
+  final def forwardingErrorsToFuturesControlled[A](sender:ActorRef, from: ActorRef)(f: => A): A =
+    try f catch {
+      case e: Exception =>
+        sender ! Done(akka.actor.Status.Failure(e), from)
+        throw e
+    }
 }

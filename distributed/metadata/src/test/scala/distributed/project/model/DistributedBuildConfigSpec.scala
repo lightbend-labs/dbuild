@@ -56,7 +56,7 @@ object DistributedBuildConfigSpec extends Specification {
           notifications = Seq.empty,
           extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
       )),Some(Seq(DeployOptions("file://localhost:8088/some/path",Some("/credentials/file"),
-       Some(Seq(DeployElementProject("p1"),DeployElementProject("p2"),DeployElementSubProject(DeploySubProjects("aaa",Seq("a","b"))))),None))), None
+       Seq(SelectorProject("p1"),SelectorProject("p2"),SelectorSubProjects(SubProjects("aaa",Seq("a","b")))),None))), None
     ))
     }
   }

@@ -31,7 +31,9 @@ class LocalBuildRunner(builder: BuildRunner,
     } catch {
       case t =>
         log.trace(t)
-        BuildFailed(build.config.name, children, t.getMessage)
+        val msg1 = t.getMessage.split("\n")(0)
+        val msg2 = if (msg1.length<40) msg1 else msg1.take(37)+"..."
+        BuildFailed(build.config.name, children, msg2)
     }
   }
   

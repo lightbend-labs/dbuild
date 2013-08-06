@@ -12,7 +12,7 @@ import com.typesafe.config.ConfigFactory.parseString
 sealed abstract class BuildOutcome {
   /** The default long response, with a subject line (usually shorter than shortTemplate (about 50-60 characters), and a body of arbitrary length. */
   def whenIDs: Seq[String] = Seq("always")
-  /** The name of the project associated with the outcome. The empty string is used to mark the root of dbuild. */
+  /** The name of the project associated with the outcome. The project name "." is used to refer to the root of dbuild. */
   def project: String
   /** the outcomes of all the dependencies of this project */
   def outcomes: Seq[BuildOutcome]
@@ -48,7 +48,7 @@ case class BuildSuccess(project: String, outcomes: Seq[BuildOutcome], artsOut: B
 /** It was not necessary to re-run this build, as nothing changed. */
 case class BuildUnchanged(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
   def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
-  override def toString() = "BuildCached(" + project + "<arts>)"
+  override def toString() = "BuildCached(" + project + ",<arts>)"
   def status() = "SUCCESS (unchanged, not rebuilt)"
   override def whenIDs: Seq[String] = "unchanged" +: super.whenIDs
 }
@@ -101,13 +101,14 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
     outcome.outcomes.map(get).mkString("", "\n", "\n")
   }
   val paddedProjectDescription =
-    if (outcome.project == "") "The dbuild result is-----------" else "Project " + (outcome.project.padTo(23, "-").mkString)
+    // "." is the name of the root project
+    if (outcome.project == ".") "The dbuild result is-----------" else "Project " + (outcome.project.padTo(23, "-").mkString)
 
   private val notifVars = SubstitutionNotifications(
     SubstitutionVars(projectName = outcome.project,
       subprojectsReport = subprojectsReport,
       status = outcome.status,
-      projectDescription = if (outcome.project != "") "project " + outcome.project else "this build configuration",
+      projectDescription = if (outcome.project != ".") "project " + outcome.project else "this build configuration",
       paddedProjectDescription = paddedProjectDescription))
   private def escaped(s: String) = StringEscapeUtils.escapeJava(s)
   private def preparedForReplacement(s: String) = escaped(s).replaceAll("(\\$\\{.*?\\})", "\"$1\"")

@@ -38,7 +38,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
         outcome <- runBuild(target, fullBuild, fullLogger)
-        _ = deployFullBuild(fullBuild)
+        _ = deployFullBuild(fullBuild, outcome, log)
         notifications = new Notifications(build, log)
         _ = notifications.sendNotifications(outcome)
       } yield outcome
@@ -100,7 +100,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
       Future.sequence(runBuild()).map { outcomes =>
         if (outcomes exists { case _: BuildBad => true; case _ => false })
-          BuildFailed("", outcomes, "one or more projects failed")
+          // "." is the name of the root project
+          BuildFailed(".", outcomes, "one or more projects failed")
         else {
           BuildSuccess("",outcomes,BuildArtifactsOut(Seq.empty))
         }

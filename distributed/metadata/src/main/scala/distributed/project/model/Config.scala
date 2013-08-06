@@ -41,12 +41,17 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   @JsonProperty("notification-options") notificationOptions: NotificationOptions = NotificationOptions())
 
 /** Deploy information. */
-case class DeployOptions(uri: String, // deploy target
-  credentials: Option[String], // path to the credentials file
-  projects: Option[Seq[DeployElement]], // names of the projects that should be deployed
-  sign: Option[DeploySignOptions] // signing options
-  )
-case class DeploySubProjects(from: String, publish: Seq[String])
+case class DeployOptions(
+  /** deploy target */
+  uri: String,
+  /** path to the credentials file */
+  credentials: Option[String],
+  /** names of the projects that should be deployed. Default: ".", meaning all */
+  projects: Seq[SelectorElement] = Seq(SelectorProject(".")),
+  /** signing options */
+  sign: Option[DeploySignOptions])
+/** used to select subprojects from one project */
+case class SubProjects(from: String, publish: Seq[String])
 
 /**
  * Signing options.
@@ -168,28 +173,28 @@ object BuildSystemExtras {
     "maven" -> classOf[MavenExtraConfig])
 }
 
-// our simplified version of Either: we use it to group String and DeploySubProjects in a transparent manner
-@JsonSerialize(using = classOf[DeployElementSerializer])
-@JsonDeserialize(using = classOf[DeployElementDeserializer])
-sealed abstract class DeployElement { def name: String }
-case class DeployElementProject(a: String) extends DeployElement {
+// our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner
+@JsonSerialize(using = classOf[SelectorElementSerializer])
+@JsonDeserialize(using = classOf[SelectorElementDeserializer])
+sealed abstract class SelectorElement { def name: String }
+case class SelectorProject(a: String) extends SelectorElement {
   override def toString() = a
   def name = a
 }
-case class DeployElementSubProject(info: DeploySubProjects) extends DeployElement {
+case class SelectorSubProjects(info: SubProjects) extends SelectorElement {
   override def toString() = info.from + " " + info.publish.mkString("(", ",", ")")
   def name = info.from
 }
 
-class DeployElementSerializer extends JsonSerializer[DeployElement] {
-  override def serialize(value: DeployElement, g: JsonGenerator, p: SerializerProvider) {
+class SelectorElementSerializer extends JsonSerializer[SelectorElement] {
+  override def serialize(value: SelectorElement, g: JsonGenerator, p: SerializerProvider) {
     value match {
-      case DeployElementProject(s) =>
+      case SelectorProject(s) =>
         new StringSerializer().serialize(s, g, p)
-      case DeployElementSubProject(d) =>
+      case SelectorSubProjects(d) =>
         val cfg = p.getConfig()
         val tf = cfg.getTypeFactory()
-        val jt = tf.constructType(classOf[DeploySubProjects])
+        val jt = tf.constructType(classOf[SubProjects])
         val Some(sts) = ScalaTypeSig(cfg.getTypeFactory, jt)
         // the "true" below is for options.caseClassSkipNulls
         (new CaseClassSerializer(jt, sts.annotatedAccessors, true)).serialize(d, g, p)
@@ -197,8 +202,8 @@ class DeployElementSerializer extends JsonSerializer[DeployElement] {
     }
   }
 }
-class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
-  override def deserialize(p: JsonParser, ctx: DeserializationContext): DeployElement = {
+class SelectorElementDeserializer extends JsonDeserializer[SelectorElement] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): SelectorElement = {
     val tf = ctx.getConfig.getTypeFactory()
     val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
     val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
@@ -206,9 +211,9 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
     jp.nextToken()
     def valueAs[T](cls: Class[T]) = cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     if (generic.isTextual()) {
-      DeployElementProject(valueAs(classOf[String]))
+      SelectorProject(valueAs(classOf[String]))
     } else {
-      DeployElementSubProject(valueAs(classOf[DeploySubProjects]))
+      SelectorSubProjects(valueAs(classOf[SubProjects]))
     }
   }
 }
@@ -220,8 +225,14 @@ class DeployElementDeserializer extends JsonDeserializer[DeployElement] {
  * Conversely, these options can affect the building stage; a copy of the record is
  * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
  * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
- *
- * - cross-version controls the crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
+ * Therefore *ONLY* place in this section the global options that affect the repeatebility of the
+ * builds!! Place other global options elsewhere, in other top-level sections. Similarly, do no place
+ * options that do not impact on the repeatability of the build inside the projects section; instead,
+ * place them in a separate section, specifying the list of projects to which they apply (like deploy
+ * and notifications).
+ * 
+ * At the moment, this section contains only the option "cross-version, which controls the
+ * crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
  *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
  *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
  *     However, the library dependencies that refer to Scala projects that are not included in this build

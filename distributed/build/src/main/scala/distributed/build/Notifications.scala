@@ -70,7 +70,7 @@ class Notifications(build: DistributedBuildConfig, log: Logger) {
 
     build.notificationOptions.notifications foreach { n =>
       // just a sanity check on the project list (we don't use the result)
-      val _ = n.expandedProjectList(rootOutcome)
+      val _ = n.flattenProjectList(rootOutcome)
       // For notifications we do things a bit differently than for
       // deploy. For deploy, we need to obtain a flattened list in
       // order to retrieve the artifacts, and the root has no artifacts

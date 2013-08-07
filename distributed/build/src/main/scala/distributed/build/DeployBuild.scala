@@ -149,7 +149,7 @@ object DeployBuild {
           try IO.withTemporaryDirectory { dir =>
             val cache = Repository.default
             // let's expand "."
-            val projList = options.expandedProjectList(outcome)
+            val projList = options.flattenProjectList(outcome)
 
             val selected = projList.map { depl =>
               build.repeatableBuilds.find(_.config.name == depl.name) match {
@@ -173,9 +173,9 @@ object DeployBuild {
             if (good.nonEmpty) try {
               good map {
                 case (depl, proj) =>
-                  val subprojs = depl match {
+                  val subprojs:Seq[String] = depl match {
                     case SelectorSubProjects(SubProjects(from, publish)) => publish
-                    case SelectorProject(_) => Seq.empty
+                    case SelectorProject(_) => Seq[String]()
                   }
                   val (arts, msg) = LocalRepoHelper.materializePartialProjectRepository(proj.uuid, subprojs, cache, dir)
                   msg foreach { log.info(_) }

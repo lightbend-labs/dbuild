@@ -43,11 +43,16 @@ other aspects of the build process.
 The build file is written in a JSON format. The file is parsed by using the Typesafe config library,
 therefore the syntax of the file can be simplified by using the conventions of that library: double
 quotes and commas may be omitted, variable substitution is available, and other facilities are
-available. Please refer to the `config library <http://github.com/typesafehub/config>`_ guide for further
-details. The order of items in the configuration file is never relevant, unless explicitly
-mentioned in the documentation.
+available. We strongly recommend you to check the many options that are available to simplify
+writing configuration; they are all documented on the website of the
+`config library <http://github.com/typesafehub/config>`_. In addition, dbuild has one special
+feature concerning lists of strings: whenever a list of strings is expected, in the form
+``"x":["a","b","c"]``, if you have only one element you can also omit the square brackets altogether.
+In accordance with the typesafe config library, you can then usually omit the double quotes
+and in the end just write ``x:a``.
 
-The top level of the configuration file is:
+The order of items in the configuration file is never relevant, unless explicitly mentioned
+in the documentation. The top level of the configuration file is:
 
 .. code-block:: javascript
 

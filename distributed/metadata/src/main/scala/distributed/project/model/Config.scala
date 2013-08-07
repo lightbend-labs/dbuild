@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ser.std.StringSerializer
+import com.fasterxml.jackson.databind.ser.impl.StringArraySerializer
 
 /**
  * Metadata about a build.  This is extracted from a config file and contains enough information
@@ -38,22 +39,68 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions],
   @JsonProperty("notification-options") notificationOptions: NotificationOptions = NotificationOptions())
 
+/**
+ * This class acts as a useful wrapper for parameters that are Seqs of Strings: it makes it
+ * possible to specify a simple string whenever an array of strings is expected in the JSON file.
+ * Quite handy, really.
+ */
+@JsonSerialize(using = classOf[SeqStringSerializer])
+@JsonDeserialize(using = classOf[SeqStringDeserializer])
+case class SeqString(s:Seq[String])
+class SeqStringSerializer extends JsonSerializer[SeqString] {
+  override def serialize(value: SeqString, g: JsonGenerator, p: SerializerProvider) {
+    value.s.length match {
+      case 1 =>
+        new StringSerializer().serialize(value.s(0), g, p)
+      case _ =>
+        val vs = p.findValueSerializer(classOf[Array[String]], null)
+        vs.serialize(value.s.toArray, g, p)
+    }
+  }
+}
+class SeqStringDeserializer extends JsonDeserializer[SeqString] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqString = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    if (generic.isTextual()) {
+      SeqString(Seq(valueAs(classOf[String])))
+    } else {
+      SeqString(valueAs(classOf[Array[String]]))
+    }
+  }
+}
+object SeqString {
+  implicit def SeqToArrayString(s:Seq[String]):SeqString = SeqString(s)
+  implicit def ArrayStringToSeq(a:SeqString):Seq[String] = a.s
+}
+
 /** a generic options section that relies on a list of projects/subprojects */
 abstract class ProjectBasedOptions {
   def projects: Seq[SelectorElement]
 
   /**
    * From its list of selected projects, which may include '.' for the root, and
-   *  the BuildOutcome of the root, expand the definition in order to select an
-   *  appropriate subset of the root children.
+   *  the BuildOutcome of the root, flattens the definition in order to select a
+   *  subset of the root children.
    *  If '.' is present as a project, return the list of all the children.
    *  If '.' is present in a subproject definition, consider the list of
    *  subprojects as children (they are the subprojects of root, in a sense).
    *  Combine that list with the of remaining requested projects. If multiple
    *  project/subproject requests exist for the same project name, combine them together.
    *  NOTE: there is no assumption that the project names in the various request actually exist.
+   *  
+   *  An auxiliary role of this method is that of performing a sanity check on
+   *  the list of projects/subprojects, which is directly the list that
+   *  the user wrote in the configuration file, and may contain errors.
    */
-  def expandedProjectList(outcome: BuildOutcome): Set[SelectorElement] = {
+  def flattenProjectList(outcome: BuildOutcome): Set[SelectorElement] = {
     val allProjNames=outcome.outcomes.map{_.project}.toSet
     def reqFromNames(n: Set[String]): Set[SelectorElement] = n map SelectorProject
     // let's split the requests by type
@@ -92,7 +139,7 @@ case class DeployOptions(
   /** signing options */
   sign: Option[DeploySignOptions]) extends ProjectBasedOptions
 /** used to select subprojects from one project */
-case class SubProjects(from: String, publish: Seq[String])
+case class SubProjects(from: String, publish: SeqString)
 
 /**
  * Signing options.
@@ -165,8 +212,8 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
 case class ScalaExtraConfig(
   @JsonProperty("build-number") buildNumber: Option[BuildNumber],
   @JsonProperty("build-target") buildTarget: Option[String],
-  @JsonProperty("build-options") buildOptions: Seq[String] = Seq.empty,
-  exclude: Seq[String] = Seq.empty // if empty -> exclude no projects (default)
+  @JsonProperty("build-options") buildOptions: SeqString = Seq.empty,
+  exclude: SeqString = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 
 case class BuildNumber(major: String, minor: String, patch: String, bnum: String)
@@ -186,7 +233,7 @@ case class IvyArtifact(
   classifier: String = "",
   @JsonProperty("type") typ: String = "jar",
   ext: String = "jar",
-  configs: Seq[String] = Seq("default"))
+  configs: SeqString = Seq("default"))
 
 case class MavenExtraConfig(
   directory: String = "") extends ExtraConfig
@@ -199,11 +246,11 @@ case class SbtExtraConfig(
   directory: String = "",
   @JsonProperty("measure-performance") measurePerformance: Boolean = false,
   @JsonProperty("run-tests") runTests: Boolean = true,
-  options: Seq[String] = Seq.empty,
+  options: SeqString = Seq.empty,
   // before extraction or building, run these commands ("set" or others)
-  commands: Seq[String] = Seq.empty,
-  projects: Seq[String] = Seq.empty, // if empty -> build all projects (default)
-  exclude: Seq[String] = Seq.empty // if empty -> exclude no projects (default)
+  commands: SeqString = Seq.empty,
+  projects: SeqString = Seq.empty, // if empty -> build all projects (default)
+  exclude: SeqString = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 
 object BuildSystemExtras {
@@ -218,7 +265,7 @@ object BuildSystemExtras {
 /** configuration for the Nil build system */
 case class NilExtraConfig(
   /** add the dependencies here, in some fashion to be decided */
-  deps: Seq[String] = Seq.empty
+  deps: SeqString = Seq.empty
 ) extends ExtraConfig
 
 
@@ -360,7 +407,7 @@ case class Notification(
    *  failure, and on the first success whenever there
    *  is a change in code or dependencies.
    */
-  when: Seq[String] = Seq("bad", "success"),
+  when: SeqString = Seq("bad", "success"),
   /** if None, default to the one from the outcome */
   template: Option[String] = None,
   /**
@@ -416,7 +463,7 @@ case class Notification(
 private case class NotificationShadow(
   kind: String = "email",
   send: JsonNode = null,
-  when: Seq[String] = Seq("bad", "success"),
+  when: SeqString = Seq("bad", "success"),
   template: Option[String] = None,
   projects: Seq[SelectorElement])
 
@@ -533,9 +580,9 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
  * "Hello Myself <here@there.com>".
  */
 case class EmailNotification(
-  to: Seq[String] = Seq.empty,
-  cc: Seq[String] = Seq.empty,
-  bcc: Seq[String] = Seq.empty,
+  to: SeqString = Seq.empty,
+  cc: SeqString = Seq.empty,
+  bcc: SeqString = Seq.empty,
   /**
    * If you want to send to a specific smtp gateway,
    * specify it here; else, messages will be sent to localhost.

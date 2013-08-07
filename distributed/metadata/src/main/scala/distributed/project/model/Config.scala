@@ -51,7 +51,8 @@ class SeqStringSerializer extends JsonSerializer[SeqString] {
   override def serialize(value: SeqString, g: JsonGenerator, p: SerializerProvider) {
     value.s.length match {
       case 1 =>
-        new StringSerializer().serialize(value.s(0), g, p)
+        val vs = p.findValueSerializer(classOf[String], null)
+        vs.serialize(value.s(0), g, p)
       case _ =>
         val vs = p.findValueSerializer(classOf[Array[String]], null)
         vs.serialize(value.s.toArray, g, p)
@@ -77,13 +78,13 @@ class SeqStringDeserializer extends JsonDeserializer[SeqString] {
   }
 }
 object SeqString {
-  implicit def SeqToArrayString(s:Seq[String]):SeqString = SeqString(s)
-  implicit def ArrayStringToSeq(a:SeqString):Seq[String] = a.s
+  implicit def SeqToSeqString(s:Seq[String]):SeqString = SeqString(s)
+  implicit def SeqStringToSeq(a:SeqString):Seq[String] = a.s
 }
 
 /** a generic options section that relies on a list of projects/subprojects */
 abstract class ProjectBasedOptions {
-  def projects: Seq[SelectorElement]
+  def projects: SeqSelectorElement
 
   /**
    * From its list of selected projects, which may include '.' for the root, and
@@ -135,7 +136,7 @@ case class DeployOptions(
   /** path to the credentials file */
   credentials: Option[String],
   /** names of the projects that should be deployed. Default: ".", meaning all */
-  projects: Seq[SelectorElement] = Seq(SelectorProject(".")),
+  projects: SeqSelectorElement = Seq(SelectorProject(".")),
   /** signing options */
   sign: Option[DeploySignOptions]) extends ProjectBasedOptions
 /** used to select subprojects from one project */
@@ -314,6 +315,47 @@ class SelectorElementDeserializer extends JsonDeserializer[SelectorElement] {
   }
 }
 
+/** same as SeqString, for Seq[SelectorElement]: a lonely String or a lonely
+ *  SelectorSubProjs can also be used when a Seq[SelectorElement] is requested.
+ */
+@JsonSerialize(using = classOf[SeqElementSerializer])
+@JsonDeserialize(using = classOf[SeqElementDeserializer])
+case class SeqSelectorElement(s:Seq[SelectorElement])
+class SeqElementSerializer extends JsonSerializer[SeqSelectorElement] {
+  override def serialize(value: SeqSelectorElement, g: JsonGenerator, p: SerializerProvider) {
+    value.s.length match {
+      case 1 =>
+        val vs = p.findValueSerializer(classOf[SelectorElement], null)
+        vs.serialize(value.s(0), g, p)
+      case _ =>
+        val vs = p.findValueSerializer(classOf[Array[SelectorElement]], null)
+        vs.serialize(value.s.toArray, g, p)
+    }
+  }
+}
+class SeqElementDeserializer extends JsonDeserializer[SeqSelectorElement] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqSelectorElement = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    if (generic.isTextual() || generic.isObject()) {
+      SeqSelectorElement(Seq(valueAs(classOf[SelectorElement])))
+    } else { // Array, or something unexpected that will be caught later
+      SeqSelectorElement(valueAs(classOf[Array[SelectorElement]]))
+    }
+  }
+}
+object SeqSelectorElement {
+  implicit def SeqToSeqSelectorElement(s:Seq[SelectorElement]):SeqSelectorElement = SeqSelectorElement(s)
+  implicit def SeqSelectorElementToSeq(a:SeqSelectorElement):Seq[SelectorElement] = a.s
+}
+
 /**
  * These are options that affect all of the projects, but must not affect extraction:
  * extraction fully relies on the fact that the project is fully described by the
@@ -422,16 +464,16 @@ case class Notification(
    *  dbuild is able to build a list automatically
    *  if a single string is specified.
    */
-  projects: Seq[SelectorElement] = Seq(SelectorProject("."))) extends ProjectBasedOptions {
-  /*
+  projects: SeqSelectorElement = Seq(SelectorProject("."))) extends ProjectBasedOptions {
+/*
  *  example:
   
   notification-options.notifications = [{
-    projects: [jline]
-    send.to: ["antonio.cunei@typesafe.com"]
+    projects: jline
+    send.to: "antonio.cunei@typesafe.com"
   },{
-    projects: [scala-compiler]
-    send.to: ["joshua.suereth@typesafe.com"]
+    projects: scala-compiler
+    send.to: "joshua.suereth@typesafe.com"
   }]
 */
   /**
@@ -465,7 +507,7 @@ private case class NotificationShadow(
   send: JsonNode = null,
   when: SeqString = Seq("bad", "success"),
   template: Option[String] = None,
-  projects: Seq[SelectorElement])
+  projects: SeqSelectorElement)
 
 /**
  * The descriptor of options for each notification mechanism;

@@ -63,8 +63,9 @@ certain repository only scala-library and scala-compiler, for example. The synta
     "publish" : [<subproject1>,<subproject2>,...]
    }
 
-  Only the projects that completed their build succesfully will be deployed; the failed
-  ones will be skipped with an error message.
+Only the projects that completed their build succesfully will be deployed; the failed ones
+will be skipped with an error message. If there is only one project in the list, either
+a string or a from/publish record, the square brackets in the list can be omitted.
 
 sign
   If this optional section is included the artifacts will be signed with the specified key

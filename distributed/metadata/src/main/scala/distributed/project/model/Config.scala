@@ -54,32 +54,30 @@ abstract class ProjectBasedOptions {
    *  NOTE: there is no assumption that the project names in the various request actually exist.
    */
   def expandedProjectList(outcome: BuildOutcome): Set[SelectorElement] = {
+    val allProjNames=outcome.outcomes.map{_.project}.toSet
     def reqFromNames(n: Set[String]): Set[SelectorElement] = n map SelectorProject
     // let's split the requests by type
     val projReqs = projects.collect { case p: SelectorProject => p }.toSet
     val subProjReqs = projects.collect { case p: SelectorSubProjects => p }.toSet
 
-    if (projReqs.exists(_.name == "."))
-      // found "." as a project: return all children, ignore the rest
-      reqFromNames(outcome.outcomes.map(_.project).toSet)
-    else {
+      val fromRoot = if (projReqs.exists(_.name == ".")) allProjNames else Set[String]()
       // list of names of projects mentioned in subprojects from root
-      val fromDot = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
+      val fromDotSubs = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
       // are you kidding me?
-      if (fromDot.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
+      if (fromDotSubs.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
       // ok, this is the complete list of full project requests
-      val allProjReqs: Set[SelectorElement] = reqFromNames(fromDot) ++ projReqs
+      val allProjReqs: Set[SelectorElement] = reqFromNames(fromRoot) ++ reqFromNames(fromDotSubs) ++ projReqs.filterNot(_.name == ".")
       // remove the subproj requests that are already in the full proj set.
       val restSubProjReqs = subProjReqs.filterNot { p => allProjReqs.map { _.name }.contains(p.name) }
       // and now we flatten together those with the same 'from'
-      val allSubProjReqsMap = restSubProjReqs.groupBy(_.name).toSet
+      val allSubProjReqsMap = restSubProjReqs.filterNot(_.name == ".").groupBy(_.name).toSet
       val allSubProjReq: Set[SelectorElement] = allSubProjReqsMap map {
         case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.publish }.flatten.toSeq))
       }
       val reqs = allSubProjReq ++ allProjReqs
-      println(reqs)
+      val unknown = reqs.map(_.name).diff(allProjNames)
+      if (unknown.nonEmpty) sys.error(unknown.mkString("These project names are unknown: ", ",", ""))
       reqs
-    }
   }
 }
 
@@ -314,7 +312,7 @@ case class GlobalBuildOptions(
  */
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
-  notifications: Seq[Notification] = Seq(Notification("console", None, when = Seq("always"))))
+  notifications: Seq[Notification] = Seq(Notification(kind = "console", send = None, when = Seq("always"))))
 /**
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable
@@ -524,7 +522,7 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
       case Some(no) =>
         // NotificationKinds are referred to by String IDs, so we have to check manually
         // (the code must work on 2.9 as well)
-        if (m.erasure.isInstance(n)) send(n.asInstanceOf[T], templ, outcome) else
+        if (m.erasure.isInstance(no)) send(no.asInstanceOf[T], templ, outcome) else
           sys.error("Internal error: " + this.getClass.getName + " received a " + n.getClass.getName + ". Please report.")
     }
   }

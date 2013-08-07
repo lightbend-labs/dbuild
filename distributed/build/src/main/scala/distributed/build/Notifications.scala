@@ -69,9 +69,17 @@ class Notifications(build: DistributedBuildConfig, log: Logger) {
     }
 
     build.notificationOptions.notifications foreach { n =>
-      val projects = n.expandedProjectList(rootOutcome)
-      projects foreach { p =>
-        val projectOutcomes = outcomes.filter(_.project == p.name)
+      // just a sanity check on the project list (we don't use the result)
+      val _ = n.expandedProjectList(rootOutcome)
+      // For notifications we do things a bit differently than for
+      // deploy. For deploy, we need to obtain a flattened list in
+      // order to retrieve the artifacts, and the root has no artifacts
+      // of its own. But, for notifications, there exists a report
+      // for the root that is distinct from those of the children.
+      // So we take the list literally: "." is really the report for
+      // the root (no expansion).
+      n.projects foreach { p =>
+        val projectOutcomes = (rootOutcome +: outcomes).filter(_.project == p.name)
         if (projectOutcomes.isEmpty)
           sys.error("Internal error: no outcome detected for project " + p.name + ". Please report.")
         if (projectOutcomes.length > 1)

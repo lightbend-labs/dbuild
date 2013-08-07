@@ -98,7 +98,8 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
   /** A report that concatenates the summaries of subprojects, using the same template */
   lazy val subprojectsReport: String = {
     def get(o: BuildOutcome) = new TemplateFormatter(templ, o).summary
-    outcome.outcomes.map(get).mkString("", "\n", "\n")
+    val s = outcome.outcomes.map(get)
+    if (s.isEmpty) "" else s.mkString("", "\n", "\n")
   }
   val paddedProjectDescription =
     // "." is the name of the root project

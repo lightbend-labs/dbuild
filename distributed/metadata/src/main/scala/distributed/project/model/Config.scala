@@ -30,15 +30,31 @@ private case class ProjectBuildConfigShadow(name: String,
   extra: JsonNode = null)
 
 /**
- * The initial configuration for a build. Note that the global notification
- *  options are not included in the repeatable config, as notifications have
- *  no effect on the actual build, or its repeatability
+ * The initial dbuild configuration. The "build" section is a complete
+ * specification of the actual build, while the "options" section contains
+ * accessory tasks and options that do not affect the actual build, but do
+ * affect other parts of the dbuild behavior.
+ */
+case class DBuildConfiguration(
+  build:DistributedBuildConfig,
+  options:GeneralOptions = GeneralOptions() // pick defaults if empty
+)
+/**
+ * The configuration for a build. Include here every bit of information that
+ * affects the actual build; the parts that do not affect the actual build,
+ * and do not belong into the repeatable build configuration, go into the
+ * GeneralOptions class instead.
  */
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
-  deploy: Option[Seq[DeployOptions]],
-  @JsonProperty("build-options") buildOptions: Option[GlobalBuildOptions],
-  @JsonProperty("notification-options") notificationOptions: NotificationOptions = NotificationOptions())
+  options: Option[BuildOptions])
 
+/**
+ * General options for dbuild, that do not affect the actual build.
+ */
+case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
+  notifications: NotificationOptions = NotificationOptions())
+
+  
 /**
  * This class acts as a useful wrapper for parameters that are Seqs of Strings: it makes it
  * possible to specify a simple string whenever an array of strings is expected in the JSON file.
@@ -82,6 +98,15 @@ object SeqString {
   implicit def SeqStringToSeq(a:SeqString):Seq[String] = a.s
 }
 
+/** Defines a task that will run before or after the build, defined somewhere
+ *  in the "options" section. No result; it anything should go wrong, just throw
+ *  an exception.
+ */
+abstract class OptionTask {
+  def beforeBuild(config:DBuildConfiguration):Unit
+  def afterBuild(repBuild:RepeatableDistributedBuild,outcome:BuildOutcome):Unit
+}
+
 /** a generic options section that relies on a list of projects/subprojects */
 abstract class ProjectBasedOptions {
   def projects: SeqSelectorElement
@@ -101,8 +126,7 @@ abstract class ProjectBasedOptions {
    *  the list of projects/subprojects, which is directly the list that
    *  the user wrote in the configuration file, and may contain errors.
    */
-  def flattenProjectList(outcome: BuildOutcome): Set[SelectorElement] = {
-    val allProjNames=outcome.outcomes.map{_.project}.toSet
+  def flattenAndCheckProjectList(allProjNames: Set[String]): Set[SelectorElement] = {
     def reqFromNames(n: Set[String]): Set[SelectorElement] = n map SelectorProject
     // let's split the requests by type
     val projReqs = projects.collect { case p: SelectorProject => p }.toSet
@@ -393,7 +417,7 @@ object SeqSelectorElement {
  * In practice, do not include a "build-options" section at all in normal use, and just add "{cross-version:standard}"
  * if you are planning to release using "set-version".
  */
-case class GlobalBuildOptions(
+case class BuildOptions(
   @JsonProperty("cross-version") crossVersion: String = "disabled")
 
 /**
@@ -401,7 +425,7 @@ case class GlobalBuildOptions(
  */
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
-  notifications: Seq[Notification] = Seq(Notification(kind = "console", send = None, when = Seq("always"))))
+  send: Seq[Notification] = Seq(Notification(kind = "console", send = None, when = Seq("always"))))
 /**
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable

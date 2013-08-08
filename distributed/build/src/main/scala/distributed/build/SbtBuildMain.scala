@@ -6,7 +6,7 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
-import distributed.project.model.{BuildArtifactsOut,DistributedBuildConfig}
+import distributed.project.model.{BuildArtifactsOut,DBuildConfiguration}
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.project.model.ClassLoaderMadness
 
@@ -40,13 +40,13 @@ class SbtBuildMain extends xsbti.AppMain {
     try {
     println("Starting dbuild...")
       val args = configuration.arguments
-      println("Args (" + (configuration.arguments mkString ",") + ")")
+//      println("Args (" + (configuration.arguments mkString ",") + ")")
       val config = 
         if(args.length == 1)
-          readValue[DistributedBuildConfig](new File(args(0)))
+          readValue[DBuildConfiguration](new File(args(0)))
         else sys.error("Usage: dbuild {build-file}")
       // Unique names?
-      val allNames=config.projects map {_.name}
+      val allNames=config.build.projects map {_.name}
       val uniqueNames=allNames.distinct
       if (uniqueNames.size != allNames.size) {
         sys.error("Project names must be unique! Duplicates found: "+(allNames diff uniqueNames).mkString(","))
@@ -54,7 +54,7 @@ class SbtBuildMain extends xsbti.AppMain {
       if (allNames.exists(_.size <3)) {
         sys.error("Project names must be at least three characters long.")
       }
-      println("Config: " + writeValue(config))
+//      println("Config: " + writeValue(config))
 //      println("Classloader:")
 //      printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(configuration)

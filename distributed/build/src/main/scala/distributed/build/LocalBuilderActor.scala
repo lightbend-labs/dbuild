@@ -12,7 +12,7 @@ import java.io.File
 import distributed.repo.core.Repository
 import distributed.project.controller.Controller
 
-case class RunLocalBuild(config: DistributedBuildConfig, targetDir: File)
+case class RunLocalBuild(config: DBuildConfiguration, targetDir: File)
 /** This is an actor which executes builds locally given a
  * set of resolvers and build systems.
  * 

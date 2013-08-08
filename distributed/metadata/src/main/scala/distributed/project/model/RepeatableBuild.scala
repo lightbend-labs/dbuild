@@ -33,7 +33,7 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
                        @JsonProperty("base-version") baseVersion: String,
                        dependencies: Seq[RepeatableProjectBuild],
                        subproj: Seq[String],
-                       buildOptions: GlobalBuildOptions) {
+                       buildOptions: BuildOptions) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
   
@@ -53,8 +53,8 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
  *  are not included, as they have no effect on builds. 
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
-    deployOptions:Option[Seq[DeployOptions]], buildOptions: Option[GlobalBuildOptions]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), deployOptions, buildOptions)
+    buildOptions: Option[BuildOptions]) {
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), buildOptions)
   def repeatableBuildString = writeValue(this)
   
   /** Our own graph helper for interacting with the build meta information. */
@@ -78,7 +78,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
             sortedDeps, head.extracted.subproj,
-            buildOptions getOrElse GlobalBuildOptions()) // pick defaults if no GlobalBuildOptions specified
+            buildOptions getOrElse BuildOptions()) // pick defaults if no GlobalBuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     // we need to check for duplicates /before/ checking for cycles, otherwise spurious

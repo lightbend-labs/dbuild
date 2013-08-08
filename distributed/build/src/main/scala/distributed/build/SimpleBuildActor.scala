@@ -18,28 +18,28 @@ import java.io.File
 import distributed.repo.core.ProjectDirs
 import org.apache.maven.execution.BuildFailure
 
-case class RunDistributedBuild(build: DistributedBuildConfig, target: File, logger: Logger)
+case class RunDistributedBuild(conf: DBuildConfiguration, target: File, logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository) extends Actor {
   def receive = {
-    case RunDistributedBuild(build, target, log) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(conf, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
-      val logger = log.newNestedLogger(hashing sha1 build)
+      val logger = log.newNestedLogger(hashing sha1 conf.build)
       // "build" contains the project configs as written in the configuration file.
       // Their 'extra' field could be None, or contain information that must be completed
       // according to the build system in use for that project.
       // Only each build system knows its own defaults (which may change over time),
       // therefore we have to ask to the build system itself to expand the 'extra' field
       // as appropriate.
-      checkDeployFullBuild(build.deploy)
+      checkDeployFullBuild(conf.options.deploy, logger)
       val result = for {
-        fullBuild <- analyze(build, target, log.newNestedLogger(hashing sha1 build))
+        fullBuild <- analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
         outcome <- runBuild(target, fullBuild, fullLogger)
-        _ = deployFullBuild(fullBuild, outcome, log)
-        notifications = new Notifications(build, log)
+        _ = deployFullBuild(conf, fullBuild, outcome, log)
+        notifications = new Notifications(conf, log)
         _ = notifications.sendNotifications(outcome)
       } yield outcome
       result pipeTo listener
@@ -117,7 +117,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     val builds: Future[Seq[ProjectConfigAndExtracted]] = 
       Future.traverse(config.projects)(extract(tdir, log))
     // We don't have to do ordering here anymore.
-    builds map {RepeatableDistributedBuild(_, config.deploy, config.buildOptions)}
+    builds map {RepeatableDistributedBuild(_, config.options)}
   }
 
   // Our Asynchronous API.

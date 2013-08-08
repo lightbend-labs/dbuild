@@ -46,9 +46,9 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
   }
 }
 
-class Notifications(build: DistributedBuildConfig, log: Logger) {
-  val definedTemplates = build.notificationOptions.templates
-  val definedNotifications = build.notificationOptions.notifications
+class Notifications(conf: DBuildConfiguration, log: Logger) {
+  val definedTemplates = conf.options.notifications.templates
+  val definedNotifications = conf.options.notifications.send
   val usedNotificationKindIds = definedNotifications.map { _.kind }.distinct
   val allContexts = Map("console" -> new ConsoleNotificationContext(log),
     "email" -> new EmailNotificationContext(log))
@@ -68,9 +68,9 @@ class Notifications(build: DistributedBuildConfig, log: Logger) {
       }
     }
 
-    build.notificationOptions.notifications foreach { n =>
+    definedNotifications foreach { n =>
       // just a sanity check on the project list (we don't use the result)
-      val _ = n.flattenProjectList(rootOutcome)
+      val _ = n.flattenAndCheckProjectList(conf.build.projects.map{_.name}.toSet)
       // For notifications we do things a bit differently than for
       // deploy. For deploy, we need to obtain a flattened list in
       // order to retrieve the artifacts, and the root has no artifacts

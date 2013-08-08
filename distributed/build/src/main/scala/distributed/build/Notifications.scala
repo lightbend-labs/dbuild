@@ -12,13 +12,14 @@ import internet._
 // Do not add any text to them, before or after: the entire text must be definable using the templates only.
 
 class ConsoleNotificationContext(log: Logger) extends NotificationContext[ConsoleNotification] {
+  val defaultOptions = ConsoleNotification()
+  def mergeOptions(over: ConsoleNotification, under: ConsoleNotification) = defaultOptions
   override def before() = {
     log.info("--== Console Notifications ==--")
   }
   override def after() = {
     log.info("--== Done Console Notifications ==--")
   }
-  def defaultOptions = ConsoleNotification()
   def send(n: ConsoleNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     templ.long.split("\n").foreach(log.info(_))
     None
@@ -26,7 +27,15 @@ class ConsoleNotificationContext(log: Logger) extends NotificationContext[Consol
 }
 
 class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNotification] {
-  def defaultOptions = EmailNotification()
+  val defaultOptions = EmailNotification()
+  def mergeOptions(ov: EmailNotification, un: EmailNotification) = {
+    val newTO = if (ov.to != defaultOptions.to) ov.to else un.to
+    val newCC = if (ov.cc != defaultOptions.cc) ov.cc else un.cc
+    val newBCC = if (ov.bcc != defaultOptions.bcc) ov.bcc else un.bcc
+    val newSMTP = if (ov.smtp != defaultOptions.smtp) ov.smtp else un.smtp
+    val newFROM = if (ov.from != defaultOptions.from) ov.from else un.from
+    EmailNotification(to = newTO, cc = newCC, bcc = newBCC, smtp = newSMTP, from = newFROM)
+  }
   override def before() = {
     log.info("--== Sending Email ==--")
   }
@@ -37,7 +46,7 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     val props = new Properties();
     props.put("mail.smtp.host", "my-mail-server")
     val session = Session.getInstance(props, null)
-    log.info("Sending to " + n.to + " the outcome of project " + outcome.project + " using template " + templ.id)
+    log.info("Sending to " + n.to + " the outcome of project " + outcome.project + " using template " + templ.id +" from: "+n.from)
     /*
     try {
       val msg = new MimeMessage(session)
@@ -58,24 +67,36 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
   }
 }
 
+
+
 class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
-  val allContexts = Map("console" -> new ConsoleNotificationContext(log),
-    "email" -> new EmailNotificationContext(log))
+  val consoleCtx=new ConsoleNotificationContext(log)
+  val emailCtx=new EmailNotificationContext(log)
+  val allContexts = Map("console" -> consoleCtx, "email" -> emailCtx)
   def definedNotifications = conf.options.notifications.send
-  val usedNotificationKindIds = definedNotifications.map { _.kind }.distinct
+  val usedNotificationKindIDs = definedNotifications.map { _.kind }.distinct
+  val defaultsMap = conf.options.notifications.default.map { d => (d.kind, d) }.toMap
+  val defDef = Notification(send = None) // defaults of defaults
 
   def beforeBuild() = {
-    // just a sanity check on the project list (we don't use the result)
-    val unknown = usedNotificationKindIds.toSet -- allContexts.keySet
+    val definedDefaults = conf.options.notifications.default
+    val defaultsKindIDs = definedDefaults.map { _.kind }.distinct
+    val unknown = (usedNotificationKindIDs ++ defaultsKindIDs).toSet -- allContexts.keySet
     if (unknown.nonEmpty) {
       sys.error(unknown.mkString("These notification kinds are unknown: ", ",", ""))
     }
-    conf.options.notifications.send foreach { n =>
+    definedDefaults.groupBy(_.kind).foreach { kd =>
+      if (kd._2.length > 1) {
+        sys.error("There can only be one default record for the kind: " + kd._1)
+      }
+    }
+    (conf.options.notifications.send ++ conf.options.notifications.default) foreach { n =>
+      // just a sanity check on the project list (we don't use the result)
       val _ = n.flattenAndCheckProjectList(conf.build.projects.map { _.name }.toSet)
     }
   }
   def afterBuild(repBuild: RepeatableDistributedBuild, rootOutcome: BuildOutcome) = {
-    usedNotificationKindIds foreach { kind =>
+    usedNotificationKindIDs foreach { kind =>
       allContexts(kind).before
       sendNotifications(kind, rootOutcome)
       allContexts(kind).after
@@ -85,14 +106,34 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
   def sendNotifications(kind: String, rootOutcome: BuildOutcome) = {
     val outcomes = rootOutcome.outcomes // children of the dbuild root
     val definedTemplates = conf.options.notifications.templates
+    val defnOpt = defaultsMap.get(kind) // defaults from the default records
+
+    // scan the kinds for which at least one notification exists
     definedNotifications.filter(kind == _.kind).foreach { n =>
-      // For notifications we do things a bit differently than for
-      // deploy. For deploy, we need to obtain a flattened list in
-      // order to retrieve the artifacts, and the root has no artifacts
-      // of its own. But, for notifications, there exists a report
-      // for the root that is distinct from those of the children.
-      // So we take the list literally: "." is really the report for
-      // the root (no expansion).
+      // Expansion from defaults; we do it manually. We must consider
+      // both the notification record, as well as the internals of the
+      // 'send' options; however, the latter are kind-specific, so we
+      // ask the corresponding NotificationContext to do it on our behalf.
+      // There are three stages: the initial standard values (defined in
+      // the source code), which appear if the fields are not specified
+      // in the JSON file. Then there are the notification defaults,
+      // specified in conf.options.notifications.defaults, and finally
+      // the topmost user record from conf.options.notifications.send.
+      // The last two have the first as their common default.
+      // The three have to be superimposed, and merged.
+      val combined = defnOpt match {
+        case None => n // no explicit default, pick n as-is
+        case Some(defn) =>
+          println("This is: "+n)
+          println("default is: "+defn)
+          println("default default is: "+defDef)
+          val newWhen = if (n.when != defDef.when) n.when else defn.when
+          val newTempl = if (n.template != defDef.template) n.template else defn.template
+          val newProjects = if (n.projects != defDef.projects) n.projects else defn.projects
+          val newSend = allContexts(kind).mergeOptionsK(n.send, defn.send)
+          Notification(kind = kind, send = Some(newSend), when = newWhen, template = newTempl, projects = newProjects)
+      }
+
       def processOneNotification(n: Notification, outcome: BuildOutcome) = {
         val resolvedTempl = n.resolveTemplate(outcome, definedTemplates)
         if (outcome.whenIDs.intersect(n.when).nonEmpty) {
@@ -100,13 +141,20 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
           allContexts(n.kind).notify(n.send, formatter, outcome) map (log.warn(_))
         }
       }
+      // For notifications we do things a bit differently than in
+      // deploy. For deploy, we need to obtain a flattened list in
+      // order to retrieve the artifacts, and the root has no artifacts
+      // of its own. But, for notifications, there exists a report
+      // for the root that is distinct from those of the children.
+      // So we take the list literally: "." is really the report for
+      // the root (no expansion).
       n.projects foreach { p =>
         val projectOutcomes = (rootOutcome +: outcomes).filter(_.project == p.name)
         if (projectOutcomes.isEmpty)
           sys.error("Internal error: no outcome detected for project " + p.name + ". Please report.")
         if (projectOutcomes.length > 1)
           sys.error("Internal error: multiple outcomes detected for project " + p.name + ". Please report.")
-        processOneNotification(n, projectOutcomes.head)
+        processOneNotification(combined, projectOutcomes.head)
       }
     }
   }

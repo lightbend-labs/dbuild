@@ -379,6 +379,47 @@ object SeqSelectorElement {
   implicit def SeqToSeqSelectorElement(s:Seq[SelectorElement]):SeqSelectorElement = SeqSelectorElement(s)
   implicit def SeqSelectorElementToSeq(a:SeqSelectorElement):Seq[SelectorElement] = a.s
 }
+/** same as SeqString, for Seq[Notification]: a single Notification will be wrapped into an array.
+ *  Note that I cannot make easily a generic version, since Jackson requires a no-args constructur
+ *  and I cannot construct a sequence without a Manifest. So I only special case a few of them.
+ */
+@JsonSerialize(using = classOf[SeqNotificationSerializer])
+@JsonDeserialize(using = classOf[SeqNotificationDeserializer])
+case class SeqNotification(s:Seq[Notification])
+class SeqNotificationSerializer extends JsonSerializer[SeqNotification] {
+  override def serialize(value: SeqNotification, g: JsonGenerator, p: SerializerProvider) {
+    value.s.length match {
+      case 1 =>
+        val vs = p.findValueSerializer(classOf[Notification], null)
+        vs.serialize(value.s(0), g, p)
+      case _ =>
+        val vs = p.findValueSerializer(classOf[Array[Notification]], null)
+        vs.serialize(value.s.toArray, g, p)
+    }
+  }
+}
+class SeqNotificationDeserializer extends JsonDeserializer[SeqNotification] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqNotification = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    if (generic.isTextual() || generic.isObject()) {
+      SeqNotification(Seq(valueAs(classOf[Notification])))
+    } else { // Array, or something unexpected that will be caught later
+      SeqNotification(valueAs(classOf[Array[Notification]]))
+    }
+  }
+}
+object SeqNotification {
+  implicit def SeqToSeqNotification(s:Seq[Notification]):SeqNotification = SeqNotification(s)
+  implicit def SeqNotificationToSeq(a:SeqNotification):Seq[Notification] = a.s
+}
 
 /**
  * These are options that affect all of the projects, but must not affect extraction:
@@ -425,7 +466,15 @@ case class BuildOptions(
  */
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
-  send: Seq[Notification] = Seq(Notification(kind = "console", send = None, when = Seq("always"))))
+  send: SeqNotification = Seq(Notification(kind = "console", send = None, when = Seq("always"))),
+  /** This section optionally contains defaults to be used for the various notification kinds.
+   *  The values specified in the defaults section will be used for that kind if no value
+   *  has been specified in a "send" record of that kind. Since the defaults of the defaults are
+   *  by default the defaults of the notifications (since they use the same Notification record),
+   *  unspecified fields in the defaults cause no change to the default interpretation of send
+   *  records.
+   */
+  default:SeqNotification = Seq[Notification]())
 /**
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable
@@ -492,13 +541,15 @@ case class Notification(
 /*
  *  example:
   
-  notification-options.notifications = [{
+  options.notifications.send = [{
     projects: jline
     send.to: "antonio.cunei@typesafe.com"
   },{
     projects: scala-compiler
     send.to: "joshua.suereth@typesafe.com"
   }]
+  options.notifications.defaults.send.smtp = "relay.typesafe.com"
+  
 */
   /**
    * It calls template(), if None, then get
@@ -531,7 +582,7 @@ private case class NotificationShadow(
   send: JsonNode = null,
   when: SeqString = Seq("bad", "success"),
   template: Option[String] = None,
-  projects: SeqSelectorElement)
+  projects: SeqSelectorElement = Seq(SelectorProject(".")))
 
 /**
  * The descriptor of options for each notification mechanism;
@@ -627,7 +678,13 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
    * issue a message and abort.
    */
   protected def defaultOptions: T
-
+  /**
+   *  Merges two records; if anything in "over" was changed with respect to defaultOptions,
+   *  then take the value of "over". Else, get the value from "under". If both are None,
+   *  return defaultOptions.
+   */  
+  protected def mergeOptions(over: T, under: T):T
+  
   /**
    * The client code calls notify(), which redispatches to send(), implemented in subclasses.
    */
@@ -641,6 +698,23 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
           sys.error("Internal error: " + this.getClass.getName + " received a " + n.getClass.getName + ". Please report.")
     }
   }
+  /** The client code calls mergeOptionsK, which is internally re-dispatched to mergeOptions */
+  def mergeOptionsK(over: Option[NotificationKind], under: Option[NotificationKind]):NotificationKind = {
+    // Once again, I get something that is no more specific than a NotificationKind, but I *know* from a String ID
+    // that they are the right kind for this Context, so I test for extra safety and cast. I am sure there is a
+    // prettier solution, probably using type members or path-dependent types (by nesting NotificationKind and/or
+    // NotificationContext into Notification), but implementation time is short at the moment and for the moment this will do.
+    // TODO: clean up this uglyness
+    (over,under) match {
+      case (None,None) => defaultOptions
+      case (Some(ov),None) => ov
+      case (None,Some(un)) => un
+      case (Some(ov),Some(un)) => 
+        if (m.erasure.isInstance(ov)&&m.erasure.isInstance(un)) mergeOptions(ov.asInstanceOf[T],un.asInstanceOf[T]) else
+          sys.error("Internal error: " + this.getClass.getName + " received: " + ov.getClass.getName + "-"+un.getClass.getName+". Please report.")
+    }
+  }
+
 }
 
 /**

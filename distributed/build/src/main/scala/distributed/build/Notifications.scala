@@ -12,6 +12,12 @@ import internet._
 // Do not add any text to them, before or after: the entire text must be definable using the templates only.
 
 class ConsoleNotificationContext(log: Logger) extends NotificationContext[ConsoleNotification] {
+  override def before() = {
+    log.info("--== Console Notifications ==--")
+  }
+  override def after() = {
+    log.info("--== Done Console Notifications ==--")
+  }
   def defaultOptions = ConsoleNotification()
   def send(n: ConsoleNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     templ.long.split("\n").foreach(log.info(_))
@@ -21,6 +27,12 @@ class ConsoleNotificationContext(log: Logger) extends NotificationContext[Consol
 
 class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNotification] {
   def defaultOptions = EmailNotification()
+  override def before() = {
+    log.info("--== Sending Email ==--")
+  }
+  override def after() = {
+    log.info("--== Done Sending Email ==--")
+  }
   def send(n: EmailNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     val props = new Properties();
     props.put("mail.smtp.host", "my-mail-server")
@@ -46,31 +58,34 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
   }
 }
 
-class Notifications(conf: DBuildConfiguration, log: Logger) {
-  val definedTemplates = conf.options.notifications.templates
-  val definedNotifications = conf.options.notifications.send
-  val usedNotificationKindIds = definedNotifications.map { _.kind }.distinct
+class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
   val allContexts = Map("console" -> new ConsoleNotificationContext(log),
     "email" -> new EmailNotificationContext(log))
-  val unknown = usedNotificationKindIds.toSet -- allContexts.keySet
-  if (unknown.nonEmpty) {
-    sys.error(unknown.mkString("These notification kinds are unknown: ", ",", ""))
-  }
-  def sendNotifications(rootOutcome: BuildOutcome) = {
-    val outcomes = rootOutcome.outcomes // children of the dbuild root
-    usedNotificationKindIds foreach { allContexts(_).before }
+  def definedNotifications = conf.options.notifications.send
+  val usedNotificationKindIds = definedNotifications.map { _.kind }.distinct
 
-    def processOneNotification(n: Notification, outcome: BuildOutcome) = {
-      val resolvedTempl = n.resolveTemplate(outcome, definedTemplates)
-      if (outcome.whenIDs.intersect(n.when).nonEmpty) {
-        val formatter = new TemplateFormatter(resolvedTempl, outcome)
-        allContexts(n.kind).notify(n.send, formatter, outcome) map (log.warn(_))
-      }
+  def beforeBuild() = {
+    // just a sanity check on the project list (we don't use the result)
+    val unknown = usedNotificationKindIds.toSet -- allContexts.keySet
+    if (unknown.nonEmpty) {
+      sys.error(unknown.mkString("These notification kinds are unknown: ", ",", ""))
     }
+    conf.options.notifications.send foreach { n =>
+      val _ = n.flattenAndCheckProjectList(conf.build.projects.map { _.name }.toSet)
+    }
+  }
+  def afterBuild(repBuild: RepeatableDistributedBuild, rootOutcome: BuildOutcome) = {
+    usedNotificationKindIds foreach { kind =>
+      allContexts(kind).before
+      sendNotifications(kind, rootOutcome)
+      allContexts(kind).after
+    }
+  }
 
-    definedNotifications foreach { n =>
-      // just a sanity check on the project list (we don't use the result)
-      val _ = n.flattenAndCheckProjectList(conf.build.projects.map{_.name}.toSet)
+  def sendNotifications(kind: String, rootOutcome: BuildOutcome) = {
+    val outcomes = rootOutcome.outcomes // children of the dbuild root
+    val definedTemplates = conf.options.notifications.templates
+    definedNotifications.filter(kind == _.kind).foreach { n =>
       // For notifications we do things a bit differently than for
       // deploy. For deploy, we need to obtain a flattened list in
       // order to retrieve the artifacts, and the root has no artifacts
@@ -78,6 +93,13 @@ class Notifications(conf: DBuildConfiguration, log: Logger) {
       // for the root that is distinct from those of the children.
       // So we take the list literally: "." is really the report for
       // the root (no expansion).
+      def processOneNotification(n: Notification, outcome: BuildOutcome) = {
+        val resolvedTempl = n.resolveTemplate(outcome, definedTemplates)
+        if (outcome.whenIDs.intersect(n.when).nonEmpty) {
+          val formatter = new TemplateFormatter(resolvedTempl, outcome)
+          allContexts(n.kind).notify(n.send, formatter, outcome) map (log.warn(_))
+        }
+      }
       n.projects foreach { p =>
         val projectOutcomes = (rootOutcome +: outcomes).filter(_.project == p.name)
         if (projectOutcomes.isEmpty)
@@ -87,7 +109,5 @@ class Notifications(conf: DBuildConfiguration, log: Logger) {
         processOneNotification(n, projectOutcomes.head)
       }
     }
-
-    usedNotificationKindIds foreach { allContexts(_).after }
   }
 }

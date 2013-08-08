@@ -103,7 +103,7 @@ object SeqString {
  *  an exception.
  */
 abstract class OptionTask {
-  def beforeBuild(config:DBuildConfiguration):Unit
+  def beforeBuild():Unit
   def afterBuild(repBuild:RepeatableDistributedBuild,outcome:BuildOutcome):Unit
 }
 
@@ -414,7 +414,7 @@ object SeqSelectorElement {
  *     full scala version string instead. The projects that have cross building disabled, however, will be
  *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
  *
- * In practice, do not include a "build-options" section at all in normal use, and just add "{cross-version:standard}"
+ * In practice, do not include an "options" section at all in normal use, and just add "{cross-version:standard}"
  * if you are planning to release using "set-version".
  */
 case class BuildOptions(
@@ -611,7 +611,9 @@ class NotificationDeserializer extends JsonDeserializer[Notification] {
  * are actually used in the configuration file will be called.
  */
 abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T]) {
+  /** before() is called once after the build, before all the send()s of this kind. */
   def before() = {}
+  /** after() is called after all the send()s of this kind, for cleanup. */
   def after() = {}
   /**
    * Send the notification using the template templ (do not use the one from outcome when implementing).

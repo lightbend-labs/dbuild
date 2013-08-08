@@ -16,7 +16,17 @@ import com.jsuereth.pgp.{ PGP, SecretKey }
 import org.bouncycastle.openpgp.{ PGPSecretKeyRingCollection, PGPSecretKeyRing }
 import org.omg.PortableInterceptor.SUCCESSFUL
 
-object DeployBuild {
+class DeployBuild(conf: DBuildConfiguration, log: Logger)  extends OptionTask {
+  def beforeBuild() = {
+    conf.options.deploy foreach { d =>
+      // just a sanity check on the project list (we don't use the result)
+      val _ = d.flattenAndCheckProjectList(conf.build.projects.map{_.name}.toSet)
+    }
+    checkDeployFullBuild(conf.options.deploy, log)
+  }
+  def afterBuild(repBuild:RepeatableDistributedBuild,outcome:BuildOutcome) = {
+    deployFullBuild(conf, repBuild, outcome, log)
+  }
 
   // first, a proper sanity check
   def checkDeployFullBuild(optionsSeq: Seq[DeployOptions], log: Logger) = {

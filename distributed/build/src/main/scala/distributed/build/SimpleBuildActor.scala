@@ -3,7 +3,6 @@ package build
 
 import project.model._
 import project.build._
-import DeployBuild._
 import repo.core.{Repository,LocalRepoHelper}
 import project.dependencies.ExtractBuildDependencies
 import logging.Logger
@@ -32,15 +31,15 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       // Only each build system knows its own defaults (which may change over time),
       // therefore we have to ask to the build system itself to expand the 'extra' field
       // as appropriate.
-      checkDeployFullBuild(conf.options.deploy, logger)
+      val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, log))
+
+      tasks foreach { _.beforeBuild }
       val result = for {
         fullBuild <- analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build))
         fullLogger = log.newNestedLogger(fullBuild.uuid)
         _ = publishFullBuild(fullBuild, fullLogger)
         outcome <- runBuild(target, fullBuild, fullLogger)
-        _ = deployFullBuild(conf, fullBuild, outcome, log)
-        notifications = new Notifications(conf, log)
-        _ = notifications.sendNotifications(outcome)
+        _ = tasks foreach { _.afterBuild(fullBuild, outcome) }
       } yield outcome
       result pipeTo listener
     }

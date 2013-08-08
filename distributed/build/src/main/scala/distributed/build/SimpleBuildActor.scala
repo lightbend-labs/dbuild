@@ -60,7 +60,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       log.info(b.dependencies.map{_.config.name}mkString("  depends on: ", ", ",""))
     }
     log.info("---== End Dependency Information ===---")
-    LocalRepoHelper.publishBuildMeta(build, repository)
+    log.info("---== Writing dbuild Metadata ===---")
+    LocalRepoHelper.publishBuildMeta(build, repository, log)
+    log.info("---== End Writing dbuild Metadata ===---")
   }
 
   def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn, log: Logger): Unit = 

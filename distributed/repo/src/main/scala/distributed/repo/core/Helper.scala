@@ -22,11 +22,44 @@ object LocalRepoHelper {
     "meta/build/" + sha
 
   /** Publishes the given repeatable build configuration to the repository. */
-  def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository): Unit =
+  def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository, log: Logger): Unit =
     IO.withTemporaryFile("repeatable-build", build.uuid) { file =>
       val key = makeBuildMetaKey(build.uuid)
-      IO.write(file, writeValue(build))
-      remote put (key, file)
+      // is the file already there? We might try to publish twice, as a previous run
+      // failed. If so, let's check that what is there matches what we have (as a sanity
+      // check) and print a message.
+      val f: File = try {
+        remote get key
+        // if we are here the file exists, so we either match, or it's an error.
+        // We might also fail to deserialize, though. We continue after the try.
+      } catch {
+        case e =>
+          // the meta doesn't exist in the repo, or other I/O error (wrong privs, for instance).
+          // we try to write, hoping we succeed.
+          log.debug("While reading from repo: " + e.getMessage)
+          IO.write(file, writeValue(build))
+          remote put (key, file)
+          log.info("Written metadata for build " + build.uuid)
+          // all ok
+          return
+      }
+      val existingBuild: RepeatableDistributedBuild = try {
+        readValue[RepeatableDistributedBuild](f)
+        // deserialized ok. We continue after the try
+      } catch {
+        case e =>
+          // failed to deserialize. Should be impossible.
+        log.error("The data already present in the dbuild repository for this build (uuid = " + build.uuid + ")")
+        log.error("does not seem a valid repeatable build configuration. This shouldn't happen! Please report.")
+        throw new Exception("Repository consistency check failed",e)
+      }
+      if (existingBuild == build) {
+        log.info("The build metadata for this build is already in the repo (we are repeating the build)")
+      } else {
+        log.error("The data already present in the dbuild repository for this build (uuid = " + build.uuid + ")")
+        log.error("does not match the current metadata. This shouldn't happen! Please report.")
+        throw new Exception("Repository consistency check failed")
+      }
     }
 
   def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {
@@ -44,7 +77,7 @@ object LocalRepoHelper {
    * Publishes all files in the localRepo directory, according to the SHAs calculated
    * by the build system.
    */
-  protected def publishRawArtifacts(localRepo: File, subproj: String, files: Seq[ArtifactSha], remote: Repository, log:Logger) = {
+  protected def publishRawArtifacts(localRepo: File, subproj: String, files: Seq[ArtifactSha], remote: Repository, log: Logger) = {
     if (subproj != "") log.info("Checking files for subproject: " + subproj)
     files foreach {
       case ArtifactSha(sha, location) =>
@@ -71,7 +104,7 @@ object LocalRepoHelper {
    * @param remote  The repository to publish into.
    */
   def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut],
-    localRepo: File, remote: Repository, log:Logger): ProjectArtifactInfo = {
+    localRepo: File, remote: Repository, log: Logger): ProjectArtifactInfo = {
     extracted foreach { case BuildSubArtifactsOut(subproj, _, shas) => publishRawArtifacts(localRepo, subproj, shas, remote, log) }
     val info = ProjectArtifactInfo(project, extracted)
     publishProjectMetadata(info, remote)

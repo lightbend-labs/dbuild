@@ -239,19 +239,19 @@ object DependencyAnalysis {
   
   /** The implementation of the print-deps command. */
   def printCmd(state: State): State = {
-    val uri = System.getProperty("remote.project.uri")
+    val uri = System.getProperty("dbuild.remote.project.uri")
     def reloadProjects(props:String) = (Option(System.getProperty(props)) getOrElse "") match {
       case "" => Seq.empty
       case projs => projs.split(",").toSeq
     }
-    val projects = reloadProjects("project.dependency.metadata.subprojects")
-    val excluded = reloadProjects("project.dependency.metadata.excluded")
-    (Option(System.getProperty("project.dependency.metadata.file"))
+    val projects = reloadProjects("dbuild.project.dependency.metadata.subprojects")
+    val excluded = reloadProjects("dbuild.project.dependency.metadata.excluded")
+    (Option(System.getProperty("dbuild.project.dependency.metadata.file"))
         foreach (f => printDependencies(state, uri, f, projects, excluded)))
     state
   }
 
-  private def print = Command.command("print-deps")(printCmd)
+  private def print = Command.command("print-deps")(saveLastMsg(printCmd))
 
   /** Settings you can add your build to print dependencies. */
   def printSettings: Seq[Setting[_]] = Seq(

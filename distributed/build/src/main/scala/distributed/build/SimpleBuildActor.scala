@@ -102,7 +102,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       Future.sequence(runBuild()).map { outcomes =>
         if (outcomes exists { case _: BuildBad => true; case _ => false })
           // "." is the name of the root project
-          BuildFailed(".", outcomes, "one or more projects failed")
+          BuildFailed(".", outcomes, "cause: one or more projects failed")
         else {
           BuildSuccess(".",outcomes,BuildArtifactsOut(Seq.empty))
         }

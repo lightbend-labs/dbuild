@@ -56,7 +56,7 @@ case class BuildUnchanged(project: String, outcomes: Seq[BuildOutcome], artsOut:
 /** This build was attempted, but an error condition occurred while executing it. */
 case class BuildFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends BuildBad {
   def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
-  def status() = "FAILED (cause: " + cause + ")"
+  def status() = "FAILED (" + cause + ")"
   override def whenIDs: Seq[String] = "failed" +: super.whenIDs
 }
 

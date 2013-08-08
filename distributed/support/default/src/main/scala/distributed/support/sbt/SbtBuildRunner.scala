@@ -34,8 +34,8 @@ object SbtBuilder {
         log = log,
         javaProps = Map(
             "sbt.repository.config" -> repoFile.getAbsolutePath,
-            "project.build.results.file" -> resultFile.getAbsolutePath,
-            "project.build.deps.file" -> depsFile.getAbsolutePath,
+            "dbuild.project.build.results.file" -> resultFile.getAbsolutePath,
+            "dbuild.project.build.deps.file" -> depsFile.getAbsolutePath,
             "sbt.ivy.home" -> ivyCache.getAbsolutePath),
         extraArgs = config.config.options
       )(config.config.commands.:+("dbuild-build"):_*)

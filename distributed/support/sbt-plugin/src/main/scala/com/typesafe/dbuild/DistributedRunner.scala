@@ -76,7 +76,7 @@ object DistributedRunner {
 
   def loadBuildConfig: Option[SbtBuildConfig] =
     for {
-      f <- Option(System getProperty "project.build.deps.file") map (new File(_))
+      f <- Option(System getProperty "dbuild.project.build.deps.file") map (new File(_))
       deps = readValue[SbtBuildConfig](f)
     } yield deps
 
@@ -578,7 +578,9 @@ object DistributedRunner {
 
   /** The implementation of the dbuild-build command. */
   def buildCmd(state: State): State = {
-    val resultFile = Option(System.getProperty("project.build.results.file"))
+    println("sono entrato in buildcmd.")
+    throw new Exception("Ohi")
+    val resultFile = Option(System.getProperty("dbuild.project.build.results.file"))
     val results = for {
       f <- resultFile
       config <- loadBuildConfig
@@ -675,8 +677,8 @@ object DistributedRunner {
     }
   }
 
-  private def buildIt = Command.command("dbuild-build")(buildCmd)
-  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(setupCmd)
+  private def buildIt = Command.command("dbuild-build")(saveLastMsg(buildCmd))
+  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(saveLastMsg(setupCmd))
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
   private def comment = Command.args("//", "// [comments]") { (state, _) => state }
 
@@ -696,7 +698,6 @@ object DistributedRunner {
       version, crossSuffix)
   }
 
-  // TODO - We need to publish too....
   def projectSettings: Seq[Setting[_]] = Seq(
     extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
       Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion) map extractArtifactLocations)

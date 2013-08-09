@@ -48,6 +48,8 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     log.info("--== Done Sending Email ==--")
   }
   def send(n: EmailNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
+    throw new Exception("Ohohohoh")
+
     val props = new Properties();
     props.put("mail.smtp.host", "my-mail-server")
     val session = Session.getInstance(props, null)
@@ -130,9 +132,6 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
       val combined = defnOpt match {
         case None => n // no explicit default, pick n as-is
         case Some(defn) =>
-          println("This is: "+n)
-          println("default is: "+defn)
-          println("default default is: "+defDef)
           val newWhen = if (n.when != defDef.when) n.when else defn.when
           val newTempl = if (n.template != defDef.template) n.template else defn.template
           val newProjects = if (n.projects != defDef.projects) n.projects else defn.projects

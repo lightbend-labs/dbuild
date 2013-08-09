@@ -3,12 +3,12 @@ package build
 
 import project.model._
 import project.build._
-import repo.core.{Repository,LocalRepoHelper}
+import repo.core.{ Repository, LocalRepoHelper }
 import project.dependencies.ExtractBuildDependencies
 import logging.Logger
-import akka.actor.{Actor,ActorRef,Props}
-import akka.pattern.{ask,pipe}
-import akka.dispatch.{Future,Futures}
+import akka.actor.{ Actor, ActorRef, Props }
+import akka.pattern.{ ask, pipe }
+import akka.dispatch.{ Future, Futures }
 import akka.util.duration._
 import akka.util.Timeout
 import actorpatterns.forwardingErrorsToFutures
@@ -36,57 +36,70 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         // as appropriate.
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, log))
         tasks foreach { _.beforeBuild }
+        def afterTasks(error:String, rdb: Option[RepeatableDistributedBuild], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
+          if (tasks.nonEmpty) futureBuildResult map {
+            wrapExceptionIntoOutcome[BuildOutcome](log) { buildOutcome =>
+              val taskOuts = tasks map { t =>
+                try { // even if one task fails, we move on to the rest
+                  t.afterBuild(rdb, buildOutcome)
+                  (t.id, true)
+                } catch {
+                  case e =>
+                    prepareLogMsg(log, e)
+                    (t.id, false)
+                }
+              }
+              log.info("---==  Tasks Report ==---")
+              val (good, bad) = taskOuts.partition(_._2)
+              if (good.nonEmpty) log.info(good.map(_._1).mkString("Run successfully: ", ", ", ""))
+              if (bad.nonEmpty) log.info(bad.map(_._1).mkString("Failed: ", ", ", ""))
+              log.info("---==  End Tasks Report ==---")
+              // should we mark a build failure if a task is unsuccessful? Probably we should
+              if (bad.nonEmpty) throw new Exception(error+": " + bad.map(_._1).mkString(", "))
+              buildOutcome
+            }
+          }
+          else futureBuildResult
+        }
         // careful with map() on Futures: exceptions must be caught separately!!
         analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build)) flatMap {
-          wrapExceptionIntoOutcome[ExtractionOutcome](log) {
+          wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>
-              tasks foreach { _.afterBuild(None, extractionOutcome) }
-              Future(extractionOutcome)
+              afterTasks("After extraction failed, tasks failed", None, Future(extractionOutcome))
             case extractionOutcome: ExtractionOK =>
               val fullBuild = RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)
               val fullLogger = log.newNestedLogger(fullBuild.uuid)
               publishFullBuild(fullBuild, fullLogger)
               val futureBuildResult = runBuild(target, fullBuild, fullLogger)
-              if (tasks.nonEmpty) futureBuildResult map { buildOutcome =>
-                forwardingErrorsToFutures(listener) {
-                  val taskOuts = tasks map { t =>
-                    try { // even if one task fails, we move on to the rest
-                      t.afterBuild(Some(fullBuild), buildOutcome)
-                      (t.id, true)
-                    } catch {
-                      case e =>
-                        prepareLogMsg(log, e)
-                        (t.id, false)
-                    }
-                  }
-                  log.info("---==  Tasks Report ==---")
-                  val (good, bad) = taskOuts.partition(_._2)
-                  if (good.nonEmpty) log.info(good.mkString("Run successfully: ", ",", ""))
-                  if (bad.nonEmpty) log.info(bad.mkString("Failed successfully: ", ",", ""))
-                  log.info("---==  End Tasks Report ==---")
-                }
-              }
-              futureBuildResult
+              afterTasks("After building, some tasks failed", Some(fullBuild), futureBuildResult)
             case _ => sys.error("Internal error: extraction did not return ExtractionOutcome. Please report.")
           }
         }
       } catch {
         case e =>
-          Future(BuildFailed(".", Seq.empty, "dbuild failed unexpectedly. Cause: " + prepareLogMsg(log, e)))
+          Future(BuildFailed(".", Seq.empty, "Unexpected. Cause: " + prepareLogMsg(log, e)))
       }
       result pipeTo listener
     }
   }
 
-  final def wrapExceptionIntoOutcome[A](log: logging.Logger)(f: A => Future[BuildOutcome])(a:A): Future[BuildOutcome] = {
+  final def wrapExceptionIntoOutcomeF[A](log: logging.Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
     implicit val ctx = context.system
     try f(a) catch {
       case e =>
-        Future(BuildFailed(".", Seq.empty, "dbuild failed unexpectedly. Cause: " + prepareLogMsg(log, e)))
+        Future(BuildFailed(".", Seq.empty, "Unexpected. Cause: " + prepareLogMsg(log, e)))
     }
   }
-  
-  /** Publishing the full build to the repository and logs the output for
+  final def wrapExceptionIntoOutcome[A](log: logging.Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
+    implicit val ctx = context.system
+    try f(a) catch {
+      case e =>
+        BuildFailed(".", Seq.empty, "Unexpected. Cause: " + prepareLogMsg(log, e))
+    }
+  }
+
+  /**
+   * Publishing the full build to the repository and logs the output for
    * re-use.
    */
   def publishFullBuild(build: RepeatableDistributedBuild, log: Logger): Unit = {
@@ -97,8 +110,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     log.debug("---== End Repeatable Build Config ===---")
     log.info("---== Dependency Information ===---")
     build.repeatableBuilds foreach { b =>
-      log.info("Project "+ b.config.name)
-      log.info(b.dependencies.map{_.config.name}mkString("  depends on: ", ", ",""))
+      log.info("Project " + b.config.name)
+      log.info(b.dependencies.map { _.config.name } mkString ("  depends on: ", ", ", ""))
     }
     log.info("---== End Dependency Information ===---")
     log.info("---== Writing dbuild Metadata ===---")
@@ -106,17 +119,17 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     log.info("---== End Writing dbuild Metadata ===---")
   }
 
-  def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn, log: Logger): Unit = 
+  def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn, log: Logger): Unit =
     try {
       log info "Printing Poms!"
       val poms = repo.PomHelper.makePomStrings(build, arts)
       log info (poms mkString "----------")
     } catch {
-      case e: Throwable => 
+      case e: Throwable =>
         log trace e
         throw e
     }
-  
+
   implicit val buildTimeout: Timeout = 4 hours
 
   // Chain together some Asynch to run this build.
@@ -169,20 +182,19 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       if (s exists { _.isInstanceOf[ExtractionFailed] })
         ExtractionFailed(".", s, "cause: one or more projects failed")
       else {
-        val sok = s.collect({case e:ExtractionOK => e})
+        val sok = s.collect({ case e: ExtractionOK => e })
         ExtractionOK(".", sok, sok flatMap { _.pces })
       }
     }
   }
 
   // Our Asynchronous API.
-  def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ExtractionOutcome]=
+  def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ExtractionOutcome] =
     (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[ExtractionOutcome]
-  
-  
+
   // TODO - Repository Knowledge here
   // outProjects is the list of Projects that will be generated by this build, as reported during extraction.
   // we will need it to calculate the version string in LocalBuildRunner, but won't need it any further 
   def buildProject(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], logger: Logger): Future[BuildOutcome] =
-       (builder ? RunBuild(target, build, outProjects, children, logger)).mapTo[BuildOutcome]
+    (builder ? RunBuild(target, build, outProjects, children, logger)).mapTo[BuildOutcome]
 }

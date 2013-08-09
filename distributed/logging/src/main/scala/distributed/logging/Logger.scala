@@ -14,7 +14,7 @@ object Logger {
     t.printStackTrace(new java.io.PrintWriter(errors));
     errors.toString.split("\n") foreach { log.error(_) }
     val msg1 = t.getClass.getSimpleName + (Option(t.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")
-    if (msg1.length < 42) msg1 else msg1.take(39) + "..."
+    if (msg1.length < 60) msg1 else msg1.take(57) + "..."
   }
 }
 

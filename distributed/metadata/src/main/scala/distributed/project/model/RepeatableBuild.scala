@@ -48,6 +48,10 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
   }
 }
 
+object RepeatableDistributedBuild {
+  def fromExtractionOutcome(conf:DBuildConfiguration, outcome:ExtractionOK) =
+     RepeatableDistributedBuild(outcome.pces, conf.build.options)
+}
 /** A distributed build containing projects in *build order*
  *  Also known as the repeatable config. Note that notifications
  *  are not included, as they have no effect on builds. 

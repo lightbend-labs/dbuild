@@ -8,9 +8,14 @@ import java.util.Date
 import javax.mail._
 import internet._
 
+//
+// Ideally, the ConsoleNotification should become the mechanism by which the entire log of the
+// dbuild compilation is printed on-screen: since builds can (will) work in parallel, the logs
+// should be captured separately and printed at the end, one per project, via this mechanism
+// rather than being mixed together while work progresses.
+//
 // Note: when implementing send(), only use templ.long, templ.short, and templ.summary (and templ.id for diagnostics only).
 // Do not add any text to them, before or after: the entire text must be definable using the templates only.
-
 class ConsoleNotificationContext(log: Logger) extends NotificationContext[ConsoleNotification] {
   val defaultOptions = ConsoleNotification()
   def mergeOptions(over: ConsoleNotification, under: ConsoleNotification) = defaultOptions
@@ -28,12 +33,12 @@ class ConsoleNotificationContext(log: Logger) extends NotificationContext[Consol
 
 class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNotification] {
   val defaultOptions = EmailNotification()
-  def mergeOptions(ov: EmailNotification, un: EmailNotification) = {
-    val newTO = if (ov.to != defaultOptions.to) ov.to else un.to
-    val newCC = if (ov.cc != defaultOptions.cc) ov.cc else un.cc
-    val newBCC = if (ov.bcc != defaultOptions.bcc) ov.bcc else un.bcc
-    val newSMTP = if (ov.smtp != defaultOptions.smtp) ov.smtp else un.smtp
-    val newFROM = if (ov.from != defaultOptions.from) ov.from else un.from
+  def mergeOptions(over: EmailNotification, under: EmailNotification) = {
+    val newTO = if (over.to != defaultOptions.to) over.to else under.to
+    val newCC = if (over.cc != defaultOptions.cc) over.cc else under.cc
+    val newBCC = if (over.bcc != defaultOptions.bcc) over.bcc else under.bcc
+    val newSMTP = if (over.smtp != defaultOptions.smtp) over.smtp else under.smtp
+    val newFROM = if (over.from != defaultOptions.from) over.from else under.from
     EmailNotification(to = newTO, cc = newCC, bcc = newBCC, smtp = newSMTP, from = newFROM)
   }
   override def before() = {
@@ -70,6 +75,7 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
 
 
 class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
+  def id="Notifications"
   val consoleCtx=new ConsoleNotificationContext(log)
   val emailCtx=new EmailNotificationContext(log)
   val allContexts = Map("console" -> consoleCtx, "email" -> emailCtx)
@@ -95,7 +101,7 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
       val _ = n.flattenAndCheckProjectList(conf.build.projects.map { _.name }.toSet)
     }
   }
-  def afterBuild(repBuild: RepeatableDistributedBuild, rootOutcome: BuildOutcome) = {
+  def afterBuild(repBuild: Option[RepeatableDistributedBuild], rootOutcome: BuildOutcome) = {
     usedNotificationKindIDs foreach { kind =>
       allContexts(kind).before
       sendNotifications(kind, rootOutcome)

@@ -5,6 +5,7 @@ import distributed.project.model.Utils.{ readValue, writeValue }
 import org.apache.commons.lang.StringEscapeUtils
 import com.typesafe.config.ConfigFactory.parseString
 
+
 /**
  * The outcome of a build. Override toString only for internal diagnostics, and define the
  * other methods instead for the user-facing messages.
@@ -66,8 +67,34 @@ case class BuildBrokenDependency(project: String, outcomes: Seq[BuildOutcome]) e
   def withOutcome(o:BuildOutcome) = copy(outcomes = o +: outcomes)
   def status() = "DID NOT RUN (stuck on broken dependency: " +
     (outcomes.filter { case _: BuildFailed => true; case _ => false }).map { _.project }.mkString(",") + ")"
-  override def whenIDs: Seq[String] = "depBroken" +: super.whenIDs
+  override def whenIDs: Seq[String] = "dep-broken" +: super.whenIDs
 }
+
+/** Outcome of Extraction; subclass of BuildBad since, if this status is returned,
+ *  something went wrong and we did not get to building. */
+sealed abstract class ExtractionOutcome extends BuildBad {
+  override def whenIDs: Seq[String] = "extraction" +: super.whenIDs  
+}
+/** Extraction was OK, but we have not proceeded to the building stage yet.
+ *  Returns the set of nested outcomes (in case extraction is done
+ *  hierarchically, for example on multiple machines), and the
+ *  set of successful RepeatableDistributedBuilds collected along the way. */
+case class ExtractionOK(project: String, outcomes: Seq[BuildOutcome], pces: Seq[ProjectConfigAndExtracted]) extends ExtractionOutcome {
+  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
+  def withOutcome(o:BuildOutcome) = copy(outcomes = o +: outcomes)
+  def status() = "Extraction ok, could not proceed"
+  override def whenIDs: Seq[String] = "extraction-ok" +: super.whenIDs
+}
+/** Something went wrong during extraction (for instance, could not resolve).
+ *  We do not bother collecting the RepeatableDistributedBuilds, since we
+ *  cannot proceed anyway. */
+case class ExtractionFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends ExtractionOutcome {
+  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
+  def withOutcome(o:BuildOutcome) = copy(outcomes = o +: outcomes)
+  def status() = "EXTRACTION FAILED ("+ cause + ")"
+  override def whenIDs: Seq[String] = "extraction-failed" +: super.whenIDs
+}
+
 
 /**
  * Utility classes, used to perform variable substitutions
@@ -86,15 +113,6 @@ case class SubstitutionVars(
  * values, via the Typesafe config library.
  */
 class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
-  // The expansion logic is tricky to get right. The limitation is that the typesafe config library will not
-  // perform replacements inside double quotes, and when we write using the same library we do get double quotes.
-  // Therefore, if we have a case class with text fields that need to undergo variable replacement, we're in
-  // the cold. What we do here: we escape the string in a manner that it looks equivalent to what one would
-  // write in the source code as a Java string (with the right escapes everywhere, including new lines etc).
-  // Then, we look for the pattern ${.*?}, and we change it into "${.*?}", so that a string like "abc${X}def"
-  // becomes "abc"${X}"def". We manually build a JSON string with *that* modified string, and finally we
-  // read it again using HOCON. At this point, thankfully, we have our full expansion, both with the variables
-  // in the SubstitutionVars, as well as all the environment vars. Phew!
   /** A report that concatenates the summaries of subprojects, using the same template */
   lazy val subprojectsReport: String = {
     def get(o: BuildOutcome) = new TemplateFormatter(templ, o).summary
@@ -111,6 +129,16 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
       status = outcome.status,
       projectDescription = if (outcome.project != ".") "project " + outcome.project else "this build configuration",
       paddedProjectDescription = paddedProjectDescription))
+
+  // The expansion logic is tricky to get right. The limitation is that the typesafe config library will not
+  // perform replacements inside double quotes, and when we write using the same library we do get double quotes.
+  // Therefore, if we have a case class with text fields that need to undergo variable replacement, we're in
+  // the cold. What we do here: we escape the string in a manner that it looks equivalent to what one would
+  // write in the source code as a Java string (with the right escapes everywhere, including new lines etc).
+  // Then, we look for the pattern ${.*?}, and we change it into "${.*?}", so that a string like "abc${X}def"
+  // becomes "abc"${X}"def". We manually build a JSON string with *that* modified string, and finally we
+  // read it again using HOCON. At this point, thankfully, we have our full expansion, both with the variables
+  // in the SubstitutionVars, as well as all the environment vars. Phew!
   private def escaped(s: String) = StringEscapeUtils.escapeJava(s)
   private def preparedForReplacement(s: String) = escaped(s).replaceAll("(\\$\\{.*?\\})", "\"$1\"")
   private def expand(s: String) =

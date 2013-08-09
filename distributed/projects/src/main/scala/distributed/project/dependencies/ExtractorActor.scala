@@ -12,7 +12,6 @@ case class ExtractBuildDependencies(config: ProjectBuildConfig, target: File, lo
 
 /** An actor that given a BuildConfig can return the completed build artifacts. */
 class ExtractorActor(e: Extractor) extends Actor {
-  // Extract one build at a time...
   def receive: Receive = {
     case Controlled(ExtractBuildDependencies(build, target, log), from) =>
       Controller.forwardingErrorsToFuturesControlled(sender, from) {

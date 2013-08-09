@@ -15,8 +15,12 @@ import dispatch.classic.{ Logger => _, _ }
 import com.jsuereth.pgp.{ PGP, SecretKey }
 import org.bouncycastle.openpgp.{ PGPSecretKeyRingCollection, PGPSecretKeyRing }
 import org.omg.PortableInterceptor.SUCCESSFUL
+import logging.Logger.prepareLogMsg
+import distributed.logging.Logger
+import Logger.prepareLogMsg
 
-class DeployBuild(conf: DBuildConfiguration, log: Logger)  extends OptionTask {
+class DeployBuild(conf: DBuildConfiguration, log: logging.Logger)  extends OptionTask {
+  def id="Deploy"
   def beforeBuild() = {
     conf.options.deploy foreach { d =>
       // just a sanity check on the project list (we don't use the result)
@@ -24,8 +28,11 @@ class DeployBuild(conf: DBuildConfiguration, log: Logger)  extends OptionTask {
     }
     checkDeployFullBuild(conf.options.deploy, log)
   }
-  def afterBuild(repBuild:RepeatableDistributedBuild,outcome:BuildOutcome) = {
-    deployFullBuild(conf, repBuild, outcome, log)
+  def afterBuild(optRepBuild:Option[RepeatableDistributedBuild],outcome:BuildOutcome) = {
+    optRepBuild match {
+      case None => log.error("*** Deploy cannot run: build did not complete.")
+      case Some(repBuild) => deployFullBuild(conf, repBuild, outcome, log)
+    }
   }
 
   // first, a proper sanity check
@@ -140,7 +147,7 @@ class DeployBuild(conf: DBuildConfiguration, log: Logger)  extends OptionTask {
    * - The root build, denoted by ".", has no artifacts of its own.
    * - This rule also applies applies to nested hierarchical build systems, if they are in turn recursive.
    */
-  def deployFullBuild(conf: DBuildConfiguration, build: RepeatableDistributedBuild, outcome: BuildOutcome, log: Logger) = {
+  def deployFullBuild(conf: DBuildConfiguration, build: RepeatableDistributedBuild, outcome: BuildOutcome, log: logging.Logger) = {
     val projectOutcomes = outcome.outcomes.map(o => (o.project, o)).toMap
     // This does not contain the root ".", but we know that the root has no artifacts to be published of its own,
     // therefore the set for "." is the union of those of the children, regardless if "." failed or not.
@@ -174,7 +181,7 @@ class DeployBuild(conf: DBuildConfiguration, log: Logger)  extends OptionTask {
           def logDepl(elems: Set[(SelectorElement, RepeatableProjectBuild)]) =
             ": " + elems.map(_._1.name).toSeq.sorted.mkString("", ", ", "")
           if (good.nonEmpty) log.info("Deploying" + logDepl(good))
-          if (bad.nonEmpty) log.warn("Currently broken, hence not deployed" + logDepl(bad))
+          if (bad.nonEmpty) log.warn("Currently broken, cannot deploy" + logDepl(bad))
 
           if (good.nonEmpty) try {
             good map {
@@ -262,13 +269,13 @@ class DeployBuild(conf: DBuildConfiguration, log: Logger)  extends OptionTask {
             case e: NumberFormatException =>
               log.error("***ERROR*** Not a valid hexadecimal value: " + options.sign.get.id.get)
               log.error("***ERROR*** Will not deploy.")
-              log.trace(e)
+              prepareLogMsg(log, e)
           }
         }
         catch {
           case e =>
             log.error("***ERROR*** Encountered an error while deploying to " + url(options.uri).host)
-            log.trace(e)
+            prepareLogMsg(log, e)
         }
       }
       log.info("--== End Deploying Artifacts ==--")

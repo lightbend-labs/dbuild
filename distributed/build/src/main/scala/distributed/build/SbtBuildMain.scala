@@ -6,9 +6,11 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
-import distributed.project.model.{BuildArtifactsOut,DBuildConfiguration}
+import distributed.project.model.DBuildConfiguration
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.project.model.ClassLoaderMadness
+import distributed.project.model.{BuildOutcome,BuildBad}
+import distributed.project.model.TemplateFormatter
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -38,7 +40,7 @@ class SbtBuildMain extends xsbti.AppMain {
   
   def run(configuration: xsbti.AppConfiguration) =
     try {
-    println("Starting dbuild...")
+      println("Starting dbuild...")
       val args = configuration.arguments
 //      println("Args (" + (configuration.arguments mkString ",") + ")")
       val config = 
@@ -58,8 +60,8 @@ class SbtBuildMain extends xsbti.AppMain {
 //      println("Classloader:")
 //      printClassLoaders(getClass.getClassLoader)
       val main = new LocalBuildMain(configuration)
-      try {
-        def time[A](f: => A) = {
+      val outcome=try {
+        def time(f: => BuildOutcome) = {
           val s = System.nanoTime
           val ret = f
           val t = System.nanoTime - s
@@ -68,17 +70,20 @@ class SbtBuildMain extends xsbti.AppMain {
           val tenths = (t / 100000000L) % 10L
           val sdf = new SimpleDateFormat("HH'h' mm'm' ss'.'")
           sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
-          println("Build took: " + sdf.format(time) + tenths + "s")
+          Thread.sleep(250) // have no way to sync on log msgs; just wait
+          println("Result: "+ret.status)
+          println("Build "+(if (ret.isInstanceOf[BuildBad]) "failed" else "succeeded")+" after: " + sdf.format(time) + tenths + "s")
           ret
         }
         time { main build config }
-        println("All done.")
       }
       finally main.dispose()
-      Exit(0)
+      println("All done.")
+      if (outcome.isInstanceOf[BuildBad])Exit(1) else Exit(0)
     } catch {
       case e: Exception =>
         e.printStackTrace
+        println("Unexpected failure.")
         Exit(1)
     }
   case class Exit(val code: Int) extends xsbti.Exit

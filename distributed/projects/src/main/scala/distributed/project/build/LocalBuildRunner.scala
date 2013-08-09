@@ -4,6 +4,7 @@ package build
 
 import model._
 import logging.Logger
+import Logger.prepareLogMsg
 import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
 import actorpatterns.forwardingErrorsToFutures
@@ -24,16 +25,13 @@ class LocalBuildRunner(builder: BuildRunner,
         BuildUnchanged(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
       } catch {
         case t: RepositoryException =>
-          log.info("Failed to resolve: " + build.uuid + " from " + build.config.name)
-          log.trace(t)
+          log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
+          //log.trace(t)
           BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects, log))
       }
     } catch {
       case t =>
-        log.trace(t)
-        val msg1 = t.getClass.getSimpleName+(Option(t.getMessage)map{": "+_.split("\n")(0)} getOrElse "")
-        val msg2 = if (msg1.length<42) msg1 else msg1.take(39)+"..."
-        BuildFailed(build.config.name, children, msg2)
+        BuildFailed(build.config.name, children, prepareLogMsg(log,t))
     }
   }
   

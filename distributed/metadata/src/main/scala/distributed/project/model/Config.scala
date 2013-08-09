@@ -103,8 +103,19 @@ object SeqString {
  *  an exception.
  */
 abstract class OptionTask {
+  /** This method is called at the very beginning of the build; it should perform
+   *  a sanity check on the configuration file.
+   */
   def beforeBuild():Unit
-  def afterBuild(repBuild:RepeatableDistributedBuild,outcome:BuildOutcome):Unit
+  /** the afterBuild() may be called after build, if the build succeeded/failed, or
+   *  after extraction, if extraction failed. In the latter case, repBuild will be
+   *  null, and the OptionTask may not run, printing a message instead.
+   *  For example, deploy will not run after extraction, but notifications will be
+   *  sent out anyway.
+   */
+  def afterBuild(repBuild:Option[RepeatableDistributedBuild],outcome:BuildOutcome):Unit
+  /** just the task name */
+  def id:String
 }
 
 /** a generic options section that relies on a list of projects/subprojects */

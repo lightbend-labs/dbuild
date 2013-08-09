@@ -16,6 +16,7 @@ import sbt.Path._
 import java.io.File
 import distributed.repo.core.ProjectDirs
 import org.apache.maven.execution.BuildFailure
+import Logger.prepareLogMsg
 
 case class RunDistributedBuild(conf: DBuildConfiguration, target: File, logger: Logger)
 
@@ -24,24 +25,64 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   def receive = {
     case RunDistributedBuild(conf, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
-      val logger = log.newNestedLogger(hashing sha1 conf.build)
-      // "build" contains the project configs as written in the configuration file.
-      // Their 'extra' field could be None, or contain information that must be completed
-      // according to the build system in use for that project.
-      // Only each build system knows its own defaults (which may change over time),
-      // therefore we have to ask to the build system itself to expand the 'extra' field
-      // as appropriate.
-      val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, log))
-
-      tasks foreach { _.beforeBuild }
-      val result = for {
-        fullBuild <- analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build))
-        fullLogger = log.newNestedLogger(fullBuild.uuid)
-        _ = publishFullBuild(fullBuild, fullLogger)
-        outcome <- runBuild(target, fullBuild, fullLogger)
-        _ = tasks foreach { _.afterBuild(fullBuild, outcome) }
-      } yield outcome
+      implicit val ctx = context.system
+      val result = try {
+        val logger = log.newNestedLogger(hashing sha1 conf.build)
+        // "build" contains the project configs as written in the configuration file.
+        // Their 'extra' field could be None, or contain information that must be completed
+        // according to the build system in use for that project.
+        // Only each build system knows its own defaults (which may change over time),
+        // therefore we have to ask to the build system itself to expand the 'extra' field
+        // as appropriate.
+        val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, log))
+        tasks foreach { _.beforeBuild }
+        // careful with map() on Futures: exceptions must be caught separately!!
+        analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build)) flatMap {
+          wrapExceptionIntoOutcome[ExtractionOutcome](log) {
+            case extractionOutcome: ExtractionFailed =>
+              tasks foreach { _.afterBuild(None, extractionOutcome) }
+              Future(extractionOutcome)
+            case extractionOutcome: ExtractionOK =>
+              val fullBuild = RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)
+              val fullLogger = log.newNestedLogger(fullBuild.uuid)
+              publishFullBuild(fullBuild, fullLogger)
+              val futureBuildResult = runBuild(target, fullBuild, fullLogger)
+              if (tasks.nonEmpty) futureBuildResult map { buildOutcome =>
+                forwardingErrorsToFutures(listener) {
+                  val taskOuts = tasks map { t =>
+                    try { // even if one task fails, we move on to the rest
+                      t.afterBuild(Some(fullBuild), buildOutcome)
+                      (t.id, true)
+                    } catch {
+                      case e =>
+                        prepareLogMsg(log, e)
+                        (t.id, false)
+                    }
+                  }
+                  log.info("---==  Tasks Report ==---")
+                  val (good, bad) = taskOuts.partition(_._2)
+                  if (good.nonEmpty) log.info(good.mkString("Run successfully: ", ",", ""))
+                  if (bad.nonEmpty) log.info(bad.mkString("Failed successfully: ", ",", ""))
+                  log.info("---==  End Tasks Report ==---")
+                }
+              }
+              futureBuildResult
+            case _ => sys.error("Internal error: extraction did not return ExtractionOutcome. Please report.")
+          }
+        }
+      } catch {
+        case e =>
+          Future(BuildFailed(".", Seq.empty, "dbuild failed unexpectedly. Cause: " + prepareLogMsg(log, e)))
+      }
       result pipeTo listener
+    }
+  }
+
+  final def wrapExceptionIntoOutcome[A](log: logging.Logger)(f: A => Future[BuildOutcome])(a:A): Future[BuildOutcome] = {
+    implicit val ctx = context.system
+    try f(a) catch {
+      case e =>
+        Future(BuildFailed(".", Seq.empty, "dbuild failed unexpectedly. Cause: " + prepareLogMsg(log, e)))
     }
   }
   
@@ -86,13 +127,20 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     def runBuild(): Seq[State] =
       build.graph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
         val b = build.buildMap(p.config.name)
-        Future.sequence(children) flatMap { outcomes =>
-          if (outcomes exists { case _: BuildBad => true; case _ => false }) {
-            Future(BuildBrokenDependency(b.config.name,outcomes))
-          } else {
-            val outProjects = p.extracted.projects
-            buildProject(tdir, b, outProjects, outcomes, log.newNestedLogger(b.config.name))
-          }
+        Future.sequence(children) flatMap {
+          // excess of caution? In theory all Future.sequence()s
+          // should be wrapped, but in practice even if we receive
+          // an exception here (inside the sequence(), but before
+          // the builder ? .., it means something /truly/ unusual
+          // happened, and getting an exception is appropriate.
+          //   wrapExceptionIntoOutcome[Seq[BuildOutcome]](log) { ...
+          outcomes =>
+            if (outcomes exists { _.isInstanceOf[BuildBad] }) {
+              Future(BuildBrokenDependency(b.config.name, outcomes))
+            } else {
+              val outProjects = p.extracted.projects
+              buildProject(tdir, b, outProjects, outcomes, log.newNestedLogger(b.config.name))
+            }
         }
       }(Some((a, b) => a.config.name < b.config.name))
 
@@ -104,26 +152,32 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
           // "." is the name of the root project
           BuildFailed(".", outcomes, "cause: one or more projects failed")
         else {
-          BuildSuccess(".",outcomes,BuildArtifactsOut(Seq.empty))
+          BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
         }
       }
     }
-  }  
-  
+  }
+
   // Asynchronously extract information from builds.
-  def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[RepeatableDistributedBuild] = {
+  def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[ExtractionOutcome] = {
     implicit val ctx = context.system
     val uuid = hashing sha1 config
     val tdir = target / "extraction" / uuid
-    val builds: Future[Seq[ProjectConfigAndExtracted]] = 
+    val futureOutcomes: Future[Seq[ExtractionOutcome]] =
       Future.traverse(config.projects)(extract(tdir, log))
-    // We don't have to do ordering here anymore.
-    builds map {RepeatableDistributedBuild(_, config.options)}
+    futureOutcomes map { s: Seq[ExtractionOutcome] =>
+      if (s exists { _.isInstanceOf[ExtractionFailed] })
+        ExtractionFailed(".", s, "cause: one or more projects failed")
+      else {
+        val sok = s.collect({case e:ExtractionOK => e})
+        ExtractionOK(".", sok, sok flatMap { _.pces })
+      }
+    }
   }
 
   // Our Asynchronous API.
-  def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ProjectConfigAndExtracted] =
-    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[ProjectConfigAndExtracted]
+  def extract(target: File, logger: Logger)(config: ProjectBuildConfig): Future[ExtractionOutcome]=
+    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.name))).mapTo[ExtractionOutcome]
   
   
   // TODO - Repository Knowledge here

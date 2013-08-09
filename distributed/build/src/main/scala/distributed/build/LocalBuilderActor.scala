@@ -37,7 +37,7 @@ class LocalBuilderActor(
   val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository)), "simple-distributed-builder")
 
   def receive = {
-    case RunLocalBuild(config, target) => 
+    case RunLocalBuild(config, target) =>
       fullBuilderActor forward RunDistributedBuild(config, target, log)
   }
 }

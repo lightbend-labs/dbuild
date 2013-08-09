@@ -8,7 +8,15 @@ import sbt.Level._
 trait Logger extends SbtLogger with ProcessLogger {
   def newNestedLogger(name: String): Logger
 }
-object Logger {}
+object Logger {
+  def prepareLogMsg(log: Logger, t: Throwable) = {
+    val errors = new java.io.StringWriter
+    t.printStackTrace(new java.io.PrintWriter(errors));
+    errors.toString.split("\n") foreach { log.error(_) }
+    val msg1 = t.getClass.getSimpleName + (Option(t.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")
+    if (msg1.length < 42) msg1 else msg1.take(39) + "..."
+  }
+}
 
 
 abstract class BasicLogger extends sbt.BasicLogger with Logger

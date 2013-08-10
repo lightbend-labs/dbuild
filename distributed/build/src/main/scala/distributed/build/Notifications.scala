@@ -2,11 +2,15 @@ package distributed.build
 
 import distributed.project.model._
 import distributed.logging.Logger
-import org.eclipse.core.runtime.SubProgressMonitor
+import Creds.loadCreds
+import org.apache.commons.mail.{ Email, SimpleEmail, DefaultAuthenticator }
 import java.util.Properties
 import java.util.Date
 import javax.mail._
 import internet._
+import Message.RecipientType
+import RecipientType._
+import Creds.loadCreds
 
 //
 // Ideally, the ConsoleNotification should become the mechanism by which the entire log of the
@@ -39,7 +43,9 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     val newBCC = if (over.bcc != defaultOptions.bcc) over.bcc else under.bcc
     val newSMTP = if (over.smtp != defaultOptions.smtp) over.smtp else under.smtp
     val newFROM = if (over.from != defaultOptions.from) over.from else under.from
-    EmailNotification(to = newTO, cc = newCC, bcc = newBCC, smtp = newSMTP, from = newFROM)
+    val newCRED = if (over.smtpCredentials != defaultOptions.smtpCredentials) over.smtpCredentials else under.smtpCredentials
+    val newAUTH = if (over.smtpAuth != defaultOptions.smtpAuth) over.smtpAuth else under.smtpAuth
+    EmailNotification(to = newTO, cc = newCC, bcc = newBCC, smtp = newSMTP, from = newFROM, smtpAuth = newAUTH, smtpCredentials = newCRED)
   }
   override def before() = {
     log.info("--== Sending Email ==--")
@@ -48,38 +54,85 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     log.info("--== Done Sending Email ==--")
   }
   def send(n: EmailNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
-    throw new Exception("Ohohohoh")
-
-    val props = new Properties();
-    props.put("mail.smtp.host", "my-mail-server")
-    val session = Session.getInstance(props, null)
-    log.info("Sending to " + n.to + " the outcome of project " + outcome.project + " using template " + templ.id +" from: "+n.from)
-    /*
+    import n._
     try {
-      val msg = new MimeMessage(session)
-      msg.setFrom(new InternetAddress("me@example.com"))
-      msg.setRecipients(Message.RecipientType.TO,
-        "you@example.com");
-      msg.setSubject("JavaMail hello world example")
-      msg.setSentDate(new Date())
-      msg.setText("Hello, world!\n");
-      Transport.send(msg, Array(new InternetAddress("me@example.com"), new InternetAddress("my-password")))
+      log.info("Sending status of project " + outcome.project + " to: " + ((to ++ cc ++ bcc).distinct.mkString(", ")))
+      val email = new SimpleEmail()
+      val smtpServer = smtp match {
+        case None =>
+          log.warn("WARNING: the smtp server is not set. Will try to send to localhost...")
+          "localhost"
+        case Some(server) => server
+      }
+
+      email.setHostName(smtpServer)
+      val sendFrom = {
+        val userName = System.getProperty("user.name")
+        from match {
+          case Some(address) => address
+          case None =>
+            val host = try {
+              java.net.InetAddress.getLocalHost().getHostName()
+            } catch {
+              // getLocalHost() will throw an exception if the current hostname is set but unrecognized
+              // by the local dns server. As a last resort, we fall back to "localhost".
+              case e =>
+                log.warn("WARNING: could not get the local hostname; your DNS settings might be misconfigured.")
+                "localhost"
+            }
+            "dbuild at " + host + " <" + userName + "@" + host + ">"
+        }
+      }
+      email.setFrom(sendFrom)
+      email.setSubject(templ.short)
+      email.setMsg(templ.long + "\n")
+      if (to.nonEmpty) email.addTo(to: _*)
+      if (cc.nonEmpty) email.addCc(cc: _*)
+      if (bcc.nonEmpty) email.addBcc(bcc: _*)
+
+      def needCreds = {
+        if (smtpCredentials.isEmpty) {
+          log.error("Please either add \"smtp-credentials\", or set \"smtp-auth\" to none.")
+          sys.error("smpt-credentials are needed with authentication \"" + smtpAuth + "\".")
+        }
+      }
+      smtpAuth match {
+        case "ssl" =>
+          email.setSSLOnConnect(true)
+          email.setStartTLSEnabled(false)
+          email.setStartTLSRequired(false)
+          needCreds
+        case "starttls" =>
+          email.setSSLOnConnect(false)
+          email.setStartTLSEnabled(true)
+          email.setStartTLSRequired(true)
+          needCreds
+        case "none" =>
+          email.setSSLOnConnect(false)
+          email.setStartTLSEnabled(false)
+        case x => sys.error("Unknown authentication scheme: "+x)
+      }
+      
+      smtpCredentials map { credFile =>
+        val c = loadCreds(credFile)
+        if (c.host != smtpServer)
+          sys.error("The credentials file " + credFile + " does not contain information for host " + smtpServer)
+        email.setAuthentication(c.user, c.pass)
+      }
+      email.send()
+      None
     } catch {
-      case mex: MessagingException =>
-        log.error("ERROR SENDING to " + n.to + " the outcome of project " + outcome.project + " using template " + templ.id)
-        log.error(mex.toString)
+      case mex =>
+        log.error("ERROR SENDING to " + n.to.mkString(", ") + " the outcome of project " + outcome.project)
+        throw mex
     }
-    */
-    Some("Couldn't send, sorry")
   }
 }
 
-
-
-class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
-  def id="Notifications"
-  val consoleCtx=new ConsoleNotificationContext(log)
-  val emailCtx=new EmailNotificationContext(log)
+class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) extends OptionTask(log) {
+  def id = "Notifications"
+  val consoleCtx = new ConsoleNotificationContext(log)
+  val emailCtx = new EmailNotificationContext(log)
   val allContexts = Map("console" -> consoleCtx, "email" -> emailCtx)
   def definedNotifications = conf.options.notifications.send
   val usedNotificationKindIDs = definedNotifications.map { _.kind }.distinct
@@ -103,8 +156,9 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
       val _ = n.flattenAndCheckProjectList(conf.build.projects.map { _.name }.toSet)
     }
   }
+
   def afterBuild(repBuild: Option[RepeatableDistributedBuild], rootOutcome: BuildOutcome) = {
-    usedNotificationKindIDs foreach { kind =>
+    runRememberingExceptions(false, usedNotificationKindIDs) { kind =>
       allContexts(kind).before
       sendNotifications(kind, rootOutcome)
       allContexts(kind).after
@@ -117,7 +171,7 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
     val defnOpt = defaultsMap.get(kind) // defaults from the default records
 
     // scan the kinds for which at least one notification exists
-    definedNotifications.filter(kind == _.kind).foreach { n =>
+    runRememberingExceptions(false, definedNotifications.filter(kind == _.kind)) { n =>
       // Expansion from defaults; we do it manually. We must consider
       // both the notification record, as well as the internals of the
       // 'send' options; however, the latter are kind-specific, so we
@@ -142,8 +196,8 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
       def processOneNotification(n: Notification, outcome: BuildOutcome) = {
         val resolvedTempl = n.resolveTemplate(outcome, definedTemplates)
         if (outcome.whenIDs.intersect(n.when).nonEmpty) {
-          val formatter = new TemplateFormatter(resolvedTempl, outcome)
-          allContexts(n.kind).notify(n.send, formatter, outcome) map (log.warn(_))
+          val formatter = new TemplateFormatter(resolvedTempl, outcome, confName)
+          allContexts(n.kind).notify(n.send, formatter, outcome)
         }
       }
       // For notifications we do things a bit differently than in
@@ -153,7 +207,7 @@ class Notifications(conf: DBuildConfiguration, log: Logger) extends OptionTask {
       // for the root that is distinct from those of the children.
       // So we take the list literally: "." is really the report for
       // the root (no expansion).
-      n.projects foreach { p =>
+      runRememberingExceptions(true, n.projects) { p =>
         val projectOutcomes = (rootOutcome +: outcomes).filter(_.project == p.name)
         if (projectOutcomes.isEmpty)
           sys.error("Internal error: no outcome detected for project " + p.name + ". Please report.")

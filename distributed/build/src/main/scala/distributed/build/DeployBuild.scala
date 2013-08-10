@@ -17,18 +17,18 @@ import org.bouncycastle.openpgp.{ PGPSecretKeyRingCollection, PGPSecretKeyRing }
 import org.omg.PortableInterceptor.SUCCESSFUL
 import logging.Logger.prepareLogMsg
 import distributed.logging.Logger
-import Logger.prepareLogMsg
+import Creds.loadCreds
 
-class DeployBuild(conf: DBuildConfiguration, log: logging.Logger)  extends OptionTask {
-  def id="Deploy"
+class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends OptionTask(log) {
+  def id = "Deploy"
   def beforeBuild() = {
     conf.options.deploy foreach { d =>
       // just a sanity check on the project list (we don't use the result)
-      val _ = d.flattenAndCheckProjectList(conf.build.projects.map{_.name}.toSet)
+      val _ = d.flattenAndCheckProjectList(conf.build.projects.map { _.name }.toSet)
     }
     checkDeployFullBuild(conf.options.deploy, log)
   }
-  def afterBuild(optRepBuild:Option[RepeatableDistributedBuild],outcome:BuildOutcome) = {
+  def afterBuild(optRepBuild: Option[RepeatableDistributedBuild], outcome: BuildOutcome) = {
     optRepBuild match {
       case None => log.error("*** Deploy cannot run: build did not complete.")
       case Some(repBuild) => deployFullBuild(conf, repBuild, outcome, log)
@@ -52,28 +52,6 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger)  extends Optio
         case scheme => sys.error("Unknown scheme in deploy: " + scheme)
       }
     }
-  }
-
-  private case class Creds(host: String, user: String, pass: String)
-
-  private def loadCreds(fromPath: String): Creds = {
-    import util.control.Exception.catching
-
-    def loadProps(f: File): Option[_root_.java.util.Properties] =
-      catching(classOf[_root_.java.io.IOException]) opt {
-        val props = new _root_.java.util.Properties()
-        props.load(new _root_.java.io.FileReader(f))
-        props
-      }
-
-    val propsFile = new File(fromPath)
-    (for {
-      f <- if (propsFile.exists) Some(propsFile) else sys.error("Credentials file not found: " + propsFile)
-      props <- loadProps(f)
-      host <- Option(props get "host")
-      user <- Option(props get "user")
-      pass <- Option(props get "password")
-    } yield Creds(host.toString, user.toString, pass.toString)) getOrElse sys.error("Unable to load properties from " + propsFile)
   }
 
   private def isNotChecksum(path: String): Boolean =
@@ -154,7 +132,7 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger)  extends Optio
     val optionsSeq = conf.options.deploy
     if (optionsSeq.nonEmpty) {
       log.info("--== Deploying Artifacts  ==--")
-      optionsSeq foreach { options =>
+      runRememberingExceptions(true, optionsSeq) { options =>
         log info ("Processing: " + options.uri)
         // we need to retrieve the artifacts from the repository
         // for build.uuid. We stage them in a temporary directory first,
@@ -269,13 +247,13 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger)  extends Optio
             case e: NumberFormatException =>
               log.error("***ERROR*** Not a valid hexadecimal value: " + options.sign.get.id.get)
               log.error("***ERROR*** Will not deploy.")
-              prepareLogMsg(log, e)
+              throw e
           }
         }
         catch {
           case e =>
             log.error("***ERROR*** Encountered an error while deploying to " + url(options.uri).host)
-            prepareLogMsg(log, e)
+            throw e
         }
       }
       log.info("--== End Deploying Artifacts ==--")

@@ -12,7 +12,7 @@ import java.io.File
 import distributed.repo.core.Repository
 import distributed.project.controller.Controller
 
-case class RunLocalBuild(config: DBuildConfiguration, targetDir: File)
+case class RunLocalBuild(config: DBuildConfiguration, configName: String, targetDir: File)
 /** This is an actor which executes builds locally given a
  * set of resolvers and build systems.
  * 
@@ -37,7 +37,7 @@ class LocalBuilderActor(
   val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository)), "simple-distributed-builder")
 
   def receive = {
-    case RunLocalBuild(config, target) =>
-      fullBuilderActor forward RunDistributedBuild(config, target, log)
+    case RunLocalBuild(config, configName, target) =>
+      fullBuilderActor forward RunDistributedBuild(config, configName, target, log)
   }
 }

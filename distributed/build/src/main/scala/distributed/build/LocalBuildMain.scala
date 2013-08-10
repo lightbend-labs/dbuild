@@ -2,31 +2,31 @@ package distributed
 package build
 
 import java.io.File
-import akka.actor.{ActorSystem,Props}
+import akka.actor.{ ActorSystem, Props }
 import akka.dispatch.Await
 import akka.util.Timeout
 import akka.util.duration._
 import project.model._
-import distributed.project.model.Utils.{readValue,writeValue}
+import distributed.project.model.Utils.{ readValue, writeValue }
 import distributed.repo.core._
 import distributed.project.model.ClassLoaderMadness
 
-class LocalBuildMain(configuration:xsbti.AppConfiguration) {
+class LocalBuildMain(configuration: xsbti.AppConfiguration) {
   val launcher = configuration.provider.scalaProvider.launcher
   val repos = launcher.ivyRepositories.toList
   val targetDir = ProjectDirs.targetDir
   val resolvers = Seq(
-      new support.git.GitProjectResolver, 
-      new support.svn.SvnProjectResolver,
-      new support.ivy.IvyProjectResolver(repos),
-      new support.nil.NilProjectResolver)
-  val buildSystems: Seq[project.BuildSystem] = 
+    new support.git.GitProjectResolver,
+    new support.svn.SvnProjectResolver,
+    new support.ivy.IvyProjectResolver(repos),
+    new support.nil.NilProjectResolver)
+  val buildSystems: Seq[project.BuildSystem] =
     Seq(new support.sbt.SbtBuildSystem(repos, targetDir),
-        support.scala.ScalaBuildSystem,
-        new support.ivy.IvyBuildSystem(repos, targetDir),
-        support.mvn.MvnBuildSystem,
-        support.nil.NilBuildSystem)
-  
+      support.scala.ScalaBuildSystem,
+      new support.ivy.IvyBuildSystem(repos, targetDir),
+      support.mvn.MvnBuildSystem,
+      support.nil.NilBuildSystem)
+
   // Gymnastics for classloader madness
 
   val system = ClassLoaderMadness.withContextLoader(getClass.getClassLoader)(ActorSystem.create)
@@ -40,11 +40,11 @@ class LocalBuildMain(configuration:xsbti.AppConfiguration) {
   val logger = new logging.ActorLogger(logMgr)
   val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, logger)))
   // TODO - Look up target elsewhere...
-  
-  def build(conf: DBuildConfiguration): BuildOutcome = {
+
+  def build(conf: DBuildConfiguration, confName: String): BuildOutcome = {
     import akka.pattern.ask
     implicit val timeout: Timeout = (4).hours
-    val result = builder ? RunLocalBuild(conf, targetDir)
+    val result = builder ? RunLocalBuild(conf, confName, targetDir)
     Await.result(result.mapTo[BuildOutcome], akka.util.Duration.Inf)
   }
   def dispose(): Unit = system.shutdown()

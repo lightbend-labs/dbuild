@@ -62,7 +62,14 @@ case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
  */
 @JsonSerialize(using = classOf[SeqStringSerializer])
 @JsonDeserialize(using = classOf[SeqStringDeserializer])
-case class SeqString(s:Seq[String])
+case class SeqString(s:Seq[String]) {
+  // whenever I use a SeqString to apply map or foreach, the implicit
+  // will kick in. However, when I try to print or use it as a string,
+  // its method toString() will be called. This is not normally a problem
+  // (we don't usually print Seq[String]s directly in user-facing code),
+  // but, just in case:
+  override def toString() = s.toString
+}
 class SeqStringSerializer extends JsonSerializer[SeqString] {
   override def serialize(value: SeqString, g: JsonGenerator, p: SerializerProvider) {
     value.s.length match {
@@ -96,26 +103,6 @@ class SeqStringDeserializer extends JsonDeserializer[SeqString] {
 object SeqString {
   implicit def SeqToSeqString(s:Seq[String]):SeqString = SeqString(s)
   implicit def SeqStringToSeq(a:SeqString):Seq[String] = a.s
-}
-
-/** Defines a task that will run before or after the build, defined somewhere
- *  in the "options" section. No result; it anything should go wrong, just throw
- *  an exception.
- */
-abstract class OptionTask {
-  /** This method is called at the very beginning of the build; it should perform
-   *  a sanity check on the configuration file.
-   */
-  def beforeBuild():Unit
-  /** the afterBuild() may be called after build, if the build succeeded/failed, or
-   *  after extraction, if extraction failed. In the latter case, repBuild will be
-   *  null, and the OptionTask may not run, printing a message instead.
-   *  For example, deploy will not run after extraction, but notifications will be
-   *  sent out anyway.
-   */
-  def afterBuild(repBuild:Option[RepeatableDistributedBuild],outcome:BuildOutcome):Unit
-  /** just the task name */
-  def id:String
 }
 
 /** a generic options section that relies on a list of projects/subprojects */
@@ -498,7 +485,8 @@ case class NotificationOptions(
  *     It should be self-contained in terms of information. Defaults to the short summary.
  *  3) A long body with a more complete description. Defaults to the short message.
  *  An Id is also present, and is used to match against the (optional) template
- *  requested in the notification.
+ *  requested in the notification. Do not terminate it with a \n, as one will be added by
+ *  the notification system if required in that specific case.
  */
 case class NotificationTemplate(
   id: String,
@@ -629,29 +617,6 @@ class NotificationDeserializer extends JsonDeserializer[Notification] {
     val from = generic.send
     val kind = generic.kind
 
-    // The code commented here could be used to parse in an even more flexible way the
-    // list of projects: if a lonely string is encountered where an array is expected,
-    // turn it automagically into an array.
-    // Just change generic.project in the Shadow into a JsonNode, and use this routine
-    // to obtain the result for building the new Notification()
-    /*
-    def flexSelectorDeserializeStringArray(fctx: DeserializationContext, node: JsonNode) = {
-      if (node == null) // if not present, I default to the empty seq. Does that mean I can never
-        // use the regular defaults ??? Well, sure I can: I just need a different constructor
-        // for Notification(), below, so that its default is used instead if this is null.
-        Seq[SelectorElement]()
-      val ftf = fctx.getConfig.getTypeFactory()
-      val fjpp = node.traverse()
-      fjpp.nextToken()
-      def valueAs[T](cls: Class[T]) = cls.cast(ctx.findContextualValueDeserializer(ftf.constructType(cls), null).deserialize(fjpp, fctx))
-      val parsedProjects: Seq[SelectorElement] =
-        if (node.isTextual) { // a lonely string
-          Seq[SelectorElement](SelectorProject(valueAs(classOf[String])))
-        } else {
-          valueAs(classOf[Array[SelectorElement]])
-        }
-    }
-    */
     if (!(notificationKinds.contains(kind))) throw new Exception("Notification kind \"" + kind + "\" is unknown.")
     val newData = if (from == null) None else Some({
       val cls = notificationKinds(kind)
@@ -679,9 +644,9 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
   def after() = {}
   /**
    * Send the notification using the template templ (do not use the one from outcome when implementing).
-   *  If the notification fails, return Some(errorMessage).
+   *  If the notification fails, just throw an Exception.
    */
-  protected def send(n: T, templ: TemplateFormatter, outcome: BuildOutcome): Option[String]
+  protected def send(n: T, templ: TemplateFormatter, outcome: BuildOutcome): Unit
   /**
    * The NotificationKind record (identified by the label 'send' in the notification record)
    * is optional; if the user does not specify it, some default is necessary.
@@ -699,7 +664,7 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
   /**
    * The client code calls notify(), which redispatches to send(), implemented in subclasses.
    */
-  def notify(n: Option[NotificationKind], templ: TemplateFormatter, outcome: BuildOutcome): Option[String] = {
+  def notify(n: Option[NotificationKind], templ: TemplateFormatter, outcome: BuildOutcome) = {
     n match {
       case None => send(defaultOptions, templ, outcome)
       case Some(no) =>
@@ -738,9 +703,24 @@ case class EmailNotification(
   bcc: SeqString = Seq.empty,
   /**
    * If you want to send to a specific smtp gateway,
-   * specify it here; else, messages will be sent to localhost.
+   * specify it here; else, messages will be sent to localhost,
+   * hoping for the best.
    */
   smtp: Option[String] = None,
+  /** If your smtp server needs username/password, specify
+   *  them in a file and supply the filename here. In the
+   *  properties file you will need: user, host, password.
+   *  The "host" property is the hostname you are connecting to,
+   *  and must match the smtp server name. The "user" property
+   *  is the name used during the authentication; it can be
+   *  "name", or "name@somehost", depending on the providers.
+   */
+  @JsonProperty("smtp-credentials") smtpCredentials: Option[String] = None,
+  /**
+   * Set this to the desired authentication mechanism. It can be
+   * starttls, ssl, or none. Default is ssl.
+   */
+  @JsonProperty("smtp-auth") smtpAuth: String = "ssl",
   /**
    * The default sender is the account under which dbuild
    * is running right now (user@hostname). Else, specify it here.

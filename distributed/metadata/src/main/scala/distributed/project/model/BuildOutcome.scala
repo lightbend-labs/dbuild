@@ -40,7 +40,6 @@ sealed abstract class BuildBad extends BuildOutcome {
 
 /** We rebuilt the project, and all was ok. */
 case class BuildSuccess(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
-  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
   override def toString() = "BuildSuccess(" + project + ",<arts>)"
   def status() = "SUCCESS (project rebuilt ok)"
   override def whenIDs: Seq[String] = "success" +: super.whenIDs
@@ -48,7 +47,6 @@ case class BuildSuccess(project: String, outcomes: Seq[BuildOutcome], artsOut: B
 
 /** It was not necessary to re-run this build, as nothing changed. */
 case class BuildUnchanged(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
-  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
   override def toString() = "BuildCached(" + project + ",<arts>)"
   def status() = "SUCCESS (unchanged, not rebuilt)"
   override def whenIDs: Seq[String] = "unchanged" +: super.whenIDs
@@ -56,15 +54,12 @@ case class BuildUnchanged(project: String, outcomes: Seq[BuildOutcome], artsOut:
 
 /** This build was attempted, but an error condition occurred while executing it. */
 case class BuildFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends BuildBad {
-  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
   def status() = "FAILED (" + cause + ")"
   override def whenIDs: Seq[String] = "failed" +: super.whenIDs
 }
 
 /** One or more of this project dependencies are broken, therefore we could not build. */
 case class BuildBrokenDependency(project: String, outcomes: Seq[BuildOutcome]) extends BuildBad {
-  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
-  def withOutcome(o:BuildOutcome) = copy(outcomes = o +: outcomes)
   def status() = "DID NOT RUN (stuck on broken dependency: " +
     (outcomes.filter { case _: BuildFailed => true; case _ => false }).map { _.project }.mkString(",") + ")"
   override def whenIDs: Seq[String] = "dep-broken" +: super.whenIDs
@@ -80,8 +75,6 @@ sealed abstract class ExtractionOutcome extends BuildBad {
  *  hierarchically, for example on multiple machines), and the
  *  set of successful RepeatableDistributedBuilds collected along the way. */
 case class ExtractionOK(project: String, outcomes: Seq[BuildOutcome], pces: Seq[ProjectConfigAndExtracted]) extends ExtractionOutcome {
-  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
-  def withOutcome(o:BuildOutcome) = copy(outcomes = o +: outcomes)
   def status() = "Extraction ok, could not proceed"
   override def whenIDs: Seq[String] = "extraction-ok" +: super.whenIDs
 }
@@ -89,12 +82,18 @@ case class ExtractionOK(project: String, outcomes: Seq[BuildOutcome], pces: Seq[
  *  We do not bother collecting the RepeatableDistributedBuilds, since we
  *  cannot proceed anyway. */
 case class ExtractionFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends ExtractionOutcome {
-  def withOutcomes(os:Seq[BuildOutcome]) = copy(outcomes = os)
-  def withOutcome(o:BuildOutcome) = copy(outcomes = o +: outcomes)
   def status() = "EXTRACTION FAILED ("+ cause + ")"
   override def whenIDs: Seq[String] = "extraction-failed" +: super.whenIDs
 }
 
+/**
+ * We run post-build tasks even if extraction or build failed. If tasks complete successfully,
+ * we return the original status, otherwise we return a special combo status.
+ */
+case class TaskFailed(project: String, outcomes: Seq[BuildOutcome], original:BuildOutcome, taskCause: String) extends BuildBad {
+  def status() = original.status()+" + TASK FAILED ("+ taskCause + ")"
+  override def whenIDs: Seq[String] = "task-failed" +: original.whenIDs
+}
 
 /**
  * Utility classes, used to perform variable substitutions
@@ -105,6 +104,7 @@ case class SubstitutionVars(
   @JsonProperty("subprojects-report") subprojectsReport: String,
   @JsonProperty("project-description") projectDescription: String,
   @JsonProperty("padded-project-description") paddedProjectDescription: String,
+  @JsonProperty("config-name") configName: String,
   status: String)
 // they become:     ${notifications.vars.project-name}, etc.
 
@@ -112,10 +112,10 @@ case class SubstitutionVars(
  * Create a TemplateFormatter with your resolved template and vars, in order to obtain the expanded
  * values, via the Typesafe config library.
  */
-class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
+class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome, confName:String) {
   /** A report that concatenates the summaries of subprojects, using the same template */
   lazy val subprojectsReport: String = {
-    def get(o: BuildOutcome) = new TemplateFormatter(templ, o).summary
+    def get(o: BuildOutcome) = new TemplateFormatter(templ, o, confName).summary
     val s = outcome.outcomes.map(get)
     if (s.isEmpty) "" else s.mkString("", "\n", "\n")
   }
@@ -127,8 +127,9 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome) {
     SubstitutionVars(projectName = outcome.project,
       subprojectsReport = subprojectsReport,
       status = outcome.status,
-      projectDescription = if (outcome.project != ".") "project " + outcome.project else "this build configuration",
-      paddedProjectDescription = paddedProjectDescription))
+      projectDescription = if (outcome.project != ".") "project " + outcome.project else "the configuration \""+confName+"\"",
+      paddedProjectDescription = paddedProjectDescription,
+      configName = confName))
 
   // The expansion logic is tricky to get right. The limitation is that the typesafe config library will not
   // perform replacements inside double quotes, and when we write using the same library we do get double quotes.

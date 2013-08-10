@@ -18,12 +18,12 @@ import distributed.repo.core.ProjectDirs
 import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
-case class RunDistributedBuild(conf: DBuildConfiguration, target: File, logger: Logger)
+case class RunDistributedBuild(conf: DBuildConfiguration, confName: String, target: File, logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository) extends Actor {
   def receive = {
-    case RunDistributedBuild(conf, target, log) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(conf, confName, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       implicit val ctx = context.system
       val result = try {
@@ -34,9 +34,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         // Only each build system knows its own defaults (which may change over time),
         // therefore we have to ask to the build system itself to expand the 'extra' field
         // as appropriate.
-        val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, log))
+        val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, confName, log))
         tasks foreach { _.beforeBuild }
-        def afterTasks(error:String, rdb: Option[RepeatableDistributedBuild], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
+        def afterTasks(error: String, rdb: Option[RepeatableDistributedBuild], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
           if (tasks.nonEmpty) futureBuildResult map {
             wrapExceptionIntoOutcome[BuildOutcome](log) { buildOutcome =>
               val taskOuts = tasks map { t =>
@@ -45,18 +45,18 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   (t.id, true)
                 } catch {
                   case e =>
-                    prepareLogMsg(log, e)
                     (t.id, false)
                 }
               }
               log.info("---==  Tasks Report ==---")
               val (good, bad) = taskOuts.partition(_._2)
-              if (good.nonEmpty) log.info(good.map(_._1).mkString("Run successfully: ", ", ", ""))
+              if (good.nonEmpty) log.info(good.map(_._1).mkString("Successful: ", ", ", ""))
               if (bad.nonEmpty) log.info(bad.map(_._1).mkString("Failed: ", ", ", ""))
               log.info("---==  End Tasks Report ==---")
-              // should we mark a build failure if a task is unsuccessful? Probably we should
-              if (bad.nonEmpty) throw new Exception(error+": " + bad.map(_._1).mkString(", "))
-              buildOutcome
+              if (bad.nonEmpty)
+                TaskFailed(".", buildOutcome.outcomes, buildOutcome, "Tasks failed: " + bad.map(_._1).mkString(", "))
+              else
+                buildOutcome
             }
           }
           else futureBuildResult
@@ -83,18 +83,18 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     }
   }
 
-  final def wrapExceptionIntoOutcomeF[A](log: logging.Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
+  final def wrapExceptionIntoOutcomeF[A <: BuildOutcome](log: logging.Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
     implicit val ctx = context.system
     try f(a) catch {
       case e =>
-        Future(BuildFailed(".", Seq.empty, "Unexpected. Cause: " + prepareLogMsg(log, e)))
+        Future(BuildFailed(".", a.outcomes, "Unexpected. Cause: " + prepareLogMsg(log, e)))
     }
   }
-  final def wrapExceptionIntoOutcome[A](log: logging.Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
+  final def wrapExceptionIntoOutcome[A <: BuildOutcome](log: logging.Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
     implicit val ctx = context.system
     try f(a) catch {
       case e =>
-        BuildFailed(".", Seq.empty, "Unexpected. Cause: " + prepareLogMsg(log, e))
+        BuildFailed(".", a.outcomes, "Unexpected. Cause: " + prepareLogMsg(log, e))
     }
   }
 

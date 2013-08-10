@@ -36,9 +36,9 @@ private case class ProjectBuildConfigShadow(name: String,
  * affect other parts of the dbuild behavior.
  */
 case class DBuildConfiguration(
-  build:DistributedBuildConfig,
-  options:GeneralOptions = GeneralOptions() // pick defaults if empty
-)
+  build: DistributedBuildConfig,
+  options: GeneralOptions = GeneralOptions() // pick defaults if empty
+  )
 /**
  * The configuration for a build. Include here every bit of information that
  * affects the actual build; the parts that do not affect the actual build,
@@ -54,7 +54,6 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
 case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
   notifications: NotificationOptions = NotificationOptions())
 
-  
 /**
  * This class acts as a useful wrapper for parameters that are Seqs of Strings: it makes it
  * possible to specify a simple string whenever an array of strings is expected in the JSON file.
@@ -62,7 +61,7 @@ case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
  */
 @JsonSerialize(using = classOf[SeqStringSerializer])
 @JsonDeserialize(using = classOf[SeqStringDeserializer])
-case class SeqString(s:Seq[String]) {
+case class SeqString(s: Seq[String]) {
   // whenever I use a SeqString to apply map or foreach, the implicit
   // will kick in. However, when I try to print or use it as a string,
   // its method toString() will be called. This is not normally a problem
@@ -101,8 +100,8 @@ class SeqStringDeserializer extends JsonDeserializer[SeqString] {
   }
 }
 object SeqString {
-  implicit def SeqToSeqString(s:Seq[String]):SeqString = SeqString(s)
-  implicit def SeqStringToSeq(a:SeqString):Seq[String] = a.s
+  implicit def SeqToSeqString(s: Seq[String]): SeqString = SeqString(s)
+  implicit def SeqStringToSeq(a: SeqString): Seq[String] = a.s
 }
 
 /** a generic options section that relies on a list of projects/subprojects */
@@ -119,7 +118,7 @@ abstract class ProjectBasedOptions {
    *  Combine that list with the of remaining requested projects. If multiple
    *  project/subproject requests exist for the same project name, combine them together.
    *  NOTE: there is no assumption that the project names in the various request actually exist.
-   *  
+   *
    *  An auxiliary role of this method is that of performing a sanity check on
    *  the list of projects/subprojects, which is directly the list that
    *  the user wrote in the configuration file, and may contain errors.
@@ -130,24 +129,24 @@ abstract class ProjectBasedOptions {
     val projReqs = projects.collect { case p: SelectorProject => p }.toSet
     val subProjReqs = projects.collect { case p: SelectorSubProjects => p }.toSet
 
-      val fromRoot = if (projReqs.exists(_.name == ".")) allProjNames else Set[String]()
-      // list of names of projects mentioned in subprojects from root
-      val fromDotSubs = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
-      // are you kidding me?
-      if (fromDotSubs.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
-      // ok, this is the complete list of full project requests
-      val allProjReqs: Set[SelectorElement] = reqFromNames(fromRoot) ++ reqFromNames(fromDotSubs) ++ projReqs.filterNot(_.name == ".")
-      // remove the subproj requests that are already in the full proj set.
-      val restSubProjReqs = subProjReqs.filterNot { p => allProjReqs.map { _.name }.contains(p.name) }
-      // and now we flatten together those with the same 'from'
-      val allSubProjReqsMap = restSubProjReqs.filterNot(_.name == ".").groupBy(_.name).toSet
-      val allSubProjReq: Set[SelectorElement] = allSubProjReqsMap map {
-        case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.publish }.flatten.toSeq))
-      }
-      val reqs = allSubProjReq ++ allProjReqs
-      val unknown = reqs.map(_.name).diff(allProjNames)
-      if (unknown.nonEmpty) sys.error(unknown.mkString("These project names are unknown: ", ",", ""))
-      reqs
+    val fromRoot = if (projReqs.exists(_.name == ".")) allProjNames else Set[String]()
+    // list of names of projects mentioned in subprojects from root
+    val fromDotSubs = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
+    // are you kidding me?
+    if (fromDotSubs.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
+    // ok, this is the complete list of full project requests
+    val allProjReqs: Set[SelectorElement] = reqFromNames(fromRoot) ++ reqFromNames(fromDotSubs) ++ projReqs.filterNot(_.name == ".")
+    // remove the subproj requests that are already in the full proj set.
+    val restSubProjReqs = subProjReqs.filterNot { p => allProjReqs.map { _.name }.contains(p.name) }
+    // and now we flatten together those with the same 'from'
+    val allSubProjReqsMap = restSubProjReqs.filterNot(_.name == ".").groupBy(_.name).toSet
+    val allSubProjReq: Set[SelectorElement] = allSubProjReqsMap map {
+      case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.publish }.flatten.toSeq))
+    }
+    val reqs = allSubProjReq ++ allProjReqs
+    val unknown = reqs.map(_.name).diff(allProjNames)
+    if (unknown.nonEmpty) sys.error(unknown.mkString("These project names are unknown: ", ",", ""))
+    reqs
   }
 }
 
@@ -288,9 +287,7 @@ object BuildSystemExtras {
 /** configuration for the Nil build system */
 case class NilExtraConfig(
   /** add the dependencies here, in some fashion to be decided */
-  deps: SeqString = Seq.empty
-) extends ExtraConfig
-
+  deps: SeqString = Seq.empty) extends ExtraConfig
 
 // our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner
 @JsonSerialize(using = classOf[SelectorElementSerializer])
@@ -337,12 +334,13 @@ class SelectorElementDeserializer extends JsonDeserializer[SelectorElement] {
   }
 }
 
-/** same as SeqString, for Seq[SelectorElement]: a lonely String or a lonely
+/**
+ * same as SeqString, for Seq[SelectorElement]: a lonely String or a lonely
  *  SelectorSubProjs can also be used when a Seq[SelectorElement] is requested.
  */
 @JsonSerialize(using = classOf[SeqElementSerializer])
 @JsonDeserialize(using = classOf[SeqElementDeserializer])
-case class SeqSelectorElement(s:Seq[SelectorElement])
+case class SeqSelectorElement(s: Seq[SelectorElement])
 class SeqElementSerializer extends JsonSerializer[SeqSelectorElement] {
   override def serialize(value: SeqSelectorElement, g: JsonGenerator, p: SerializerProvider) {
     value.s.length match {
@@ -374,16 +372,17 @@ class SeqElementDeserializer extends JsonDeserializer[SeqSelectorElement] {
   }
 }
 object SeqSelectorElement {
-  implicit def SeqToSeqSelectorElement(s:Seq[SelectorElement]):SeqSelectorElement = SeqSelectorElement(s)
-  implicit def SeqSelectorElementToSeq(a:SeqSelectorElement):Seq[SelectorElement] = a.s
+  implicit def SeqToSeqSelectorElement(s: Seq[SelectorElement]): SeqSelectorElement = SeqSelectorElement(s)
+  implicit def SeqSelectorElementToSeq(a: SeqSelectorElement): Seq[SelectorElement] = a.s
 }
-/** same as SeqString, for Seq[Notification]: a single Notification will be wrapped into an array.
+/**
+ * same as SeqString, for Seq[Notification]: a single Notification will be wrapped into an array.
  *  Note that I cannot make easily a generic version, since Jackson requires a no-args constructur
  *  and I cannot construct a sequence without a Manifest. So I only special case a few of them.
  */
 @JsonSerialize(using = classOf[SeqNotificationSerializer])
 @JsonDeserialize(using = classOf[SeqNotificationDeserializer])
-case class SeqNotification(s:Seq[Notification])
+case class SeqNotification(s: Seq[Notification])
 class SeqNotificationSerializer extends JsonSerializer[SeqNotification] {
   override def serialize(value: SeqNotification, g: JsonGenerator, p: SerializerProvider) {
     value.s.length match {
@@ -415,8 +414,8 @@ class SeqNotificationDeserializer extends JsonDeserializer[SeqNotification] {
   }
 }
 object SeqNotification {
-  implicit def SeqToSeqNotification(s:Seq[Notification]):SeqNotification = SeqNotification(s)
-  implicit def SeqNotificationToSeq(a:SeqNotification):Seq[Notification] = a.s
+  implicit def SeqToSeqNotification(s: Seq[Notification]): SeqNotification = SeqNotification(s)
+  implicit def SeqNotificationToSeq(a: SeqNotification): Seq[Notification] = a.s
 }
 
 /**
@@ -465,14 +464,15 @@ case class BuildOptions(
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
   send: SeqNotification = Seq(Notification(kind = "console", send = None, when = Seq("always"))),
-  /** This section optionally contains defaults to be used for the various notification kinds.
+  /**
+   * This section optionally contains defaults to be used for the various notification kinds.
    *  The values specified in the defaults section will be used for that kind if no value
    *  has been specified in a "send" record of that kind. Since the defaults of the defaults are
    *  by default the defaults of the notifications (since they use the same Notification record),
    *  unspecified fields in the defaults cause no change to the default interpretation of send
    *  records.
    */
-  default:SeqNotification = Seq[Notification]())
+  default: SeqNotification = Seq[Notification]())
 /**
  *  A notification template; for notification systems that require short messages,
  *  use only the subject line. It is a template because variable
@@ -537,7 +537,7 @@ case class Notification(
    *  if a single string is specified.
    */
   projects: SeqSelectorElement = Seq(SelectorProject("."))) extends ProjectBasedOptions {
-/*
+  /*
  *  example:
   
   options.notifications.send = [{
@@ -551,18 +551,18 @@ case class Notification(
   
 */
   /**
-   * It calls template(), if None, then get
-   * the default template from the outcome, else
-   * search in the list of defined templates (in NotificationOptions)
-   * for one matching the one requested; if no short, replace with summary.
-   * Return the result.
-   * definedTemplates are those the user wrote in the configuration file
+   * If the notification refers to a specific template name, use that template name,
+   * otherwise the template name we need is the same as the notification kind.
+   * Once we determined that, we search for it in the list of templates, passed as an
+   * argument. Once we find it, we replace the missing parts of the template using
+   * the appropriate defaults, and return the resolved template.
    */
-  def resolveTemplate(outcome: BuildOutcome, definedTemplates: Seq[NotificationTemplate]): ResolvedTemplate = {
-    val templ = template match {
-      case None => outcome.defaultTemplate
-      case Some(t) => definedTemplates.find(_.id == t) getOrElse sys.error("The requested notification template \"" + t + "\" was not found.")
+  def resolveTemplate(definedTemplates: Seq[NotificationTemplate]): ResolvedTemplate = {
+    val templName= template match {
+      case None => kind
+      case Some(t) => t
     }
+    val templ = definedTemplates.find(_.id == templName) getOrElse sys.error("The requested notification template \"" + templName + "\" was not found.")
     val short = templ.short match {
       case Some(s) => s
       case None => templ.summary
@@ -658,9 +658,9 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
    *  Merges two records; if anything in "over" was changed with respect to defaultOptions,
    *  then take the value of "over". Else, get the value from "under". If both are None,
    *  return defaultOptions.
-   */  
-  protected def mergeOptions(over: T, under: T):T
-  
+   */
+  protected def mergeOptions(over: T, under: T): T
+
   /**
    * The client code calls notify(), which redispatches to send(), implemented in subclasses.
    */
@@ -675,19 +675,19 @@ abstract class NotificationContext[T <: NotificationKind](implicit m: Manifest[T
     }
   }
   /** The client code calls mergeOptionsK, which is internally re-dispatched to mergeOptions */
-  def mergeOptionsK(over: Option[NotificationKind], under: Option[NotificationKind]):NotificationKind = {
+  def mergeOptionsK(over: Option[NotificationKind], under: Option[NotificationKind]): NotificationKind = {
     // Once again, I get something that is no more specific than a NotificationKind, but I *know* from a String ID
     // that they are the right kind for this Context, so I test for extra safety and cast. I am sure there is a
     // prettier solution, probably using type members or path-dependent types (by nesting NotificationKind and/or
     // NotificationContext into Notification), but implementation time is short at the moment and for the moment this will do.
     // TODO: clean up this uglyness
-    (over,under) match {
-      case (None,None) => defaultOptions
-      case (Some(ov),None) => ov
-      case (None,Some(un)) => un
-      case (Some(ov),Some(un)) => 
-        if (m.erasure.isInstance(ov)&&m.erasure.isInstance(un)) mergeOptions(ov.asInstanceOf[T],un.asInstanceOf[T]) else
-          sys.error("Internal error: " + this.getClass.getName + " received: " + ov.getClass.getName + "-"+un.getClass.getName+". Please report.")
+    (over, under) match {
+      case (None, None) => defaultOptions
+      case (Some(ov), None) => ov
+      case (None, Some(un)) => un
+      case (Some(ov), Some(un)) =>
+        if (m.erasure.isInstance(ov) && m.erasure.isInstance(un)) mergeOptions(ov.asInstanceOf[T], un.asInstanceOf[T]) else
+          sys.error("Internal error: " + this.getClass.getName + " received: " + ov.getClass.getName + "-" + un.getClass.getName + ". Please report.")
     }
   }
 
@@ -702,12 +702,26 @@ case class EmailNotification(
   cc: SeqString = Seq.empty,
   bcc: SeqString = Seq.empty,
   /**
-   * If you want to send to a specific smtp gateway,
-   * specify it here; else, messages will be sent to localhost,
-   * hoping for the best.
+   * The default sender is the account under which dbuild
+   * is running right now (user@hostname). Else, specify it here.
    */
-  smtp: Option[String] = None,
-  /** If your smtp server needs username/password, specify
+  from: Option[String] = None,
+  /**
+   * SMTP parameters. If not specified, messages will be sent
+   * to localhost, port 25, no auth, hoping for the best.
+   */
+  smtp: Smtp = Smtp("localhost", None, "none", false)) extends NotificationKind
+
+/**
+ * Description of the smtp server to be used for email delivery.
+ */
+case class Smtp(
+  /**
+   * Specify here the smtp gateway that should be used.
+   */
+  server: String,
+  /**
+   * If your smtp server needs username/password, specify
    *  them in a file and supply the filename here. In the
    *  properties file you will need: user, host, password.
    *  The "host" property is the hostname you are connecting to,
@@ -715,17 +729,17 @@ case class EmailNotification(
    *  is the name used during the authentication; it can be
    *  "name", or "name@somehost", depending on the providers.
    */
-  @JsonProperty("smtp-credentials") smtpCredentials: Option[String] = None,
+  credentials: Option[String] = None,
   /**
    * Set this to the desired authentication mechanism. It can be
    * starttls, ssl, submission (port 587/STARTTLS), or none. Default is ssl.
    */
-  @JsonProperty("smtp-auth") smtpAuth: String = "ssl",
+  auth: String = "ssl",
   /**
-   * The default sender is the account under which dbuild
-   * is running right now (user@hostname). Else, specify it here.
+   * If using SSL/TLS, a self-signed certificate could be in use.
+   * In that case, explicitly disable certificate checking here.
    */
-  from: Option[String] = None) extends NotificationKind
+  @JsonProperty("check-certificate") checkCertificate: Boolean = true)
 
 case class ConsoleNotification() extends NotificationKind
 

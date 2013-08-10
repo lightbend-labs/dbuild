@@ -28,16 +28,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       implicit val ctx = context.system
       val result = try {
         val logger = log.newNestedLogger(hashing sha1 conf.build)
-        // "build" contains the project configs as written in the configuration file.
-        // Their 'extra' field could be None, or contain information that must be completed
-        // according to the build system in use for that project.
-        // Only each build system knows its own defaults (which may change over time),
-        // therefore we have to ask to the build system itself to expand the 'extra' field
-        // as appropriate.
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, confName, log))
         tasks foreach { _.beforeBuild }
         def afterTasks(error: String, rdb: Option[RepeatableDistributedBuild], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
           if (tasks.nonEmpty) futureBuildResult map {
+            // >>>> careful with map() on Futures: exceptions must be caught separately!!
             wrapExceptionIntoOutcome[BuildOutcome](log) { buildOutcome =>
               val taskOuts = tasks map { t =>
                 try { // even if one task fails, we move on to the rest
@@ -61,7 +56,13 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
           }
           else futureBuildResult
         }
-        // careful with map() on Futures: exceptions must be caught separately!!
+        // "conf" contains the project configs as written in the configuration file.
+        // Their 'extra' field could be None, or contain information that must be completed
+        // according to the build system in use for that project.
+        // Only each build system knows its own defaults (which may change over time),
+        // therefore we have to ask to the build system itself to expand the 'extra' field
+        // as appropriate.
+        //
         analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>

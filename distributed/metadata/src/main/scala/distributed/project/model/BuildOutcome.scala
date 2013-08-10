@@ -17,15 +17,6 @@ sealed abstract class BuildOutcome {
   def project: String
   /** the outcomes of all the dependencies of this project */
   def outcomes: Seq[BuildOutcome]
-
-  /** The default notification template; see Notification for further details. */
-  def defaultTemplate(): NotificationTemplate = NotificationTemplate("",
-    "${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}",
-    None,
-    Some("---==  Execution Report ==---\nReport from the dbuild run for ${dbuild.template-vars.project-description}:\n${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}\n---==  End Execution Report ==---"))
-
-  // the utility methods below are used to build the default template, and are used in the substitutions,
-  // but are /not/ part of any template per se.
   /** A short status string. This is the only string that you should define in a BuildOutcome, all the rest goes in the template.  */
   def status(): String
 }

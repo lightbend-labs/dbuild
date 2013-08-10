@@ -35,5 +35,4 @@ object Dependencies {
   val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.1"
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
   val commonsLang    = "commons-lang" % "commons-lang" % "2.6"
-  val commonsEmail   = "org.apache.commons" % "commons-email" % "1.3.1"
 }

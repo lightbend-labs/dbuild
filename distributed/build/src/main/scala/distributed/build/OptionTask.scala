@@ -3,7 +3,6 @@ package distributed.build
 import distributed.project.model._
 import distributed.logging.Logger
 import Creds.loadCreds
-import org.apache.commons.mail.{ Email, SimpleEmail, DefaultAuthenticator }
 import Logger.prepareLogMsg
 
 /**
@@ -41,12 +40,12 @@ abstract class OptionTask(log: Logger) {
       try { f(item); (true, "") } catch {
         case e =>
           // Got an error from this notification? remember it and continue.
-          // Print diagnostics only in the innermost calls
+          // use "diagnose" to print diagnostics only in the innermost calls
           if (diagnose) prepareLogMsg(log, e)
           (false, e.getMessage)
       }
     }
-    // was there an error? pass it up (for this kind)
+    // was there an error? pass it up
     status.find(!_._1) map {
       case (_, msg) =>
         throw new Exception(msg)

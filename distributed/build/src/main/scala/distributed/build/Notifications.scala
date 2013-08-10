@@ -42,9 +42,7 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     val newBCC = if (over.bcc != defaultOptions.bcc) over.bcc else under.bcc
     val newSMTP = if (over.smtp != defaultOptions.smtp) over.smtp else under.smtp
     val newFROM = if (over.from != defaultOptions.from) over.from else under.from
-    val newCRED = if (over.smtpCredentials != defaultOptions.smtpCredentials) over.smtpCredentials else under.smtpCredentials
-    val newAUTH = if (over.smtpAuth != defaultOptions.smtpAuth) over.smtpAuth else under.smtpAuth
-    EmailNotification(to = newTO, cc = newCC, bcc = newBCC, smtp = newSMTP, from = newFROM, smtpAuth = newAUTH, smtpCredentials = newCRED)
+    EmailNotification(to = newTO, cc = newCC, bcc = newBCC, smtp = newSMTP, from = newFROM)
   }
   override def before() = {
     log.info("--== Sending Email ==--")
@@ -55,40 +53,36 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
   def send(n: EmailNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     import n._
     log.info("Sending outcome of project " + outcome.project + " to: " + ((to ++ cc ++ bcc).distinct.mkString(", ")))
-    val smtpServer = smtp match {
-      case None => "localhost"
-      case Some(server) => server
-    }
-    val creds = smtpCredentials map { credFile =>
-      val c = loadCreds(credFile)
-      if (c.host != smtpServer)
-        sys.error("The credentials file " + credFile + " does not contain information for host " + smtpServer)
-      c
-    }
-
     val props = new Properties()
-    props.put("mail.smtp.host", smtpServer)
+    props.put("mail.smtp.host", smtp.server)
     def needCreds = {
-      if (smtpCredentials.isEmpty) {
+      if (smtp.credentials.isEmpty) {
         log.error("Please either add \"smtp-credentials\", or set \"smtp-auth\" to none.")
-        sys.error("smpt-credentials are needed with authentication \"" + smtpAuth + "\".")
+        sys.error("smpt-credentials are needed with authentication \"" + smtp.auth + "\".")
       }
     }
-    smtpAuth match {
+    smtp.auth match {
       case "ssl" =>
         needCreds
-        props.put("mail.smtp.ssl.checkserveridentity", "false");
+        if (!smtp.checkCertificate)
+          props.put("mail.smtp.ssl.checkserveridentity", "false");
         props.put("mail.smtp.ssl.trust", "*")
         props.put("mail.smtp.ssl.enable", "true")
         props.put("mail.smtp.auth", "true")
         props.put("mail.smtp.port", "465")
       case "starttls" =>
         needCreds
+        if (!smtp.checkCertificate)
+          props.put("mail.smtp.starttls.checkserveridentity", "false");
         props.put("mail.smtp.auth", "true")
         props.put("mail.smtp.starttls.enable", "true")
+        props.put("mail.smtp.starttls.required", "true");
         props.put("mail.smtp.port", "25")
       case "submission" =>
+        if (!smtp.checkCertificate)
+          props.put("mail.smtp.starttls.checkserveridentity", "false");
         props.put("mail.smtp.auth", "true")
+        props.put("mail.smtp.starttls.required", "true");
         props.put("mail.smtp.starttls.enable", "true")
         props.put("mail.smtp.port", "587")
       case "none" =>
@@ -97,10 +91,10 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     }
 
     try {
-      val creds = smtpCredentials map { credFile =>
+      val creds = smtp.credentials map { credFile =>
         val c = loadCreds(credFile)
-        if (c.host != smtpServer)
-          sys.error("The credentials file " + credFile + " does not contain information for host " + smtpServer)
+        if (c.host != smtp.server)
+          sys.error("The credentials file " + credFile + " does not contain information for host " + smtp.server)
         c
       }
       val session = Session.getInstance(props, creds match {
@@ -112,7 +106,7 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
             }
           }
       })
-      //      session.setDebug(true)
+      // session.setDebug(true)
       val msg = new MimeMessage(session)
       msg.setFrom(new InternetAddress({
         val userName = System.getProperty("user.name")
@@ -143,11 +137,7 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     } catch {
       case mex: MessagingException =>
         log.error("ERROR SENDING to " + n.to.mkString(", ") + " the outcome of project " + outcome.project + " using template " + templ.id)
-        val errors = new java.io.StringWriter
-        mex.printStackTrace(new java.io.PrintWriter(errors))
-        errors.toString.split("\n").take(3) foreach { log.error(_) }
-        val msg1 = mex.getClass.getSimpleName + (Option(mex.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")
-        Some(msg1)
+        throw mex
     }
   }
 }
@@ -190,7 +180,7 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
 
   def sendNotifications(kind: String, rootOutcome: BuildOutcome) = {
     val outcomes = rootOutcome.outcomes // children of the dbuild root
-    val definedTemplates = conf.options.notifications.templates
+    val userDefinedTemplates = conf.options.notifications.templates
     val defnOpt = defaultsMap.get(kind) // defaults from the default records
 
     // scan the kinds for which at least one notification exists
@@ -217,7 +207,8 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
       }
 
       def processOneNotification(n: Notification, outcome: BuildOutcome) = {
-        val resolvedTempl = n.resolveTemplate(outcome, definedTemplates)
+        // we append the standard templates at the end, so that the user can override them
+        val resolvedTempl = n.resolveTemplate(userDefinedTemplates ++ standardTemplates)
         if (outcome.whenIDs.intersect(n.when).nonEmpty) {
           val formatter = new TemplateFormatter(resolvedTempl, outcome, confName)
           allContexts(n.kind).notify(n.send, formatter, outcome)
@@ -240,4 +231,14 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
       }
     }
   }
+
+  val standardTemplates = Seq(
+    NotificationTemplate("console",
+      "${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}",
+      None,
+      Some("---==  Execution Report ==---\nReport from the dbuild run for ${dbuild.template-vars.project-description}:\n${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}\n---==  End Execution Report ==---")),
+    NotificationTemplate("email",
+      "${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}",
+      None,
+      Some("---==  Execution Report ==---\nReport from the dbuild run for ${dbuild.template-vars.project-description}:\n${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}\n---==  End Execution Report ==---")))
 }

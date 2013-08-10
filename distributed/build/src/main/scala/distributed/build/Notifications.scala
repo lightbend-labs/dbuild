@@ -3,7 +3,6 @@ package distributed.build
 import distributed.project.model._
 import distributed.logging.Logger
 import Creds.loadCreds
-import org.apache.commons.mail.{ Email, SimpleEmail, DefaultAuthenticator }
 import java.util.Properties
 import java.util.Date
 import javax.mail._
@@ -55,18 +54,67 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
   }
   def send(n: EmailNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     import n._
-    try {
-      log.info("Sending status of project " + outcome.project + " to: " + ((to ++ cc ++ bcc).distinct.mkString(", ")))
-      val email = new SimpleEmail()
-      val smtpServer = smtp match {
-        case None =>
-          log.warn("WARNING: the smtp server is not set. Will try to send to localhost...")
-          "localhost"
-        case Some(server) => server
-      }
+    log.info("Sending outcome of project " + outcome.project + " to: " + ((to ++ cc ++ bcc).distinct.mkString(", ")))
+    val smtpServer = smtp match {
+      case None => "localhost"
+      case Some(server) => server
+    }
+    val creds = smtpCredentials map { credFile =>
+      val c = loadCreds(credFile)
+      if (c.host != smtpServer)
+        sys.error("The credentials file " + credFile + " does not contain information for host " + smtpServer)
+      c
+    }
 
-      email.setHostName(smtpServer)
-      val sendFrom = {
+    val props = new Properties()
+    props.put("mail.smtp.host", smtpServer)
+    def needCreds = {
+      if (smtpCredentials.isEmpty) {
+        log.error("Please either add \"smtp-credentials\", or set \"smtp-auth\" to none.")
+        sys.error("smpt-credentials are needed with authentication \"" + smtpAuth + "\".")
+      }
+    }
+    smtpAuth match {
+      case "ssl" =>
+        needCreds
+        props.put("mail.smtp.ssl.checkserveridentity", "false");
+        props.put("mail.smtp.ssl.trust", "*")
+        props.put("mail.smtp.ssl.enable", "true")
+        props.put("mail.smtp.auth", "true")
+        props.put("mail.smtp.port", "465")
+      case "starttls" =>
+        needCreds
+        props.put("mail.smtp.auth", "true")
+        props.put("mail.smtp.starttls.enable", "true")
+        props.put("mail.smtp.port", "25")
+      case "submission" =>
+        props.put("mail.smtp.auth", "true")
+        props.put("mail.smtp.starttls.enable", "true")
+        props.put("mail.smtp.port", "587")
+      case "none" =>
+        props.put("mail.smtp.port", "25")
+      case x => sys.error("Unknown authentication scheme: " + x)
+    }
+
+    try {
+      val creds = smtpCredentials map { credFile =>
+        val c = loadCreds(credFile)
+        if (c.host != smtpServer)
+          sys.error("The credentials file " + credFile + " does not contain information for host " + smtpServer)
+        c
+      }
+      val session = Session.getInstance(props, creds match {
+        case None => null
+        case Some(c) =>
+          new javax.mail.Authenticator() {
+            protected override def getPasswordAuthentication(): javax.mail.PasswordAuthentication = {
+              return new PasswordAuthentication(c.user, c.pass)
+            }
+          }
+      })
+      //      session.setDebug(true)
+      val msg = new MimeMessage(session)
+      msg.setFrom(new InternetAddress({
         val userName = System.getProperty("user.name")
         from match {
           case Some(address) => address
@@ -76,55 +124,30 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
             } catch {
               // getLocalHost() will throw an exception if the current hostname is set but unrecognized
               // by the local dns server. As a last resort, we fall back to "localhost".
-              case e =>
-                log.warn("WARNING: could not get the local hostname; your DNS settings might be misconfigured.")
-                "localhost"
+              case e => "localhost"
             }
             "dbuild at " + host + " <" + userName + "@" + host + ">"
         }
-      }
-      email.setFrom(sendFrom)
-      email.setSubject(templ.short)
-      email.setMsg(templ.long + "\n")
-      if (to.nonEmpty) email.addTo(to: _*)
-      if (cc.nonEmpty) email.addCc(cc: _*)
-      if (bcc.nonEmpty) email.addBcc(bcc: _*)
-
-      def needCreds = {
-        if (smtpCredentials.isEmpty) {
-          log.error("Please either add \"smtp-credentials\", or set \"smtp-auth\" to none.")
-          sys.error("smpt-credentials are needed with authentication \"" + smtpAuth + "\".")
-        }
-      }
-      smtpAuth match {
-        case "ssl" =>
-          email.setSSLOnConnect(true)
-          email.setStartTLSEnabled(false)
-          email.setStartTLSRequired(false)
-          needCreds
-        case "starttls" =>
-          email.setSSLOnConnect(false)
-          email.setStartTLSEnabled(true)
-          email.setStartTLSRequired(true)
-          needCreds
-        case "none" =>
-          email.setSSLOnConnect(false)
-          email.setStartTLSEnabled(false)
-        case x => sys.error("Unknown authentication scheme: "+x)
-      }
-      
-      smtpCredentials map { credFile =>
-        val c = loadCreds(credFile)
-        if (c.host != smtpServer)
-          sys.error("The credentials file " + credFile + " does not contain information for host " + smtpServer)
-        email.setAuthentication(c.user, c.pass)
-      }
-      email.send()
-      None
+      }, /*strict checking*/ true): Address)
+      def setData(field: RecipientType, data: Seq[String]) =
+        msg.setRecipients(field,
+          data.map(new InternetAddress(_, true): Address).toArray)
+      setData(TO, to)
+      setData(CC, cc)
+      setData(BCC, bcc)
+      msg.setSubject(templ.short)
+      msg.setSentDate(new Date())
+      msg.setText(templ.long + "\n")
+      // message is ready. Now, the delivery.
+      Transport.send(msg)
     } catch {
-      case mex =>
-        log.error("ERROR SENDING to " + n.to.mkString(", ") + " the outcome of project " + outcome.project)
-        throw mex
+      case mex: MessagingException =>
+        log.error("ERROR SENDING to " + n.to.mkString(", ") + " the outcome of project " + outcome.project + " using template " + templ.id)
+        val errors = new java.io.StringWriter
+        mex.printStackTrace(new java.io.PrintWriter(errors))
+        errors.toString.split("\n").take(3) foreach { log.error(_) }
+        val msg1 = mex.getClass.getSimpleName + (Option(mex.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")
+        Some(msg1)
     }
   }
 }

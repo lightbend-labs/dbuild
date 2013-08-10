@@ -718,7 +718,7 @@ case class EmailNotification(
   @JsonProperty("smtp-credentials") smtpCredentials: Option[String] = None,
   /**
    * Set this to the desired authentication mechanism. It can be
-   * starttls, ssl, or none. Default is ssl.
+   * starttls, ssl, submission (port 587/STARTTLS), or none. Default is ssl.
    */
   @JsonProperty("smtp-auth") smtpAuth: String = "ssl",
   /**

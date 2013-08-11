@@ -1,0 +1,234 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Deploying &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.6.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Notifications" href="notifications.html" />
+    <link rel="prev" title="Build options" href="buildOptions.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/distributed-build">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Deploying</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="notifications.html">Notifications</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="buildOptions.html">Build options</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.6.3">Version 0.6.3</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="deploying">
+<h1>Deploying<a class="headerlink" href="#deploying" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-deploy-section">
+<span id="section-deploy"></span><h2>The <tt class="docutils literal"><span class="pre">deploy</span></tt> section<a class="headerlink" href="#the-deploy-section" title="Permalink to this headline">¶</a></h2>
+<p>At the end of the build process, dbuild can automatically upload the generated artifacts to one or more
+repositories. The <tt class="docutils literal"><span class="pre">deploy</span></tt> section in the build configuration file is optional; it consists of a sequence
+of deploy records, with the following structure:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="nx">build</span><span class="o">:</span> <span class="p">{</span><span class="nx">projects</span><span class="o">:</span><span class="p">...,</span> <span class="nx">options</span><span class="o">:</span><span class="p">...}</span>
+
+ <span class="nx">options</span><span class="o">:</span> <span class="p">{</span>
+  <span class="nx">deploy</span><span class="o">:</span> <span class="p">{</span>
+   <span class="s2">&quot;uri&quot;</span>         <span class="o">:</span> <span class="o">&lt;</span><span class="nx">repository</span><span class="o">-</span><span class="nx">uri</span><span class="o">&gt;</span><span class="p">,</span>
+   <span class="s2">&quot;credentials&quot;</span> <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">credentials</span><span class="o">&gt;</span><span class="p">,</span>
+   <span class="s2">&quot;projects&quot;</span>    <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">project1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">project2</span><span class="o">&gt;</span><span class="p">,...]</span>
+   <span class="s2">&quot;sign&quot;</span>        <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">sign</span><span class="o">-</span><span class="nx">info</span><span class="o">&gt;</span>
+  <span class="p">}</span>
+ <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Within each record:</p>
+<dl class="docutils">
+<dt>repository-uri</dt>
+<dd><p class="first">A string specifying the URI of the desired repository; it can be written either with or
+without a trailing slash. It can be one of the following:</p>
+<dl class="last docutils">
+<dt><tt class="docutils literal"><span class="pre">file:///path/to/local/repository</span></tt></dt>
+<dd>The artifacts will be copied to the local file system. The directory will be created
+if it does not exist. Existing files in that directory with colliding names will be
+overwritten; the other files that were previously in the same directory will be left
+untouched.</dd>
+<dt><tt class="docutils literal"><span class="pre">http://hostname:port/path1/path2</span></tt></dt>
+<dd>A Maven or Ivy (or other) remote repository. It can also use the &quot;https&quot; scheme, and
+a custom port may optionally be specified. A credentials file is required (see later).</dd>
+<dt><tt class="docutils literal"><span class="pre">s3://bucket/path1/path2</span></tt></dt>
+<dd>The artifacts will be uploaded to an Amazon S3 bucket. Credentials must be specified.</dd>
+</dl>
+</dd>
+<dt>credentials</dt>
+<dd>A properties file containing at least the properties &quot;host&quot;, &quot;user&quot;, and &quot;password&quot;. The
+value of the &quot;host&quot; property must match the hostname or the bucket name. In the case of
+Amazon S3, the property &quot;user&quot; contains the Access Key ID, while the property &quot;password&quot;
+contains the Secret Access Key. The credentials specification should be omitted for <tt class="docutils literal"><span class="pre">file</span></tt>
+repositories.</dd>
+<dt>projects</dt>
+<dd>An optional list of project names, from the ones specified in the same build configuration file.
+Only the artifacts generated by this projects will be deployed to the repository specified. If
+not present, the artifacts of all projects will be uploaded. If present, but empty, none will
+be uploaded (useful to disable temporarily the section). The string &quot;.&quot; refers to the
+root build, and is equivalent to &quot;all the projects&quot;.</dd>
+</dl>
+<p>In place of a project name, it is also possible to specify a limited set of subprojects from
+a certain project. That will also work for the Scala build; it is possible to deploy to a
+certain repository only scala-library and scala-compiler, for example. The syntax is:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;from&quot;</span>    <span class="o">:</span> <span class="o">&lt;</span><span class="nx">project</span><span class="o">-</span><span class="nx">name</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;publish&quot;</span> <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">subproject1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">subproject2</span><span class="o">&gt;</span><span class="p">,...]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Only the projects that completed their build succesfully will be deployed; the failed ones
+will be skipped with an error message. If there is only one project in the list, either
+a string or a from/publish record, the square brackets in the list can be omitted.</p>
+<dl class="docutils">
+<dt>sign</dt>
+<dd>If this optional section is included, the artifacts will be signed with the specified key
+information before being deployed. The relevant information is supplied as:</dd>
+</dl>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;passphrase&quot;</span>   <span class="o">:</span> <span class="o">&lt;</span><span class="nx">passphrase</span><span class="o">-</span><span class="nx">file</span><span class="o">&gt;</span>
+ <span class="s2">&quot;id&quot;</span>           <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">secret</span><span class="o">-</span><span class="nx">key</span><span class="o">-</span><span class="nx">id</span><span class="o">&gt;</span>
+ <span class="s2">&quot;secret-ring&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">secret</span><span class="o">-</span><span class="nx">ring</span><span class="o">-</span><span class="nx">file</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>passphrase</dt>
+<dd>This is the only required field: it is the path to a text file that contains the
+passphrase that should be used for signing.</dd>
+<dt>id</dt>
+<dd>If the keyring contains several keys, this field can be used to specify the id of
+the key that should be used. It must be a 16-characters hexadecimal string; you
+can find the necessary value by using <tt class="docutils literal"><span class="pre">gpg</span> <span class="pre">--list-keys</span> <span class="pre">--with-colon</span></tt>.</dd>
+<dt>secret-ring</dt>
+<dd>If the file containing your keys is in a non-standard location, you can specify the
+file path here. By default, it will use <tt class="docutils literal"><span class="pre">~/.gnupg/secring.gpg</span></tt></dd>
+</dl>
+<p>Using such a sequence of deploy records, it is possible to deploy diffent sets of artifacts to different
+repositories, or to upload the same artifacts to multiple repositories during a single run. Since signing
+is specified within a deploy record, the same artifacts can be signed with different keys for different
+repositories, during deployment.</p>
+<p>For example:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="s2">&quot;deploy&quot;</span><span class="o">:</span><span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nx">uri</span><span class="o">=</span><span class="s2">&quot;file:///home/user/files/repo&quot;</span>
+    <span class="nx">projects</span><span class="o">:</span><span class="p">[</span><span class="s2">&quot;genjavadoc&quot;</span><span class="p">,{</span><span class="nx">from</span><span class="o">:</span><span class="s2">&quot;akka&quot;</span><span class="p">,</span><span class="nx">publish</span><span class="o">:</span><span class="s2">&quot;akka-actor&quot;</span><span class="p">}]</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="nx">uri</span><span class="o">=</span><span class="s2">&quot;s3://s3-testBucket/repo&quot;</span>
+    <span class="nx">credentials</span><span class="o">=</span><span class="s2">&quot;/home/user/.credentials-s3&quot;</span>
+    <span class="nx">projects</span><span class="o">=</span><span class="s2">&quot;scala-arm&quot;</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="nx">uri</span><span class="o">=</span><span class="s2">&quot;http://localhost:8088/artifactory/repos/test1&quot;</span>
+    <span class="nx">credentials</span><span class="o">=</span><span class="s2">&quot;/home/user/.ivy2/.credentials-local&quot;</span>
+    <span class="nx">projects</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;genjavadoc&quot;</span><span class="p">,</span><span class="s2">&quot;akka&quot;</span><span class="p">,</span><span class="s2">&quot;scala&quot;</span><span class="p">,</span><span class="s2">&quot;scala-arm&quot;</span><span class="p">]</span>
+    <span class="nx">sign</span><span class="o">:</span> <span class="p">{</span>
+      <span class="nx">passphrase</span><span class="o">:</span><span class="s2">&quot;/home/user/.passphrase&quot;</span>
+      <span class="nx">id</span><span class="o">:</span><span class="s2">&quot;0A6C9FC933CA9D7E&quot;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>If you encounter an error <tt class="docutils literal"><span class="pre">404</span></tt> while deploying, that may be caused by an attempt to upload a checksum file
+(.sha1 or .md5) that has no corresponding main file. This should normally never happen, but it may be the result
+of some anomalous build/clean error during the build stage.</p>
+<p class="last">Similarly, an error <tt class="docutils literal"><span class="pre">409</span></tt> may occur when the checksum file that was generated during the build stage does
+not match the checksum that was calculated on the server during the deployment of the main file. Again, this
+may be the result of some unexpected build anomaly, or it may be caused by a failure while uploading the artifact
+files to the repository server.</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="notifications.html"><em>Notifications</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Deploying</a><ul>
+<li><a class="reference internal" href="#the-deploy-section">The <tt class="docutils literal"><span class="pre">deploy</span></tt> section</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

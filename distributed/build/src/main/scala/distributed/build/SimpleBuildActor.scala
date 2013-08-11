@@ -28,7 +28,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       implicit val ctx = context.system
       val result = try {
         val logger = log.newNestedLogger(hashing sha1 conf.build)
-        val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), new Notifications(conf, confName, log))
+        val notifTask=new Notifications(conf, confName, log)
+        // add further new tasks at the beginning of this list, leave notifications at the end
+        val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), notifTask)
         tasks foreach { _.beforeBuild }
         def afterTasks(error: String, rdb: Option[RepeatableDistributedBuild], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
           if (tasks.nonEmpty) futureBuildResult map {

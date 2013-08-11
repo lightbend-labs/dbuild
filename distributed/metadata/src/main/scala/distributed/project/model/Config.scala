@@ -463,7 +463,7 @@ case class BuildOptions(
  */
 case class NotificationOptions(
   templates: Seq[NotificationTemplate] = Seq.empty,
-  send: SeqNotification = Seq(Notification(kind = "console", send = None, when = Seq("always"))),
+  send: SeqNotification = Seq(Notification(kind = "console", where = None, when = Seq("always"))),
   /**
    * This section optionally contains defaults to be used for the various notification kinds.
    *  The values specified in the defaults section will be used for that kind if no value
@@ -513,7 +513,7 @@ case class Notification(
    * kind-specific arguments. Optional, but some
    *  notification kinds (notably email) may require it.
    */
-  send: Option[NotificationKind],
+  where: Option[NotificationKind],
   /**
    * One of these IDs must match one of the BuildOutcome
    *  IDs for the notification to be sent. The default is

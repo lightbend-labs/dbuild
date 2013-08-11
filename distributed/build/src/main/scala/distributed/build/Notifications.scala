@@ -151,7 +151,7 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
   def definedNotifications = conf.options.notifications.send
   val usedNotificationKindIDs = definedNotifications.map { _.kind }.distinct
   val defaultsMap = conf.options.notifications.default.map { d => (d.kind, d) }.toMap
-  val defDef = Notification(send = None) // defaults of defaults
+  val defDef = Notification(where = None) // defaults of defaults
 
   def beforeBuild() = {
     val definedDefaults = conf.options.notifications.default
@@ -203,8 +203,8 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
           val newWhen = if (n.when != defDef.when) n.when else defn.when
           val newTempl = if (n.template != defDef.template) n.template else defn.template
           val newProjects = if (n.projects != defDef.projects) n.projects else defn.projects
-          val newSend = allContexts(kind).mergeOptionsK(n.send, defn.send)
-          Notification(kind = kind, send = Some(newSend), when = newWhen, template = newTempl, projects = newProjects)
+          val newWhere = allContexts(kind).mergeOptionsK(n.where, defn.where)
+          Notification(kind = kind, where = Some(newWhere), when = newWhen, template = newTempl, projects = newProjects)
       }
 
       def processOneNotification(n: Notification, outcome: BuildOutcome) = {
@@ -212,7 +212,7 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
         val resolvedTempl = n.resolveTemplate(userDefinedTemplates ++ standardTemplates)
         if (outcome.whenIDs.intersect(n.when).nonEmpty) {
           val formatter = new TemplateFormatter(resolvedTempl, outcome, confName)
-          allContexts(n.kind).notify(n.send, formatter, outcome)
+          allContexts(n.kind).notify(n.where, formatter, outcome)
         }
       }
       // For notifications we do things a bit differently than in

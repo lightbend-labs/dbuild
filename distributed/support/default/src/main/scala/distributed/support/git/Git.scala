@@ -70,7 +70,6 @@ object Git {
       // equivalent to:
   // for branch in `git branch -a | grep remotes | grep -v HEAD`; do git branch --track ${branch#remotes/origin/} $branch 2>/dev/null; done
   def setupRemoteBranches(dir: File, log: Logger): Unit = {
-    log.info("Updating local branches to match the remote ones. This may take a while...")
     val branches = read(Seq("branch", "-a"), dir).split("\n").filter(_.startsWith("  remotes/origin/")).
       map { _.substring("  remotes/origin/".length) } filterNot (_.startsWith("HEAD "))
     branches foreach { b =>

@@ -1,7 +1,6 @@
 import akka.actor.ActorRef
 
-// TODO: is the misspelling intentional?
-package object actorpaterns {
+package object actorpatterns {
   
   @inline
   final def forwardingErrorsToFutures[A](sender: ActorRef)(f: => A): A =

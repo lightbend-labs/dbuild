@@ -11,4 +11,4 @@ case class MalformedMetadata(key: String, msg: String) extends java.lang.Runtime
 /** We had an issue attempting to store the artifact in the cache. */
 case class StoreException(key: String, msg: String) extends java.lang.RuntimeException(msg) with RepositoryException
 /** We were copying files from the local repo to a new Scala "lib" directory, but a needed file couldn't be copied/found */
-case class LocalArtifactMissingException(key: String, msg: String) extends java.lang.RuntimeException(msg) with RepositoryException
+case class LocalArtifactMissingException(msg: String) extends java.lang.RuntimeException(msg) with RepositoryException

@@ -12,15 +12,16 @@ import project.resolve.ProjectResolver
 class GitProjectResolver extends ProjectResolver {
   def canResolve(config: ProjectBuildConfig): Boolean = {
     val uri = new _root_.java.net.URI(config.uri)    
-    (uri.getScheme == "git") || (uri.getPath endsWith ".git") || ((uri.getScheme == "file") &&
+    (uri.getPath!=null) && ((uri.getScheme == "git") || (uri.getPath endsWith ".git") || ((uri.getScheme == "file") &&
       (new _root_.java.io.File(uri.getPath()) / ".git").exists
-    )
+    ))
   }
 
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
     val uri = new _root_.java.net.URI(config.uri)
     val uriString=UriUtil.dropFragment(uri).toASCIIString
     val cloneDir=distributed.repo.core.ProjectDirs.clonesDir / (hashing sha1 uriString)
+    val ref=Option(uri.getFragment()) getOrElse "master"
 
     // We cache a single git clone for this repository URI (sans fragment),
     // then we re-clone just the local clone. Note that there are never
@@ -30,9 +31,8 @@ class GitProjectResolver extends ProjectResolver {
     if(!cloneDir.exists) {
       cloneDir.mkdirs()
       Git.clone(uri, cloneDir, log)
-    } else {
-      Git.fetchSafe(uriString, cloneDir, log)
     }
+    Git.fetchSafe(uriString, cloneDir, ref.startsWith("pull/"), log)
     Git.setupRemoteBranches(cloneDir,log)
 
     // Now: clone into the directory or fetch
@@ -42,13 +42,12 @@ class GitProjectResolver extends ProjectResolver {
     if(!(dir / ".git").exists) Git.cloneLocal(cloneDir, dir, log)
     
     // Make sure we pull down all the refs from origin for our repeatable builds...
-    Git.fetch("origin", dir, log)
+    Git.fetch("origin", dir, ref.startsWith("pull/"), log)
     Git.setupRemoteBranches(dir,log)
     
     // Now clean the directory so only desired artifacts are there...
     if(config.name != "scala") Git.clean(dir, log)
 
-    val ref=Option(uri.getFragment()) getOrElse "master"
     // is it a /REMOTE/ branch? If so, we checkout the remote branch.
     // Note that "fetch" does not update the local branch refs
     // (but will grab remote tags)

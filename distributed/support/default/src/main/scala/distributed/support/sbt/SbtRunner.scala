@@ -7,6 +7,7 @@ import _root_.distributed.logging.Logger
 import sys.process._
 import distributed.project.model.ExtraConfig
 import distributed.repo.core.Defaults
+import org.apache.commons.io.FileUtils.readFileToString
 
 /** A runner for SBT. 
  * TODO - Make it platform synch safe?
@@ -32,18 +33,34 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
           extraArgs: Seq[String] = Seq.empty)(args: String*): Unit = {
     removeProjectBuild(projectDir, log)
 
+    IO.withTemporaryFile("sbtrunner", "lastExceptionMessage") { lastMsg =>
+    // TODO: now the sbt version is ALWAYS set (thanks to the expansion)
+    // Fetch it here, and use it to run the appropriate SBT
     val cmd = SbtRunner.makeShell(
         launcherJar.getAbsolutePath,
-        defaultProps,
+        defaultProps + ("dbuild.sbt-runner.last-msg"->lastMsg.getCanonicalPath),
         javaProps,
         javaArgs,
         extraArgs)(args:_*)
 
     log.debug("Running: " + cmd.mkString("[", ",", "]"))
-    Process(cmd, Some(projectDir)) ! log match {
-      case 0 => ()
-      // TODO - SBT specific failures?
-      case n => sys.error("Failure to run sbt!  Error code: " + n)
+      // I need a sort of back channel to return a diagnostic string from sbt,
+      // aside from stdin/stderr which are captured by the logger. I use a
+      // temporary file and ask the sbt plugin to fill it in, in case of
+      // exception, as last thing before returning. If I return, there is
+      // nothing in the file, but the return code is !=0, I revert to a
+      // generic message.
+      Process(cmd, Some(projectDir)) ! log match {
+        case 0 => ()
+        case n => { // Always exit this block with a throw or sys.error
+          val lastErr=try {
+            readFileToString(lastMsg, "UTF-8")
+          } catch {
+            case _ => sys.error("Failure to run sbt!  Error code: " + n)
+          }
+          sys.error(lastErr)
+        }
+      }
     }
   }
   

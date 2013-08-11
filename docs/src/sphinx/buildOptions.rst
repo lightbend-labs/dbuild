@@ -1,22 +1,24 @@
-Global build options
+Build options
 ====================
 
 .. _section-build-options:
 
-The ``build-options`` section
------------------------------
+The build options section
+-------------------------
 
 Some additional options can modify the behavior of dbuild during the building stage;
-these options have an effect on all projects. They are specified in the "build-options"
-section, which is entirely optional and lives at the same level as the "deploy" and
-"projects" sections. Its structure is currently:
+these options have an effect on all projects. They are specified in the build "options"
+section, which is entirely optional and lives at the same level as the "projects"
+sections. Its structure is currently:
 
 .. code-block:: javascript
 
-   "build-options":{
-    "cross-version"  : <cross-version-level>
+   build:{
+    projects: [...]
+    options: {
+     "cross-version"  : <cross-version-level>
+    }
    }
-
 
 cross-version
   This option controls the way in which the various sbt-based projects will use the cross-version
@@ -73,4 +75,4 @@ just add the following if you are releasing using "set-version":
 
    build-options:{cross-version:standard}
 
-*Next:* :doc:`repositories`.
+*Next:* :doc:`deploy`.

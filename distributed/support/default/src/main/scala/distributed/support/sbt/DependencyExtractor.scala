@@ -29,10 +29,10 @@ object SbtExtractor {
           projectDir = project, 
           log = log,
           javaProps = Map(
-              "project.dependency.metadata.file" -> result.getAbsolutePath,
-              "project.dependency.metadata.subprojects" -> extra.projects.mkString(","),
-              "project.dependency.metadata.excluded" -> extra.exclude.mkString(","),
-              "remote.project.uri" -> project.getAbsolutePath), // ++ runner.localIvyProps
+              "dbuild.project.dependency.metadata.file" -> result.getAbsolutePath,
+              "dbuild.project.dependency.metadata.subprojects" -> extra.projects.mkString(","),
+              "dbuild.project.dependency.metadata.excluded" -> extra.exclude.mkString(","),
+              "dbuild.remote.project.uri" -> project.getAbsolutePath), // ++ runner.localIvyProps
           extraArgs = extra.options
       )(extra.commands.:+("print-deps"):_*)
       IO read result

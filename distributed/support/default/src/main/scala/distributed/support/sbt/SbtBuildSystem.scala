@@ -11,7 +11,7 @@ import _root_.java.io.File
 import distributed.repo.core.{Defaults,ProjectDirs}
 
 /** Implementation of the SBT build system. */
-class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File = ProjectDirs.builddir) extends BuildSystem {
+class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends BuildSystem {
   val name: String = "sbt"  
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"

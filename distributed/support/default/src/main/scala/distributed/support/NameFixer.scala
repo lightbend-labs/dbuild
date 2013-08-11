@@ -1,4 +1,4 @@
-package com.typesafe.dbuild
+package distributed.support
 
 object NameFixer {
   // Remove scala version from names so we can do cross-compile magikz.

@@ -16,12 +16,10 @@ case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfi
 class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectConfigAndExtracted, Nothing] {
   private val buildNodes = builds.map(b => new BuildNode(b))(collection.breakOut)
   override val nodes: Set[Nd] = buildNodes.toSet
-  
-  def nodeFor(build: ProjectConfigAndExtracted): Option[Nd] =
-    (for {
-      node <- nodes
-      if node.value == build
-    } yield node).headOption
+
+  private val nodeMap: Map[ProjectConfigAndExtracted, graph.Node[ProjectConfigAndExtracted]] =
+    buildNodes.map(b => b.value -> b)(collection.breakOut)
+  def nodeFor(build: ProjectConfigAndExtracted): Option[Nd] = nodeMap.get(build)
   
   // Memoized ok?
   def edges(n: Nd): Seq[Ed] = edgeMap get n getOrElse Seq.empty

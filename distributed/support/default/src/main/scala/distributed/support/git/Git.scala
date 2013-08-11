@@ -11,24 +11,32 @@ import logging.Logger
 /** A git runner */
 object Git {
   
-  def revparse(dir: File, ref: String): String = 
+  def refSpecs = Seq("+refs/heads/*:refs/remotes/origin/*",
+      "+refs/pull/*/head:refs/remotes/origin/pull/*/head") 
+
+    def revparse(dir: File, ref: String): String = 
     this.read(Seq("rev-parse", ref), dir).trim
 
-  def fetch(ref: String, tempDir: File, log: Logger): Unit = {
-    val args = if(ref.isEmpty) Seq("fetch")
-               else Seq("fetch",ref)
+
+  // from our cache clone to the working repo
+  def fetch(ref: String, tempDir: File, usePR:Boolean, log: Logger): Unit = {
+    val extra = if (usePR) refSpecs else Seq[String]()
+    val args = if(ref.isEmpty) sys.error("fetch with no argument")
+               else Seq("fetch",ref)++extra
     this.apply(args, tempDir, log)
-    val args2 = if(ref.isEmpty) Seq("fetch","-t")
-                else Seq("fetch","-t",ref)
+    val args2 = if(ref.isEmpty) sys.error("fetch with no argument")
+                else Seq("fetch","-t",ref)++extra
     this.apply(args2, tempDir, log)
   }
 
+  // from github to our cache clone.
   // we allow failures, which may happen if we are offline
   // but we want to use our current local cache
-  def fetchSafe(uriString: String, tempDir: File, log: Logger): Unit = {
+  def fetchSafe(uriString: String, tempDir: File, usePR:Boolean, log: Logger): Unit = {
+    val extra = if (usePR) refSpecs else Seq[String]()
     try {
-      apply(Seq("fetch", "origin"), tempDir, log)
-      apply(Seq("fetch", "-t", "origin"), tempDir, log)
+      apply(Seq("fetch", "origin")++extra, tempDir, log)
+      apply(Seq("fetch", "-t", "origin")++extra, tempDir, log)
     } catch {
       case e: Exception =>
         log.warn("WARNING:")
@@ -62,6 +70,7 @@ object Git {
       // equivalent to:
   // for branch in `git branch -a | grep remotes | grep -v HEAD`; do git branch --track ${branch#remotes/origin/} $branch 2>/dev/null; done
   def setupRemoteBranches(dir: File, log: Logger): Unit = {
+    log.info("Updating local branches to match the remote ones. This may take a while...")
     val branches = read(Seq("branch", "-a"), dir).split("\n").filter(_.startsWith("  remotes/origin/")).
       map { _.substring("  remotes/origin/".length) } filterNot (_.startsWith("HEAD "))
     branches foreach { b =>

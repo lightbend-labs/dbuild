@@ -578,8 +578,6 @@ object DistributedRunner {
 
   /** The implementation of the dbuild-build command. */
   def buildCmd(state: State): State = {
-    println("sono entrato in buildcmd.")
-    throw new Exception("Ohi")
     val resultFile = Option(System.getProperty("dbuild.project.build.results.file"))
     val results = for {
       f <- resultFile

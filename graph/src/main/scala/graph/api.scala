@@ -20,7 +20,7 @@ trait Edge[N,E] {
 }
 
 /** A directed graph of nodes. */
-trait Graph[N,E] {
+trait GraphCore[N,E] {
   type Nd = Node[N]
   type Ed = Edge[N,E]
   

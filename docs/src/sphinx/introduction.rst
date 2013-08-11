@@ -28,17 +28,17 @@ A suitable build configuration file is:
 
 .. code-block:: javascript
 
-   {"projects":[
+   build.projects:[
      {
-       name:  "scala",
-       system: "scala",
+       name:   scala
+       system: scala
        uri:    "git://github.com/scala/scala.git#2.10.x"
      }, {
-       name:   "sperformance",
-       system: "sbt",
+       name:   sperformance
+       system: sbt
        uri:    "git://github.com/jsuereth/sperformance.git#community"
      }
-   ]}
+   ]
 
 We will put this into a file called ``test.dbuild``. The line "system" specifies the build mechanism used to build each of the
 projects (a custom "scala" build system for scala, and "sbt" for sperformance). Let's download dbuild, and try it out (the

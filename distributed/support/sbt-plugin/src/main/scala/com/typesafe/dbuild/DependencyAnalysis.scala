@@ -3,7 +3,7 @@ package com.typesafe.dbuild
 import sbt._
 import distributed.project.model
 import StateHelpers._
-import NameFixer.fixName
+import distributed.support.NameFixer.fixName
 import distributed.project.model.Utils.writeValue
 import DistributedRunner.{getSortedProjects,verifySubProjects}
 
@@ -15,17 +15,19 @@ object DependencyAnalysis {
     (Vector[model.Project]() /: refs) { (dependencies, ref) =>
       val name = fixName(extracted.get(Keys.name in ref))
       val organization = extracted.get(Keys.organization in ref)
-      
+
       // Project dependencies (TODO - Custom task for this...)
       val (_, pdeps) = extracted.runTask(Keys.projectDependencies in ref, state)
       val ldeps = extracted.get(Keys.libraryDependencies in ref)
       def artifactsNoEmpty(name: String, arts: Seq[Artifact]) =
-        if(!arts.isEmpty) arts
+        if (!arts.isEmpty) arts
         else Seq(Artifact(name))
-      val deps = for {
+      val deps = (for {
         d <- (pdeps ++ ldeps)
         a <- artifactsNoEmpty(d.name, d.explicitArtifacts)
-      } yield model.ProjectRef(fixName(a.name), d.organization, a.extension, a.classifier)
+      } yield model.ProjectRef(fixName(a.name), d.organization, a.extension, a.classifier)) :+
+        model.ProjectRef("scala-compiler", "org.scala-lang", "jar", None)
+        // the scala-compiler is always needed for the sbt build system!
       
       // Project Artifacts
       val artifacts = for {
@@ -37,7 +39,7 @@ object DependencyAnalysis {
         name,
         organization,
         artifacts,
-        deps)
+        deps.distinct)
     }
 
 
@@ -177,10 +179,10 @@ object DependencyAnalysis {
       // 1) safeTopological() will check for cycles
 
       log.info("sorting...")
-      val allProjSorted = Graphs.safeTopological(allProjGraph)
+      val allProjSorted = allProjGraph.safeTopological
       log.debug(normalizedProjectNames(allRefs).mkString("original: ", ", ", ""))
       log.debug(normalizedProjectNames(allProjSorted.map { _.value}).mkString("sorted: ", ", ", ""))
-      log.debug("dot: " + Graphs.toDotFile(allProjGraph)(normalizedProjectName))
+      log.debug("dot: " + allProjGraph.toDotFile(normalizedProjectName))
 
       // Excellent. 2) Now we need the set of projects transitively reachable from "requested".
       
@@ -194,7 +196,7 @@ object DependencyAnalysis {
         result
       } else {
         val needed = requested.foldLeft(Set[Node[ProjectRef]]()) { (set, node) =>
-          set ++ Graphs.subGraphFrom(allProjGraph)(allProjGraph.nodeMap(node))
+          set ++ allProjGraph.subGraphFrom(allProjGraph.nodeMap(node))
         } map { _.value }
 
         // In the end, our final sorted list (prior to explicit exclusions) is:
@@ -237,19 +239,19 @@ object DependencyAnalysis {
   
   /** The implementation of the print-deps command. */
   def printCmd(state: State): State = {
-    val uri = System.getProperty("remote.project.uri")
+    val uri = System.getProperty("dbuild.remote.project.uri")
     def reloadProjects(props:String) = (Option(System.getProperty(props)) getOrElse "") match {
       case "" => Seq.empty
       case projs => projs.split(",").toSeq
     }
-    val projects = reloadProjects("project.dependency.metadata.subprojects")
-    val excluded = reloadProjects("project.dependency.metadata.excluded")
-    (Option(System.getProperty("project.dependency.metadata.file"))
+    val projects = reloadProjects("dbuild.project.dependency.metadata.subprojects")
+    val excluded = reloadProjects("dbuild.project.dependency.metadata.excluded")
+    (Option(System.getProperty("dbuild.project.dependency.metadata.file"))
         foreach (f => printDependencies(state, uri, f, projects, excluded)))
     state
   }
 
-  private def print = Command.command("print-deps")(printCmd)
+  private def print = Command.command("print-deps")(saveLastMsg(printCmd))
 
   /** Settings you can add your build to print dependencies. */
   def printSettings: Seq[Setting[_]] = Seq(

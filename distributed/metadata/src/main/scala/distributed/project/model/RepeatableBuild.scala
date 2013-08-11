@@ -1,6 +1,5 @@
 package distributed.project.model
 
-import graph.Graphs
 import Utils.writeValue
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -34,7 +33,7 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
                        @JsonProperty("base-version") baseVersion: String,
                        dependencies: Seq[RepeatableProjectBuild],
                        subproj: Seq[String],
-                       buildOptions: GlobalBuildOptions) {
+                       buildOptions: BuildOptions) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
   
@@ -49,17 +48,23 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
   }
 }
 
+object RepeatableDistributedBuild {
+  def fromExtractionOutcome(conf:DBuildConfiguration, outcome:ExtractionOK) =
+     RepeatableDistributedBuild(outcome.pces, conf.build.options)
+}
 /** A distributed build containing projects in *build order*
- *  Also known as the repeatable config. 
+ *  Also known as the repeatable config. Note that notifications
+ *  are not included, as they have no effect on builds. 
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
-    deployOptions:Option[Seq[DeployOptions]], buildOptions: Option[GlobalBuildOptions]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), deployOptions, buildOptions)
+    buildOptions: Option[BuildOptions]) {
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), buildOptions)
   def repeatableBuildString = writeValue(this)
   
   /** Our own graph helper for interacting with the build meta information. */
-  private[this] lazy val graph = new BuildGraph(builds)
+  lazy val graph = new BuildGraph(builds)
   /** All of our repeatable build configuration in build order. */
+  lazy val buildMap = repeatableBuilds.map(b => b.config.name -> b).toMap
   lazy val repeatableBuilds: Seq[RepeatableProjectBuild] = {
     def makeMeta(remaining: Seq[ProjectConfigAndExtracted], 
                  current: Map[String, RepeatableProjectBuild],
@@ -69,7 +74,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
         // Pull out current repeatable config for a project.
         val head = remaining.head
         val node = graph.nodeFor(head) getOrElse sys.error("O NOES -- TODO better graph related puke message")
-        val subgraph = Graphs.subGraphFrom(graph)(node) map (_.value)
+        val subgraph = graph.subGraphFrom(node) map (_.value)
         val dependencies = 
           for {
             dep <- (subgraph - head)
@@ -77,27 +82,28 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
             sortedDeps, head.extracted.subproj,
-            buildOptions getOrElse GlobalBuildOptions()) // pick defaults if no GlobalBuildOptions specified
+            buildOptions getOrElse BuildOptions()) // pick defaults if no GlobalBuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     // we need to check for duplicates /before/ checking for cycles, otherwise spurious
     // cycles may be detected, leading to unhelpful error messages
     // TODO: if model.Project is ever associated with the subproject name, it would be
     // more appropriate to print the actual subproject name, rather than the Project
-    val generatedArtifacts = builds flatMap { _.extracted.projects }
+    val generatedArtifacts = builds flatMap { _.extracted.projects } map {a => (a.organization,a.name)}
     val uniq = generatedArtifacts.distinct
     if (uniq.size != generatedArtifacts.size) {
       val conflicting = generatedArtifacts.diff(uniq).distinct
       val conflictSeq = conflicting map {
         a =>
           (builds filter {
-            b => b.extracted.projects contains a
-          } map { _.config.name }).mkString("  " + a.name + "#" + a.organization + ", from:  ", ", ", "")
+            b =>
+              b.extracted.projects.exists(p => p.organization == a._1 && p.name == a._2)
+          } map { _.config.name }).mkString("  " + a._1 + "#" + a._2 + ", from:  ", ", ", "")
       }
       sys.error(conflictSeq.
         mkString("\n\nFatal: multiple projects produce the same artifacts. Please exclude them from some of the conflicting projects.\n\n", "\n", "\n"))
     }
-    val orderedBuilds = (Graphs safeTopological graph map (_.value)).reverse
+    val orderedBuilds = (graph.safeTopological map (_.value)).reverse
     makeMeta(orderedBuilds, Map.empty, Seq.empty)
   }
     

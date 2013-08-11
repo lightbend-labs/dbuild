@@ -26,8 +26,9 @@ Contents
    introduction
    download
    dbuild
-   deploy
    buildOptions
+   deploy
+   notifications
    repositories
    plugin
    caveats

@@ -17,7 +17,7 @@ object ScalaBuildSystem extends BuildSystem {
   val name: String = "scala"  
 
   private def scalaExpandConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => ScalaExtraConfig(None,None,Seq.empty) // pick default values
+    case None => ScalaExtraConfig(None,None,Seq.empty,Seq.empty) // pick default values
     case Some(ec:ScalaExtraConfig) => ec
     case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \""+config.name+"\". Please report")
   }
@@ -59,7 +59,6 @@ object ScalaBuildSystem extends BuildSystem {
     val version = input.version
 
     val meta=readMeta(dir, ec.exclude)
-    log.info("Building project: "+input.projectName)
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
 
     Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
@@ -120,7 +119,7 @@ object ScalaBuildSystem extends BuildSystem {
       readMeta.copy(subproj=subProjects).copy(projects=readMeta.projects.filter {
         p => subProjects.contains(p.name)
       })
-    } else readMeta.copy(subproj=readMeta.projects map {_.name})
+    } else readMeta.copy(subproj=allSubProjects)
 
     // override the "dbuild.json" version with the one from "build.number" (if it exists)
     readBuildNumberFile(baseDir) map {v=>meta.copy(version=v)} getOrElse meta
@@ -164,13 +163,13 @@ object ScalaBuildSystem extends BuildSystem {
         Seq.empty),
       Project("scala-partest", "org.scala-lang",
         Seq(ProjectRef("scala-partest", "org.scala-lang")),
-        Seq(ProjectRef("scala-compiler", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))),
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-compiler", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))),
       Project("scala-actors", "org.scala-lang",
         Seq(ProjectRef("scala-actors", "org.scala-lang")),
         Seq(ProjectRef("scala-library", "org.scala-lang"))),
       Project("scala-compiler", "org.scala-lang",
         Seq(ProjectRef("scala-compiler", "org.scala-lang")),
-        Seq(ProjectRef("scala-reflect", "org.scala-lang"), ProjectRef("jline", "org.scala-lang"))),
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-reflect", "org.scala-lang"), ProjectRef("jline", "org.scala-lang"))),
       Project("scala-library", "org.scala-lang",
         Seq(ProjectRef("scala-library", "org.scala-lang")),
         Seq.empty),
@@ -182,7 +181,7 @@ object ScalaBuildSystem extends BuildSystem {
         Seq(ProjectRef("scala-library", "org.scala-lang"))),
       Project("scalap", "org.scala-lang",
         Seq(ProjectRef("scalap", "org.scala-lang")),
-        Seq(ProjectRef("scala-compiler", "org.scala-lang")))
+        Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-compiler", "org.scala-lang")))
     ) ++ (if (detectActorsMigration(baseDir))
       Seq(Project("scala-actors-migration", "org.scala-lang",
         Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),

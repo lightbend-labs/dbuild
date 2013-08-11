@@ -74,7 +74,7 @@ will be skipped with an error message. If there is only one project in the list,
 a string or a from/publish record, the square brackets in the list can be omitted.
 
 sign
-  If this optional section is included the artifacts will be signed with the specified key
+  If this optional section is included, the artifacts will be signed with the specified key
   information before being deployed. The relevant information is supplied as:
 
 .. code-block:: javascript
@@ -95,7 +95,7 @@ id
   can find the necessary value by using ``gpg --list-keys --with-colon``.
 
 secret-ring
-  If the file containing your keys is a non-standard location, you can specify the
+  If the file containing your keys is in a non-standard location, you can specify the
   file path here. By default, it will use ``~/.gnupg/secring.gpg``
 
 
@@ -140,5 +140,7 @@ For example:
   not match the checksum that was calculated on the server during the deployment of the main file. Again, this
   may be the result of some unexpected build anomaly, or it may be caused by a failure while uploading the artifact
   files to the repository server.
+
+|
 
 *Next:* :doc:`notifications`.

@@ -75,4 +75,6 @@ just add the following if you are releasing using "set-version":
 
    build-options:{cross-version:standard}
 
+|
+
 *Next:* :doc:`deploy`.

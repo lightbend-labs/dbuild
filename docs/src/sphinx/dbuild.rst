@@ -43,8 +43,8 @@ other aspects of the build process.
 The build file is written in a JSON format. The file is parsed by using the Typesafe config library,
 therefore the syntax of the file can be simplified by using the conventions of that library: double
 quotes and commas may be omitted, variable substitution is available, and other facilities are
-available. We strongly recommend you to check the many options that are available to simplify
-writing configuration; they are all documented on the website of the
+available. You should check the many options that are available to simplify the syntax of
+configuration file; they are all documented on the website of the
 `config library <http://github.com/typesafehub/config>`_. In addition, dbuild has one special
 feature concerning lists of strings: whenever a list of strings is expected, in the form
 ``"x":["a","b","c"]``, if you have only one element you can also omit the square brackets altogether.
@@ -75,10 +75,10 @@ options
 
    {
     "deploy"        : [ <deploy_1>, <deploy_2>,...],
-    "notifications" : <notificationss>
+    "notifications" : <notifications>
    }
 
-The two values are optional, and are described in detail at the
+The two values are optional, and are described in detail on the
 pages :doc:`deploy` and :doc:`notifications`, respectively.
 
 The build section
@@ -94,9 +94,9 @@ The build section has the following content:
    }
 
 projects
-  The "projects" section is the most important and is the only one that is required in a
+  The "projects" section is the most important one, and is the only one that is required in a
   dbuild configuration file. If you have no other sections, you can take advantage of the
-  extended JSON syntax, and introduce the project section directly writing:
+  extended JSON syntax, and introduce the project section directly by writing:
   ``build.projects: [...]``. The list of projects, enclosed in square brackets, describes
   the various software projects that should be built together by dbuild. 
 
@@ -315,7 +315,7 @@ Ivy-specific options
 The Ivy build system works like a regular build mechanism, but rather than compiling
 the needed dependency from a source repository, it asks directly a Maven/Ivy repository
 for the requested binary code. Although that rather defeats the point of compiling all
-code using the same Scala version, it can be nonetheless quite useful in the case in
+code using the same Scala version, it can nonetheless be quite useful in the case in
 which only a specific binary is available, for example in case of libraries that are
 proprietary and closed-source, or that are currently unmaintained.
 
@@ -366,6 +366,8 @@ the configuration ``default`` will be used. For example, the javadoc jar of a mo
 can also be obtained by specifying an artifact in which the classifier is
 "javadoc", the type is "doc", the file extension is "jar", and the configuration
 is "javadoc".
+
+|
 
 *Next:* :doc:`buildOptions`.
 

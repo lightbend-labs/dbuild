@@ -548,7 +548,7 @@ case class Notification(
     projects: scala-compiler
     send.to: "joshua.suereth@typesafe.com"
   }]
-  options.notifications.defaults.send.smtp = "relay.typesafe.com"
+  options.notifications.defaults.send.smtp.server = "relay.typesafe.com"
   
 */
   /**

@@ -56,33 +56,23 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     log.info("Sending outcome of project " + outcome.project + " to: " + ((to ++ cc ++ bcc).distinct.mkString(", ")))
     val props = new Properties()
     props.put("mail.smtp.host", smtp.server)
-    def needCreds = {
-      if (smtp.credentials.isEmpty) {
-        log.error("Please either add \"smtp-credentials\", or set \"smtp-auth\" to none.")
-        sys.error("smpt-credentials are needed with authentication \"" + smtp.auth + "\".")
-      }
-    }
+
     smtp.auth match {
       case "ssl" =>
-        needCreds
         if (!smtp.checkCertificate)
           props.put("mail.smtp.ssl.checkserveridentity", "false");
         props.put("mail.smtp.ssl.trust", "*")
         props.put("mail.smtp.ssl.enable", "true")
-        props.put("mail.smtp.auth", "true")
         props.put("mail.smtp.port", "465")
       case "starttls" =>
-        needCreds
         if (!smtp.checkCertificate)
           props.put("mail.smtp.starttls.checkserveridentity", "false");
-        props.put("mail.smtp.auth", "true")
         props.put("mail.smtp.starttls.enable", "true")
         props.put("mail.smtp.starttls.required", "true");
         props.put("mail.smtp.port", "25")
       case "submission" =>
         if (!smtp.checkCertificate)
           props.put("mail.smtp.starttls.checkserveridentity", "false");
-        props.put("mail.smtp.auth", "true")
         props.put("mail.smtp.starttls.required", "true");
         props.put("mail.smtp.starttls.enable", "true")
         props.put("mail.smtp.port", "587")
@@ -90,6 +80,8 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
         props.put("mail.smtp.port", "25")
       case x => sys.error("Unknown authentication scheme: " + x)
     }
+    if (!smtp.credentials.isEmpty)
+      props.put("mail.smtp.auth", "true")
 
     try {
       val creds = smtp.credentials map { credFile =>

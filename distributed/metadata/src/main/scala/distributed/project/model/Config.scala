@@ -578,7 +578,7 @@ case class Notification(
 // It must be kept in sync with Notification.
 private case class NotificationShadow(
   kind: String = "email",
-  send: JsonNode = null,
+  where: JsonNode = null,
   when: SeqString = Seq("bad", "success"),
   template: Option[String] = None,
   projects: SeqSelectorElement = Seq(SelectorProject(".")))
@@ -614,7 +614,7 @@ class NotificationDeserializer extends JsonDeserializer[Notification] {
 
     if (generic == null) throw new Exception("Cannot deserialize notification: no value found")
 
-    val from = generic.send
+    val from = generic.where
     val kind = generic.kind
 
     if (!(notificationKinds.contains(kind))) throw new Exception("Notification kind \"" + kind + "\" is unknown.")
@@ -734,7 +734,7 @@ case class Smtp(
    * Set this to the desired authentication mechanism. It can be
    * starttls, ssl, submission (port 587/STARTTLS), or none. Default is ssl.
    */
-  auth: String = "ssl",
+  encryption: String = "ssl",
   /**
    * If using SSL/TLS, a self-signed certificate could be in use.
    * In that case, explicitly disable certificate checking here.

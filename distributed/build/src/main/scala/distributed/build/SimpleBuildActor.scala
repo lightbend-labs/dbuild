@@ -47,7 +47,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   }
                 }
                 // generate an outcome that Notifications can use, with a report from all other tasks
-                val badForNotif = taskOutsWithoutNotif.filter(_._2).map { _._1 }
+                val badForNotif = taskOutsWithoutNotif.filter(!_._2).map { _._1 }
                 val outcomeForNotif = if (badForNotif.nonEmpty)
                   TaskFailed(".", buildOutcome.outcomes, buildOutcome, "Tasks failed: " + badForNotif.mkString(", "))
                 else

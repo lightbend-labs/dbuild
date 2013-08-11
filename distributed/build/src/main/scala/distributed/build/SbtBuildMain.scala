@@ -83,7 +83,7 @@ class SbtBuildMain extends xsbti.AppMain {
     } catch {
       case e: Exception =>
         e.printStackTrace
-        println("Unexpected failure.")
+        println("Unexpected failure. Please report.")
         Exit(1)
     }
   case class Exit(val code: Int) extends xsbti.Exit

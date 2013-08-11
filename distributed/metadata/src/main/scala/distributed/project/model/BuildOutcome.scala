@@ -92,5 +92,16 @@ case class ExtractionFailed(project: String, outcomes: Seq[BuildOutcome], cause:
 case class TaskFailed(project: String, outcomes: Seq[BuildOutcome], original:BuildOutcome, taskCause: String) extends BuildBad {
   def withOutcomes(os:Seq[BuildOutcome])=copy(outcomes=os)
   def status() = original.status()+" + TASK FAILED ("+ taskCause + ")"
-  override def whenIDs: Seq[String] = "task-failed" +: original.whenIDs
+  override def whenIDs: Seq[String] = ("task-failed" +: (super.whenIDs ++ original.whenIDs)).distinct
+}
+
+/**
+ * Something unexpected happened. Maybe an internal dbuild failure, or some other anomalous condition that
+ * we have been unable to capture. We may be able to capture nested outcomes or not, depending on the
+ * circumstances.
+ */
+case class UnexpectedOutcome(project: String, outcomes: Seq[BuildOutcome], cause: String) extends BuildBad {
+  def withOutcomes(os:Seq[BuildOutcome])=copy(outcomes=os)
+  def status() = "UNEXPECTED ("+ cause + ")"
+  override def whenIDs: Seq[String] = "unexpected" +: super.whenIDs
 }

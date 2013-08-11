@@ -13,10 +13,16 @@ of deploy records, with the following structure:
 .. code-block:: javascript
 
    {
-    "uri"         : <repository-uri>,
-    "credentials" : <optional-credentials>,
-    "projects"    : [<project1>,<project2>,...]
-    "sign"        : <optional-sign-info>
+    build: {projects:..., options:...}
+    
+    options: {
+     deploy: {
+      "uri"         : <repository-uri>,
+      "credentials" : <optional-credentials>,
+      "projects"    : [<project1>,<project2>,...]
+      "sign"        : <optional-sign-info>
+     }
+    }
    }
 
 Within each record:
@@ -110,7 +116,7 @@ For example:
     {
       uri="s3://s3-testBucket/repo"
       credentials="/home/user/.credentials-s3"
-      projects=["scala-arm"]
+      projects="scala-arm"
     },
     {
       uri="http://localhost:8088/artifactory/repos/test1"
@@ -135,4 +141,4 @@ For example:
   may be the result of some unexpected build anomaly, or it may be caused by a failure while uploading the artifact
   files to the repository server.
 
-*Next:* :doc:`buildOptions`.
+*Next:* :doc:`notifications`.

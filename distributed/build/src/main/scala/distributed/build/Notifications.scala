@@ -57,7 +57,7 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
     val props = new Properties()
     props.put("mail.smtp.host", smtp.server)
 
-    smtp.auth match {
+    smtp.encryption match {
       case "ssl" =>
         if (!smtp.checkCertificate)
           props.put("mail.smtp.ssl.checkserveridentity", "false");

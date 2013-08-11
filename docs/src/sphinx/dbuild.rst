@@ -56,13 +56,56 @@ in the documentation. The top level of the configuration file is:
 
 .. code-block:: javascript
 
-   {"projects": [ <dbuild_project1>, <dbuild_project2>,...],
-    "deploy":   [ <dbuild_deploy1>, <dbuild_deploy2>,...],
-    "build-options": <global-build-options>
+   {
+    "build"  : <build_section>,
+    "options": <options_section>
    }
 
-Only the "projects" section is required; the others are entirely optional. Each of the projects in
-the dbuild "projects" section has this structure:
+build
+  This section is required, and contains all of the information needed to generate the build.
+  It includes the description of the various projects, and other options that control the
+  generation of the code. It is described in detail below.
+
+options
+  This section is optional. It does not contain information that affect the build, but is used
+  to control other aspects of dbuild, in particular options and tasks that should be executed
+  after the build. At this time, the section may contain the following:
+
+.. code-block:: javascript
+
+   {
+    "deploy"        : [ <deploy_1>, <deploy_2>,...],
+    "notifications" : <notificationss>
+   }
+
+The two values are optional, and are described in detail at the
+pages :doc:`deploy` and :doc:`notifications`, respectively.
+
+The build section
+-----------------
+
+The build section has the following content:
+
+.. code-block:: javascript
+
+   {
+    "projects": [ <dbuild_project1>, <dbuild_project2>,...],
+    "options" : <build-options>
+   }
+
+projects
+  The "projects" section is the most important and is the only one that is required in a
+  dbuild configuration file. If you have no other sections, you can take advantage of the
+  extended JSON syntax, and introduce the project section directly writing:
+  ``build.projects: [...]``. The list of projects, enclosed in square brackets, describes
+  the various software projects that should be built together by dbuild. 
+
+options
+  This section contains global options that affect the projects in the build; it is distinct
+  from the previous one. It is optional, and is described on the page :doc:`buildOptions`.
+
+
+Each project descriptions has this structure:
 
 .. code-block:: javascript
 
@@ -324,5 +367,5 @@ can also be obtained by specifying an artifact in which the classifier is
 "javadoc", the type is "doc", the file extension is "jar", and the configuration
 is "javadoc".
 
-*Next:* :doc:`deploy`.
+*Next:* :doc:`buildOptions`.
 

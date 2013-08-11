@@ -28,7 +28,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       implicit val ctx = context.system
       val result = try {
         val logger = log.newNestedLogger(hashing sha1 conf.build)
-        val notifTask=new Notifications(conf, confName, log)
+        val notifTask = new Notifications(conf, confName, log)
         // add further new tasks at the beginning of this list, leave notifications at the end
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), notifTask)
         tasks foreach { _.beforeBuild }
@@ -36,14 +36,32 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
           if (tasks.nonEmpty) futureBuildResult map {
             // >>>> careful with map() on Futures: exceptions must be caught separately!!
             wrapExceptionIntoOutcome[BuildOutcome](log) { buildOutcome =>
-              val taskOuts = tasks map { t =>
-                try { // even if one task fails, we move on to the rest
-                  t.afterBuild(rdb, buildOutcome)
-                  (t.id, true)
+              val taskOuts = {
+                val taskOutsWithoutNotif = tasks.diff(Seq(notifTask)) map { t =>
+                  try { // even if one task fails, we move on to the rest
+                    t.afterBuild(rdb, buildOutcome)
+                    (t.id, true)
+                  } catch {
+                    case e =>
+                      (t.id, false)
+                  }
+                }
+                // generate an outcome that Notifications can use, with a report from all other tasks
+                val badForNotif = taskOutsWithoutNotif.filter(_._2).map { _._1 }
+                val outcomeForNotif = if (badForNotif.nonEmpty)
+                  TaskFailed(".", buildOutcome.outcomes, buildOutcome, "Tasks failed: " + badForNotif.mkString(", "))
+                else
+                  buildOutcome
+                // ok, let's concatenate the previous task results with the one from notifications, and proceed with the
+                // calculation of the final global outcome and the final tasks reporting (and possibly an emergency notification,
+                // if that is ever implemented).
+                taskOutsWithoutNotif :+ (try {
+                  notifTask.afterBuild(rdb, outcomeForNotif)
+                  (notifTask.id, true)
                 } catch {
                   case e =>
-                    (t.id, false)
-                }
+                    (notifTask.id, false)
+                })
               }
               log.info("---==  Tasks Report ==---")
               val (good, bad) = taskOuts.partition(_._2)
@@ -73,8 +91,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               // that was ok in extractionOutcome.outcomes, a fictitious dependency is
               // created in order to point out that we could not proceed due to some
               // other failing extraction, and we list which ones.
-              val remappedExtractionOutcome=extractionOutcome.copy(outcomes=
-                extractionOutcome.outcomes.map(o=>if (o.isInstanceOf[ExtractionOK]) o.withOutcomes(extractionOutcome.outcomes.diff(Seq(o))) else o))
+              val remappedExtractionOutcome = extractionOutcome.copy(outcomes =
+                extractionOutcome.outcomes.map(o => if (o.isInstanceOf[ExtractionOK]) o.withOutcomes(extractionOutcome.outcomes.diff(Seq(o))) else o))
               afterTasks("After extraction failed, tasks failed", None, Future(remappedExtractionOutcome))
             case extractionOutcome: ExtractionOK =>
               val fullBuild = RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)
@@ -87,7 +105,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         }
       } catch {
         case e =>
-          Future(BuildFailed(".", Seq.empty, "Unexpected. Cause: " + prepareLogMsg(log, e)))
+          Future(UnexpectedOutcome(".", Seq.empty, "Cause: " + prepareLogMsg(log, e)))
       }
       result pipeTo listener
     }
@@ -97,14 +115,14 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     implicit val ctx = context.system
     try f(a) catch {
       case e =>
-        Future(BuildFailed(".", a.outcomes, "Unexpected. Cause: " + prepareLogMsg(log, e)))
+        Future(UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e)))
     }
   }
   final def wrapExceptionIntoOutcome[A <: BuildOutcome](log: logging.Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
     implicit val ctx = context.system
     try f(a) catch {
       case e =>
-        BuildFailed(".", a.outcomes, "Unexpected. Cause: " + prepareLogMsg(log, e))
+        UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e))
     }
   }
 

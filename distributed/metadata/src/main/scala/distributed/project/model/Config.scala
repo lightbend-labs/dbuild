@@ -484,9 +484,10 @@ case class NotificationOptions(
  *  2) A slightly longer short summary (<110 characters), suitable for SMS, Tweets, etc.
  *     It should be self-contained in terms of information. Defaults to the short summary.
  *  3) A long body with a more complete description. Defaults to the short message.
+ *  Do not terminate it with a \n, as one will be added by the notification system if
+ *  required in that specific case.
  *  An Id is also present, and is used to match against the (optional) template
- *  requested in the notification. Do not terminate it with a \n, as one will be added by
- *  the notification system if required in that specific case.
+ *  requested in the notification. 
  */
 case class NotificationTemplate(
   id: String,

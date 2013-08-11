@@ -10,6 +10,7 @@ import internet._
 import Message.RecipientType
 import RecipientType._
 import Creds.loadCreds
+import distributed.project.model.TemplateFormatter
 
 //
 // Ideally, the ConsoleNotification should become the mechanism by which the entire log of the
@@ -236,9 +237,22 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
     NotificationTemplate("console",
       "${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}",
       None,
-      Some("---==  Execution Report ==---\nReport from the dbuild run for ${dbuild.template-vars.project-description}:\n${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}\n---==  End Execution Report ==---")),
+      Some("""---==  Execution Report ==---
+Report from the dbuild run for ${dbuild.template-vars.project-description}:
+${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}
+---==  End Execution Report ==---""")),
     NotificationTemplate("email",
-      "${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}",
+      "[dbuild] [${JOB_NAME}] ${dbuild.template-vars.project-description}: ${dbuild.template-vars.status}",
       None,
-      Some("---==  Execution Report ==---\nReport from the dbuild run for ${dbuild.template-vars.project-description}:\n${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}\n---==  End Execution Report ==---")))
+      Some("""This is a test report for ${dbuild.template-vars.project-description} in the dbuild configuration "${dbuild.template-vars.config-name}"
+running under the Jenkins job "${JOB_NAME}" on ${NODE_NAME}.
+
+${dbuild.template-vars.subprojects-report}
+** The current status of ${dbuild.template-vars.project-description} is:
+${dbuild.template-vars.status}
+
+
+A more detailed report of this dbuild run is available at:
+${BUILD_URL}console
+""")))
 }

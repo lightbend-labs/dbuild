@@ -66,7 +66,14 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>
-              afterTasks("After extraction failed, tasks failed", None, Future(extractionOutcome))
+              // This is a bit of a hack, in order to get better notifications: we
+              // replace extractionOutcome.outcomes.outcomes so that, for each extraction
+              // that was ok in extractionOutcome.outcomes, a fictitious dependency is
+              // created in order to point out that we could not proceed due to some
+              // other failing extraction, and we list which ones.
+              val remappedExtractionOutcome=extractionOutcome.copy(outcomes=
+                extractionOutcome.outcomes.map(o=>if (o.isInstanceOf[ExtractionOK]) o.withOutcomes(extractionOutcome.outcomes.diff(Seq(o))) else o))
+              afterTasks("After extraction failed, tasks failed", None, Future(remappedExtractionOutcome))
             case extractionOutcome: ExtractionOK =>
               val fullBuild = RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)
               val fullLogger = log.newNestedLogger(fullBuild.uuid)

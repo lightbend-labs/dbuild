@@ -1,4 +1,4 @@
-{"projects":[
+build.projects:[
   {
     name:  scala-compiler
     system: ivy
@@ -54,4 +54,4 @@
     system: ivy
     uri: "ivy:org.specs2#specs2-scalaz-core_2.10.0-RC3;6.0.1"
   }
-]}
+]

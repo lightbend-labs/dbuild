@@ -1,4 +1,4 @@
-{"projects":[
+build.projects:[
   {
     name:  "scala",
     system: "scala",
@@ -24,4 +24,4 @@
     system:"sbt",
     uri:"git://github.com/akka/akka.git#master"
   }
-]}
+]

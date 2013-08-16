@@ -16,7 +16,7 @@ object SbtSupport {
   }
 
   def downloadFile(uri: String, file: File): File = {
-    import dispatch._
+    import dispatch.classic._
     if(!file.exists) {
        // oddly, some places require us to create the file before writing...
        IO.touch(file)

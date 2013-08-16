@@ -1,10 +1,10 @@
 import sbt._
-import com.typesafe.packager.Keys._
+import com.typesafe.sbt.packager.Keys._
 import sbt.Keys._
-import com.typesafe.packager.PackagerPlugin._
+import com.typesafe.sbt.SbtNativePackager._
 import com.typesafe.sbt.S3Plugin
 import com.typesafe.sbt.S3Plugin.S3._
-import com.typesafe.packager.universal.Keys.packageZipTarball
+import com.typesafe.sbt.packager.universal.Keys.packageZipTarball
 
 object Packaging {
 

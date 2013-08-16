@@ -4,15 +4,16 @@ import sbt._
 object Dependencies {
 
   val akkaVersion = "2.0.5"
-  val sbtVersion = "0.12.4"
+  val sbtVersion = "0.13.0-RC5"
   val mvnVersion = "3.0.4"
 
   val typesafeConfig = "com.typesafe" % "config" % "1.0.2"
   val akkaActor      = "com.typesafe.akka" % "akka-actor" % akkaVersion
 
-  val specs2         = "org.specs2" %% "specs2" % "1.10" % "test"
+  val specs2         = "org.specs2" %% "specs2" % "2.1.1" % "test"
 
   val dispatch       = "net.databinder" %% "dispatch-http" % "0.8.10"
+//  val dispatch       = "net.databinder.dispatch" %% "dispatch-core" % "0.11.0"
 
   val sbtIo          = "org.scala-sbt" % "io" % sbtVersion
   val sbtIvy         = "org.scala-sbt" % "ivy" % sbtVersion

@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 import Dependencies._
-import com.typesafe.packager.PackagerPlugin.Universal  
+import com.typesafe.sbt.SbtNativePackager.Universal  
 import com.typesafe.sbt.SbtSite.site
 import com.typesafe.sbt.SbtGhPages.{ghpages, GhPagesKeys}
 import com.typesafe.sbt.SbtGit.{git, GitKeys}
@@ -117,7 +117,7 @@ trait BuildHelper extends Build {
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
     organization := "com.typesafe.dbuild",
-    scalaVersion := "2.9.2",
+    scalaVersion := "2.10.2",
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",

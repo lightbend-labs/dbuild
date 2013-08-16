@@ -192,7 +192,7 @@ object DistributedRunner {
 
     val newSettings1 = {
       ptSettings map { s =>
-        Project.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
+        Def.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
           _ match {
             case Some(r: PatternsBasedRepository) if (!r.patterns.isMavenCompatible) => ivyRepo
             case _ => mavenRepo
@@ -247,7 +247,7 @@ object DistributedRunner {
   }
 
   // as above, but assumes the transformation is a simple Project.update (aka: ~= )
-  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => Project.update(s.key)(f) } _
+  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => Def.update(s.key)(f) } _
 
   // Separate cases for settings and tasks (to keep the type inferencer happy)
   def fixGeneric2[K](k: SettingKey[K], m: String)(f: K => K) = fixGenericK2(k, f)(m)
@@ -363,7 +363,7 @@ object DistributedRunner {
   // extract the ModuleRevisionIds of all the subprojects of this dbuild project (as calculated from exclusions, dependencies, etc).
   def getModuleRevisionIds(state: State, projects: Seq[String], log: Logger) =
     runAggregate[Seq[ModuleRevisionId], ModuleRevisionId](state, projects, Seq.empty) { _ :+ _ } {
-      (proj, state, _) => (state, Project.extract(state).evalTask(Keys.ivyModule in proj, state).dependencyMapping(log)._1)
+      (proj, state, _) => (state, Project.extract(state).runTask(Keys.ivyModule in proj, state)._2.dependencyMapping(log)._1)
     }._2
 
   // In order to convince sbt to use the scala instance we need, we just generate a fictitious

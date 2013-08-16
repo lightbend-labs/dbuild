@@ -1,1 +1,1 @@
-addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.4")
+addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.5")

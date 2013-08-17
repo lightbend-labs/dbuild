@@ -36,43 +36,50 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // The component projects...
   lazy val graph = (
       LibProject("graph")
+      settings(crossSettings:_*)
     )
   lazy val hashing = (
       LibProject("hashing")
       dependsOnRemote(typesafeConfig)
+      settings(crossSettings:_*)
     )
 
   lazy val dmeta = (
       DmodProject("metadata")
       dependsOn(graph, hashing)
-      dependsOnRemote(jacks, jackson, typesafeConfig, sbtCollections, commonsLang)
+      dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
+      settings(crossSettings:_*)
     )
 
   // Projects relating to distributed builds.
   lazy val logging = (
       DmodProject("logging")
-      dependsOnRemote(sbtLogging, sbtIo, sbtLaunchInt)
+      dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
+      settings(crossSettings:_*)
     )
   lazy val actorLogging = (
       DmodProject("actorLogging")
       dependsOn(logging)
-      dependsOnRemote(sbtLogging, akkaActor, sbtIo, sbtLaunchInt)
+      dependsOnRemote(akkaActor)
+      dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)      
     )
   lazy val dcore = (
       DmodProject("core")
       dependsOn(dmeta, graph, hashing, logging, drepo)
-      dependsOnRemote(sbtIo)
+      dependsOnSbt(sbtIo)
+      settings(crossSettings:_*)
     )
   lazy val dprojects = (
       DmodProject("projects")
       dependsOn(dcore, actorLogging)
-      dependsOnRemote(sbtIo)
+      dependsOnSbt(sbtIo)
     )
   lazy val drepo = (
     DmodProject("repo")
     dependsOn(dmeta,logging)
-    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, sbtLaunchInt)
-      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
+    dependsOnRemote(mvnAether, aetherWagon, dispatch)
+    dependsOnSbt(sbtIo, sbtLaunchInt)
+      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion) map { (dir, version, org, sv) =>
         val file = dir / "Defaults.scala"
         if(!dir.isDirectory) dir.mkdirs()
         IO.write(file, """
@@ -83,28 +90,33 @@ object Defaults {
   val version = "%s"
   val org = "%s"
 }
-""" format (Dependencies.sbtVersion, version, org))
+""" format (sbtVersion(sv), version, org))
         Seq(file)
       })
+      settings(crossSettings:_*)
   )
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch, gpgLib)
+      dependsOnRemote(aws, uriutil, dispatch, gpgLib)
+      dependsOnSbt(sbtLaunchInt)
     )
 
   // Projects relating to supporting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dcore, drepo, dmeta)
-      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt, sbtIvy, javaMail)
+      dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
+      dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
+      settings(crossSettings:_*)
     ) 
 
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
     dependsOn(defaultSupport, dmeta)
+    settings(crossSettings:_*)
   )
 }
 
@@ -113,6 +125,8 @@ object Defaults {
 trait BuildHelper extends Build {
   
   def MyVersion: String
+
+  def sbtVersion(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) "0.12.4" else "0.13.0-RC5"
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
@@ -125,6 +139,10 @@ trait BuildHelper extends Build {
     publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns)),
     publishArtifact in (Compile, packageSrc) := false,
     publishMavenStyle := false
+  )
+
+  def crossSettings: Seq[Setting[_]] = Seq(
+    crossScalaVersions := Seq("2.9.2", "2.10.2")
   )
   
   // TODO - Aggregate into a single JAR if possible for easier resolution later...
@@ -154,7 +172,7 @@ trait BuildHelper extends Build {
   implicit def p2remote(p: Project): RemoteDepHelper = new RemoteDepHelper(p)
   class RemoteDepHelper(p: Project) {
     def dependsOnRemote(ms: ModuleID*): Project = p.settings(libraryDependencies ++= ms)
-  }
+    def dependsOnSbt(ms: (String=>ModuleID)*): Project = p.settings(libraryDependencies <++= (scalaVersion) {sv => ms map {_(sbtVersion(sv))}})}
 
   lazy val ddocs = (Project("d-docs",file("docs"))
     settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++

@@ -192,7 +192,7 @@ object DistributedRunner {
 
     val newSettings1 = {
       ptSettings map { s =>
-        Def.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
+        SbtUpdate.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
           _ match {
             case Some(r: PatternsBasedRepository) if (!r.patterns.isMavenCompatible) => ivyRepo
             case _ => mavenRepo
@@ -247,7 +247,7 @@ object DistributedRunner {
   }
 
   // as above, but assumes the transformation is a simple Project.update (aka: ~= )
-  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => Def.update(s.key)(f) } _
+  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => SbtUpdate.update(s.key)(f) } _
 
   // Separate cases for settings and tasks (to keep the type inferencer happy)
   def fixGeneric2[K](k: SettingKey[K], m: String)(f: K => K) = fixGenericK2(k, f)(m)

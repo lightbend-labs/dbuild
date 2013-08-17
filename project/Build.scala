@@ -79,9 +79,10 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     dependsOn(dmeta,logging)
     dependsOnRemote(mvnAether, aetherWagon, dispatch)
     dependsOnSbt(sbtIo, sbtLaunchInt)
-      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion) map { (dir, version, org, sv) =>
+      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion, streams) map { (dir, version, org, sv, s) =>
         val file = dir / "Defaults.scala"
         if(!dir.isDirectory) dir.mkdirs()
+        s.log.info("Generating \"Defaults.scala\" for sbt "+sbtVersion(sv)+" and Scala "+sv)
         IO.write(file, """
 package distributed.repo.core
 
@@ -117,6 +118,19 @@ object Defaults {
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
     dependsOn(defaultSupport, dmeta)
     settings(crossSettings:_*)
+      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
+        val file = dir / "Update.scala"
+        if(!dir.isDirectory) dir.mkdirs()
+        s.log.info("Generating \"Update.scala\" for sbt "+sbtVersion(sv)+" and Scala "+sv)
+        val where = if (sbtVersion(sv).startsWith("0.12")) "Project" else "Def"
+        IO.write(file, """
+package com.typesafe.dbuild
+object SbtUpdate {
+def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.update[T]
+}
+""" format (where, where, where))
+        Seq(file)
+      })
   )
 }
 

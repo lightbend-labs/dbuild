@@ -32,7 +32,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   // this is the general dbuild one (we don't use it here)
   val dbuildIvyHome = (distributed.repo.core.ProjectDirs.dbuildDir / ".ivy2").getAbsolutePath
 
-  def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
+    val config=extractionConfig.buildConfig
     val response = IvyMachinery.resolveIvy(config, baseDir, repos, log)
     val report = response.report
     val artifactReports = report.getAllArtifactsReports()

@@ -21,8 +21,6 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
         "sbt.override.build.repos" -> "true",
         "sbt.log.noformat" -> "true")
         
-
-  
   def localIvyProps: Map[String,String] =
     Map("sbt.ivy.home" -> (globalBase / ".ivy2").getAbsolutePath)
   

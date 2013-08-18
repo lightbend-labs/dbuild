@@ -40,7 +40,7 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
-      val dbuildDir=builder.projectDbuildDir(dir,build.config)
+      val dbuildDir=builder.projectDbuildDir(dir,build)
       val readRepo = dbuildDir / "local-repo"
       val writeRepo = dbuildDir / "local-publish-repo"
       if(!writeRepo.exists()) writeRepo.mkdirs()

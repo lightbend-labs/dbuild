@@ -19,9 +19,7 @@ case class ProjectBuildConfig(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
-  extra: Option[ExtraConfig]) {
-  def uuid = hashing sha1 this
-}
+  extra: Option[ExtraConfig])
 
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
@@ -39,6 +37,19 @@ case class DBuildConfiguration(
   build: DistributedBuildConfig,
   options: GeneralOptions = GeneralOptions() // pick defaults if empty
   )
+
+/**
+ *  Some of the options within the DistributedBuildConfig may affect
+ *  the extraction of all the projects (for example, the default sbt version).
+ *  We pack a copy of the BuildOptions together with the ProjectBuildConfig,
+ *  and pass it to extraction.
+ */
+case class ExtractionConfig(
+    buildConfig:ProjectBuildConfig,
+    buildOptions:BuildOptions) {
+    def uuid = hashing sha1 this
+}
+
 /**
  * The configuration for a build. Include here every bit of information that
  * affects the actual build; the parts that do not affect the actual build,

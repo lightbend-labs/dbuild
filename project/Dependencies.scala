@@ -3,11 +3,11 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion = "2.1.4"
   val mvnVersion = "3.0.4"
 
   val typesafeConfig = "com.typesafe" % "config" % "1.0.2"
-  val akkaActor      = "com.typesafe.akka" %% "akka-actor" % akkaVersion
+  val akkaActor12      = "com.typesafe.akka" % "akka-actor" % "2.0.5"
+  val akkaActor13      = "com.typesafe.akka" %% "akka-actor" % "2.1.4"
 
 // 2.1.1 per 2.10, 1.12.4.1 per 2.9.x. 1.12.3 is the only common one
 //  val specs2         = "org.specs2" %% "specs2" % "2.1.1" % "test"

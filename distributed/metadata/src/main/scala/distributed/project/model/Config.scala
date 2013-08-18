@@ -431,7 +431,7 @@ object SeqNotification {
  * place them in a separate section, specifying the list of projects to which they apply (like deploy
  * and notifications).
  *
- * At the moment, this section contains only the option "cross-version, which controls the
+ * This section contains the option "cross-version, which controls the
  * crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
  *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
  *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
@@ -454,9 +454,16 @@ object SeqNotification {
  *
  * In practice, do not include an "options" section at all in normal use, and just add "{cross-version:standard}"
  * if you are planning to release using "set-version".
+ * 
+ * This section also contains the sbt version that should be used by default (unless overridden in the individual
+ * projects) to compile all the projects. If not specified, the string "0.12.4" is used.
  */
 case class BuildOptions(
-  @JsonProperty("cross-version") crossVersion: String = "disabled")
+  @JsonProperty("cross-version") crossVersion: String = "disabled",
+  // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
+  // also in the future (for repeatability); if the user wants a default of 0.13.0,
+  // they can specify "build.options.sbt-version = 0.13.0"
+  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4")
 
 /**
  * This section is used to notify users, by using some notification system.

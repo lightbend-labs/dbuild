@@ -34,7 +34,7 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
     removeProjectBuild(projectDir, log)
 
     IO.withTemporaryFile("sbtrunner", "lastExceptionMessage") { lastMsg =>
-    // TODO: now the sbt version is ALWAYS set (thanks to the expansion)
+    // TODO: the sbt version in the project description is always set to some version
     // Fetch it here, and use it to run the appropriate SBT
     val cmd = SbtRunner.makeShell(
         launcherJar.getAbsolutePath,

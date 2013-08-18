@@ -22,7 +22,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
     case None => SbtExtraConfig(sbtVersion = Defaults.sbtVersion) // pick default values
     case Some(ec:SbtExtraConfig) => {
       if (ec.sbtVersion == "")
-        ec.copy(sbtVersion = Defaults.sbtVersion)
+        ec.copy(sbtVersion = config.options.sbtVersion)
       else
         ec
     }

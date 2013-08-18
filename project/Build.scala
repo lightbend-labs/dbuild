@@ -36,38 +36,33 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // The component projects...
   lazy val graph = (
       LibProject("graph")
-      settings(crossSettings:_*)
     )
   lazy val hashing = (
       LibProject("hashing")
       dependsOnRemote(typesafeConfig)
-      settings(crossSettings:_*)
     )
 
   lazy val dmeta = (
       DmodProject("metadata")
       dependsOn(graph, hashing)
       dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
-      settings(crossSettings:_*)
     )
 
   // Projects relating to distributed builds.
   lazy val logging = (
       DmodProject("logging")
       dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
-      settings(crossSettings:_*)
     )
   lazy val actorLogging = (
       DmodProject("actorLogging")
       dependsOn(logging)
-      dependsOnRemote(akkaActor)
+      dependsOnAkka()
       dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)      
     )
   lazy val dcore = (
       DmodProject("core")
       dependsOn(dmeta, graph, hashing, logging, drepo)
       dependsOnSbt(sbtIo)
-      settings(crossSettings:_*)
     )
   lazy val dprojects = (
       DmodProject("projects")
@@ -94,7 +89,6 @@ object Defaults {
 """ format (sbtVersion(sv), version, org))
         Seq(file)
       })
-      settings(crossSettings:_*)
   )
   lazy val dbuild = (
       DmodProject("build")
@@ -110,14 +104,12 @@ object Defaults {
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
-      settings(crossSettings:_*)
     ) 
 
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
     dependsOn(defaultSupport, dmeta)
-    settings(crossSettings:_*)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
         val file = dir / "Update.scala"
         if(!dir.isDirectory) dir.mkdirs()
@@ -155,10 +147,6 @@ trait BuildHelper extends Build {
     publishMavenStyle := false
   )
 
-  def crossSettings: Seq[Setting[_]] = Seq(
-    crossScalaVersions := Seq("2.9.2", "2.10.2")
-  )
-  
   // TODO - Aggregate into a single JAR if possible for easier resolution later...
   def SbtPluginProject(name: String, file: File) = (
       Project(name, file)
@@ -186,7 +174,9 @@ trait BuildHelper extends Build {
   implicit def p2remote(p: Project): RemoteDepHelper = new RemoteDepHelper(p)
   class RemoteDepHelper(p: Project) {
     def dependsOnRemote(ms: ModuleID*): Project = p.settings(libraryDependencies ++= ms)
-    def dependsOnSbt(ms: (String=>ModuleID)*): Project = p.settings(libraryDependencies <++= (scalaVersion) {sv => ms map {_(sbtVersion(sv))}})}
+    def dependsOnSbt(ms: (String=>ModuleID)*): Project = p.settings(libraryDependencies <++= (scalaVersion) {sv => ms map {_(sbtVersion(sv))}})
+    def dependsOnAkka(): Project = p.settings(libraryDependencies <+= (scalaVersion) {sv => if (sv.startsWith("2.9")) akkaActor12 else akkaActor13})
+  }
 
   lazy val ddocs = (Project("d-docs",file("docs"))
     settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++

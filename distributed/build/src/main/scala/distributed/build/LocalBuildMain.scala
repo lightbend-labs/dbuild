@@ -3,9 +3,9 @@ package build
 
 import java.io.File
 import akka.actor.{ ActorSystem, Props }
-import scala.concurrent.Await
+import akka.dispatch.Await
 import akka.util.Timeout
-import scala.concurrent.duration._
+import akka.util.duration._
 import project.model._
 import distributed.project.model.Utils.{ readValue, writeValue }
 import distributed.repo.core._
@@ -45,7 +45,7 @@ class LocalBuildMain(configuration: xsbti.AppConfiguration) {
     import akka.pattern.ask
     implicit val timeout: Timeout = (4).hours
     val result = builder ? RunLocalBuild(conf, confName, targetDir)
-    Await.result(result.mapTo[BuildOutcome], Duration.Inf)
+    Await.result(result.mapTo[BuildOutcome], akka.util.Duration.Inf)
   }
   def dispose(): Unit = system.shutdown()
 }

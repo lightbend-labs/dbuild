@@ -8,9 +8,8 @@ import project.dependencies.ExtractBuildDependencies
 import logging.Logger
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.pattern.{ ask, pipe }
-import scala.concurrent.Future
-import akka.dispatch.Futures
-import scala.concurrent.duration._
+import akka.dispatch.{ Future, Futures }
+import akka.util.duration._
 import akka.util.Timeout
 import actorpatterns.forwardingErrorsToFutures
 import sbt.Path._
@@ -25,7 +24,6 @@ case class RunDistributedBuild(conf: DBuildConfiguration, confName: String, targ
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository) extends Actor {
   def receive = {
     case RunDistributedBuild(conf, confName, target, log) => forwardingErrorsToFutures(sender) {
-      import context.dispatcher
       val listener = sender
       implicit val ctx = context.system
       val result = try {
@@ -35,7 +33,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), notifTask)
         tasks foreach { _.beforeBuild }
         def afterTasks(error: String, rdb: Option[RepeatableDistributedBuild], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
-          import context.dispatcher
           if (tasks.nonEmpty) futureBuildResult map {
             // >>>> careful with map() on Futures: exceptions must be caught separately!!
             wrapExceptionIntoOutcome[BuildOutcome](log) { buildOutcome =>
@@ -116,7 +113,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
 
   final def wrapExceptionIntoOutcomeF[A <: BuildOutcome](log: logging.Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
     implicit val ctx = context.system
-    import context.dispatcher
     try f(a) catch {
       case e =>
         Future(UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e)))
@@ -171,7 +167,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     type State = Future[BuildOutcome]
     def runBuild(): Seq[State] =
       build.graph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
-        import context.dispatcher
         val b = build.buildMap(p.config.name)
         Future.sequence(children) flatMap {
           // excess of caution? In theory all Future.sequence()s
@@ -192,7 +187,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
 
     // TODO - REpository management here!!!!
     ProjectDirs.userRepoDirFor(build) { localRepo =>
-      import context.dispatcher
       // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
       Future.sequence(runBuild()).map { outcomes =>
         if (outcomes exists { case _: BuildBad => true; case _ => false })
@@ -208,7 +202,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   // Asynchronously extract information from builds.
   def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[ExtractionOutcome] = {
     implicit val ctx = context.system
-    import context.dispatcher
     val uuid = hashing sha1 config
     val tdir = target / "extraction" / uuid
     val futureOutcomes: Future[Seq[ExtractionOutcome]] =

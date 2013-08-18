@@ -137,7 +137,7 @@ trait BuildHelper extends Build {
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
     organization := "com.typesafe.dbuild",
-    scalaVersion := "2.10.2",
+    scalaVersion := "2.9.2",
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",

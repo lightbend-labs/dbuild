@@ -29,7 +29,8 @@ object SbtSupport {
   }
 
   val buildSettings: Seq[Setting[_]] = Seq(
-    sbtLaunchJarUrl <<= sbtVersion apply downloadUrlForVersion,
+//    sbtLaunchJarUrl <<= sbtVersion apply downloadUrlForVersion,
+    sbtLaunchJarUrl := downloadUrlForVersion(Dependencies.sbtVersion13),
     sbtLaunchJarLocation <<= baseDirectory (_ / "target" / "sbt" / "sbt-launch.jar"),
     sbtLaunchJar <<= (sbtLaunchJarUrl, sbtLaunchJarLocation) map downloadFile
   )

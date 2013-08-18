@@ -77,7 +77,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion, streams) map { (dir, version, org, sv, s) =>
         val file = dir / "Defaults.scala"
         if(!dir.isDirectory) dir.mkdirs()
-        s.log.info("Generating \"Defaults.scala\" for sbt "+sbtVersion(sv)+" and Scala "+sv)
+        s.log.info("Generating \"Defaults.scala\" for sbt "+sbtVer(sv)+" and Scala "+sv)
         IO.write(file, """
 package distributed.repo.core
 
@@ -86,7 +86,7 @@ object Defaults {
   val version = "%s"
   val org = "%s"
 }
-""" format (sbtVersion(sv), version, org))
+""" format (sbtVer(sv), version, org))
         Seq(file)
       })
   )
@@ -113,8 +113,8 @@ object Defaults {
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
         val file = dir / "Update.scala"
         if(!dir.isDirectory) dir.mkdirs()
-        s.log.info("Generating \"Update.scala\" for sbt "+sbtVersion(sv)+" and Scala "+sv)
-        val where = if (sbtVersion(sv).startsWith("0.12")) "Project" else "Def"
+        s.log.info("Generating \"Update.scala\" for sbt "+sbtVer(sv)+" and Scala "+sv)
+        val where = if (sbtVer(sv).startsWith("0.12")) "Project" else "Def"
         IO.write(file, """
 package com.typesafe.dbuild
 object SbtUpdate {
@@ -132,7 +132,7 @@ trait BuildHelper extends Build {
   
   def MyVersion: String
 
-  def sbtVersion(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) "0.12.4" else "0.13.0-RC5"
+  def sbtVer(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) sbtVersion12 else sbtVersion13
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
@@ -174,8 +174,8 @@ trait BuildHelper extends Build {
   implicit def p2remote(p: Project): RemoteDepHelper = new RemoteDepHelper(p)
   class RemoteDepHelper(p: Project) {
     def dependsOnRemote(ms: ModuleID*): Project = p.settings(libraryDependencies ++= ms)
-    def dependsOnSbt(ms: (String=>ModuleID)*): Project = p.settings(libraryDependencies <++= (scalaVersion) {sv => ms map {_(sbtVersion(sv))}})
-    def dependsOnAkka(): Project = p.settings(libraryDependencies <+= (scalaVersion) {sv => if (sv.startsWith("2.9")) akkaActor12 else akkaActor13})
+    def dependsOnSbt(ms: (String=>ModuleID)*): Project = p.settings(libraryDependencies <++= (scalaVersion) {sv => ms map {_(sbtVer(sv))}})
+    def dependsOnAkka(): Project = p.settings(libraryDependencies <+= (scalaVersion) {sv => if (sv.startsWith("2.9")) akkaActor29 else akkaActor210})
   }
 
   lazy val ddocs = (Project("d-docs",file("docs"))

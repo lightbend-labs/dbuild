@@ -57,7 +57,8 @@ object DependencyAnalysis {
   // Use these normalization routines only when printing or comparing
   //
   def normalizedProjectName(s: ProjectRef, baseDirectory: File) = {
-    val defaultIDs = Seq(Build.defaultID(baseDirectory), StringUtilities.normalize(baseDirectory.getName))
+    // we only cover the most common cases. The full logic for 0.13 may involve Load.scala (autoID) and the def default* in Build.scala
+    val defaultIDs = Seq(Build.defaultID(baseDirectory), "root-"+StringUtilities.normalize(baseDirectory.getName))
     val defaultName = "default-sbt-project"
     if (defaultIDs contains s.project) defaultName else s.project
   }

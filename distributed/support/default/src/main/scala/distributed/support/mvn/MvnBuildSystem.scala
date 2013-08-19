@@ -11,8 +11,8 @@ import collection.JavaConverters._
 
 object MvnBuildSystem extends BuildSystem {
   val name = "maven"
-  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
-    val mc = mvnConfig(config)
+  def extractDependencies(config: ExtractionConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+    val mc = mvnConfig(config.buildConfig)
     val pom = 
       if(mc.directory.isEmpty) dir / "pom.xml"
       else  dir / mc.directory / "pom.xml"

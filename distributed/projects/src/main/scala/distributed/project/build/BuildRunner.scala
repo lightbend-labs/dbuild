@@ -25,7 +25,7 @@ trait BuildRunner {
    * @param dir The dir containing the checkout of the project
    * @param config The configuration record of this project
    */
-  def projectDbuildDir(dir: File, proj: ProjectBuildConfig): File
+  def projectDbuildDir(dir: File, proj: RepeatableProjectBuild): File
 }
 
 /** Aggregate builder. */
@@ -37,6 +37,6 @@ class AggregateBuildRunner(systems: Seq[BuildSystem]) extends BuildRunner {
   def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, log: logging.Logger): BuildArtifactsOut =
     findBuildSystem(b.config).runBuild(b, dir, input, log)
 
-  def projectDbuildDir(dir:File, proj: ProjectBuildConfig): File =
-    findBuildSystem(proj).projectDbuildDir(dir, proj)
+  def projectDbuildDir(dir:File, proj: RepeatableProjectBuild): File =
+    findBuildSystem(proj.config).projectDbuildDir(dir, proj)
 }

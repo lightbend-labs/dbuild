@@ -89,7 +89,8 @@ object DistributedRunner {
   // Note: ArtifactLocation at this point does not (should not) contain any
   // cross version suffix attached to its "name" field; therefore, we apply
   // fixName() only to the ModuleID we are trying to rewrite right now.
-  def fixModule(arts: Seq[model.ArtifactLocation], crossVersion: String, log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
+  def fixModule(arts: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
+      log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
     def expandName(a: Artifact) = {
       import a._
       classifier match {
@@ -134,8 +135,8 @@ object DistributedRunner {
       // explicitly need such a lax resolution in this case
       // (and we should get a warning about that circumstance anyway).
       if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) &&
-        // Do not inspect the artifacts that we are building right at this time:
-        (fixName(m.name) != currentName || m.organization != currentOrg)) {
+        // Do not inspect the artifacts that belong to the project we are building at this time:
+        (!(modules exists {i => i.getOrganisation == currentOrg && fixName(i.getName) == currentName}))) {
         // If we are here, it means that this is a library dependency that is required,
         // that refers to an artifact that is not provided by any project in this build,
         // and that needs a certain Scala version (range) in order to work as intended.
@@ -192,7 +193,7 @@ object DistributedRunner {
 
     val newSettings1 = {
       ptSettings map { s =>
-        Project.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
+        SbtUpdate.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
           _ match {
             case Some(r: PatternsBasedRepository) if (!r.patterns.isMavenCompatible) => ivyRepo
             case _ => mavenRepo
@@ -247,7 +248,7 @@ object DistributedRunner {
   }
 
   // as above, but assumes the transformation is a simple Project.update (aka: ~= )
-  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => Project.update(s.key)(f) } _
+  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => SbtUpdate.update(s.key)(f) } _
 
   // Separate cases for settings and tasks (to keep the type inferencer happy)
   def fixGeneric2[K](k: SettingKey[K], m: String)(f: K => K) = fixGenericK2(k, f)(m)
@@ -309,11 +310,11 @@ object DistributedRunner {
 
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
-  def fixDependencies2(locs: Seq[model.ArtifactLocation], crossVersion: String, log: Logger) =
+  def fixDependencies2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String, log: Logger) =
     fixGenericTransform2(Keys.allDependencies) { r: Setting[Task[Seq[sbt.ModuleID]]] =>
       val sc = r.key.scope
       Keys.allDependencies in sc <<= (Keys.allDependencies in sc, Keys.name in sc, Keys.organization in sc) map { (old, n, o) =>
-        old map fixModule(locs, crossVersion, log, n, o)
+        old map fixModule(locs, modules, crossVersion, log, n.toLowerCase, o.toLowerCase)
       }
     }("Updating dependencies") _
 
@@ -363,7 +364,7 @@ object DistributedRunner {
   // extract the ModuleRevisionIds of all the subprojects of this dbuild project (as calculated from exclusions, dependencies, etc).
   def getModuleRevisionIds(state: State, projects: Seq[String], log: Logger) =
     runAggregate[Seq[ModuleRevisionId], ModuleRevisionId](state, projects, Seq.empty) { _ :+ _ } {
-      (proj, state, _) => (state, Project.extract(state).evalTask(Keys.ivyModule in proj, state).dependencyMapping(log)._1)
+      (proj, state, _) => (state, Project.extract(state).runTask(Keys.ivyModule in proj, state)._2.dependencyMapping(log)._1)
     }._2
 
   // In order to convince sbt to use the scala instance we need, we just generate a fictitious
@@ -613,7 +614,7 @@ object DistributedRunner {
     repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion: String) = {
     Seq[Fixer](
       fixResolvers2(repoDir),
-      fixDependencies2(arts, crossVersion, log),
+      fixDependencies2(arts, modules, crossVersion, log),
       fixScalaVersion2(dbuildDir, repoDir, arts),
       fixInterProjectResolver2bis(modules, log),
       fixCrossVersions2(crossVersion),

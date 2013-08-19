@@ -22,8 +22,8 @@ object ScalaBuildSystem extends BuildSystem {
     case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \""+config.name+"\". Please report")
   }
 
-  def extractDependencies(config: ProjectBuildConfig, dir: File, log: Logger): ExtractedBuildMeta = {
-    val ec = scalaExpandConfig(config)
+  def extractDependencies(config: ExtractionConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+    val ec = scalaExpandConfig(config.buildConfig)
     val meta=readMeta(dir, ec.exclude)
     val projects=meta.projects map {_.name}
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))

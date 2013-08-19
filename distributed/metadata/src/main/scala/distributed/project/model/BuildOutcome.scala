@@ -57,8 +57,8 @@ case class BuildFailed(project: String, outcomes: Seq[BuildOutcome], cause: Stri
 /** One or more of this project dependencies are broken, therefore we could not build. */
 case class BuildBrokenDependency(project: String, outcomes: Seq[BuildOutcome]) extends BuildBad {
   def withOutcomes(os:Seq[BuildOutcome])=copy(outcomes=os)
-  def status() = "DID NOT RUN (stuck on broken dependency: " +
-    (outcomes.filter { case _: BuildFailed => true; case _ => false }).map { _.project }.mkString(",") + ")"
+  def status() = "DID NOT RUN (stuck on broken dependencies: " +
+    (outcomes.filter { case _: BuildFailed => true; case _ => false }).map { _.project }.mkString(", ") + ")"
   override def whenIDs: Seq[String] = "dep-broken" +: super.whenIDs
 }
 

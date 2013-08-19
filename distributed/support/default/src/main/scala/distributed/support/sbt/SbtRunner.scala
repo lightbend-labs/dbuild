@@ -17,16 +17,14 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
   
   private val defaultProps = 
     Map("sbt.global.base" -> globalBase.getAbsolutePath,
-        "sbt.version" -> Defaults.sbtVersion,
         "sbt.override.build.repos" -> "true",
         "sbt.log.noformat" -> "true")
         
-
-  
   def localIvyProps: Map[String,String] =
     Map("sbt.ivy.home" -> (globalBase / ".ivy2").getAbsolutePath)
   
   def run(projectDir: File,
+          sbtVersion: String,
           log: Logger,
           javaProps: Map[String,String] = Map.empty,
           javaArgs: Seq[String] = SbtRunner.defaultJavaArgs,
@@ -34,11 +32,12 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
     removeProjectBuild(projectDir, log)
 
     IO.withTemporaryFile("sbtrunner", "lastExceptionMessage") { lastMsg =>
-    // TODO: now the sbt version is ALWAYS set (thanks to the expansion)
+    // TODO: the sbt version in the project description is always set to some version
     // Fetch it here, and use it to run the appropriate SBT
     val cmd = SbtRunner.makeShell(
         launcherJar.getAbsolutePath,
-        defaultProps + ("dbuild.sbt-runner.last-msg"->lastMsg.getCanonicalPath),
+        defaultProps + ("dbuild.sbt-runner.last-msg"->lastMsg.getCanonicalPath,
+            "sbt.version" -> sbtVersion),
         javaProps,
         javaArgs,
         extraArgs)(args:_*)

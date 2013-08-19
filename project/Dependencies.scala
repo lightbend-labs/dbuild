@@ -3,23 +3,21 @@ import sbt._
 
 object Dependencies {
 
-  val akkaVersion = "2.0.5"
-  val sbtVersion = "0.12.4"
+  val sbtVersion12 = "0.12.4"
+  val sbtVersion13 = "0.13.0-RC5"
+
   val mvnVersion = "3.0.4"
 
   val typesafeConfig = "com.typesafe" % "config" % "1.0.2"
-  val akkaActor      = "com.typesafe.akka" % "akka-actor" % akkaVersion
+  val akkaActor29      = "com.typesafe.akka" % "akka-actor" % "2.0.5"
+  val akkaActor210     = "com.typesafe.akka" %% "akka-actor" % "2.1.4"
 
-  val specs2         = "org.specs2" %% "specs2" % "1.10" % "test"
+// 2.1.1 per 2.10, 1.12.4.1 per 2.9.x. 1.12.3 is the only common one
+//  val specs2         = "org.specs2" %% "specs2" % "2.1.1" % "test"
+  val specs2         = "org.specs2" %% "specs2" % "1.12.3" % "test"
 
   val dispatch       = "net.databinder" %% "dispatch-http" % "0.8.10"
 
-  val sbtIo          = "org.scala-sbt" % "io" % sbtVersion
-  val sbtIvy         = "org.scala-sbt" % "ivy" % sbtVersion
-  val sbtLogging     = "org.scala-sbt" % "logging" % sbtVersion
-  val sbtCollections     = "org.scala-sbt" % "collections" % sbtVersion
-  val sbtLaunchInt   = "org.scala-sbt" % "launcher-interface" % sbtVersion % "provided"
-//  val sbtLauncher    = "org.scala-sbt" % "launcher" % sbtVersion
 
   //val aether         = "org.sonatype.aether" % "aether" % "1.13.1"
   val mvnAether      = "org.apache.maven" % "maven-aether-provider" % mvnVersion
@@ -35,4 +33,13 @@ object Dependencies {
   val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.1"
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
   val commonsLang    = "commons-lang" % "commons-lang" % "2.6"
+
+  def sbtIo(v:String)          = "org.scala-sbt" % "io" % v
+  def sbtIvy(v:String)         = "org.scala-sbt" % "ivy" % v
+  def sbtLogging(v:String)     = "org.scala-sbt" % "logging" % v
+  def sbtLaunchInt(v:String)   = "org.scala-sbt" % "launcher-interface" % v % "provided"
+//  def sbtCollections(v:String)     = "org.scala-sbt" % "collections" % v
+//  def sbtLauncher(v:String)    = "org.scala-sbt" % "launcher" % v
+
+
 }

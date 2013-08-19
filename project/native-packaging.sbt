@@ -1,1 +1,1 @@
-addSbtPlugin("com.typesafe" % "sbt-native-packager" % "0.4.4")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "0.6.0")

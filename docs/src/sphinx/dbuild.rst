@@ -178,7 +178,9 @@ Each of these fields is optional; their meaning is:
 
 sbt-version
   A string that specifies the version of sbt that should be used to compile
-  this dbuild project.
+  this dbuild project. If not specified, the sbt version in use will be the
+  one specified in the global build options property "sbt-version" (see
+  :doc:`buildOptions`). If that is also missing, sbt 0.12.4 will be used.
 
 projects
   A sequence of strings that identifies a subset of the sbt subprojects that should be

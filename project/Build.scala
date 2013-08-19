@@ -123,6 +123,8 @@ def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.u
 """ format (where, where, where))
         Seq(file)
       })
+    // this aggregate is only for publishing the plugin with 2.10.2 / 0.13
+    aggregate(defaultSupport, dmeta, dcore, drepo, logging, graph, hashing)
   )
 }
 

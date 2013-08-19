@@ -17,6 +17,7 @@ sections. Its structure is currently:
     projects: [...]
     options: {
      "cross-version"  : <cross-version-level>
+     "sbt-version"    : <sbt-version>
     }
    }
 
@@ -68,12 +69,16 @@ cross-version
     Missing dependent projects will be detected. This option exists mainly for testing,
     and is not intended for regular use.
 
-In practice, you can omit the "build-options" section entirely during normal use, and
-just add the following if you are releasing using "set-version":
+  In practice, you can omit the "build-options" section entirely during normal use, and
+  just add the following if you are releasing using "set-version":
 
 .. code-block:: javascript
 
-   build-options:{cross-version:standard}
+   build.options:{cross-version:standard}
+
+sbt-version
+  You can optionally specify here the sbt version that should be used to compile
+  all the sbt-based projects. If not specified, sbt 0.12.4 will be used.
 
 |
 

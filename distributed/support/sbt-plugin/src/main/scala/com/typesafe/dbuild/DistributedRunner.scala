@@ -314,7 +314,7 @@ object DistributedRunner {
     fixGenericTransform2(Keys.allDependencies) { r: Setting[Task[Seq[sbt.ModuleID]]] =>
       val sc = r.key.scope
       Keys.allDependencies in sc <<= (Keys.allDependencies in sc, Keys.name in sc, Keys.organization in sc) map { (old, n, o) =>
-        old map fixModule(locs, modules, crossVersion, log, n, o)
+        old map fixModule(locs, modules, crossVersion, log, n.toLowerCase, o.toLowerCase)
       }
     }("Updating dependencies") _
 

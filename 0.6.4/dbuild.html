@@ -1,0 +1,437 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Using dbuild &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.6.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Build options" href="buildOptions.html" />
+    <link rel="prev" title="Download and Setup" href="download.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/distributed-build">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Using dbuild</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="buildOptions.html">Build options</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="download.html">Download and Setup</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.6.4">Version 0.6.4</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="using-dbuild">
+<h1>Using dbuild<a class="headerlink" href="#using-dbuild" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>Using dbuild<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>The stand-alone <tt class="docutils literal"><span class="pre">dbuild</span></tt> tool is called by specifying on the command line its build configuration file:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/dbuild build-file.dbuild
+</pre></div>
+</div>
+<p>The build tool will create, if not existing, a <tt class="docutils literal"><span class="pre">~/.dbuild</span></tt> directory in your home, which stores general
+dbuild support files and the local repository cache, and a <tt class="docutils literal"><span class="pre">target</span></tt> in your current directory, which is
+used as a staging area for the current build.</p>
+<p>Unless specified otherwise, the end results of the build (artifacts and build information) will be stored
+into a local repository in <tt class="docutils literal"><span class="pre">~/.dbuild</span></tt>. It is also possible to use a remote Ivy repository as storage;
+that is explained later in the section <a class="reference internal" href="repositories.html"><em>Repositories</em></a>.</p>
+</div>
+<div class="section" id="properties-file">
+<h2>Properties file<a class="headerlink" href="#properties-file" title="Permalink to this headline">¶</a></h2>
+<p>By default, dbuild will use the file <tt class="docutils literal"><span class="pre">dbuild.properties</span></tt> to retrieve information about its internal
+configuration. There is usually no need to touch this file, as it contains defaults that should be
+adequate for most projects. However, you can modify this file if you would like to modify the standard
+behavior in some way (for instance, relocating the default <tt class="docutils literal"><span class="pre">~/.dbuild</span></tt> directory, or the location of
+the Ivy cache it uses).</p>
+<p>One important case, however, is the customization of the resolvers list: you can just change the
+<tt class="docutils literal"><span class="pre">[repositories]</span></tt> stanza in this properties file, adding or removing resolvers as needed. The list
+specified in this properties file will completely override the normal list of library resolvers,
+for all of the projects invoked by dbuild. By specifying here a local Artifactory cache, for instance,
+the artifacts resolution can be made considerably faster.</p>
+</div>
+<div class="section" id="the-build-configuration-file">
+<h2>The build configuration file<a class="headerlink" href="#the-build-configuration-file" title="Permalink to this headline">¶</a></h2>
+<p>The central part of the build tool operation revolves around the build configuration file, which describes
+in detail which software projects are involved in the build, which version of each should be used, and many
+other aspects of the build process.</p>
+<p>The build file is written in a JSON format. The file is parsed by using the Typesafe config library,
+therefore the syntax of the file can be simplified by using the conventions of that library: double
+quotes and commas may be omitted, variable substitution is available, and other facilities are
+available. You should check the many options that are available to simplify the syntax of
+configuration file; they are all documented on the website of the
+<a class="reference external" href="http://github.com/typesafehub/config">config library</a>. In addition, dbuild has one special
+feature concerning lists of strings: whenever a list of strings is expected, in the form
+<tt class="docutils literal"><span class="pre">&quot;x&quot;:[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;]</span></tt>, if you have only one element you can also omit the square brackets altogether.
+In accordance with the typesafe config library, you can then usually omit the double quotes
+and in the end just write <tt class="docutils literal"><span class="pre">x:a</span></tt>.</p>
+<p>The order of items in the configuration file is never relevant, unless explicitly mentioned
+in the documentation. The top level of the configuration file is:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;build&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">build_section</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;options&quot;</span><span class="o">:</span> <span class="o">&lt;</span><span class="nx">options_section</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>build</dt>
+<dd>This section is required, and contains all of the information needed to generate the build.
+It includes the description of the various projects, and other options that control the
+generation of the code. It is described in detail below.</dd>
+<dt>options</dt>
+<dd>This section is optional. It does not contain information that affect the build, but is used
+to control other aspects of dbuild, in particular options and tasks that should be executed
+after the build. At this time, the section may contain the following:</dd>
+</dl>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;deploy&quot;</span>        <span class="o">:</span> <span class="p">[</span> <span class="o">&lt;</span><span class="nx">deploy_1</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="nx">deploy_2</span><span class="o">&gt;</span><span class="p">,...],</span>
+ <span class="s2">&quot;notifications&quot;</span> <span class="o">:</span> <span class="o">&lt;</span><span class="nx">notifications</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The two values are optional, and are described in detail on the
+pages <a class="reference internal" href="deploy.html"><em>Deploying</em></a> and <a class="reference internal" href="notifications.html"><em>Notifications</em></a>, respectively.</p>
+</div>
+<div class="section" id="the-build-section">
+<h2>The build section<a class="headerlink" href="#the-build-section" title="Permalink to this headline">¶</a></h2>
+<p>The build section has the following content:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;projects&quot;</span><span class="o">:</span> <span class="p">[</span> <span class="o">&lt;</span><span class="nx">dbuild_project1</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="nx">dbuild_project2</span><span class="o">&gt;</span><span class="p">,...],</span>
+ <span class="s2">&quot;options&quot;</span> <span class="o">:</span> <span class="o">&lt;</span><span class="nx">build</span><span class="o">-</span><span class="nx">options</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>projects</dt>
+<dd>The &quot;projects&quot; section is the most important one, and is the only one that is required in a
+dbuild configuration file. If you have no other sections, you can take advantage of the
+extended JSON syntax, and introduce the project section directly by writing:
+<tt class="docutils literal"><span class="pre">build.projects:</span> <span class="pre">[...]</span></tt>. The list of projects, enclosed in square brackets, describes
+the various software projects that should be built together by dbuild.</dd>
+<dt>options</dt>
+<dd>This section contains global options that affect the projects in the build; it is distinct
+from the previous one. It is optional, and is described on the page <a class="reference internal" href="buildOptions.html"><em>Build options</em></a>.</dd>
+</dl>
+<p>Each project descriptions has this structure:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;name&quot;</span>        <span class="o">:</span> <span class="o">&lt;</span><span class="nx">project</span><span class="o">-</span><span class="nx">name</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;system&quot;</span>      <span class="o">:</span> <span class="o">&lt;</span><span class="nx">build</span><span class="o">-</span><span class="nx">system</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;uri&quot;</span>         <span class="o">:</span> <span class="o">&lt;</span><span class="nx">source</span><span class="o">-</span><span class="nx">repository</span><span class="o">-</span><span class="nx">uri</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;set-version&quot;</span> <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">output</span><span class="o">-</span><span class="nx">version</span><span class="o">&gt;</span>
+ <span class="s2">&quot;extra&quot;</span>       <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">extra</span><span class="o">-</span><span class="nx">build</span><span class="o">-</span><span class="nx">parameters</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Within a project description:</p>
+<dl class="docutils">
+<dt>name</dt>
+<dd>A string identifying the software project. This can be arbitrary, and is only used within dbuild,
+although you will want to use something meaningful, like &quot;akka&quot; for Akka, or &quot;scala-arm&quot; for the
+Scala ARM project.</dd>
+<dt>system</dt>
+<dd>A string that describes the build system used by this software project. Valid values are currently
+&quot;scala&quot; (custom for the Scala project), &quot;sbt&quot;, and &quot;ivy&quot;; additional mechanisms will be added soon (Maven
+support is in the works). If not specified, &quot;sbt&quot; is assumed.</dd>
+<dt>uri</dt>
+<dd><p class="first">A string pointing to the source repository for this project. It can be git-based (if the uri begins
+with <tt class="docutils literal"><span class="pre">git://</span></tt> or ends with <tt class="docutils literal"><span class="pre">.git</span></tt>), or svn (schemes <tt class="docutils literal"><span class="pre">http://</span></tt>, <tt class="docutils literal"><span class="pre">https://</span></tt>, <tt class="docutils literal"><span class="pre">svn://</span></tt>, only
+if an svn repository is detected). Other source repository formats may be added in the future.</p>
+<p>The uri may optionally be prefixed with a <tt class="docutils literal"><span class="pre">'#'</span></tt> and either a commit hash, an svn version, or a
+branch name. For example:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="s2">&quot;uri&quot;</span><span class="o">:</span>  <span class="s2">&quot;git://github.com/scala/scala.git#2.10.x&quot;</span>
+</pre></div>
+</div>
+<p class="last">dbuild will download and extract the most recent available version in the specified branch, or the
+exact version or commit in case if specified . If no prefix is added, dbuild will fetch the most recent
+version in git master, or svn head.</p>
+</dd>
+<dt>set-version</dt>
+<dd>This component is optional, and normally not used. During compilation, dbuild will automatically
+generate a version string that is used for the various artifacts that are produced by each
+project. However, in case you need to obtain artifacts with a specific version string, you can
+override the default value by specifying a specific version string here. If you are planning to
+use this feature in order to release artifact, then you also need to set the option &quot;cross-version&quot;
+to &quot;standard&quot;, as explained in the section <a class="reference internal" href="buildOptions.html#section-build-options"><em>The build options section</em></a>.</dd>
+<dt>extra</dt>
+<dd>The &quot;extra&quot; component is optional, as are all of its sub-components; it describes additional
+parameters used while building the project, and its content depends on the build system, as
+detailed below.</dd>
+</dl>
+</div>
+<div class="section" id="sbt-specific-options">
+<h2>sbt-specific options<a class="headerlink" href="#sbt-specific-options" title="Permalink to this headline">¶</a></h2>
+<p>In this case the &quot;extra&quot; argument is a record with the following content:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;sbt-version&quot;</span>    <span class="o">:</span> <span class="o">&lt;</span><span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;projects&quot;</span>       <span class="o">:</span> <span class="p">[</span> <span class="nx">subproj1</span><span class="p">,</span> <span class="nx">subproj2</span><span class="p">,...</span> <span class="p">]</span>
+ <span class="s2">&quot;exclude&quot;</span>        <span class="o">:</span> <span class="p">[</span> <span class="nx">subproj1</span><span class="p">,</span> <span class="nx">subproj2</span><span class="p">,...</span> <span class="p">]</span>
+ <span class="s2">&quot;run-tests&quot;</span>      <span class="o">:</span> <span class="o">&lt;</span><span class="nx">run</span><span class="o">-</span><span class="nx">tests</span><span class="o">&gt;</span>
+ <span class="s2">&quot;options&quot;</span>        <span class="o">:</span> <span class="p">[</span> <span class="nx">opt1</span><span class="p">,</span> <span class="nx">opt2</span><span class="p">,...</span> <span class="p">]</span>
+ <span class="s2">&quot;commands&quot;</span>       <span class="o">:</span> <span class="p">[</span> <span class="nx">cmd1</span><span class="p">,</span> <span class="nx">cmd2</span><span class="p">,...</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Each of these fields is optional; their meaning is:</p>
+<dl class="docutils">
+<dt>sbt-version</dt>
+<dd>A string that specifies the version of sbt that should be used to compile
+this dbuild project. If not specified, the sbt version in use will be the
+one specified in the global build options property &quot;sbt-version&quot; (see
+<a class="reference internal" href="buildOptions.html"><em>Build options</em></a>). If that is also missing, sbt 0.12.4 will be used.</dd>
+<dt>projects</dt>
+<dd><p class="first">A sequence of strings that identifies a subset of the sbt subprojects that should be
+built within this dbuild project. For instance, you can specify:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="s2">&quot;projects&quot;</span><span class="o">:</span>  <span class="p">[</span><span class="s2">&quot;akka-actor&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>in order to compile only the &quot;akka-actor&quot; sbt project within Akka. For each
+of the specified subprojects, dbuild will also add recursively all of the
+subprojects that are in the same project and that are required dependencies
+of the specified ones; if the subproject is an sbt aggregate, its components
+will also be added. If the &quot;projects&quot; clause is not present, all of the
+subprojects will be included.</p>
+<p class="last">If the project uses sbt's default projects, the actual subproject name may
+vary over time, and take forms like &quot;default-e3c4f7&quot;. In order to refer to
+sbt's default subproject, you can use the predefined name <tt class="docutils literal"><span class="pre">&quot;default-sbt-project&quot;</span></tt>.</p>
+</dd>
+<dt>exclude</dt>
+<dd>Sometimes it may be useful to split a single project into two or more parts.
+This clause can be used to exclude explicitly some of the subprojects, which
+can then be compiled in a different project within the same configuration file,
+using a different project name but using the same uri.</dd>
+<dt>run-tests</dt>
+<dd>Boolean value: if set to false, the project will be built but no tests will be run.
+Normally, each project is built first, then tested; if compilation succeeds but testing
+fails, the dbuild run will abort and no artifacts will be stored into the repository.
+If you set run-tests to false, however, testing for the affected project will be skipped,
+and the artifacts will be published at the end of the compilation stage. This is useful
+in case you would like to use the artifacts of a given project, even though its testing
+stage is currently failing for whatever reason.</dd>
+<dt>options</dt>
+<dd>A sequence of strings; they will be
+passed as-is as additional JVM options, while launching the sbt instance that is used
+to build this project.</dd>
+<dt>commands</dt>
+<dd>A sequence of sbt commands; they will be executed by sbt before dbuild rearranges
+the project dependencies. These commands can be used, for example, to change settings
+using forms like &quot;set setting := ...&quot;.</dd>
+</dl>
+</div>
+<div class="section" id="scala-specific-options">
+<h2>Scala-specific options<a class="headerlink" href="#scala-specific-options" title="Permalink to this headline">¶</a></h2>
+<p>In the case of Scala, the &quot;extra&quot; record is:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;build-target&quot;</span>   <span class="o">:</span> <span class="o">&lt;</span><span class="nx">build</span><span class="o">-</span><span class="nx">target</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;build-options&quot;</span>  <span class="o">:</span> <span class="p">[</span> <span class="nx">opt1</span><span class="p">,</span> <span class="nx">opt2</span><span class="p">,...</span> <span class="p">]</span>
+ <span class="s2">&quot;build-number&quot;</span>   <span class="o">:</span> <span class="o">&lt;</span><span class="nx">build</span><span class="o">-</span><span class="nx">number</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;exclude&quot;</span>        <span class="o">:</span> <span class="p">[</span> <span class="nx">subproj1</span><span class="p">,</span> <span class="nx">subproj2</span><span class="p">,...</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Each of the fields is optional. The are:</p>
+<dl class="docutils">
+<dt>build-target</dt>
+<dd>The Scala build system will normally generate the files by invoking
+the target &quot;distpack-maven-opt&quot;. If required, a different target can
+be specified using this option.</dd>
+<dt>build-options</dt>
+<dd>A sequence of strings; they will be appended to the ant options when
+compiling. This option can be used to define additional properties,
+or to set other flags.</dd>
+<dt>build-number</dt>
+<dd><p class="first">The contents of the file <tt class="docutils literal"><span class="pre">build.properties</span></tt> can be overridden by
+using this option. It is specified as:</p>
+<div class="last highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;major&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">major</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;minor&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">minor</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;patch&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">patch</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="s2">&quot;bnum&quot;</span>   <span class="o">:</span> <span class="o">&lt;</span><span class="nx">bnum</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd>
+<dt>exclude</dt>
+<dd>The ant-based Scala build does not support real subprojects. However,
+dbuild will simulate multiple subprojects based on the artifact names.
+This &quot;exclude&quot; clause can be used to prevent some artifacts from being
+published or advertised as available to the rest of the dbuild projects.
+They will still be built, however.</dd>
+</dl>
+</div>
+<div class="section" id="scala-version-numbers">
+<h2>Scala version numbers<a class="headerlink" href="#scala-version-numbers" title="Permalink to this headline">¶</a></h2>
+<p>The handling of version numbers in the Scala build system is made
+somewhat more complicated by the variety of ways in which version
+strings are passed to ant while compiling Scala. The combination
+of <tt class="docutils literal"><span class="pre">build-number</span></tt>, <tt class="docutils literal"><span class="pre">set-version</span></tt> (described above), and <tt class="docutils literal"><span class="pre">build-options</span></tt>,
+however, makes it possible to control all the various aspects.
+In detail, this is the way in which versions are handled:</p>
+<dl class="docutils">
+<dt>maven.version.number</dt>
+<dd>The first version number is the one that is passed to ant via
+a property called <tt class="docutils literal"><span class="pre">maven.version.number</span></tt>. If <tt class="docutils literal"><span class="pre">set-version</span></tt> is
+specified, the corresponding string will be used. If there is
+no set-version, the version string will be derived from the
+content of the file <tt class="docutils literal"><span class="pre">build.number</span></tt>, in the checked out source
+tree, with an additional build-specific suffix. If there is no
+<tt class="docutils literal"><span class="pre">build.number</span></tt>, the Scala build system will use instead
+the version string contained in the file <tt class="docutils literal"><span class="pre">dbuild.json</span></tt>, if
+present, with the build-specific suffix. If both <tt class="docutils literal"><span class="pre">dbuild.json</span></tt>
+and <tt class="docutils literal"><span class="pre">build.number</span></tt> exist, the version in <tt class="docutils literal"><span class="pre">build.number</span></tt> will
+be used.</dd>
+<dt>build.number</dt>
+<dd>The content of the build.number, independently, will also
+affect the calculation of some of the version strings used
+by the Scala ant system. If the extra option <tt class="docutils literal"><span class="pre">build-option</span></tt>
+is used, its content will be used to overwrite the content
+of the <tt class="docutils literal"><span class="pre">build.number</span></tt> file inside the source tree. This
+replacement will not affect the calculation of <tt class="docutils literal"><span class="pre">maven.version.number</span></tt>
+described above.</dd>
+<dt>other properties</dt>
+<dd>The Scala ant build file uses internally other properties; as
+mentioned previously, they can be set if needed by using the
+option <tt class="docutils literal"><span class="pre">build-options</span></tt>. The main option that is probably of
+interest is <tt class="docutils literal"><span class="pre">build.release</span></tt>; it can be set using:
+<tt class="docutils literal"><span class="pre">build-options:[&quot;-Dbuild.release=true&quot;]</span></tt></dd>
+</dl>
+</div>
+<div class="section" id="ivy-specific-options">
+<h2>Ivy-specific options<a class="headerlink" href="#ivy-specific-options" title="Permalink to this headline">¶</a></h2>
+<p>The Ivy build system works like a regular build mechanism, but rather than compiling
+the needed dependency from a source repository, it asks directly a Maven/Ivy repository
+for the requested binary code. Although that rather defeats the point of compiling all
+code using the same Scala version, it can nonetheless be quite useful in the case in
+which only a specific binary is available, for example in case of libraries that are
+proprietary and closed-source, or that are currently unmaintained.</p>
+<p>The <tt class="docutils literal"><span class="pre">uri</span></tt> field follows the syntax &quot;ivy:organization#name;revision&quot;. For example:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+  <span class="nx">name</span><span class="o">:</span>   <span class="nx">ivytest</span>
+  <span class="nx">system</span><span class="o">:</span> <span class="nx">ivy</span>
+  <span class="nx">uri</span><span class="o">:</span>   <span class="s2">&quot;ivy:org.scala-sbt#compiler-interface;0.12.4&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>If cross-versions are in use, the Scala version suffix must be explicitly added to the name,
+for example: &quot;ivy:org.specs2#specs2_2.10;1.12.3&quot;. The &quot;extra&quot; options are the following:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;main-jar&quot;</span>    <span class="o">:</span> <span class="o">&lt;</span><span class="kc">true</span><span class="o">-</span><span class="nx">or</span><span class="o">-</span><span class="kc">false</span><span class="o">&gt;</span>
+ <span class="s2">&quot;sources&quot;</span>     <span class="o">:</span> <span class="o">&lt;</span><span class="kc">true</span><span class="o">-</span><span class="nx">or</span><span class="o">-</span><span class="kc">false</span><span class="o">&gt;</span>
+ <span class="s2">&quot;javadoc&quot;</span>     <span class="o">:</span> <span class="o">&lt;</span><span class="kc">true</span><span class="o">-</span><span class="nx">or</span><span class="o">-</span><span class="kc">false</span><span class="o">&gt;</span>
+ <span class="s2">&quot;artifacts&quot;</span>   <span class="o">:</span> <span class="p">[</span> <span class="o">&lt;</span><span class="nx">art1</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="nx">art2</span><span class="o">&gt;</span><span class="p">,...</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>All the fields are optional. The specification of an artifact is:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s2">&quot;classifier&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">classifier</span><span class="o">&gt;</span>
+ <span class="s2">&quot;type&quot;</span>        <span class="o">:</span> <span class="o">&lt;</span><span class="nx">type</span><span class="o">&gt;</span>
+ <span class="s2">&quot;ext&quot;</span>         <span class="o">:</span> <span class="o">&lt;</span><span class="nx">extension</span><span class="o">&gt;</span>
+ <span class="s2">&quot;configs&quot;</span>     <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">conf1</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="nx">conf2</span><span class="o">&gt;</span><span class="p">,...</span> <span class="p">]</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The option <tt class="docutils literal"><span class="pre">main-jar</span></tt> controls whether the default binary jar is fetched from the
+repository, and it is true by default. The options <tt class="docutils literal"><span class="pre">sources</span></tt> grabs the source jar, and the
+option <tt class="docutils literal"><span class="pre">javadoc</span></tt> the documentation jar; both options are false by default. The field
+<tt class="docutils literal"><span class="pre">artifact</span></tt> can be used to retrieve only specific artifacts from the module.</p>
+<p>The four properties of the artifact specification are optional, and map directly to
+the components of the Ivy resolution pattern. If no property <tt class="docutils literal"><span class="pre">classifier</span></tt> is present,
+or if it is the empty string, the classifier will remain unspecified. The fields
+<tt class="docutils literal"><span class="pre">type</span></tt> and <tt class="docutils literal"><span class="pre">ext</span></tt>, if omitted, will default to the string &quot;jar&quot;. The field
+<tt class="docutils literal"><span class="pre">configs</span></tt> can optionally be used to specify one or more Ivy configuration; if missing,
+the configuration <tt class="docutils literal"><span class="pre">default</span></tt> will be used. For example, the javadoc jar of a module
+can also be obtained by specifying an artifact in which the classifier is
+&quot;javadoc&quot;, the type is &quot;doc&quot;, the file extension is &quot;jar&quot;, and the configuration
+is &quot;javadoc&quot;.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="buildOptions.html"><em>Build options</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Using dbuild</a><ul>
+<li><a class="reference internal" href="#id1">Using dbuild</a></li>
+<li><a class="reference internal" href="#properties-file">Properties file</a></li>
+<li><a class="reference internal" href="#the-build-configuration-file">The build configuration file</a></li>
+<li><a class="reference internal" href="#the-build-section">The build section</a></li>
+<li><a class="reference internal" href="#sbt-specific-options">sbt-specific options</a></li>
+<li><a class="reference internal" href="#scala-specific-options">Scala-specific options</a></li>
+<li><a class="reference internal" href="#scala-version-numbers">Scala version numbers</a></li>
+<li><a class="reference internal" href="#ivy-specific-options">Ivy-specific options</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

@@ -18,19 +18,19 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
   final val runner = new SbtRunner(repos, buildBase / "runner")
   final val extractor = new SbtRunner(repos, buildBase / "extractor")
   
-  private def sbtExpandConfig(config: ProjectBuildConfig) = config.extra match {
+  private def sbtExpandConfig(config: ProjectBuildConfig, buildOptions:BuildOptions) = config.extra match {
     case None => SbtExtraConfig(sbtVersion = Defaults.sbtVersion) // pick default values
     case Some(ec:SbtExtraConfig) => {
       if (ec.sbtVersion == "")
-        ec.copy(sbtVersion = Defaults.sbtVersion)
+        ec.copy(sbtVersion = buildOptions.sbtVersion)
       else
         ec
     }
     case _ => throw new Exception("Internal error: sbt build config options are the wrong type in project \""+config.name+"\". Please report")
   }
 
-  override def projectDbuildDir(baseDir: File, config: ProjectBuildConfig): File = {
-    val ec = sbtExpandConfig(config)
+  override def projectDbuildDir(baseDir: File, config: RepeatableProjectBuild): File = {
+    val ec = sbtExpandConfig(config.config, config.buildOptions)
     projectDir(baseDir, ec) / ".dbuild"
   }
 
@@ -42,14 +42,14 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
     projectDir
   }
 
-  def extractDependencies(config: ProjectBuildConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
-    val ec = sbtExpandConfig(config)
+  def extractDependencies(config: ExtractionConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
+    val ec = sbtExpandConfig(config.buildConfig, config.buildOptions)
     val projDir = projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifactsOut = {
-    val ec = sbtExpandConfig(project.config)
+    val ec = sbtExpandConfig(project.config, project.buildOptions)
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory

@@ -16,7 +16,7 @@ object SbtSupport {
   }
 
   def downloadFile(uri: String, file: File): File = {
-    import dispatch._
+    import dispatch.classic._
     if(!file.exists) {
        // oddly, some places require us to create the file before writing...
        IO.touch(file)
@@ -29,7 +29,8 @@ object SbtSupport {
   }
 
   val buildSettings: Seq[Setting[_]] = Seq(
-    sbtLaunchJarUrl <<= sbtVersion apply downloadUrlForVersion,
+//    sbtLaunchJarUrl <<= sbtVersion apply downloadUrlForVersion,
+    sbtLaunchJarUrl := downloadUrlForVersion(Dependencies.sbtVersion13),
     sbtLaunchJarLocation <<= baseDirectory (_ / "target" / "sbt" / "sbt-launch.jar"),
     sbtLaunchJar <<= (sbtLaunchJarUrl, sbtLaunchJarLocation) map downloadFile
   )

@@ -26,7 +26,8 @@ object SbtExtractor {
     IO.withTemporaryFile("result", "sbtmeta") { result =>
       log.debug("Extracting SBT build (" + project + ") dependencies into " + result)
       runner.run(
-          projectDir = project, 
+          projectDir = project,
+          sbtVersion = extra.sbtVersion,
           log = log,
           javaProps = Map(
               "dbuild.project.dependency.metadata.file" -> result.getAbsolutePath,

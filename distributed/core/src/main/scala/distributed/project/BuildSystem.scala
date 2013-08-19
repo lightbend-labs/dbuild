@@ -24,7 +24,7 @@ trait BuildSystem {
    * 
    * @return The dependencies the local project requires.
    */
-  def extractDependencies(config: ProjectBuildConfig, dir: java.io.File, log: Logger): ExtractedBuildMeta
+  def extractDependencies(config: ExtractionConfig, dir: java.io.File, log: Logger): ExtractedBuildMeta
   /**
    * Runs this build system on a project.
    * 
@@ -45,5 +45,5 @@ trait BuildSystem {
    * @param dir The dir containing the checkout of the project
    * @param config The configuration record of this project
    */
-  def projectDbuildDir(dir: File, proj: ProjectBuildConfig): File = dir / ".dbuild"
+  def projectDbuildDir(dir: File, proj: RepeatableProjectBuild): File = dir / ".dbuild"
 }

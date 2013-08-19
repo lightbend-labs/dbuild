@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 import Dependencies._
-import com.typesafe.packager.PackagerPlugin.Universal  
+import com.typesafe.sbt.SbtNativePackager.Universal  
 import com.typesafe.sbt.SbtSite.site
 import com.typesafe.sbt.SbtGhPages.{ghpages, GhPagesKeys}
 import com.typesafe.sbt.SbtGit.{git, GitKeys}
@@ -14,7 +14,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.6.3"
+  def MyVersion: String = "0.6.4"
   
   lazy val root = (
     Project("root", file(".")) 
@@ -45,36 +45,39 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val dmeta = (
       DmodProject("metadata")
       dependsOn(graph, hashing)
-      dependsOnRemote(jacks, jackson, typesafeConfig, sbtCollections, commonsLang)
+      dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
     )
 
   // Projects relating to distributed builds.
   lazy val logging = (
       DmodProject("logging")
-      dependsOnRemote(sbtLogging, sbtIo, sbtLaunchInt)
+      dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
     )
   lazy val actorLogging = (
       DmodProject("actorLogging")
       dependsOn(logging)
-      dependsOnRemote(sbtLogging, akkaActor, sbtIo, sbtLaunchInt)
+      dependsOnAkka()
+      dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)      
     )
   lazy val dcore = (
       DmodProject("core")
       dependsOn(dmeta, graph, hashing, logging, drepo)
-      dependsOnRemote(sbtIo)
+      dependsOnSbt(sbtIo)
     )
   lazy val dprojects = (
       DmodProject("projects")
       dependsOn(dcore, actorLogging)
-      dependsOnRemote(sbtIo)
+      dependsOnSbt(sbtIo)
     )
   lazy val drepo = (
     DmodProject("repo")
     dependsOn(dmeta,logging)
-    dependsOnRemote(mvnAether, aetherWagon, dispatch, sbtIo, sbtLaunchInt)
-      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization) map { (dir, version, org) =>
+    dependsOnRemote(mvnAether, aetherWagon, dispatch)
+    dependsOnSbt(sbtIo, sbtLaunchInt)
+      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion, streams) map { (dir, version, org, sv, s) =>
         val file = dir / "Defaults.scala"
         if(!dir.isDirectory) dir.mkdirs()
+        s.log.info("Generating \"Defaults.scala\" for sbt "+sbtVer(sv)+" and Scala "+sv)
         IO.write(file, """
 package distributed.repo.core
 
@@ -83,21 +86,23 @@ object Defaults {
   val version = "%s"
   val org = "%s"
 }
-""" format (Dependencies.sbtVersion, version, org))
+""" format (sbtVer(sv), version, org))
         Seq(file)
       })
   )
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
-      dependsOnRemote(sbtLaunchInt, aws, uriutil, dispatch, gpgLib)
+      dependsOnRemote(aws, uriutil, dispatch, gpgLib)
+      dependsOnSbt(sbtLaunchInt)
     )
 
   // Projects relating to supporting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dcore, drepo, dmeta)
-      dependsOnRemote(mvnEmbedder, mvnWagon, sbtLaunchInt, sbtIvy, javaMail)
+      dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
+      dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
     ) 
 
@@ -105,6 +110,21 @@ object Defaults {
   lazy val sbtSupportPlugin = (
     SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
     dependsOn(defaultSupport, dmeta)
+      settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
+        val file = dir / "Update.scala"
+        if(!dir.isDirectory) dir.mkdirs()
+        s.log.info("Generating \"Update.scala\" for sbt "+sbtVer(sv)+" and Scala "+sv)
+        val where = if (sbtVer(sv).startsWith("0.12")) "Project" else "Def"
+        IO.write(file, """
+package com.typesafe.dbuild
+object SbtUpdate {
+def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.update[T]
+}
+""" format (where, where, where))
+        Seq(file)
+      })
+    // this aggregate is only for publishing the plugin with 2.10.2 / 0.13
+    aggregate(defaultSupport, dmeta, dcore, drepo, logging, graph, hashing)
   )
 }
 
@@ -113,6 +133,8 @@ object Defaults {
 trait BuildHelper extends Build {
   
   def MyVersion: String
+
+  def sbtVer(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) sbtVersion12 else sbtVersion13
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
@@ -126,7 +148,7 @@ trait BuildHelper extends Build {
     publishArtifact in (Compile, packageSrc) := false,
     publishMavenStyle := false
   )
-  
+
   // TODO - Aggregate into a single JAR if possible for easier resolution later...
   def SbtPluginProject(name: String, file: File) = (
       Project(name, file)
@@ -154,6 +176,8 @@ trait BuildHelper extends Build {
   implicit def p2remote(p: Project): RemoteDepHelper = new RemoteDepHelper(p)
   class RemoteDepHelper(p: Project) {
     def dependsOnRemote(ms: ModuleID*): Project = p.settings(libraryDependencies ++= ms)
+    def dependsOnSbt(ms: (String=>ModuleID)*): Project = p.settings(libraryDependencies <++= (scalaVersion) {sv => ms map {_(sbtVer(sv))}})
+    def dependsOnAkka(): Project = p.settings(libraryDependencies <+= (scalaVersion) {sv => if (sv.startsWith("2.9")) akkaActor29 else akkaActor210})
   }
 
   lazy val ddocs = (Project("d-docs",file("docs"))

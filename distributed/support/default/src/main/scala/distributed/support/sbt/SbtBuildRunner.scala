@@ -31,6 +31,7 @@ object SbtBuilder {
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       runner.run(
         projectDir = project,
+        sbtVersion = config.config.sbtVersion,
         log = log,
         javaProps = Map(
             "sbt.repository.config" -> repoFile.getAbsolutePath,

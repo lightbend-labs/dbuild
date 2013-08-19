@@ -9,7 +9,18 @@ object StateHelpers {
     extracted.structure.allProjectRefs
 
   private def saveMsg(e: Throwable, lastMsg: String) = {
-    writeStringToFile(new File(lastMsg), e.getMessage, "UTF-8")
+    val msg = e match {
+      case x:sbt.Incomplete =>
+        x.message match {
+          case Some(s) => s
+          case None => x.directCause match {
+            case Some(i) => Option(i.getMessage) getOrElse ""
+            case None => ""
+          }
+        }
+      case x => x.getMessage
+    }
+    writeStringToFile(new File(lastMsg), msg, "UTF-8")
     e.printStackTrace()
     throw e
   }

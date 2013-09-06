@@ -29,7 +29,7 @@ import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
 
 object IvyMachinery {
   def ivyExpandConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => IvyExtraConfig(false, false, true, Seq.empty, None) // pick default values
+    case None => IvyExtraConfig(false, false, true, Seq.empty, Seq.empty, None) // pick default values
     case Some(ec: IvyExtraConfig) => ec
     case _ => throw new Exception("Internal error: ivy build config options are the wrong type in project \"" + config.name + "\". Please report")
   }

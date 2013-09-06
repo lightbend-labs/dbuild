@@ -57,9 +57,35 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
       if (deps.nonEmpty) log.info("Dependencies of project " + config.name + ":")
       deps foreach { d => log.info("  " + d) }
-      val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
-        firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
-        nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))
+      def isExcluded(node: IvyNode): Boolean = { 
+        val extra = IvyMachinery.ivyExpandConfig(config)
+        val id = node.getResolvedId
+        extra.excludes.exists { ex =>
+          (id.getOrganisation == ex.organization) &&
+          (id.getName == ex.name)
+        }
+      }
+      def depsAsDbuild: Seq[ProjectRef] = {
+        val allArts = 
+          for {
+            n <- nodes drop 1
+            if n.isLoaded
+            if !isExcluded(n)
+            art <- n.getAllArtifacts.toSeq
+          } yield artifactToProjectRef(art)
+        allArts.distinct
+      } 
+      val q = ExtractedBuildMeta(
+          version = modRevId.getRevision, 
+          projects = Seq(
+              Project(
+                  name = fixName(first.getName), 
+                  organization = first.getOrganisation,
+                  artifacts = firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
+                  dependencies = depsAsDbuild
+             )
+          )
+      )
       log.debug(q.toString)
       q
     }

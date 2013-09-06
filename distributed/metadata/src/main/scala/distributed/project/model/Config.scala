@@ -256,6 +256,7 @@ case class IvyExtraConfig(
   javadoc: Boolean = false,
   @JsonProperty("main-jar") mainJar: Boolean = true,
   artifacts: Seq[IvyArtifact] = Seq.empty,
+  excludes: Seq[IvyExclude] = Seq.empty,
   // The snapshot marker is used internally by the Ivy build system
   // in order to distinguish among different snapshots of the same
   // dependency, in which case it contains the publication date.
@@ -268,6 +269,11 @@ case class IvyArtifact(
   ext: String = "jar",
   configs: SeqString = Seq("default"))
 
+case class IvyExclude(
+  organization: String,
+  name: String
+)
+  
 case class MavenExtraConfig(
   directory: String = "") extends ExtraConfig
 

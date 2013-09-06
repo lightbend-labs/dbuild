@@ -341,6 +341,7 @@ for example: "ivy:org.specs2#specs2_2.10;1.12.3". The "extra" options are the fo
     "sources"     : <true-or-false>
     "javadoc"     : <true-or-false>
     "artifacts"   : [ <art1>, <art2>,... ]
+    "excludes"    : [ <exclude1>, <exclude2>, .... ]
    }
 
 All the fields are optional. The specification of an artifact is:
@@ -359,6 +360,7 @@ repository, and it is true by default. The options ``sources`` grabs the source 
 option ``javadoc`` the documentation jar; both options are false by default. The field
 ``artifact`` can be used to retrieve only specific artifacts from the module.
 
+
 The four properties of the artifact specification are optional, and map directly to
 the components of the Ivy resolution pattern. If no property ``classifier`` is present,
 or if it is the empty string, the classifier will remain unspecified. The fields
@@ -368,6 +370,20 @@ the configuration ``default`` will be used. For example, the javadoc jar of a mo
 can also be obtained by specifying an artifact in which the classifier is
 "javadoc", the type is "doc", the file extension is "jar", and the configuration
 is "javadoc".
+
+The specification of an exclude is:
+
+.. code-block:: javascript
+
+   {
+    "organization"  : <groupId>
+    "name"          : <name>
+   }
+
+Exclusions are used to prevent dependencies in ivy from showing up in the dbuild graph.   This can be used
+to break cycles between things you wish to resolve from Ivy and projects which use them.
+Specifically, this can be used to resolve an artifact and remove its dependency on a project you are building,
+like the scala-xml module and the scala build itself.
 
 |
 

@@ -376,7 +376,17 @@ object DistributedRunner {
   def fixScalaVersion2(dbuildDir: File, repoDir: File, locs: Seq[model.ArtifactLocation])(oldSettings: Seq[Setting[_]], log: Logger) = {
     customScalaVersion(locs).toSeq flatMap { ver =>
       log.info("Preparing Scala binaries: scala-library version " + ver)
-      val scalaArts = locs.filter(_.info.organization == "org.scala-lang")
+      // TODO - We actually need to pull all dependencies that the scala compiler has for this to work.
+      // Unfortunately, with the 2.11 modularization, some of the modules are required by the scala compiler/scaladoc
+      // to run.  We have to pull these in.  Right now, that's just scala-xml.
+      // In the future, we should see if we can just resolve the scala-compiler.jar using Ivy here instead
+      // of manually constructing the scala instance....
+      // In sbt 0.13, it may be ok to just let Ivy go by default without special handling.
+      def isCoreScalaArtifact(dep: model.ArtifactLocation) = dep.info.organization == "org.scala-lang"
+      def isRequiredModularScalaArtifact(dep: model.ArtifactLocation) = 
+        (dep.info.organization == "org.scala-lang.modules") &&
+        ((dep.info.name contains "scala-xml") || (dep.info.name contains "scala-parser-combinators"))
+      val scalaArts = locs.filter(dep => isRequiredModularScalaArtifact(dep) || isCoreScalaArtifact(dep))
       val scalaHomeSha = hashing sha1 (scalaArts map { _.version })
       val scalaHome = dbuildDir / "scala" / scalaHomeSha
       generateScalaDir(repoDir, scalaArts, scalaHome)
@@ -409,21 +419,30 @@ object DistributedRunner {
       if dep.name == "scala-library"
     } yield artifact.version).headOption
 
+  // TODO - This should actually just use ivy resolution of scala-compiler.jar, to ensure that we
+  // have pulled in all artifacts.   The issue is that now certain artifacts are cross-versioned,
+  // and the old mechanism of finding maven/ivy files does not work.  This is a workaround until
+  // we actually use artifact dependencies to resolve what we need.
   private def generateScalaDir(repoDir: File, scalaArts: Seq[ArtifactLocation], scalaHome: File): Unit = {
-    scalaArts foreach { art =>
-      val org = art.info.organization
-      val name = art.info.name
-      val ver = art.version
-      val mavenFile = mavenJarFile(repoDir, org, name, ver)
-      val ivyFile = ivyJarFile(repoDir, org, name, ver)
-      if (mavenFile.isFile && ivyFile.isFile)
-        sys.error("Unexpected internal error: both maven and ivy provide the artifact " +
-          art.info.name + ". Please report.")
-      if (mavenFile.isFile)
-        retrieveJarFile(mavenFile, scalaHome, name)
-      if (ivyFile.isFile)
-        retrieveJarFile(ivyFile, scalaHome, name)
-    }
+    // First hackily grab ALL scala artifacts
+    val coreLibs = ( 
+      (mavenBase(repoDir, "org.scala-lang") ** "*.jar").get ++
+      (ivyBase(repoDir, "org.scala-lang") ** "*.jar").get ++
+      (mavenBase(repoDir, "org.scala-lang.modules") ** "*.jar").get ++
+      (ivyBase(repoDir, "org.scala-lang.modules") ** "*.jar").get
+    )
+    // Now find all artifacts which match what we expect.
+    // TODO - This doesn't detect multiple overlapping jars, just blindly copies artifacts
+    for {
+      art <- scalaArts
+      lib <- coreLibs
+      name = art.info.name
+      if lib.isFile
+      if lib.getName startsWith name
+      if lib.getName endsWith art.info.extension
+      if !(lib.getName contains "javadoc")
+      if !(lib.getName contains "sources")
+    } retrieveJarFile(lib, scalaHome, name) 
   }
 
   def mavenJarFile(repoDir: File, org: String, name: String, version: String) =

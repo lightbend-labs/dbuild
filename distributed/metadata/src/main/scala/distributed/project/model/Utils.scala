@@ -10,8 +10,12 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import java.io.File
 
 object Utils {
+  // TODO - We should figure out how to selectively require known classes.
+  // E.g. we should allow users to have a "globals" at the top of the config that we ignore,
+  // but then restrict parsing to known values after this top "unrestricted" block.
+  // For now, let's remove the restriction so our build files dont' go out of control.
   private val mapper=JacksMapper.withOptions(CaseClassCheckNulls(true),
-      CaseClassSkipNulls(true),CaseClassRequireKnown(true))
+      CaseClassSkipNulls(true),CaseClassRequireKnown(false))
   private def readValueT[T](c: Config)(implicit m: Manifest[T]) =
     withContextLoader(getClass.getClassLoader) {
       val expanded = c.resolve.root.render(ConfigRenderOptions.concise)

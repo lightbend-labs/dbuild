@@ -38,53 +38,64 @@ class SbtBuildMain extends xsbti.AppMain {
       printClassLoaders(cl.getParent)
   }
 
-  def run(configuration: xsbti.AppConfiguration) =
-    try {
-      println("Starting dbuild...")
-      val args = configuration.arguments
-      //      println("Args (" + (configuration.arguments mkString ",") + ")")
-      val configFile = new File(args(0))
-      val config =
-        if (args.length == 1)
-          readValue[DBuildConfiguration](configFile)
-        else sys.error("Usage: dbuild {build-file}")
-      // Unique names?
-      val allNames = config.build.projects map { _.name }
-      val uniqueNames = allNames.distinct
-      if (uniqueNames.size != allNames.size) {
-        sys.error("Project names must be unique! Duplicates found: " + (allNames diff uniqueNames).mkString(","))
-      }
-      if (allNames.exists(_.size < 3)) {
-        sys.error("Project names must be at least three characters long.")
-      }
-      //      println("Config: " + writeValue(config))
-      //      println("Classloader:")
-      //      printClassLoaders(getClass.getClassLoader)
-      val main = new LocalBuildMain(configuration)
-      val outcome = try {
-        def time(f: => BuildOutcome) = {
-          val s = System.nanoTime
-          val ret = f
-          val t = System.nanoTime - s
-          // Braindead SimpleDateFormat messes up 'S' format
-          val time = new Date(t / 1000000L)
-          val tenths = (t / 100000000L) % 10L
-          val sdf = new SimpleDateFormat("HH'h' mm'm' ss'.'")
-          sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
-          Thread.sleep(250) // have no way to sync on log msgs; just wait
-          println("Result: " + ret.status)
-          println("Build " + (if (ret.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + sdf.format(time) + tenths + "s")
-          ret
+  def run(configuration: xsbti.AppConfiguration) = {
+    println("Starting dbuild...")
+    val args = configuration.arguments
+    //      println("Args (" + (configuration.arguments mkString ",") + ")")
+    if (args.length != 1) {
+      println("Usage: dbuild {build-file}")
+      Exit(1)
+    } else {
+      try {
+        val configFile = new File(args(0))
+        if (!configFile.isFile())
+          sys.error("Configuration file not found")
+        val config =
+          try {
+            readValue[DBuildConfiguration](configFile)
+          } catch {
+            case e: Exception =>
+              println("Error reading configuration file:")
+              throw e
+          }
+        // Unique names?
+        val allNames = config.build.projects map { _.name }
+        val uniqueNames = allNames.distinct
+        if (uniqueNames.size != allNames.size) {
+          sys.error("Project names must be unique! Duplicates found: " + (allNames diff uniqueNames).mkString(","))
         }
-        time { main.build(config,configFile.getName) }
-      } finally main.dispose()
-      println("All done.")
-      if (outcome.isInstanceOf[BuildBad]) Exit(1) else Exit(0)
-    } catch {
-      case e: Exception =>
-        e.printStackTrace
-        println("Unexpected failure. Please report.")
-        Exit(1)
+        if (allNames.exists(_.size < 3)) {
+          sys.error("Project names must be at least three characters long.")
+        }
+        //      println("Config: " + writeValue(config))
+        //      println("Classloader:")
+        //      printClassLoaders(getClass.getClassLoader)
+        val main = new LocalBuildMain(configuration)
+        val outcome = try {
+          def time(f: => BuildOutcome) = {
+            val s = System.nanoTime
+            val ret = f
+            val t = System.nanoTime - s
+            // Braindead SimpleDateFormat messes up 'S' format
+            val time = new Date(t / 1000000L)
+            val tenths = (t / 100000000L) % 10L
+            val sdf = new SimpleDateFormat("HH'h' mm'm' ss'.'")
+            sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
+            Thread.sleep(250) // have no way to sync on log msgs; just wait
+            println("Result: " + ret.status)
+            println("Build " + (if (ret.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + sdf.format(time) + tenths + "s")
+            ret
+          }
+          time { main.build(config, configFile.getName) }
+        } finally main.dispose()
+        println("All done.")
+        if (outcome.isInstanceOf[BuildBad]) Exit(1) else Exit(0)
+      } catch {
+        case e: Exception =>
+          e.printStackTrace
+          Exit(1)
+      }
     }
+  }
   case class Exit(val code: Int) extends xsbti.Exit
 } 

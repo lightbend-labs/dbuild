@@ -24,7 +24,7 @@ object ScalaBuildSystem extends BuildSystem {
 
   def extractDependencies(config: ExtractionConfig, dir: File, log: Logger): ExtractedBuildMeta = {
     val ec = scalaExpandConfig(config.buildConfig)
-    val meta=readMeta(dir, ec.exclude)
+    val meta=readMeta(dir, ec.exclude, log)
     val projects=meta.projects map {_.name}
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     meta
@@ -58,7 +58,7 @@ object ScalaBuildSystem extends BuildSystem {
     // the dbuild-specific suffix).
     val version = input.version
 
-    val meta=readMeta(dir, ec.exclude)
+    val meta=readMeta(dir, ec.exclude, log)
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
 
     Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
@@ -99,13 +99,13 @@ object ScalaBuildSystem extends BuildSystem {
    * Also, exclude any subprojects listed in the "exclude" list; they will still
    * be listed, but will not be published or advertised as available.
    */
-  private def readMeta(baseDir: File, exclude: Seq[String]): ExtractedBuildMeta = {
+  private def readMeta(baseDir: File, exclude: Seq[String], log: logging.Logger): ExtractedBuildMeta = {
     val dbuildMetaFile = new File(baseDir, "dbuild-meta.json")
     val readMeta=try readValue[ExtractedBuildMeta](dbuildMetaFile)
-    catch { case e:Exception =>
-      System.err.println("Failed to read scala metadata file: " + dbuildMetaFile.getAbsolutePath)
-      e.printStackTrace(System.err)
-      System.err.println("Falling back to default.")
+    catch { case e: Exception =>
+      log.error("Failed to read scala metadata file: " + dbuildMetaFile.getAbsolutePath)
+      logging.Logger.prepareLogMsg(log, e)
+      log.error("Falling back to default.")
       fallbackMeta(baseDir)
     }
     // There are no real subprojects in the Scala build;

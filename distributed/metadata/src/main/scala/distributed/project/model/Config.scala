@@ -35,8 +35,25 @@ private case class ProjectBuildConfigShadow(name: String,
  */
 case class DBuildConfiguration(
   build: DistributedBuildConfig,
-  options: GeneralOptions = GeneralOptions() // pick defaults if empty
-  )
+  options: GeneralOptions = GeneralOptions(), // pick defaults if empty
+  vars: Option[Vars] = Some(Vars())
+)
+
+/* This section is unchecked, and is used prior to deserialization by
+ * the Typesafe config library. Its contents are no longer used once we
+ * get to deserialization, which is why it is always replaced with an
+ * empty record.
+ */
+@JsonDeserialize(using = classOf[VarDeserializer])
+case class Vars
+class VarDeserializer extends JsonDeserializer[Vars] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): Vars = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    Vars()
+  }
+}
 
 /**
  *  Some of the options within the DistributedBuildConfig may affect

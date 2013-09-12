@@ -58,7 +58,8 @@ in the documentation. The top level of the configuration file is:
 
    {
     "build"  : <build_section>,
-    "options": <options_section>
+    "options": <options_section>,
+    "vars"   : { <substitution_var1, <substitution_var2>, ... }
    }
 
 build
@@ -78,8 +79,22 @@ options
     "notifications" : <notifications>
    }
 
-The two values are optional, and are described in detail on the
-pages :doc:`deploy` and :doc:`notifications`, respectively.
+vars
+  This section is optional; it may contain a list of variables, in JSON format, whose content
+  is simply substituted in the rest of the configuration file, using the conventions of the
+  Typesafe config library. For example, if you define it as:
+
+.. code-block:: javascript
+
+   vars: {
+    a : "string1"
+    b : "string2"
+   }
+
+
+  you can then insert in the rest of the file ``${vars.a}`` and ``${vars.b}``, which will
+  be replaced with the specified replacement strings. Sequences, or other arbitrary JSON
+  structures, may also be defined and expanded in the same manner.
 
 The build section
 -----------------

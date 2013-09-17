@@ -67,7 +67,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val dprojects = (
       DmodProject("projects")
       dependsOn(dcore, actorLogging)
-      dependsOnSbt(sbtIo)
+      dependsOnSbt(sbtIo, sbtIvy)
     )
   lazy val drepo = (
     DmodProject("repo")

@@ -19,13 +19,22 @@ case class ProjectBuildConfig(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
-  extra: Option[ExtraConfig])
+  deps: Option[DepsModifiers] = None,
+  extra: Option[ExtraConfig]
+)
 
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
+  deps: Option[DepsModifiers] = None,
   extra: JsonNode = null)
+
+case class DepsModifiers(
+    // One or more dependencies, in the form "org#name".
+    // They will not be rewired by dbuild
+    ignore: SeqString = Seq.empty
+)
 
 /**
  * The initial dbuild configuration. The "build" section is a complete
@@ -241,7 +250,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, newData)
+    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.deps, newData)
   }
 }
 /**

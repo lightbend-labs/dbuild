@@ -129,6 +129,7 @@ Each project descriptions has this structure:
     "system"      : <build-system>,
     "uri"         : <source-repository-uri>,
     "set-version" : <optional-output-version>
+    "deps"        : <optional-dependencies-modifiers>
     "extra"       : <optional-extra-build-parameters>
    }
 
@@ -167,6 +168,37 @@ set-version
   override the default value by specifying a specific version string here. If you are planning to
   use this feature in order to release artifact, then you also need to set the option "cross-version"
   to "standard", as explained in the section :ref:`section-build-options`.
+
+deps
+  The optional "deps" section can be used to modify the way in which dbuild rewires certain
+  dependencies of this project. At this time, it can be used to prevent dbuild from modifying
+  some of the dependencies, by using the syntax:
+
+.. code-block:: javascript
+
+   {
+    "ignore" : [ mod1, mod2, ...]
+   }
+
+  The dependencies that match the specified modules (in the format "organization#name") will
+  be resolved as they would normally be for the project, rather than being adapted by dbuild
+  in order to match one of the other projects in the file. For example:
+
+.. code-block:: text
+
+   {
+     name:   scala-xml
+     system: ivy
+     uri:    "ivy:org.scala-lang.modules#scala-xml_2.11.0-M4;1.0-RC3"
+     set-version: "1.0-RC3"
+     deps.ignore: "org.scala-lang#scala-library"
+   }
+
+  This option exists only to address very specific cases in which dependency cycles exist
+  that cannot be solved otherwise; it should not be used under normal circumstances. The
+  recommended approach is rather either splitting the projects into sets of subprojects that
+  do not form a cycle, or modifying the projects themselves, in order to remove the cyclic
+  dependencies.
 
 extra
   The "extra" component is optional, as are all of its sub-components; it describes additional

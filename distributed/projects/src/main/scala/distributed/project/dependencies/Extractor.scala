@@ -13,6 +13,7 @@ import repo.core.Repository
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.logging.Logger.prepareLogMsg
 import org.apache.ivy.core.module.id.ModuleId
+import distributed.project.model.ProjectRef
 
 
 /** This is used to extract dependencies from projects. */
@@ -32,10 +33,17 @@ class Extractor(
       case None => extractedDeps
       case Some(all) =>
         val ignored = all.ignore.map(ModuleId.parse)
+        // are these ignored modules present? if not, print a warning
+        val allRealDeps = extractedDeps.projects.flatMap(_.dependencies)
+        def sameId(dep: ProjectRef, mod: ModuleId) =
+          mod.getOrganisation == dep.organization && mod.getName == dep.name
+        val notFound = ignored.filterNot(mod =>
+          allRealDeps.exists(dep => sameId(dep, mod)))
+        if (notFound.nonEmpty)
+          log.warn(notFound.mkString("*** WARNING: These dependencies (marked as \"ignore\") were not found: ", ", ", ""))
         extractedDeps.copy(projects = extractedDeps.projects.map(proj =>
           proj.copy(dependencies = proj.dependencies.filterNot(dep =>
-            ignored.exists(mod =>
-              mod.getOrganisation == dep.organization && mod.getName == dep.name)))))
+            ignored.exists(mod => sameId(dep, mod))))))
     }
   }
 

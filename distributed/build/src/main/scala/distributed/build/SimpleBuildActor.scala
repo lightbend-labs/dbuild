@@ -95,14 +95,33 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 extractionOutcome.outcomes.map(o => if (o.isInstanceOf[ExtractionOK]) o.withOutcomes(extractionOutcome.outcomes.diff(Seq(o))) else o))
               afterTasks("After extraction failed, tasks failed", None, Future(remappedExtractionOutcome))
             case extractionOutcome: ExtractionOK =>
+
               // fromExtractionOutcome() may fail, for instance if cycles are detected. Possibly,
               // something may also go wrong within publishFullBuild(). So, we must catch and wrap exceptions
-              // for those as well, and run afterTask() as usual afterward. >>> TODO!
-              val fullBuild = RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)
-              val fullLogger = log.newNestedLogger(fullBuild.uuid)
-              publishFullBuild(fullBuild, fullLogger)
-              val futureBuildResult = runBuild(target, fullBuild, fullLogger)
-              afterTasks("After building, some tasks failed", Some(fullBuild), futureBuildResult)
+              // for those as well, and run afterTask() as usual afterward.
+              def nest[K](f: => K)(g: K => Future[BuildOutcome]): Future[BuildOutcome] = (try {
+                Left(f)
+              } catch {
+                case e =>
+                  val outcome = Future(ExtractionFailed(".", extractionOutcome.outcomes, "Cause: " + prepareLogMsg(log, e)))
+                  afterTasks("After extraction, an error occurred", None, outcome)
+                  Right(outcome)
+              }) match {
+                case Left(k) => g(k)
+                case Right(o) => o
+              }
+
+              nest(RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)) { fullBuild =>
+                // evaluate repeatableBuilds in order to force cycles to be checked at this time
+                nest(fullBuild.repeatableBuilds) { rb =>
+                  val fullLogger = log.newNestedLogger(fullBuild.uuid)
+                  nest(publishFullBuild(fullBuild, fullLogger)) { unit =>
+                    val futureBuildResult = runBuild(target, fullBuild, fullLogger)
+                    afterTasks("After building, some tasks failed", Some(fullBuild), futureBuildResult)
+                  }
+                }
+              }
+              
             case _ => sys.error("Internal error: extraction did not return ExtractionOutcome. Please report.")
           }
         }

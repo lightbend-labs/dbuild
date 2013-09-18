@@ -95,6 +95,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 extractionOutcome.outcomes.map(o => if (o.isInstanceOf[ExtractionOK]) o.withOutcomes(extractionOutcome.outcomes.diff(Seq(o))) else o))
               afterTasks("After extraction failed, tasks failed", None, Future(remappedExtractionOutcome))
             case extractionOutcome: ExtractionOK =>
+              // fromExtractionOutcome() may fail, for instance if cycles are detected. Possibly,
+              // something may also go wrong within publishFullBuild(). So, we must catch and wrap exceptions
+              // for those as well, and run afterTask() as usual afterward. >>> TODO!
               val fullBuild = RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)
               val fullLogger = log.newNestedLogger(fullBuild.uuid)
               publishFullBuild(fullBuild, fullLogger)
@@ -119,7 +122,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     }
   }
   final def wrapExceptionIntoOutcome[A <: BuildOutcome](log: logging.Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
-    implicit val ctx = context.system
     try f(a) catch {
       case e =>
         UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e))

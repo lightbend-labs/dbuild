@@ -11,6 +11,15 @@ trait Logger extends SbtLogger with ProcessLogger {
 object Logger {
   def prepareLogMsg(log: Logger, t: Throwable) = {
     val errors = new java.io.StringWriter
+    // usually, prepareLogMsg only prints the first
+    // few lines of the stack trace. However, a graph cycle
+    // description may be longer than that, so we print out
+    // the description separately
+    t match {
+      case e:graph.CycleException =>
+        e.description.split("\n") foreach {log.error(_)}
+      case _ =>
+    }
     t.printStackTrace(new java.io.PrintWriter(errors));
     errors.toString.split("\n").take(6) foreach { log.error(_) }
     val msg1 = t.getClass.getSimpleName + (Option(t.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")

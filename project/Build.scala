@@ -51,6 +51,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   // Projects relating to distributed builds.
   lazy val logging = (
       DmodProject("logging")
+      dependsOn(graph)
       dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
     )
   lazy val actorLogging = (

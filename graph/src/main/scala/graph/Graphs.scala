@@ -2,7 +2,6 @@ package graph
 
 /** A directed graph of nodes. */
 abstract class Graph[N,E] extends GraphCore[N,E] {
-
   // find the strongly connected components of size greater than one
   lazy val cycles = tarjan.filter(_.size>1)
   lazy val isCyclic = cycles.nonEmpty
@@ -81,10 +80,9 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
     if (isCyclic)
       // I have no access to logging here, so I have to
       // create a long error message instead
-      sys.error((cycles map { comp: Set[Node[N]] =>
+      throw new CycleException((cycles map { comp: Set[Node[N]] =>
         comp mkString ("Found a cycle among the following:\n\n", "\n", "\n")
       }).mkString + "The graph is not acyclic.")
-
   }
 
   def safeTopological: Seq[Node[N]] = {
@@ -159,3 +157,7 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
     subTraverse(this, scala.collection.immutable.ListMap[Node[N], State]())
   }
 }
+
+// In case of cycles, we use a special exception
+// to return a more extended error description to the caller
+case class CycleException(description: String) extends Exception("Cycle found")

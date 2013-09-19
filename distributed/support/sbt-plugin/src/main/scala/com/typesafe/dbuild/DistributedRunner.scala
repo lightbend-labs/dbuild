@@ -376,7 +376,8 @@ object DistributedRunner {
   def fixScalaVersion2(dbuildDir: File, repoDir: File, locs: Seq[model.ArtifactLocation])(oldSettings: Seq[Setting[_]], log: Logger) = {
     customScalaVersion(locs).toSeq flatMap { ver =>
       log.info("Preparing Scala binaries: scala-library version " + ver)
-      val scalaArts = locs.filter(_.info.organization == "org.scala-lang")
+      val scalaOrgs = Seq("org.scala-lang","org.scala-lang.modules")
+      val scalaArts = locs.filter(scalaOrgs contains _.info.organization)
       val scalaHomeSha = hashing sha1 (scalaArts map { _.version })
       val scalaHome = dbuildDir / "scala" / scalaHomeSha
       generateScalaDir(repoDir, scalaArts, scalaHome)
@@ -412,12 +413,15 @@ object DistributedRunner {
   private def generateScalaDir(repoDir: File, scalaArts: Seq[ArtifactLocation], scalaHome: File): Unit = {
     scalaArts foreach { art =>
       val org = art.info.organization
-      val name = art.info.name
+      val name = art.info.name + art.crossSuffix
       val ver = art.version
       val mavenFile = mavenJarFile(repoDir, org, name, ver)
       val ivyFile = ivyJarFile(repoDir, org, name, ver)
       if (mavenFile.isFile && ivyFile.isFile)
         sys.error("Unexpected internal error: both maven and ivy provide the artifact " +
+          art.info.name + ". Please report.")
+      if (!mavenFile.isFile && !ivyFile.isFile)
+        sys.error("Unexpected error: no artifact file found, for the artifact " +
           art.info.name + ". Please report.")
       if (mavenFile.isFile)
         retrieveJarFile(mavenFile, scalaHome, name)

@@ -6,11 +6,14 @@ import sbt.IO
 import sbt.Path._
 import java.io.File
 import project.resolve.ProjectResolver
-import model.{ProjectConfigAndExtracted,ProjectBuildConfig,ExtractedBuildMeta,ExtractionOK,ExtractionOutcome,ExtractionFailed,ExtractionConfig}
+import model.{ ProjectConfigAndExtracted, ProjectBuildConfig, ExtractedBuildMeta }
+import model.{ ExtractionOK, ExtractionOutcome, ExtractionFailed, ExtractionConfig, DepsModifiers }
 import logging._
 import repo.core.Repository
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.logging.Logger.prepareLogMsg
+import org.apache.ivy.core.module.id.ModuleId
+import distributed.project.model.ProjectRef
 
 
 /** This is used to extract dependencies from projects. */
@@ -18,6 +21,31 @@ class Extractor(
     resolver: ProjectResolver, 
     dependencyExtractor: BuildDependencyExtractor,
     repository: Repository) {
+
+  /**
+   * Filter or modify the project dependencies, according to the specification
+   * contained in DepsModifiers. It is presently used to ignore (and not rewire) certain
+   * dependencies; that could be further extended in the future in order to
+   * modify the project dependencies in other manners.
+   */
+  def modifiedDeps(depsMods: Option[DepsModifiers], extractedDeps: ExtractedBuildMeta, log: logging.Logger): ExtractedBuildMeta = {
+    depsMods match {
+      case None => extractedDeps
+      case Some(all) =>
+        val ignored = all.ignore.map(ModuleId.parse)
+        // are these ignored modules present? if not, print a warning
+        val allRealDeps = extractedDeps.projects.flatMap(_.dependencies)
+        def sameId(dep: ProjectRef, mod: ModuleId) =
+          mod.getOrganisation == dep.organization && mod.getName == dep.name
+        val notFound = ignored.filterNot(mod =>
+          allRealDeps.exists(dep => sameId(dep, mod)))
+        if (notFound.nonEmpty)
+          log.warn(notFound.mkString("*** WARNING: These dependencies (marked as \"ignore\") were not found: ", ", ", ""))
+        extractedDeps.copy(projects = extractedDeps.projects.map(proj =>
+          proj.copy(dependencies = proj.dependencies.filterNot(dep =>
+            ignored.exists(mod => sameId(dep, mod))))))
+    }
+  }
 
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */
   def extract(tdir: File, extractionConfig: ExtractionConfig, logger: logging.Logger): ExtractionOutcome = try {
@@ -31,7 +59,9 @@ class Extractor(
       // TODO - This should be configurable!
       cachedExtractOr(config, logger) {
         logger.info("Extracting dependencies for: " + build.name)
-        val deps = dependencyExtractor.extract(config, dir, logger)
+        val extractedDeps = dependencyExtractor.extract(config, dir, logger)
+        // process deps.ignore clauses
+        val deps = modifiedDeps(config.buildConfig.deps, extractedDeps, logger)
         logger.debug("Dependencies = " + writeValue(deps))
         cacheExtract(config, deps, logger)
         ExtractionOK(build.name, Seq.empty, Seq(ProjectConfigAndExtracted(config.buildConfig, deps)))

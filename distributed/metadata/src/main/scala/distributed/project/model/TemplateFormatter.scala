@@ -32,7 +32,7 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome, confName
   }
   def paddedProjectDescription(outcome:BuildOutcome) =
     // "." is the name of the root project
-    if (outcome.project == ".") "The dbuild result is-----------" else "Project " + (outcome.project.padTo(23, "-").mkString)
+    if (outcome.project == ".") "The dbuild result is------------" else "Project " + (outcome.project.padTo(24, "-").mkString)
 
   private val notifVars = SubstitutionNotifications(
     SubstitutionVars(projectName = outcome.project,
@@ -40,7 +40,7 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome, confName
       status = outcome.status,
       projectDescription = if (outcome.project != ".") "project " + outcome.project else "dbuild",
       paddedProjectDescription = paddedProjectDescription(outcome),
-      configName = confName))
+      configName = if (confName.endsWith(".dbuild")) confName.substring(0, confName.length-7) else confName))
 
   // The expansion logic is tricky to get right. The limitation is that the typesafe config library will not
   // perform replacements inside double quotes, and when we write using the same library we do get double quotes.

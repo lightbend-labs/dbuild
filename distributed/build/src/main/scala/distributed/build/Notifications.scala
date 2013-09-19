@@ -230,13 +230,13 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
       "${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}",
       None,
       Some("""---==  Execution Report ==---
-Report from the dbuild run for ${dbuild.template-vars.project-description}:
+Report from the dbuild run for ${dbuild.template-vars.project-description}: 
 ${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}
 ---==  End Execution Report ==---""")),
     NotificationTemplate("email",
       "[dbuild] [${JOB_NAME}] ${dbuild.template-vars.project-description}: ${dbuild.template-vars.status}",
       None,
-      Some("""This is a test report for ${dbuild.template-vars.project-description} in the dbuild configuration "${dbuild.template-vars.config-name}"
+      Some("""This is a report for ${dbuild.template-vars.project-description} in the configuration "${dbuild.template-vars.config-name}"
 running under the Jenkins job "${JOB_NAME}" on ${NODE_NAME}.
 
 ${dbuild.template-vars.subprojects-report}
@@ -244,7 +244,7 @@ ${dbuild.template-vars.subprojects-report}
 ${dbuild.template-vars.status}
 
 
-A more detailed report of this dbuild run is available at:
+A more detailed report of this run is available at:
 ${BUILD_URL}console
 """)))
 }

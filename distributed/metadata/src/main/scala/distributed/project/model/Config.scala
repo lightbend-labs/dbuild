@@ -19,13 +19,22 @@ case class ProjectBuildConfig(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
-  extra: Option[ExtraConfig])
+  deps: Option[DepsModifiers] = None,
+  extra: Option[ExtraConfig]
+)
 
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String,
   @JsonProperty("set-version") setVersion: Option[String],
+  deps: Option[DepsModifiers] = None,
   extra: JsonNode = null)
+
+case class DepsModifiers(
+    // One or more dependencies, in the form "org#name".
+    // They will not be rewired by dbuild
+    ignore: SeqString = Seq.empty
+)
 
 /**
  * The initial dbuild configuration. The "build" section is a complete
@@ -35,8 +44,25 @@ private case class ProjectBuildConfigShadow(name: String,
  */
 case class DBuildConfiguration(
   build: DistributedBuildConfig,
-  options: GeneralOptions = GeneralOptions() // pick defaults if empty
-  )
+  options: GeneralOptions = GeneralOptions(), // pick defaults if empty
+  vars: Option[Vars] = Some(Vars())
+)
+
+/* This section is unchecked, and is used prior to deserialization by
+ * the Typesafe config library. Its contents are no longer used once we
+ * get to deserialization, which is why it is always replaced with an
+ * empty record.
+ */
+@JsonDeserialize(using = classOf[VarDeserializer])
+case class Vars
+class VarDeserializer extends JsonDeserializer[Vars] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): Vars = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    Vars()
+  }
+}
 
 /**
  *  Some of the options within the DistributedBuildConfig may affect
@@ -224,7 +250,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, newData)
+    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.deps, newData)
   }
 }
 /**

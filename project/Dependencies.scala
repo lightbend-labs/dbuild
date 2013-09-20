@@ -4,7 +4,7 @@ import sbt._
 object Dependencies {
 
   val sbtVersion12 = "0.12.4"
-  val sbtVersion13 = "0.13.0-RC5"
+  val sbtVersion13 = "0.13.0"
 
   val mvnVersion = "3.0.4"
 

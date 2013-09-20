@@ -84,7 +84,7 @@ vars
   is simply substituted in the rest of the configuration file, using the conventions of the
   Typesafe config library. For example, if you define it as:
 
-.. code-block:: javascript
+  .. code-block:: javascript
 
    vars: {
     a : "string1"
@@ -174,7 +174,7 @@ deps
   dependencies of this project. At this time, it can be used to prevent dbuild from modifying
   some of the dependencies, by using the syntax:
 
-.. code-block:: javascript
+  .. code-block:: javascript
 
    {
     "ignore" : [ mod1, mod2, ...]
@@ -184,7 +184,7 @@ deps
   be resolved as they would normally be for the project, rather than being adapted by dbuild
   in order to match one of the other projects in the file. For example:
 
-.. code-block:: text
+  .. code-block:: text
 
    {
      name:   scala-xml

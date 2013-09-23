@@ -761,6 +761,23 @@ case class EmailNotification(
   smtp: Smtp = Smtp("localhost", None, "none", false)) extends NotificationKind
 
 /**
+ * Messages sent to a Flowdock flow, via their Push API
+ */
+case class FlowdockNotification(
+  /** The path to a text file containing the Flowdock API token */
+  token: String,
+  /** If "detailed" is true (default), use the long template format,
+   *  if false, print just a one-line summary.
+   */
+  detailed: Boolean = true,
+  /** The username that Flowdock will display as the sender
+   *  (it need not exist in the system)
+   */
+  from: String,
+  /** tags that will be appended to the message */
+  tags: SeqString = Seq.empty) extends NotificationKind
+
+/**
  * Description of the smtp server to be used for email delivery.
  */
 case class Smtp(
@@ -794,5 +811,6 @@ case class ConsoleNotification() extends NotificationKind
 object NotificationKind {
   val kinds: Map[String, java.lang.Class[_ <: NotificationKind]] = Map(
     "console" -> classOf[ConsoleNotification],
+    "flowdock" -> classOf[FlowdockNotification],
     "email" -> classOf[EmailNotification])
 }

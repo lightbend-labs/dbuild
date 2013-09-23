@@ -11,6 +11,7 @@ import Message.RecipientType
 import RecipientType._
 import Creds.loadCreds
 import distributed.project.model.TemplateFormatter
+import dispatch.classic.{ Logger => _, _ }
 
 //
 // Ideally, the ConsoleNotification should become the mechanism by which the entire log of the
@@ -32,6 +33,53 @@ class ConsoleNotificationContext(log: Logger) extends NotificationContext[Consol
   def send(n: ConsoleNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     templ.long.split("\n").foreach(log.info(_))
     None
+  }
+}
+
+case class FlowdockJSON(
+  content: String,
+  external_user_name: String,
+  tags: Seq[String])
+case class FlowdockResponse(
+  message: Option[String])
+class FlowdockNotificationContext(log: Logger) extends NotificationContext[FlowdockNotification] {
+  val defaultOptions = FlowdockNotification(token = "", from = "")
+  def mergeOptions(over: FlowdockNotification, under: FlowdockNotification) = {
+    val newToken = if (over.token != defaultOptions.token) over.token else under.token
+    val newDetailed = if (over.detailed != defaultOptions.detailed) over.detailed else under.detailed
+    val newFrom = if (over.from != defaultOptions.from) over.from else under.from
+    val newTags = if (over.tags != defaultOptions.tags) over.tags else under.tags
+    FlowdockNotification(token = newToken, detailed = newDetailed, from = newFrom, tags = newTags)
+  }
+  override def before() = {
+    log.info("--== Flowdock Notifications ==--")
+  }
+  override def after() = {
+    log.info("--== Done Flowdock Notifications ==--")
+  }
+  def send(n: FlowdockNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
+    def diag = " to Flowdock the outcome of project " + outcome.project + " using template " + templ.id
+    try {
+      val token = (scala.io.Source.fromFile(n.token)).getLines.next
+      val msg = if (n.detailed) templ.long else templ.summary
+      val descriptor = new FlowdockJSON(content = msg, external_user_name = n.from, tags = n.tags)
+      val json = Utils.writeValue(descriptor)
+      val uri = "https://api.flowdock.com/v1/messages/chat/" + token
+      val sender = url(uri.toString).POST << (json,"application/json")
+      val response = (new Http with NoLogging)(sender >- { str =>
+        Utils.readSomePath[FlowdockResponse](str)
+      })
+      if (response != None && response.get.message != null && response.get.message != None) {
+        val out = response.get.message.get
+        log.error("While sending" + diag)
+        log.error("received the response: " + out)
+      }
+      None
+    } catch {
+      case mex: MessagingException =>
+        log.error("ERROR SENDING" + diag)
+        throw mex
+    }
   }
 }
 
@@ -138,8 +186,9 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
 class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) extends OptionTask(log) {
   def id = "Notifications"
   val consoleCtx = new ConsoleNotificationContext(log)
+  val flowdockCtx = new FlowdockNotificationContext(log)
   val emailCtx = new EmailNotificationContext(log)
-  val allContexts = Map("console" -> consoleCtx, "email" -> emailCtx)
+  val allContexts = Map("console" -> consoleCtx, "flowdock" -> flowdockCtx, "email" -> emailCtx)
   def definedNotifications = conf.options.notifications.send
   val usedNotificationKindIDs = definedNotifications.map { _.kind }.distinct
   val defaultsMap = conf.options.notifications.default.map { d => (d.kind, d) }.toMap
@@ -233,6 +282,11 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
 Report from the dbuild run for ${dbuild.template-vars.project-description}: 
 ${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}
 ---==  End Execution Report ==---""")),
+    NotificationTemplate("flowdock",
+      "${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}",
+      None,
+      Some("""${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}
+${dbuild.template-vars.subprojects-report-tabs}Info at: ${BUILD_URL}console""")),
     NotificationTemplate("email",
       "[dbuild] [${JOB_NAME}] ${dbuild.template-vars.project-description}: ${dbuild.template-vars.status}",
       None,

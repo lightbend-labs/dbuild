@@ -77,8 +77,8 @@ kind
   The "kind" of a notification refers to the mechanism that is used to deliver the
   message. The notification infrastructure has been designed to be very easily
   extendable with further notification systems, like tweets, posts, etc. The
-  notification kinds available initially are "email" and "console". If "kind"
-  is not specified, it will be assumed to be "email".
+  notification kinds available at this time are "email", "flowdock", and "console".
+  If "kind" is not specified, it will be assumed to be "email".
 
 when
   There are several possible outcomes from a dbuild run. For example, it could be
@@ -106,13 +106,13 @@ projects
 
 template
   The optional string "template" can be used to select one of the custom or standard
-  templates. There are two predefined templates: "email" and "console". If the template
+  templates. There are three predefined templates: "email", "flowdock", and "console". If the template
   is not specified, the template with the same name as the kind will be used. However,
   you could in theory send an email using the console template, or print onscreen the
   text of an email. If you want to use a custom template, just define it in the
   "templates" section, and refer to it here by using its identifier.
   You can also override the standard template for all the
-  email messages by in the templates section a template called "email",
+  email messages by defining in the templates section a template called "email",
   which will override the standard one.
 
 
@@ -243,8 +243,8 @@ The "send" clause
 
 Each notification kind may need further information concerning exactly where to
 address the resulting messages. For the predefined kind "console" at this time
-there is no further information needed. For the kind "email", the
-"send" clause is the following:
+there is no further information needed. For the kind "email", the "send"
+clause is the following:
 
 .. code-block:: text
 
@@ -302,6 +302,35 @@ check-certificate
   check-certificate is by default true, but you can explicitly set it to "false" in order to
   bypass SSL certificate verification.
 
+Flowdock
+--------
+For Flowdock notifications, the "send" clause is:
+
+.. code-block:: text
+
+     {
+      token     : <api-token>
+      detailed  : <true-or-false>
+      sender    : <sender-name>
+      tags      : <optional-tags>
+     }
+
+token
+  This is the Flowdock API token for the desired flow (it can be obtained from the
+  Flowdock interface, clicking on the settings gear)
+
+detailed
+  Optional, either true or false. If true (default), a summary of the status of all the
+  subprojects will be sent. If false, just a one-line status message will appear. For
+  instance you can minimize the visual clutter by using two notifications, where
+  "when: bad -> detailed: true", "when: good -> detailed: false".
+
+sender
+  The name that Flowdock will display within the flow as the message sender. It need
+  not match any existing user in the system.
+
+tags
+  An optional list of tags, which will be used by Flowdock to categorize the message.
 
 Example
 -------
@@ -439,6 +468,8 @@ ${dbuild.template-vars.status}
 ${dbuild.template-vars.subprojects-report}
   A compact report of the name and status of all of the projects that are
   our dependencies; useful to determine the cause a broken dependencies status.
+  The variant "subprojects-report-tabs" prepends each line with a tab
+  character (used in Flowdock notifications).
 
 ${dbuild.template-vars.project-description}
   The name of the project, preformatted as eithed "project <name>", or "dbuild" for the root.

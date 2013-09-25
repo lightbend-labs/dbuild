@@ -770,10 +770,11 @@ case class EmailNotification(
 case class FlowdockNotification(
   /** The path to a text file containing the Flowdock API token */
   token: String = "",
-  /** If "detailed" is true (default), use the long template format,
-   *  if false, print just a one-line summary.
+  /** "detail" can take the value "summary", "short" (default), or
+   *  "long"; it specifies the amount of detail that will be used
+   *  in the Flowdock notification.
    */
-  detailed: Boolean = true,
+  detail: String = "short",
   /** The username that Flowdock will display as the sender
    *  (it need not exist in the system)
    */

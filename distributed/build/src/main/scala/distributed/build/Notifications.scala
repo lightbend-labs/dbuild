@@ -46,10 +46,10 @@ class FlowdockNotificationContext(log: Logger) extends NotificationContext[Flowd
   val defaultOptions = FlowdockNotification(token = "", from = "")
   def mergeOptions(over: FlowdockNotification, under: FlowdockNotification) = {
     val newToken = if (over.token != defaultOptions.token) over.token else under.token
-    val newDetailed = if (over.detailed != defaultOptions.detailed) over.detailed else under.detailed
+    val newDetail = if (over.detail != defaultOptions.detail) over.detail else under.detail
     val newFrom = if (over.from != defaultOptions.from) over.from else under.from
     val newTags = if (over.tags != defaultOptions.tags) over.tags else under.tags
-    FlowdockNotification(token = newToken, detailed = newDetailed, from = newFrom, tags = newTags)
+    FlowdockNotification(token = newToken, detail = newDetail, from = newFrom, tags = newTags)
   }
   override def before() = {
     log.info("--== Flowdock Notifications ==--")
@@ -65,7 +65,12 @@ class FlowdockNotificationContext(log: Logger) extends NotificationContext[Flowd
       checkField(n.token, "token")
       checkField(n.from, "from")
       val token = (scala.io.Source.fromFile(n.token)).getLines.next
-      val msg = if (n.detailed) templ.long else templ.summary
+      val msg = n.detail match {
+          case "summary" => templ.summary
+          case "short" => templ.short
+          case "long" => templ.long
+          case s => throw new RuntimeException("The Flowdock detail level must be one of: summary, short, long. (found: \""+s+"\"")
+        }
       val descriptor = new FlowdockJSON(content = msg, external_user_name = n.from, tags = n.tags)
       val json = Utils.writeValue(descriptor)
       val uri = "https://api.flowdock.com/v1/messages/chat/" + token
@@ -288,7 +293,8 @@ ${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-proj
 ---==  End Execution Report ==---""")),
     NotificationTemplate("flowdock",
       "${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}",
-      None,
+      Some("""${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}
+Info at: ${BUILD_URL}console"""),
       Some("""${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}
 ${dbuild.template-vars.subprojects-report-tabs}Info at: ${BUILD_URL}console""")),
     NotificationTemplate("email",

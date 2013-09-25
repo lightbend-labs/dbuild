@@ -310,7 +310,7 @@ For Flowdock notifications, the "send" clause is:
 
      {
       token     : <api-token>
-      detailed  : <true-or-false>
+      detail    : <summary-or-short-or-long>
       sender    : <sender-name>
       tags      : <optional-tags>
      }
@@ -319,11 +319,12 @@ token
   This is the Flowdock API token for the desired flow (it can be obtained from the
   Flowdock interface, clicking on the settings gear)
 
-detailed
-  Optional, either true or false. If true (default), a summary of the status of all the
-  subprojects will be sent. If false, just a one-line status message will appear. For
-  instance you can minimize the visual clutter by using two notifications, where
-  "when: bad -> detailed: true", "when: good -> detailed: false".
+detail
+  Optional, it can be one of "summary", "short" (default), or "long". It selects
+  the detail level of the notification text, with summary being a one-line message,
+  and long being a full report of all subprojects. For instance, in order to reduce
+  visual clutter, different notifications can be used together with different detail
+  levels: "when: bad, detail: long" and "when: good, detail: summary".
 
 sender
   The name that Flowdock will display within the flow as the message sender. It need

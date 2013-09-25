@@ -43,7 +43,7 @@ class LocalBuildMain(configuration: xsbti.AppConfiguration) {
 
   def build(conf: DBuildConfiguration, confName: String): BuildOutcome = {
     import akka.pattern.ask
-    implicit val timeout: Timeout = (4).hours
+    implicit val timeout: Timeout = 4.hours + 30.minutes
     val result = builder ? RunLocalBuild(conf, confName, targetDir)
     Await.result(result.mapTo[BuildOutcome], akka.util.Duration.Inf)
   }

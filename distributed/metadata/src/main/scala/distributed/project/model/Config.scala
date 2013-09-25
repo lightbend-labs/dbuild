@@ -634,6 +634,10 @@ private case class NotificationShadow(
 /**
  * The descriptor of options for each notification mechanism;
  * subclasses are ConsoleNotification, EmailNotification, etc.
+ * All the implementing notification kinds should have a
+ * nullary constructor, in order to allow for "default"
+ * notifications; any inappropriate default value should be
+ * detected when sending (or before).
  */
 @JsonSerialize(using = classOf[NotificationKindSerializer])
 abstract class NotificationKind
@@ -765,7 +769,7 @@ case class EmailNotification(
  */
 case class FlowdockNotification(
   /** The path to a text file containing the Flowdock API token */
-  token: String,
+  token: String = "",
   /** If "detailed" is true (default), use the long template format,
    *  if false, print just a one-line summary.
    */
@@ -773,7 +777,7 @@ case class FlowdockNotification(
   /** The username that Flowdock will display as the sender
    *  (it need not exist in the system)
    */
-  from: String,
+  from: String = "",
   /** tags that will be appended to the message */
   tags: SeqString = Seq.empty) extends NotificationKind
 

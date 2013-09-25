@@ -60,12 +60,16 @@ class FlowdockNotificationContext(log: Logger) extends NotificationContext[Flowd
   def send(n: FlowdockNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     def diag = " to Flowdock the outcome of project " + outcome.project + " using template " + templ.id
     try {
+      def checkField(s: String, n: String) =
+        if (s == "") throw new RuntimeException("Field \"" + n + "\" MISSING (must be specified), when sending" + diag)
+      checkField(n.token, "token")
+      checkField(n.from, "from")
       val token = (scala.io.Source.fromFile(n.token)).getLines.next
       val msg = if (n.detailed) templ.long else templ.summary
       val descriptor = new FlowdockJSON(content = msg, external_user_name = n.from, tags = n.tags)
       val json = Utils.writeValue(descriptor)
       val uri = "https://api.flowdock.com/v1/messages/chat/" + token
-      val sender = url(uri.toString).POST << (json,"application/json")
+      val sender = url(uri.toString).POST << (json, "application/json")
       val response = (new Http with NoLogging)(sender >- { str =>
         Utils.readSomePath[FlowdockResponse](str)
       })

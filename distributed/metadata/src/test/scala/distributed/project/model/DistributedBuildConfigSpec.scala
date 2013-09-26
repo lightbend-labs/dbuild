@@ -38,14 +38,6 @@ object DistributedBuildConfigSpec extends Specification {
           set-version = "3.9.43"
           extra = { directory = "ZOMG" }
     }]
-    deploy = [{
-          uri = "file://localhost:8088/some/path"
-          credentials = "/credentials/file"
-          projects = ["p1","p2",{
-    from:"aaa"
-    publish:["a","b"]
-    }]
-    }]
 }""") must equalTo(DistributedBuildConfig(
       Seq(ProjectBuildConfig(
           name = "p1",

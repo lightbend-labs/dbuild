@@ -23,7 +23,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     aggregate(graph,hashing,logging,actorLogging,dprojects,dcore,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
-    settings(CrossBuilding.crossSbtVersions := Seq(sbtVersion12,sbtVersion13), selectScalaVersion)
+    settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
   )
 
   lazy val dist = (
@@ -129,7 +129,7 @@ def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.u
 """ format (where, where, where))
         Seq(file)
      },
-     CrossBuilding.crossSbtVersions := Seq(sbtVersion12,sbtVersion13)
+     CrossBuilding.crossSbtVersions := Seq("0.12","0.13")
    )
    settings(CrossPlugin.crossBuildingSettings:_*)
   )

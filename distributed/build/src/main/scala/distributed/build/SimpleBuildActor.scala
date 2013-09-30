@@ -252,7 +252,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         if (outcomes exists { case _: BuildBad => true; case _ => false })
           // "." is the name of the root project
           BuildFailed(".", outcomes,
-            outcomes.filter { _.isInstanceOf[BuildBad] }.map { _.project }.mkString("failed: ", ", ", ""))
+            // pick the ones that failed, but not because any of their dependencies failed.
+            outcomes.filter { o =>
+              o.isInstanceOf[BuildBad] &&
+                !o.outcomes.exists { _.isInstanceOf[BuildBad] }
+            }.map { _.project }.mkString("failed: ", ", ", ""))
         else {
           BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
         }

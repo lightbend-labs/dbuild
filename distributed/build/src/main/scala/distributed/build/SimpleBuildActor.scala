@@ -251,7 +251,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       Future.sequence(runBuild()).map { outcomes =>
         if (outcomes exists { case _: BuildBad => true; case _ => false })
           // "." is the name of the root project
-          BuildFailed(".", outcomes, "cause: one or more projects failed")
+          BuildFailed(".", outcomes,
+            outcomes.filter { _.isInstanceOf[BuildBad] }.map { _.project }.mkString("failed: ", ", ", ""))
         else {
           BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
         }
@@ -277,7 +278,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       }
     futureOutcomes map { s: Seq[ExtractionOutcome] =>
       if (s exists { _.isInstanceOf[ExtractionFailed] })
-        ExtractionFailed(".", s, "cause: one or more projects failed")
+        ExtractionFailed(".", s,
+          s.filter { _.isInstanceOf[ExtractionFailed] }.map { _.project }.mkString("failed: ", ", ", ""))
       else {
         val sok = s.collect({ case e: ExtractionOK => e })
         ExtractionOK(".", sok, sok flatMap { _.pces })

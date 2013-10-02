@@ -298,17 +298,15 @@ Info at: ${BUILD_URL}console"""),
       Some("""${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}
 ${dbuild.template-vars.subprojects-report-tabs}Info at: ${BUILD_URL}console""")),
     NotificationTemplate("email",
-      "[dbuild] [${JOB_NAME}] ${dbuild.template-vars.project-description}: ${dbuild.template-vars.status}",
+      "[${JOB_NAME}] ${dbuild.template-vars.project-description}: ${dbuild.template-vars.status}",
       None,
       Some("""This is a report for ${dbuild.template-vars.project-description} in the configuration "${dbuild.template-vars.config-name}"
 running under the Jenkins job "${JOB_NAME}" on ${NODE_NAME}.
 
-${dbuild.template-vars.subprojects-report}
-** The current status of ${dbuild.template-vars.project-description} is:
-${dbuild.template-vars.status}
+${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}
 
 
-A more detailed report of this run is available at:
+A more detailed report is available at:
 ${BUILD_URL}console
 """)))
 }

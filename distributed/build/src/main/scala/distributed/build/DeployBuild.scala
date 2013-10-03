@@ -29,10 +29,13 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
     checkDeployFullBuild(conf.options.deploy, log)
   }
   def afterBuild(optRepBuild: Option[RepeatableDistributedBuild], outcome: BuildOutcome) = {
-    optRepBuild match {
-      case None => log.error("*** Deploy cannot run: build did not complete.")
-      case Some(repBuild) => deployFullBuild(conf, repBuild, outcome, log)
-    }
+    def dontRun() = log.error("*** Deploy cannot run: build did not complete.")
+    // we do not run deploy if we reached time out, or if we never arrived past extraction (or both)
+    if (outcome.isInstanceOf[TimedOut]) dontRun() else
+      optRepBuild match {
+        case None => dontRun
+        case Some(repBuild) => deployFullBuild(conf, repBuild, outcome, log)
+      }
   }
 
   // first, a proper sanity check

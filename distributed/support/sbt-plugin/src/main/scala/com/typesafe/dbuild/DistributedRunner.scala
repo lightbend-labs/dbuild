@@ -136,7 +136,7 @@ object DistributedRunner {
       // (and we should get a warning about that circumstance anyway).
       if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) &&
         // Do not inspect the artifacts that belong to the project we are building at this time:
-        (!(modules exists {i => i.getOrganisation == currentOrg && fixName(i.getName) == currentName}))) {
+        (!(modules exists {i => i.getOrganisation == m.organization && fixName(i.getName) == fixName(m.name)}))) {
         // If we are here, it means that this is a library dependency that is required,
         // that refers to an artifact that is not provided by any project in this build,
         // and that needs a certain Scala version (range) in order to work as intended.

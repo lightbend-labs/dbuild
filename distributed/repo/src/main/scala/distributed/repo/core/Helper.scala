@@ -87,8 +87,9 @@ object LocalRepoHelper {
     }
   }
 
-  protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository): Unit = {
+  protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository, log: Logger): Unit = {
     val key = makeProjectMetaKey(meta.project.uuid)
+    log.debug("Publishing meta info for project " + meta.project.config.name + ", uuid " + key)
     // padding string, as withTemporaryFile() will fail if the prefix is too short
     IO.withTemporaryFile(meta.project.config.name + "-padding", meta.project.uuid) { file =>
       IO.write(file, writeValue(meta))
@@ -107,7 +108,7 @@ object LocalRepoHelper {
     localRepo: File, remote: Repository, log: Logger): ProjectArtifactInfo = {
     extracted foreach { case BuildSubArtifactsOut(subproj, _, shas) => publishRawArtifacts(localRepo, subproj, shas, remote, log) }
     val info = ProjectArtifactInfo(project, extracted)
-    publishProjectMetadata(info, remote)
+    publishProjectMetadata(info, remote, log)
     info
   }
 
@@ -195,9 +196,10 @@ object LocalRepoHelper {
     resolveArtifacts(uuid, remote)((x, y) => x -> y)
 
   /** Checks whether or not a given project (by UUID) is published. */
-  def getPublishedDeps(uuid: String, remote: ReadableRepository): Seq[BuildSubArtifactsOut] = {
+  def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): Seq[BuildSubArtifactsOut] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
+    log.debug("Found cached project build, uuid "+uuid)
     meta.versions
   }
 

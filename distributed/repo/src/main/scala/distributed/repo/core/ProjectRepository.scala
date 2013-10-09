@@ -7,6 +7,7 @@ import project.model._
 import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
+import logging.Logger
 
 /** This class provides utilities for dealing with a project repository. */
 class ReadableProjectRepository(val remote: ReadableRepository) {
@@ -28,8 +29,8 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
    * Note: This will resolve artifacts to the local and throw an exception
    * if unable to do so!
    */
-  def getPublishedArtifacts(uuid: String): Seq[BuildSubArtifactsOut] = 
-    LocalRepoHelper.getPublishedDeps(uuid, remote)
+  def getPublishedArtifacts(uuid: String, log: Logger): Seq[BuildSubArtifactsOut] = 
+    LocalRepoHelper.getPublishedDeps(uuid, remote, log)
     
     
   def getProjectInfo(uuid: String) = LocalRepoHelper.getProjectInfo(uuid, remote)

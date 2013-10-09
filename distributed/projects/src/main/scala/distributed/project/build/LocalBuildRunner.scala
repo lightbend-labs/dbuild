@@ -22,7 +22,7 @@ class LocalBuildRunner(builder: BuildRunner,
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger): BuildOutcome = {
     try {
       try {
-        BuildUnchanged(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository)))
+        BuildUnchanged(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository, log)))
       } catch {
         case t: RepositoryException =>
           log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)

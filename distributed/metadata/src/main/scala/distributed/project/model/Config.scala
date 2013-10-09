@@ -132,7 +132,10 @@ class SeqStringDeserializer extends JsonDeserializer[SeqString] {
     if (generic.isTextual()) {
       SeqString(Seq(valueAs(classOf[String])))
     } else {
-      SeqString(valueAs(classOf[Array[String]]))
+      // The valueAs() returns a WrappedArray; we use
+      // its values to build a new Seq, in order to keep
+      // the same sha1 UUID (a WrappedArray returns a different one)
+      SeqString(Seq(valueAs(classOf[Array[String]]):_*))
     }
   }
 }

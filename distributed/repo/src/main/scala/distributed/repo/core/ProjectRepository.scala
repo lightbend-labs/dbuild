@@ -41,12 +41,12 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
  */
 class ProjectRepository(remote: Repository) extends ReadableProjectRepository(remote) {
   /**
-   * Publishes the metadata for a project build.
+   * Publishes the artifacts metadata for a project build.
    * 
-   * @param project  The repeatable project build, used to genreate UUIDs and find dependencies.
+   * @param project  The repeatable project build, used to generate UUIDs and find dependencies.
    * @param extracted The extracted artifacts that this project generates.
    * @param localRepo  The location of all artifacts we should read and send.
    */
-  def publishArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut], localRepo: File, log:logging.Logger): ProjectArtifactInfo =
-    LocalRepoHelper.publishProjectArtifactInfo(project, extracted, localRepo, remote, log)
+  def publishArtifactsInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut], localRepo: File, log:logging.Logger): ProjectArtifactInfo =
+    LocalRepoHelper.publishArtifactsInfo(project, extracted, localRepo, remote, log)
 }

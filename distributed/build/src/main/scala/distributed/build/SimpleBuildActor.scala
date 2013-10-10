@@ -8,7 +8,7 @@ import project.dependencies.ExtractBuildDependencies
 import logging.Logger
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.pattern.{ ask, pipe }
-import akka.dispatch.{ Future, Futures }
+import akka.dispatch.{ Future, Futures, Promise }
 import akka.util.duration._
 import akka.util.Timeout
 import actorpatterns.forwardingErrorsToFutures
@@ -26,12 +26,24 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     case RunDistributedBuild(conf, confName, target, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       implicit val ctx = context.system
+      val extractionPhaseDuration = Timeouts.extractionPhaseTimeout.duration
+      val extractionPlusBuildDuration = Timeouts.extractionPlusBuildTimeout.duration
       val result = try {
         val logger = log.newNestedLogger(hashing sha1 conf.build)
         val notifTask = new Notifications(conf, confName, log)
         // add further new tasks at the beginning of this list, leave notifications at the end
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), notifTask)
         tasks foreach { _.beforeBuild }
+        // afterTasks may be called when the build is complete, or when something went wrong.
+        // Some tasks (for instance deploy) may be unable to run when some error conditions
+        // occurred. Each should detect the error conditions; what we offer for them to check is:
+        // - rdb is a RepeatableDistributedBuild if we completed extraction successfully, and
+        // we got to building. If we stopped before building (during extraction, or immediately
+        // afterward), rdb will be None.
+        // - futureBuildResult is the eventual BuildOutcome. In particular, tasks may test whether
+        // the outcome is an instance of TimedOut, which may mean that we were interrupted and
+        // therefore the generated data may be incomplete, corrupted, or absent. Each OptionTask
+        // may decide not to run, or to run partially, if the outcome is one of TimedOut, BuildBad, etc.
         def afterTasks(rdb: Option[RepeatableDistributedBuild], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
           if (tasks.nonEmpty) futureBuildResult map {
             // >>>> careful with map() on Futures: exceptions must be caught separately!!
@@ -83,7 +95,28 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         // therefore we have to ask to the build system itself to expand the 'extra' field
         // as appropriate.
         //
-        analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build)) flatMap {
+
+        // I use four watchdogs; please refer to object "Timeouts" for details. Please make
+        // sure that any outcome returned by a watchdog extends TimedOut (the condition is
+        // checked within afterTask() to inhibit deployment and possibly other tasks that
+        // can only be executed when building completed successfully).
+        val extractionWatchdog = Timeouts.after(extractionPhaseDuration,
+          using = ctx.scheduler)(
+            Future(new ExtractionFailed(".", Seq(), "Timeout: extraction took longer than " + extractionPhaseDuration) with TimedOut))
+        val extractionPlusBuildWatchdog = Timeouts.after(extractionPlusBuildDuration,
+          using = ctx.scheduler) {
+            // something went wrong and we ran into an unexpected timeout. We prepare the watchdog at the beginning,
+            // so that we know we will have enough time for the notifications before dbuildTimeout arrives. So we mark
+            // this as a BuildFailed; we also create a fictitious dependency on every subproject, where every
+            // subproject also fails in the same manner.
+            val msg = "Timeout: extraction plus building took longer than " + extractionPlusBuildDuration
+            def timeoutOutcome(name: String) = BuildFailed(name, Seq(), msg)
+            val outcomes = conf.build.projects.map { p => timeoutOutcome(p.name) }
+            Future(new BuildFailed(".", outcomes, msg) with TimedOut)
+          }
+
+        val extractionOutcome = analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build))
+        Future.firstCompletedOf(Seq(extractionWatchdog, extractionOutcome)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>
               // This is a bit of a hack, in order to get better notifications: we
@@ -117,7 +150,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   val fullLogger = log.newNestedLogger(fullBuild.uuid)
                   nest(publishFullBuild(fullBuild, fullLogger)) { unit =>
                     val futureBuildResult = runBuild(target, fullBuild, fullLogger)
-                    afterTasks(Some(fullBuild), futureBuildResult)
+                    afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                   }
                 }
               }
@@ -201,7 +234,13 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               Future(BuildBrokenDependency(b.config.name, outcomes))
             } else {
               val outProjects = p.extracted.projects
-              buildProject(tdir, b, outProjects, outcomes, log.newNestedLogger(b.config.name))
+              val buildDuration = Timeouts.buildTimeout.duration
+              val watchdog = Timeouts.after(buildDuration,
+                using = ctx.scheduler)(
+                  Future(new BuildFailed(b.config.name, outcomes,
+                      "Timeout: building project " + b.config.name + " took longer than " + buildDuration) with TimedOut))
+              val buildOutcome = buildProject(tdir, b, outProjects, outcomes, log.newNestedLogger(b.config.name))
+              Future.firstCompletedOf(Seq(watchdog, buildOutcome))
             }
         }
       }(Some((a, b) => a.config.name < b.config.name))
@@ -226,7 +265,16 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     val uuid = hashing sha1 config
     val tdir = target / "extraction" / uuid
     val futureOutcomes: Future[Seq[ExtractionOutcome]] =
-      Future.traverse(config.projects){projConfig => extract(tdir, log)(ExtractionConfig(projConfig,config.options getOrElse BuildOptions()))}
+      Future.traverse(config.projects) { projConfig =>
+        val extractionDuration = Timeouts.extractionTimeout.duration
+        val watchdog = Timeouts.after(extractionDuration,
+          using = ctx.scheduler)(
+            Future(new ExtractionFailed(projConfig.name, Seq(),
+                "Timeout: extraction of project " + projConfig.name + " took longer than " + extractionDuration) with TimedOut))
+        val outcome =
+          extract(tdir, log)(ExtractionConfig(projConfig, config.options getOrElse BuildOptions()))
+        Future.firstCompletedOf(Seq(watchdog, outcome))
+      }
     futureOutcomes map { s: Seq[ExtractionOutcome] =>
       if (s exists { _.isInstanceOf[ExtractionFailed] })
         ExtractionFailed(".", s, "cause: one or more projects failed")

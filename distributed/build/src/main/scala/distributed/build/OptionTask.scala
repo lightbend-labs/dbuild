@@ -22,6 +22,8 @@ abstract class OptionTask(log: Logger) {
    *  null, and the OptionTask may not run, printing a message instead.
    *  For example, deploy will not run after extraction, but notifications will be
    *  sent out anyway.
+   *  Similarly, BuildOutcome may be BuildBad, or may implement TimedOut; in those
+   *  cases, some OptionTasks may not run, or run partially.
    */
   def afterBuild(repBuild: Option[RepeatableDistributedBuild], outcome: BuildOutcome): Unit
   /** just the task name */

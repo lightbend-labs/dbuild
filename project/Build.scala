@@ -9,6 +9,7 @@ import com.typesafe.sbt.SbtGit.{git, GitKeys}
 import com.typesafe.sbt.site.SphinxSupport
 import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
 import com.typesafe.sbt.S3Plugin
+import net.virtualvoid.sbt.cross.CrossPlugin
 
 object DistributedBuilderBuild extends Build with BuildHelper {
 
@@ -20,7 +21,9 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
     aggregate(graph,hashing,logging,actorLogging,dprojects,dcore,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
-    settings(publish := (), version := MyVersion)
+    settings(publish := (), publishLocal := (), version := MyVersion)
+    settings(CrossPlugin.crossBuildingSettings:_*)
+    settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
   )
 
   lazy val dist = (
@@ -58,7 +61,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       DmodProject("actorLogging")
       dependsOn(logging)
       dependsOnAkka()
-      dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)      
+      dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
+      settings(skip210:_*)
     )
   lazy val dcore = (
       DmodProject("core")
@@ -96,6 +100,7 @@ object Defaults {
       dependsOn(dprojects, defaultSupport, drepo, dmeta)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib)
       dependsOnSbt(sbtLaunchInt)
+      settings(skip210:_*)
     )
 
   // Projects relating to supporting various tools in distributed builds.
@@ -123,11 +128,13 @@ def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.u
 }
 """ format (where, where, where))
         Seq(file)
-      })
-    // this aggregate is only for publishing the plugin with 2.10.2 / 0.13
-    aggregate(defaultSupport, dmeta, dcore, drepo, logging, graph, hashing)
+     },
+     CrossBuilding.crossSbtVersions := Seq("0.12","0.13")
+   )
+   settings(CrossPlugin.crossBuildingSettings:_*)
   )
 }
+
 
 
 // Additional DSL
@@ -135,12 +142,21 @@ trait BuildHelper extends Build {
   
   def MyVersion: String
 
+  // for dependencies
   def sbtVer(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) sbtVersion12 else sbtVersion13
+
+  def selectScalaVersion =
+    scalaVersion <<= (sbtVersion in sbtPlugin).apply( sb => if (sb.startsWith("0.12")) "2.9.2" else "2.10.2" )
+
+  def skip210 = 
+    Seq(skip in compile <<= scalaVersion.map(_.startsWith("2.10")),
+        compileInputs in doc in Compile <<= (compileInputs in doc in Compile,skip in compile).map( (c,s) =>
+          if(s) c.copy(config = c.config.copy(sources = List())) else c ) )
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,
     organization := "com.typesafe.dbuild",
-    scalaVersion := "2.9.2",
+    selectScalaVersion,
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
@@ -235,4 +251,5 @@ trait BuildHelper extends Build {
         def versionFilter = new PatternFilter(VersionPattern) && DirectoryFilter
 
     }
+
 }

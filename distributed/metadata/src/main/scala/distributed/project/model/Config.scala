@@ -634,6 +634,10 @@ private case class NotificationShadow(
 /**
  * The descriptor of options for each notification mechanism;
  * subclasses are ConsoleNotification, EmailNotification, etc.
+ * All the implementing notification kinds should have a
+ * nullary constructor, in order to allow for "default"
+ * notifications; any inappropriate default value should be
+ * detected when sending (or before).
  */
 @JsonSerialize(using = classOf[NotificationKindSerializer])
 abstract class NotificationKind
@@ -761,6 +765,24 @@ case class EmailNotification(
   smtp: Smtp = Smtp("localhost", None, "none", false)) extends NotificationKind
 
 /**
+ * Messages sent to a Flowdock flow, via their Push API
+ */
+case class FlowdockNotification(
+  /** The path to a text file containing the Flowdock API token */
+  token: String = "",
+  /** "detail" can take the value "summary", "short" (default), or
+   *  "long"; it specifies the amount of detail that will be used
+   *  in the Flowdock notification.
+   */
+  detail: String = "short",
+  /** The username that Flowdock will display as the sender
+   *  (it need not exist in the system)
+   */
+  from: String = "",
+  /** tags that will be appended to the message */
+  tags: SeqString = Seq.empty) extends NotificationKind
+
+/**
  * Description of the smtp server to be used for email delivery.
  */
 case class Smtp(
@@ -794,5 +816,6 @@ case class ConsoleNotification() extends NotificationKind
 object NotificationKind {
   val kinds: Map[String, java.lang.Class[_ <: NotificationKind]] = Map(
     "console" -> classOf[ConsoleNotification],
+    "flowdock" -> classOf[FlowdockNotification],
     "email" -> classOf[EmailNotification])
 }

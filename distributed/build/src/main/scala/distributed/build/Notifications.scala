@@ -11,6 +11,7 @@ import Message.RecipientType
 import RecipientType._
 import Creds.loadCreds
 import distributed.project.model.TemplateFormatter
+import dispatch.classic.{ Logger => _, _ }
 
 //
 // Ideally, the ConsoleNotification should become the mechanism by which the entire log of the
@@ -32,6 +33,62 @@ class ConsoleNotificationContext(log: Logger) extends NotificationContext[Consol
   def send(n: ConsoleNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
     templ.long.split("\n").foreach(log.info(_))
     None
+  }
+}
+
+case class FlowdockJSON(
+  content: String,
+  external_user_name: String,
+  tags: Seq[String])
+case class FlowdockResponse(
+  message: Option[String])
+class FlowdockNotificationContext(log: Logger) extends NotificationContext[FlowdockNotification] {
+  val defaultOptions = FlowdockNotification(token = "", from = "")
+  def mergeOptions(over: FlowdockNotification, under: FlowdockNotification) = {
+    val newToken = if (over.token != defaultOptions.token) over.token else under.token
+    val newDetail = if (over.detail != defaultOptions.detail) over.detail else under.detail
+    val newFrom = if (over.from != defaultOptions.from) over.from else under.from
+    val newTags = if (over.tags != defaultOptions.tags) over.tags else under.tags
+    FlowdockNotification(token = newToken, detail = newDetail, from = newFrom, tags = newTags)
+  }
+  override def before() = {
+    log.info("--== Flowdock Notifications ==--")
+  }
+  override def after() = {
+    log.info("--== Done Flowdock Notifications ==--")
+  }
+  def send(n: FlowdockNotification, templ: TemplateFormatter, outcome: BuildOutcome) = {
+    def diag = " to Flowdock the outcome of project " + outcome.project + " using template " + templ.id
+    try {
+      def checkField(s: String, n: String) =
+        if (s == "") throw new RuntimeException("Field \"" + n + "\" MISSING (must be specified), when sending" + diag)
+      checkField(n.token, "token")
+      checkField(n.from, "from")
+      val token = (scala.io.Source.fromFile(n.token)).getLines.next
+      val msg = n.detail match {
+          case "summary" => templ.summary
+          case "short" => templ.short
+          case "long" => templ.long
+          case s => throw new RuntimeException("The Flowdock detail level must be one of: summary, short, long. (found: \""+s+"\"")
+        }
+      val descriptor = new FlowdockJSON(content = msg, external_user_name = n.from, tags = n.tags)
+      val json = Utils.writeValue(descriptor)
+      val uri = "https://api.flowdock.com/v1/messages/chat/" + token
+      val sender = url(uri.toString).POST << (json, "application/json")
+      val response = (new Http with NoLogging)(sender >- { str =>
+        Utils.readSomePath[FlowdockResponse](str)
+      })
+      if (response != None && response.get.message != null && response.get.message != None) {
+        val out = response.get.message.get
+        log.error("While sending" + diag)
+        log.error("received the response: " + out)
+      }
+      None
+    } catch {
+      case mex: MessagingException =>
+        log.error("ERROR SENDING" + diag)
+        throw mex
+    }
   }
 }
 
@@ -138,8 +195,9 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
 class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) extends OptionTask(log) {
   def id = "Notifications"
   val consoleCtx = new ConsoleNotificationContext(log)
+  val flowdockCtx = new FlowdockNotificationContext(log)
   val emailCtx = new EmailNotificationContext(log)
-  val allContexts = Map("console" -> consoleCtx, "email" -> emailCtx)
+  val allContexts = Map("console" -> consoleCtx, "flowdock" -> flowdockCtx, "email" -> emailCtx)
   def definedNotifications = conf.options.notifications.send
   val usedNotificationKindIDs = definedNotifications.map { _.kind }.distinct
   val defaultsMap = conf.options.notifications.default.map { d => (d.kind, d) }.toMap
@@ -233,18 +291,22 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
 Report from the dbuild run for ${dbuild.template-vars.project-description}: 
 ${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}
 ---==  End Execution Report ==---""")),
+    NotificationTemplate("flowdock",
+      "${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}",
+      Some("""${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}
+Info at: ${BUILD_URL}console"""),
+      Some("""${JOB_NAME} on ${NODE_NAME}: ${dbuild.template-vars.status}
+${dbuild.template-vars.subprojects-report-tabs}Info at: ${BUILD_URL}console""")),
     NotificationTemplate("email",
-      "[dbuild] [${JOB_NAME}] ${dbuild.template-vars.project-description}: ${dbuild.template-vars.status}",
+      "[${JOB_NAME}] ${dbuild.template-vars.project-description}: ${dbuild.template-vars.status}",
       None,
       Some("""This is a report for ${dbuild.template-vars.project-description} in the configuration "${dbuild.template-vars.config-name}"
 running under the Jenkins job "${JOB_NAME}" on ${NODE_NAME}.
 
-${dbuild.template-vars.subprojects-report}
-** The current status of ${dbuild.template-vars.project-description} is:
-${dbuild.template-vars.status}
+${dbuild.template-vars.subprojects-report}>>> ${dbuild.template-vars.padded-project-description}: ${dbuild.template-vars.status}
 
 
-A more detailed report of this run is available at:
+A more detailed report is available at:
 ${BUILD_URL}console
 """)))
 }

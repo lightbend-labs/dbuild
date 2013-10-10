@@ -12,6 +12,7 @@ case class SubstitutionNotifications(@JsonProperty("template-vars") vars: Substi
 case class SubstitutionVars(
   @JsonProperty("project-name") projectName: String,
   @JsonProperty("subprojects-report") subprojectsReport: String,
+  @JsonProperty("subprojects-report-tabs") subprojectsReportTabs: String,
   @JsonProperty("project-description") projectDescription: String,
   @JsonProperty("padded-project-description") paddedProjectDescription: String,
   @JsonProperty("config-name") configName: String,
@@ -37,6 +38,7 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome, confName
   private val notifVars = SubstitutionNotifications(
     SubstitutionVars(projectName = outcome.project,
       subprojectsReport = subprojectsReport,
+      subprojectsReportTabs = subprojectsReport.split("\n").mkString("\t","\n\t","\n"),
       status = outcome.status,
       projectDescription = if (outcome.project != ".") "project " + outcome.project else "dbuild",
       paddedProjectDescription = paddedProjectDescription(outcome),

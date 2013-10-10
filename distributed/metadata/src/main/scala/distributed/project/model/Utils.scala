@@ -44,8 +44,9 @@ object Utils {
   def writeValue[T](t:T)(implicit m: Manifest[T]) = 
     withContextLoader(getClass.getClassLoader){mapper.writeValueAsString[T](t)}
   
-  // specific simplified variant to deal with reading a path from a /possible/ Artifactory response
   private val mapper2=JacksMapper
+  // specific simplified variant to deal with reading a path from a /possible/ Artifactory response,
+  // as well as a possible response from Flowdock
   def readSomePath[T](s:String)(implicit m: Manifest[T]) = 
     withContextLoader(getClass.getClassLoader){
       try {

@@ -11,3 +11,9 @@ though each of them may evolve independently.
 
 You can find the complete dbuild documentation at the
 [dbuild web site](http://typesafehub.github.com/distributed-build).
+
+To recompile, publish, etc., just type the following in the root project:
+
+  ^command
+
+where command is one of compile, clean, test, publish, publish-local, etc.

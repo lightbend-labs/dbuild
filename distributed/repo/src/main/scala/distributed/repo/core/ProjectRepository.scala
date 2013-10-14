@@ -7,6 +7,7 @@ import project.model._
 import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
+import logging.Logger
 
 /** This class provides utilities for dealing with a project repository. */
 class ReadableProjectRepository(val remote: ReadableRepository) {
@@ -28,8 +29,8 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
    * Note: This will resolve artifacts to the local and throw an exception
    * if unable to do so!
    */
-  def getPublishedArtifacts(uuid: String): Seq[BuildSubArtifactsOut] = 
-    LocalRepoHelper.getPublishedDeps(uuid, remote)
+  def getPublishedArtifacts(uuid: String, log: Logger): Seq[BuildSubArtifactsOut] = 
+    LocalRepoHelper.getPublishedDeps(uuid, remote, log)
     
     
   def getProjectInfo(uuid: String) = LocalRepoHelper.getProjectInfo(uuid, remote)
@@ -40,12 +41,12 @@ class ReadableProjectRepository(val remote: ReadableRepository) {
  */
 class ProjectRepository(remote: Repository) extends ReadableProjectRepository(remote) {
   /**
-   * Publishes the metadata for a project build.
+   * Publishes the artifacts metadata for a project build.
    * 
-   * @param project  The repeatable project build, used to genreate UUIDs and find dependencies.
+   * @param project  The repeatable project build, used to generate UUIDs and find dependencies.
    * @param extracted The extracted artifacts that this project generates.
    * @param localRepo  The location of all artifacts we should read and send.
    */
-  def publishArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut], localRepo: File, log:logging.Logger): ProjectArtifactInfo =
-    LocalRepoHelper.publishProjectArtifactInfo(project, extracted, localRepo, remote, log)
+  def publishArtifactsInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut], localRepo: File, log:logging.Logger): ProjectArtifactInfo =
+    LocalRepoHelper.publishArtifactsInfo(project, extracted, localRepo, remote, log)
 }

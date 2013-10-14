@@ -15,16 +15,32 @@ object LocalRepoHelper {
   protected def makeRawFileKey(sha: String): String =
     "raw/" + sha
 
-  protected def makeProjectMetaKey(sha: String): String =
-    "meta/project/" + sha
-
+  // we write here the RepeatableDistributedBuild,
+  // right after extraction
   protected def makeBuildMetaKey(sha: String): String =
     "meta/build/" + sha
 
-  /** Publishes the given repeatable build configuration to the repository. */
-  def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository, log: Logger): Unit =
-    IO.withTemporaryFile("repeatable-build", build.uuid) { file =>
-      val key = makeBuildMetaKey(build.uuid)
+  // the RepeatableProjectBuild gets written here,
+  // once all the project dependencies are ready and
+  // we are ready to build for the first time
+  protected def makeProjectMetaKey(sha: String): String =
+    "meta/project/" + sha
+
+  // the Seq[BuildSubArtifactsOut] produced by a
+  // build is written here (only after the build
+  // completes successfully), wrapped into a
+  // BuildArtifactsOut. Note: the sha that is used
+  // to find the data is NOT that of the BuildArtifactsOut,
+  // but rather the one of the corresponding RepeatableProjectBuild
+  protected def makeArtifactsMetaKey(sha: String): String =
+    "meta/artifacts/" + sha
+
+  // we use publishMeta() when we need to publish some data that may already be
+  // in the remote repository (for instance: repeatable build info, or repeatable project info)
+  def publishMeta[T <: { def uuid: String }](data: T, remote: Repository,
+      makeKey: String => String, log: Logger)(implicit m: scala.reflect.Manifest[T]): Unit =
+    IO.withTemporaryFile("meta-data", data.uuid) { file =>
+      val key = makeKey(data.uuid)
       // is the file already there? We might try to publish twice, as a previous run
       // failed. If so, let's check that what is there matches what we have (as a sanity
       // check) and print a message.
@@ -37,30 +53,36 @@ object LocalRepoHelper {
           // the meta doesn't exist in the repo, or other I/O error (wrong privs, for instance).
           // we try to write, hoping we succeed.
           log.debug("While reading from repo: " + e.getMessage)
-          IO.write(file, writeValue(build))
+          IO.write(file, writeValue(data))
           remote put (key, file)
-          log.info("Written metadata for build " + build.uuid)
+          log.info("Written " + data.getClass + " metadata: " + key)
           // all ok
           return
       }
-      val existingBuild: RepeatableDistributedBuild = try {
-        readValue[RepeatableDistributedBuild](f)
+      val existingBuild: T = try {
+        readValue[T](f)
         // deserialized ok. We continue after the try
       } catch {
         case e =>
           // failed to deserialize. Should be impossible.
-        log.error("The data already present in the dbuild repository for this build (uuid = " + build.uuid + ")")
-        log.error("does not seem a valid repeatable build configuration. This shouldn't happen! Please report.")
-        throw new Exception("Repository consistency check failed",e)
+          log.error("The data already present in the dbuild repository for this data (uuid = " + data.uuid + ")")
+          log.error("does not seem a valid " + data.getClass + ". This shouldn't happen! Please report.")
+          log.error("Key: " + key)
+          throw new Exception("Repository consistency check failed", e)
       }
-      if (existingBuild == build) {
-        log.info("The build metadata for this build is already in the repo (we are repeating the build)")
+      if (existingBuild == data) {
+        log.info("The " + data.getClass + " metadata (uuid " + data.uuid + ") is already in the repository.")
       } else {
-        log.error("The data already present in the dbuild repository for this build (uuid = " + build.uuid + ")")
+        log.error("The data already present in the dbuild repository for this data (uuid = " + data.uuid + ")")
         log.error("does not match the current metadata. This shouldn't happen! Please report.")
+        log.error("Key: " + key)
         throw new Exception("Repository consistency check failed")
       }
     }
+
+  /** Publishes the given repeatable build configuration to the repository. */
+  def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository, log: Logger): Unit =
+    publishMeta(build, remote, makeBuildMetaKey, log)
 
   def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {
     val file = remote get makeBuildMetaKey(uuid)
@@ -87,11 +109,15 @@ object LocalRepoHelper {
     }
   }
 
-  protected def publishProjectMetadata(meta: ProjectArtifactInfo, remote: Repository): Unit = {
-    val key = makeProjectMetaKey(meta.project.uuid)
+  protected def publishProjectMetadata(project: RepeatableProjectBuild, remote: Repository, log: Logger): Unit =
+    publishMeta(project, remote, makeProjectMetaKey, log)
+
+  protected def publishArtifactsMetadata(meta: ProjectArtifactInfo, remote: Repository, log: Logger): Unit = {
+    val key = makeArtifactsMetaKey(meta.project.uuid)
+    log.debug("Publishing artifacts meta info for project " + meta.project.config.name + ", uuid " + key)
     // padding string, as withTemporaryFile() will fail if the prefix is too short
     IO.withTemporaryFile(meta.project.config.name + "-padding", meta.project.uuid) { file =>
-      IO.write(file, writeValue(meta))
+      IO.write(file, writeValue(BuildArtifactsOut(meta.versions)))
       remote put (key, file)
     }
   }
@@ -100,24 +126,40 @@ object LocalRepoHelper {
    * Publishes the metadata for a project build.
    *
    * @param project  The repeatable project build, used to generate UUIDs and find dependencies.
+   * @param remote  The repository to publish into.
+   */
+  def publishProjectInfo(project: RepeatableProjectBuild,
+    remote: Repository, log: Logger) = {
+    publishProjectMetadata(project, remote, log)
+  }
+
+  /**
+   * Publishes the resulting artifacts metadata for a project build.
+   *
+   * @param project  The repeatable project build, used to generate UUIDs and find dependencies.
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
-  def publishProjectArtifactInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut],
+  def publishArtifactsInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut],
     localRepo: File, remote: Repository, log: Logger): ProjectArtifactInfo = {
     extracted foreach { case BuildSubArtifactsOut(subproj, _, shas) => publishRawArtifacts(localRepo, subproj, shas, remote, log) }
     val info = ProjectArtifactInfo(project, extracted)
-    publishProjectMetadata(info, remote)
+    publishArtifactsMetadata(info, remote, log)
     info
   }
 
-  protected def materializeProjectMetadata(uuid: String, remote: ReadableRepository): Option[ProjectArtifactInfo] = {
-    val key = makeProjectMetaKey(uuid)
-    val file = remote get key
-    try Some(readValue[ProjectArtifactInfo](IO read file))
-    catch {
-      case t: Throwable => throw new MalformedMetadata(key, "Unable to parse ProjectArtifactInfo metadata from: " + file.getAbsolutePath)
+  protected def materializeProjectMetadata(uuid: String, remote: ReadableRepository): ProjectArtifactInfo = {
+    def getMeta[T](makeMeta: String => String)(implicit m: scala.reflect.Manifest[T]) = {
+      val key = makeMeta(uuid)
+      val file = remote get key
+      try readValue[T](file)
+      catch {
+        case t: Throwable => throw new MalformedMetadata(key, "Unable to parse metadata from: " + file.getAbsolutePath)
+      }
     }
+    val projectMeta = getMeta[RepeatableProjectBuild](makeProjectMetaKey)
+    val artifactsMeta = getMeta[BuildArtifactsOut](makeArtifactsMetaKey)
+    ProjectArtifactInfo(projectMeta, artifactsMeta.results)
   }
 
   /**
@@ -133,7 +175,7 @@ object LocalRepoHelper {
   // Also return the list of artifacts corresponding to the selected subprojects.
   protected def resolvePartialArtifacts[T](uuid: String, subprojs: Seq[String], remote: ReadableRepository)(f: (File, ArtifactSha) => T): (ProjectArtifactInfo, Seq[T], Seq[ArtifactLocation]) = {
     val metadata =
-      materializeProjectMetadata(uuid, remote) getOrElse (throw new ResolveException(makeProjectMetaKey(uuid), "Could not resolve metadata for " + uuid))
+      materializeProjectMetadata(uuid, remote)
     val fetch = if (subprojs.isEmpty) metadata.versions.map { _.subName } else {
       val unknown = subprojs.diff(metadata.versions.map { _.subName })
       if (unknown.nonEmpty) {
@@ -195,9 +237,10 @@ object LocalRepoHelper {
     resolveArtifacts(uuid, remote)((x, y) => x -> y)
 
   /** Checks whether or not a given project (by UUID) is published. */
-  def getPublishedDeps(uuid: String, remote: ReadableRepository): Seq[BuildSubArtifactsOut] = {
+  def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): Seq[BuildSubArtifactsOut] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
+    log.debug("Found cached project build, uuid "+uuid)
     meta.versions
   }
 

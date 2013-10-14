@@ -195,15 +195,19 @@ deps
    }
 
   This option exists only to address very specific cases in which dependency cycles exist
-  that cannot be solved otherwise; it should not be used under normal circumstances. The
-  recommended approach is rather either splitting the projects into sets of subprojects that
-  do not form a cycle, or modifying the projects themselves, in order to remove the cyclic
-  dependencies.
+  that cannot be solved otherwise; however, its use is inherently difficult to control, and
+  it should be avoided if at all possible. In particular, excluding libraries from dbuild's
+  control may cause library conflicts due to different transitive dependencies, pulled in
+  by different projects. The recommended approach is instead either splitting the projects
+  into sets of subprojects that do not form a cycle, or modifying the projects themselves,
+  in order to remove the cyclic dependencies.
 
 extra
   The "extra" component is optional, as are all of its sub-components; it describes additional
   parameters used while building the project, and its content depends on the build system, as
   detailed below.
+
+.. _sbt-options:
 
 sbt-specific options
 --------------------
@@ -213,12 +217,13 @@ In this case the "extra" argument is a record with the following content:
 .. code-block:: javascript
 
    {
-    "sbt-version"    : <sbt-version>,
-    "projects"       : [ subproj1, subproj2,... ]
-    "exclude"        : [ subproj1, subproj2,... ]
-    "run-tests"      : <run-tests>
-    "options"        : [ opt1, opt2,... ]
-    "commands"       : [ cmd1, cmd2,... ]
+    "sbt-version"         : <sbt-version>,
+    "projects"            : [ subproj1, subproj2,... ]
+    "exclude"             : [ subproj1, subproj2,... ]
+    "run-tests"           : <run-tests>
+    "options"             : [ opt1, opt2,... ]
+    "commands"            : [ cmd1, cmd2,... ]
+    "extraction-compiler" : <compiler-option>
    }
 
 Each of these fields is optional; their meaning is:
@@ -272,6 +277,50 @@ commands
   A sequence of sbt commands; they will be executed by sbt before dbuild rearranges
   the project dependencies. These commands can be used, for example, to change settings
   using forms like "set setting := ...".
+
+extraction-compiler
+  This value can be used to override the Scala compiler version used during dependency
+  extraction. It is optional within each project; it is also possible to specify this
+  option for all projects from the global build options (see :doc:`buildOptions`). In
+  that case, the corresponding choice in each project, if present, will override the
+  global value. For example:
+
+  .. code-block:: text
+
+    build.options.extraction-compiler: "2.11.0-M5"
+    build.projects: [{
+      name: "a"
+      uri: "..."
+      extra.extraction-compiler: "2.11.0-M4"
+     },{
+      name: "b"
+      uri: "..."
+     },{...}]
+   
+  In this case, Scala version 2.11.0-M5 will be used to determine the library
+  dependencies of all projects, except for project "a", for which Scala version
+  2.11.0-M4 will be used.
+
+  More in detail, the "extraction-compiler" option 
+  can be either a fixed Scala version string, or the string "standard". In the
+  latter case, each project will use the Scala version specified in its own build
+  files in order to determine the project's dependencies. If no "extraction-compiler"
+  option is specified anywhere, "standard" is assumed for all projects.
+
+  It is not normally necessary to specify this value explicitly,
+  but it may be useful in case the project contains code that adds specific
+  library dependencies depending on the Scala version in use, and the default
+  Scala compiler used by the project in that specific branch is not compatible
+  with the version of Scala that is being tested. For example, if a project
+  was developed until recently using Scala 2.10.x, and its master branch still
+  uses a Scala 2.10.x compiler, but at the same time there is some code that
+  adds specific libraries when using the Scala 2.11.x compilers, then it may
+  be useful to specify an "extraction" compiler that belongs to the 2.11
+  family.
+
+  In general, it may be simple and effective to specify the extraction
+  compiler just once, in the global build options, as shown in the example
+  above.
 
 Scala-specific options
 ----------------------

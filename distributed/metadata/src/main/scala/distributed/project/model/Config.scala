@@ -319,8 +319,14 @@ case class SbtExtraConfig(
   // before extraction or building, run these commands ("set" or others)
   commands: SeqString = Seq.empty,
   projects: SeqString = Seq.empty, // if empty -> build all projects (default)
-  exclude: SeqString = Seq.empty // if empty -> exclude no projects (default)
- ) extends ExtraConfig
+  exclude: SeqString = Seq.empty, // if empty -> exclude no projects (default)
+  /**
+   *  Use "standard" to use the project's standard Scala compiler for extraction,
+   *  or a version string to force a different Scala compiler.
+   */
+  // None is interpreted as default: use build.option.extraction-compiler
+  @JsonProperty("extraction-compiler") extractionCompiler: Option[String] = None
+  ) extends ExtraConfig
 
 object BuildSystemExtras {
   val buildSystems: Map[String, java.lang.Class[_ <: ExtraConfig]] = Map(
@@ -510,7 +516,11 @@ case class BuildOptions(
   // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
   // also in the future (for repeatability); if the user wants a default of 0.13.0,
   // they can specify "build.options.sbt-version = 0.13.0"
-  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4")
+  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
+  // This option applies to all sbt-based projects, unless overridden.
+  // see SbtExtraConfig for details.
+  @JsonProperty("extraction-compiler") extractionCompiler: String = "standard"
+)
 
 /**
  * This section is used to notify users, by using some notification system.

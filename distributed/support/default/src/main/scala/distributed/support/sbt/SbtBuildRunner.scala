@@ -31,7 +31,7 @@ object SbtBuilder {
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
       runner.run(
         projectDir = project,
-        sbtVersion = config.config.sbtVersion,
+        sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
         log = log,
         javaProps = Map(
             "sbt.repository.config" -> repoFile.getAbsolutePath,

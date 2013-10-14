@@ -34,8 +34,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         // First, a quick sanity check on the list of project names
         //
         val projectNames = conf.build.projects map (_.name.toLowerCase)
-        if (projectNames.intersect(Seq("default", "dbuild", "root", ".")).nonEmpty) {
-          sys.error("The project names \"dbuild\", \"root\", \"default\", and \".\" are reserved; please choose a different name.")
+        if (projectNames.intersect(Seq("default", "standard", "dbuild", "root", ".")).nonEmpty) {
+          sys.error("The project names \"dbuild\", \"root\", \"default\", \"standard\", and \".\" are reserved; please choose a different name.")
         }
         val validCharset = ('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_'
         if (projectNames.exists(_.exists(!validCharset.contains(_)))) {

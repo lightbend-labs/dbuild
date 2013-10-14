@@ -304,7 +304,8 @@ case class MavenExtraConfig(
  * sbt-specific build parameters
  */
 case class SbtExtraConfig(
-  @JsonProperty("sbt-version") sbtVersion: String = "", // Note: empty version is interpreted as default, when the Build System extracts this bit
+  // None is interpreted as default: use build.option.sbt-version
+  @JsonProperty("sbt-version") sbtVersion: Option[String] = None,
   directory: String = "",
   @JsonProperty("measure-performance") measurePerformance: Boolean = false,
   @JsonProperty("run-tests") runTests: Boolean = true,
@@ -313,7 +314,7 @@ case class SbtExtraConfig(
   commands: SeqString = Seq.empty,
   projects: SeqString = Seq.empty, // if empty -> build all projects (default)
   exclude: SeqString = Seq.empty // if empty -> exclude no projects (default)
-  ) extends ExtraConfig
+ ) extends ExtraConfig
 
 object BuildSystemExtras {
   val buildSystems: Map[String, java.lang.Class[_ <: ExtraConfig]] = Map(

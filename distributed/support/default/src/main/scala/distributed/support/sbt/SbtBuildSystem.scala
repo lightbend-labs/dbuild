@@ -19,12 +19,12 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
   final val extractor = new SbtRunner(repos, buildBase / "extractor")
   
   private def sbtExpandConfig(config: ProjectBuildConfig, buildOptions:BuildOptions) = config.extra match {
-    case None => SbtExtraConfig(sbtVersion = Defaults.sbtVersion) // pick default values
+    case None => SbtExtraConfig(sbtVersion = Some(buildOptions.sbtVersion)) // pick default values
     case Some(ec:SbtExtraConfig) => {
-      if (ec.sbtVersion == "")
-        ec.copy(sbtVersion = buildOptions.sbtVersion)
-      else
-        ec
+      ec.sbtVersion match {
+        case None => ec.copy(sbtVersion = Some(buildOptions.sbtVersion))
+        case Some(sbtVer) => ec
+      }
     }
     case _ => throw new Exception("Internal error: sbt build config options are the wrong type in project \""+config.name+"\". Please report")
   }

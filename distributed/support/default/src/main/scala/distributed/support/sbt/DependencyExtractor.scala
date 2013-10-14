@@ -27,7 +27,7 @@ object SbtExtractor {
       log.debug("Extracting SBT build (" + project + ") dependencies into " + result)
       runner.run(
           projectDir = project,
-          sbtVersion = extra.sbtVersion,
+          sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
           log = log,
           javaProps = Map(
               "dbuild.project.dependency.metadata.file" -> result.getAbsolutePath,

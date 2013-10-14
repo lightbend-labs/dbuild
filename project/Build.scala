@@ -87,7 +87,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 package distributed.repo.core
 
 object Defaults {
-  val sbtVersion = "%s"
+// no longer used: see sbt-version in Config.scala
+// val sbtVersion = "%s"
   val version = "%s"
   val org = "%s"
 }

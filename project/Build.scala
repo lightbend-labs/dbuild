@@ -90,7 +90,7 @@ object Defaults {
   val version = "%s"
   val org = "%s"
 }
-""" format (sbtVer(sv), version, org))
+""" format (version, org))
         Seq(file)
       })
   )

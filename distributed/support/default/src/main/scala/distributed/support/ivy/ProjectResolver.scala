@@ -9,6 +9,7 @@ import java.text.DateFormat
 import java.util.Locale
 import java.util.TimeZone
 import javax.mail.internet.MailDateFormat
+import _root_.java.net.URI
 
 /**
  * This class knows how to resolve the 'ivy' uri scheme. It usually doesn't
@@ -17,8 +18,7 @@ import javax.mail.internet.MailDateFormat
  * snapshot, in order to build a new and unique ProjectBuildConfig.
  */
 class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver {
-  def canResolve(config: ProjectBuildConfig): Boolean = {
-    val uri = new java.net.URI(config.uri)
+  def canResolve(uri: URI): Boolean = {
     uri.getScheme == "ivy"
   }
 

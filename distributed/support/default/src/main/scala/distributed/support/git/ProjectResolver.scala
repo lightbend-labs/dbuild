@@ -5,13 +5,13 @@ package git
 import _root_.sbt.Path._
 import project.model._
 import project.resolve.ProjectResolver
+import _root_.java.net.URI
 
 /** This class knows how to resolve Git projects and
  * update the build configuration for repeatable checkouts.
  */
 class GitProjectResolver extends ProjectResolver {
-  def canResolve(config: ProjectBuildConfig): Boolean = {
-    val uri = new _root_.java.net.URI(config.uri)    
+  def canResolve(uri: URI): Boolean = {
     (uri.getPath!=null) && ((uri.getScheme == "git") || (uri.getPath endsWith ".git") || ((uri.getScheme == "file") &&
       (new _root_.java.io.File(uri.getPath()) / ".git").exists
     ))

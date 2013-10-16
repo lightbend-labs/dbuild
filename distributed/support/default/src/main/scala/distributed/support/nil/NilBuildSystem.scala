@@ -1,14 +1,16 @@
 package distributed.support.nil
 
 import distributed.project.model.NilExtraConfig
-import distributed.project.BuildSystem
+import distributed.support.BuildSystemCore
 import distributed.project.model._
 import distributed.logging.Logger
 import java.io.File
 import distributed.logging
+import distributed.project.dependencies.Extractor
+import distributed.project.build.LocalBuildRunner
 
 /** The Nil build system does essentially nothing, and is used for testing */
-object NilBuildSystem extends BuildSystem {
+object NilBuildSystem extends BuildSystemCore {
   val name: String = "nil"  
 
   private def nilExpandConfig(config: ProjectBuildConfig) = config.extra match {
@@ -17,7 +19,7 @@ object NilBuildSystem extends BuildSystem {
     case _ => throw new Exception("Internal error: Nil build config options are the wrong type in project \""+config.name+"\". Please report.")
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
     val ec = nilExpandConfig(config.buildConfig)
     val meta=readMeta(config.buildConfig)
     val projects=meta.projects map {_.name}
@@ -25,7 +27,7 @@ object NilBuildSystem extends BuildSystem {
     meta
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
     val ec = nilExpandConfig(project.config)
 
     val version = input.version

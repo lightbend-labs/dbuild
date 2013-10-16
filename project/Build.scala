@@ -111,7 +111,7 @@ object Defaults {
   // Projects relating to supporting various tools in distributed builds.
   lazy val defaultSupport = (
       SupportProject("default") 
-      dependsOn(dcore, drepo, dmeta)
+      dependsOn(dcore, drepo, dmeta, dprojects)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)

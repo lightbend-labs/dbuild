@@ -20,7 +20,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val root = (
     Project("root", file(".")) 
     dependsOn(defaultSupport, dbuild, drepo)
-    aggregate(graph,hashing,logging,actorLogging,dprojects,dcore,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
+    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
     settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
@@ -71,8 +71,14 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val dprojects = (
       DmodProject("projects")
-      dependsOn(dcore, actorLogging)
+      dependsOn(dcore, logging)
       dependsOnSbt(sbtIo, sbtIvy)
+    )
+  lazy val dactorProjects = (
+      DmodProject("actorProjects")
+      dependsOn(dcore, actorLogging, dprojects)
+      dependsOnSbt(sbtIo, sbtIvy)
+      settings(skip210:_*)
     )
   lazy val drepo = (
     DmodProject("repo")
@@ -96,7 +102,7 @@ object Defaults {
   )
   lazy val dbuild = (
       DmodProject("build")
-      dependsOn(dprojects, defaultSupport, drepo, dmeta)
+      dependsOn(dactorProjects, defaultSupport, drepo, dmeta)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib)
       dependsOnSbt(sbtLaunchInt)
       settings(skip210:_*)

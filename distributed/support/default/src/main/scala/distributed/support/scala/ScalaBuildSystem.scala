@@ -3,6 +3,8 @@ package support
 package scala
 
 import project.model._
+import org.apache.commons.io.FilenameUtils
+import org.apache.commons.io.FileUtils
 import _root_.java.io.File
 import _root_.sbt.Path._
 import _root_.sbt.IO.relativize
@@ -16,6 +18,7 @@ import collection.JavaConverters._
 import org.apache.maven.model.{ Model, Dependency }
 import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 import org.apache.maven.model.Dependency
+import org.apache.ivy.util.ChecksumHelper
 import distributed.support.NameFixer.fixName
 
 /** Implementation of the Scala  build system. */
@@ -104,9 +107,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       sys.error("Duplicate artifacts found in project")
     }
 
-    // ok, now we just have to merge everything together. There is currently no support for
-    // artifacts with different version strings within the same project, so we flatten everything
-    // and pretend that all artifacts have the same version number.
+    // ok, now we just have to merge everything together.
     val newMeta = ExtractedBuildMeta(meta.version, allConfigAndExtracted.flatMap(_.extracted.projects),
       meta.subproj ++ moduleOutcomes.map { _.project })
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
@@ -277,9 +278,18 @@ object ScalaBuildSystem extends BuildSystemCore {
         // we overwrite in place, there should be no adverse effect at this point
         val writer = new MavenXpp3Writer
         writer.write(new _root_.java.io.FileWriter(pom), newModel)
+        // It's not over, yet. we also have to change the .sha1 and .md5 files
+        // corresponding to this pom, if they exist, otherwise artifactory and ivy
+        // will refuse to use the pom in question.
+        Seq("md5", "sha1") foreach { algorithm =>
+            val checksumFile = new File(pom.getCanonicalPath + "." + algorithm)
+            if (checksumFile.exists) {
+              FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(pom, algorithm))
+            }
+        }
     }
-
-    // SHAs must be re-computed (since the POMs changed), and the ArtifactsOuts must be merged
+    
+    // dbuild SHAs must be re-computed (since the POMs changed), and the ArtifactsOuts must be merged
     val out = BuildArtifactsOut(getScalaArtifactsOut().results ++ artifactsMap.map {
       case (project, arts) =>
         val modArtLocs = arts.results.flatMap { _.artifacts }

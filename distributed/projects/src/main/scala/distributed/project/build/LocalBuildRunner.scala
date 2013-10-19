@@ -4,9 +4,7 @@ package build
 
 import model._
 import logging.Logger
-import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
-import actorpatterns.forwardingErrorsToFutures
 import Logger.prepareLogMsg
 import java.io.File
 import distributed.repo.core._

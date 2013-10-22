@@ -163,8 +163,8 @@ object ScalaBuildSystem extends BuildSystemCore {
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
 
-    def artifactDir(repoDir: File, ref: ProjectRef) =
-      ref.organization.split('.').foldLeft(repoDir)(_ / _) / ref.name
+    def artifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
+      ref.organization.split('.').foldLeft(repoDir)(_ / _) / (ref.name + crossSuffix)
 
     // Since this is a real local maven repo, it also contains
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
@@ -173,28 +173,29 @@ object ScalaBuildSystem extends BuildSystemCore {
     // the files corresponding to each one of them right from the relevant subdirectory.
     // We then calculate the sha, and package each subproj's results as a BuildSubArtifactsOut.
 
-    def projSHAs(artifacts: Seq[ProjectRef]): Seq[ArtifactSha] = {
+    def scanFiles[Out](artifacts: Seq[ProjectRef], crossSuffix: String)(f: File => Out) = {
       // use the list of artifacts as a hint as to which directories should be looked up,
       // but actually scan the dirs rather than using the list of artifacts (there may be
-      // additional files like checksums, for instance). An additional consistency check
-      // is later performed by the caller of the build system, upon return.
-      artifacts.map(artifactDir(localRepo, _)).distinct.flatMap { _.***.get }.
-        filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map {
-          LocalRepoHelper.makeArtifactSha(_, localRepo)
-        }
+      // additional files like checksums, for instance).
+      artifacts.map(artifactDir(localRepo, _, crossSuffix)).distinct.flatMap { _.***.get }.
+        filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map(f)
+    }
+
+    def projSHAs(artifacts: Seq[ProjectRef], crossSuffix: String): Seq[ArtifactSha] = scanFiles(artifacts, crossSuffix) {
+      LocalRepoHelper.makeArtifactSha(_, localRepo)
     }
 
     def getScalaArtifactsOut() = BuildArtifactsOut(meta.projects map {
       proj =>
         BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, version, "") },
-          projSHAs(proj.artifacts))
+          projSHAs(proj.artifacts, "")) // "" means: no cross suffix for scala core artifacts
     })
 
     val scalaArtifactsOut = getScalaArtifactsOut()
 
     // ok, we have built the main compiler/library/etc. Do we have any modules
     // that need to be built? If so, build them now.
-    val (artifactsMap, repeatableProjectBuilds) = (ec.modules.toSeq flatMap { build =>
+    val (preCrossArtifactsMap, repeatableProjectBuilds) = (ec.modules.toSeq flatMap { build =>
       build.projects map { p =>
         // the modules are build ENTIRELY independently from one another. Their list
         // of dependencies is cleared before building, so that they do not rely on one another
@@ -222,17 +223,13 @@ object ScalaBuildSystem extends BuildSystemCore {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Module " + p.name + ": " + o.status)
         }
-        log.debug("artifacts from module " + p.name + ": " + writeValue(artifactsOut))
         ((p.name, artifactsOut), repeatableProjectBuild)
       }
     }).unzip
-    val moduleArtifacts = artifactsMap.map { _._2 }
 
-    // excellent, we now have in moduleArtifacts a sequence of BuildArtifactsOut from the modules,
+    // excellent, we now have in preCrossArtifactsMap a sequence of BuildArtifactsOut from the modules,
     // and in scalaArtifactsOut the BuildArtifactsOut from the core. We just need to mix them
     // together, while rewiring the various poms together so that they all refer to one another.
-    //
-    // Note that we are going to change the poms now, therefore we have to recalculate the shas
     //
     // ------
     //
@@ -242,18 +239,87 @@ object ScalaBuildSystem extends BuildSystemCore {
     log.info("Retrieving module artifacts")
     log.debug("into " + localRepo)
     val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, localRepo, uuids)
+
+    // ------
     //
-    // we know that the Scala version is "version", we have all our artifacts ready. Time to rewrite the POMs!
+    // Before rearranging the poms, we may need to adapt the cross-version strings in the module
+    // names. That depends on the value of cross-version in our main build.options.cross-version.
+    // If it is "disabled" (default), the modules already have a version without a cross-version
+    // string, so we are good. If it "full", the modules will have a cross suffix like
+    // "_2.11.0-M5"; we should replace that with the full Scala version string we have now.
+    // For "standard" it may be either "_2.11.0-M5" or "_2.11", depending on what the modules
+    // decides. For binaryFull, it will be "_2.11" even for milestones.
+    // The cross suffix for modules depends on their own build.options.
+    // 
+    // We change that in conformance to project.crossVersion, so that:
+    // - disabled => no suffix
+    // - full => full version string
+    // - binaryFull => binaryScalaVersion
+    // - standard => binary if stable, full otherwise
+    // For "standard" we rely on the simple 0.12 algorithm (contains "-"), as opposed to the
+    // algorithms detailed in sbt's pull request #600.
+    //
+    // We have to patch both the list of BuildSubArtifactsOut, as well as the actual filenames
+    // (including checksums, if any)
+
+    val Part = """(\d+\.\d+)(?:\..+)?""".r
+    def binary(s: String) = s match {
+      case Part(z) => z
+      case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
+    }
+    val crossSuff = project.buildOptions.crossVersion match {
+      case "disabled" => ""
+      case "full" => "_" + version
+      case "binary" => "_" + binary(version)
+      case "standard" => "_" + (if (version.contains('-')) version else binary(version))
+      case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
+    }
+    def patchName(s: String) = fixName(s) + crossSuff
+
+    val artifactsMap = preCrossArtifactsMap map {
+      case (projName, BuildArtifactsOut(subs)) => (projName, BuildArtifactsOut(
+        subs map {
+          case BuildSubArtifactsOut(name, artifacts, shas) =>
+            val renamedArtifacts = artifacts map {
+              _.copy(crossSuffix = crossSuff)
+            }
+            val refs = artifacts map (_.info)
+            val newSHAs = shas map { sha =>
+              val OrgNameVerFilenamesuffix = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
+              val oldLocation = sha.location
+              try {
+                val OrgNameVerFilenamesuffix(org, oldName, ver, suffix) = oldLocation
+                val newName = patchName(oldName)
+                if (newName == oldName) sha else {
+                  val newLocation = org + "/" + newName + "/" + ver + "/" + (newName + suffix)
+                  def fileDir(name: String) = org.split('/').foldLeft(localRepo)(_ / _) / name / ver
+                  def fileLoc(name: String) = fileDir(name) / (name + suffix)
+                  val oldFile = fileLoc(oldName)
+                  val newFile = fileLoc(newName)
+                  fileDir(newName).mkdirs() // ignore if already present
+                  if (!oldFile.renameTo(newFile))
+                    log.error("cannot rename " + oldLocation + " to " + newLocation + ". Continuing...")
+                  sha.copy(location = newLocation)
+                }
+              } catch {
+                case e: _root_.scala.MatchError =>
+                  log.error("Path cannot be parsed: " + oldLocation + ". Continuing...")
+                  sha
+              }
+            }
+            BuildSubArtifactsOut(name, renamedArtifacts, newSHAs)
+        }))
+    }
+    val moduleArtifacts = artifactsMap.map { _._2 }
+
+    //
+    // we have all our artifacts ready. Time to rewrite the POMs!
+    // Note that we will also have to recalculate the shas
     //
     // Let's collect the list of available artifacts:
     //
     val allArtifactsOut = moduleArtifacts :+ scalaArtifactsOut
     val available = allArtifactsOut.flatMap { _.results }.flatMap { _.artifacts }
-    log.debug("Available artifacts:")
-    available.foreach { a =>
-      log.debug(a.info.organization + "#" + a.info.name + " " +
-        (a.info.classifier getOrElse "") + " " + a.info.extension + " ; " + a.version + " (cross: \"" + a.crossSuffix + "\")")
-    }
 
     (localRepo.***.get).filter(_.getName.endsWith(".pom")).map {
       pom =>
@@ -269,7 +335,6 @@ object ScalaBuildSystem extends BuildSystemCore {
             val m2 = m.clone
             m2.setArtifactId(fixName(m.getArtifactId) + art.crossSuffix)
             m2.setVersion(art.version)
-            log.debug("Changed " + m + " to " + m2 + " in " + pom.getName)
             m2
           } getOrElse m
         }).asJava
@@ -282,20 +347,20 @@ object ScalaBuildSystem extends BuildSystemCore {
         // corresponding to this pom, if they exist, otherwise artifactory and ivy
         // will refuse to use the pom in question.
         Seq("md5", "sha1") foreach { algorithm =>
-            val checksumFile = new File(pom.getCanonicalPath + "." + algorithm)
-            if (checksumFile.exists) {
-              FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(pom, algorithm))
-            }
+          val checksumFile = new File(pom.getCanonicalPath + "." + algorithm)
+          if (checksumFile.exists) {
+            FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(pom, algorithm))
+          }
         }
     }
-    
+
     // dbuild SHAs must be re-computed (since the POMs changed), and the ArtifactsOuts must be merged
     val out = BuildArtifactsOut(getScalaArtifactsOut().results ++ artifactsMap.map {
       case (project, arts) =>
         val modArtLocs = arts.results.flatMap { _.artifacts }
-        BuildSubArtifactsOut(project, modArtLocs, projSHAs(modArtLocs.map { _.info }))
+        BuildSubArtifactsOut(project, modArtLocs, projSHAs(modArtLocs.map { _.info }, crossSuff))
     })
-    
+
     out
   }
 

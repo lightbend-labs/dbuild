@@ -55,7 +55,7 @@ object LocalRepoHelper {
           log.debug("While reading from repo: " + e.getMessage)
           IO.write(file, writeValue(data))
           remote put (key, file)
-          log.info("Written " + data.getClass + " metadata: " + key)
+          log.info("Written " + data.getClass.getSimpleName + " metadata: " + key)
           // all ok
           return
       }
@@ -66,12 +66,12 @@ object LocalRepoHelper {
         case e =>
           // failed to deserialize. Should be impossible.
           log.error("The data already present in the dbuild repository for this data (uuid = " + data.uuid + ")")
-          log.error("does not seem a valid " + data.getClass + ". This shouldn't happen! Please report.")
+          log.error("does not seem a valid " + data.getClass.getSimpleName + ". This shouldn't happen! Please report.")
           log.error("Key: " + key)
           throw new Exception("Repository consistency check failed", e)
       }
       if (existingBuild == data) {
-        log.info("The " + data.getClass + " metadata (uuid " + data.uuid + ") is already in the repository.")
+        log.info("The " + data.getClass.getSimpleName + " metadata (uuid " + data.uuid + ") is already in the repository.")
       } else {
         log.error("The data already present in the dbuild repository for this data (uuid = " + data.uuid + ")")
         log.error("does not match the current metadata. This shouldn't happen! Please report.")

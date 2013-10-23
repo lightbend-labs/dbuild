@@ -4,20 +4,19 @@ package build
 
 import model._
 import logging.Logger
-import akka.actor.Actor
 import distributed.project.resolve.ProjectResolver
-import actorpatterns.forwardingErrorsToFutures
 import Logger.prepareLogMsg
 import java.io.File
 import distributed.repo.core._
 import sbt.Path._
+import dependencies.Extractor
 
 /** This class encodes the logic to resolve a project and run its build given
  * a local repository, a resolver and a build runner.
  */
 class LocalBuildRunner(builder: BuildRunner, 
-    resolver: ProjectResolver, 
-    repository: Repository) {
+    val extractor: Extractor, 
+    val repository: Repository) {
 
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger): BuildOutcome = {
     try {
@@ -37,10 +36,15 @@ class LocalBuildRunner(builder: BuildRunner,
   
   def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildArtifactsOut =
     distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
+      // extractor.resolver.resolve() only resolves the main URI,
+      // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
+      // here we only resolve the ROOT project, as we will later call the runBuild()
+      // of the build system, which in turn will call checkCacheThenBuild(), above, on all subprojects,
+      // which will again call this method, thereby resolve()ing each project right before building it.
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
-      resolver.resolve(build.config, dir, log)
+      extractor.resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
-      val dbuildDir=builder.projectDbuildDir(dir,build)
+      val dbuildDir = builder.projectDbuildDir(dir, build)
       val readRepo = dbuildDir / "local-repo"
       val writeRepo = dbuildDir / "local-publish-repo"
       if(!writeRepo.exists()) writeRepo.mkdirs()
@@ -92,7 +96,8 @@ class LocalBuildRunner(builder: BuildRunner,
       }
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
-      val results = builder.runBuild(build, dir, BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), log)
+      val results = builder.runBuild(build, dir,
+          BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, log)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
       results
     }

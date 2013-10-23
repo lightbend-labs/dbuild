@@ -4,13 +4,13 @@ import distributed.logging.Logger
 import distributed.project.model._
 import distributed.project.resolve.ProjectResolver
 import java.io.File
+import _root_.java.net.URI
 
 /**
  * The nil resolver does absolutely nothing.
  */
 class NilProjectResolver() extends ProjectResolver {
-  def canResolve(config: ProjectBuildConfig): Boolean = {
-    val uri = new java.net.URI(config.uri)
+  def canResolve(uri: URI): Boolean = {
     uri.getScheme == "nil"
   }
 

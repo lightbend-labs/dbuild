@@ -1,6 +1,6 @@
 package distributed.support.ivy
 
-import distributed.project.BuildSystem
+import distributed.support.BuildSystemCore
 import distributed.project.model._
 import distributed.repo.core.LocalArtifactMissingException
 import java.io.File
@@ -24,15 +24,17 @@ import org.apache.ivy.core.resolve.IvyNode
 import distributed.support.NameFixer.fixName
 import org.apache.ivy.core.module.descriptor.DefaultArtifact
 import distributed.support.ivy.IvyMachinery.PublishIvyInfo
+import distributed.project.dependencies.Extractor
+import distributed.project.build.LocalBuildRunner
 
 /** Implementation of the Scala  build system. workingDir is the "target" general dbuild dir */
-class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystem {
+class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystemCore {
 
   val name = "ivy"
   // this is the general dbuild one (we don't use it here)
   val dbuildIvyHome = (distributed.repo.core.ProjectDirs.dbuildDir / ".ivy2").getAbsolutePath
 
-  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor:Extractor, log: Logger): ExtractedBuildMeta = {
     val config=extractionConfig.buildConfig
     val response = IvyMachinery.resolveIvy(config, baseDir, repos, log)
     val report = response.report
@@ -65,7 +67,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     }
   }
 
-  def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, log: Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: Logger): BuildArtifactsOut = {
     log.debug("BuildInput is: "+input)
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)
     val version = input.version

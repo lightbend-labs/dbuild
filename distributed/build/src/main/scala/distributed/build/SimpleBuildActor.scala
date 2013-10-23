@@ -30,6 +30,18 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       val extractionPlusBuildDuration = Timeouts.extractionPlusBuildTimeout.duration
       val result = try {
         val logger = log.newNestedLogger(hashing sha1 conf.build)
+        //
+        // First, a quick sanity check on the list of project names
+        //
+        val projectNames = conf.build.projects map (_.name.toLowerCase)
+        if (projectNames.intersect(Seq("default", "standard", "dbuild", "root", ".")).nonEmpty) {
+          sys.error("The project names \"dbuild\", \"root\", \"default\", \"standard\", and \".\" are reserved; please choose a different name.")
+        }
+        val validCharset = ('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_'
+        if (projectNames.exists(_.exists(!validCharset.contains(_)))) {
+          sys.error("A project name contains an illegal character: only letters, numbers, dash and underscore are allowed.")
+        }
+        //
         val notifTask = new Notifications(conf, confName, log)
         // add further new tasks at the beginning of this list, leave notifications at the end
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), notifTask)

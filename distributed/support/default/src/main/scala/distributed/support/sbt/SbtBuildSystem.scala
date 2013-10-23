@@ -2,16 +2,17 @@ package distributed
 package support
 package sbt
 
-import project.BuildSystem
 import project.model._
 import _root_.sbt.Path._
 import logging.Logger
 import distributed.project.model.SbtExtraConfig
 import _root_.java.io.File
 import distributed.repo.core.{Defaults,ProjectDirs}
+import distributed.project.dependencies.Extractor
+import distributed.project.build.LocalBuildRunner
 
 /** Implementation of the SBT build system. */
-class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends BuildSystem {
+class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends BuildSystemCore {
   val name: String = "sbt"  
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"
@@ -42,13 +43,13 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
     projectDir
   }
 
-  def extractDependencies(config: ExtractionConfig, baseDir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, baseDir: File, extr: Extractor, log: Logger): ExtractedBuildMeta = {
     val ec = sbtExpandConfig(config.buildConfig, config.buildOptions)
     val projDir = projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log)
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
     val ec = sbtExpandConfig(project.config, project.buildOptions)
     val name = project.config.name
     // TODO - Does this work correctly?

@@ -10,9 +10,12 @@ import project.model._
 import distributed.project.model.Utils.{ readValue, writeValue }
 import distributed.repo.core._
 import distributed.project.model.ClassLoaderMadness
+import distributed.project.dependencies.Extractor
+import distributed.support.BuildSystemCore
 
 class LocalBuildMain(configuration: xsbti.AppConfiguration) {
   val launcher = configuration.provider.scalaProvider.launcher
+
   val repos = launcher.ivyRepositories.toList
   val targetDir = ProjectDirs.targetDir
   val resolvers = Seq(
@@ -20,7 +23,7 @@ class LocalBuildMain(configuration: xsbti.AppConfiguration) {
     new support.svn.SvnProjectResolver,
     new support.ivy.IvyProjectResolver(repos),
     new support.nil.NilProjectResolver)
-  val buildSystems: Seq[project.BuildSystem] =
+  val buildSystems: Seq[BuildSystemCore] =
     Seq(new support.sbt.SbtBuildSystem(repos, targetDir),
       support.scala.ScalaBuildSystem,
       new support.ivy.IvyBuildSystem(repos, targetDir),

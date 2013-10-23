@@ -2,16 +2,18 @@ package distributed
 package support
 package mvn
 
-import distributed.project.BuildSystem
-import distributed.project.model._
+import project.BuildSystem
+import project.model._
 import _root_.java.io.File
-import distributed.logging.Logger
+import logging.Logger
 import _root_.sbt.Path._
 import collection.JavaConverters._
+import distributed.project.dependencies.Extractor
+import distributed.project.build.LocalBuildRunner
 
-object MvnBuildSystem extends BuildSystem {
+object MvnBuildSystem extends BuildSystemCore {
   val name = "maven"
-  def extractDependencies(config: ExtractionConfig, dir: File, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
     val mc = mvnConfig(config.buildConfig)
     val pom = 
       if(mc.directory.isEmpty) dir / "pom.xml"
@@ -27,7 +29,7 @@ object MvnBuildSystem extends BuildSystem {
       case _ => throw new Exception("Internal error: Maven build config options are the wrong type. Please report")
     }
   
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
     log.info("Running maven...")
     val mc = mvnConfig(project.config)
     val pom = 

@@ -3,6 +3,7 @@ package project
 package resolve
 
 import model._
+import _root_.java.net.URI
 
 /** Represents an interface that is used
  * to resolve a given project locally so that
@@ -14,7 +15,7 @@ trait ProjectResolver {
   /** returns whether or not a resolver can resolve a particular
    * type of project.
    */
-  def canResolve(config: ProjectBuildConfig): Boolean
+  def canResolve(uri: URI): Boolean
   /**
    * Resolves a remote project into the given local directory.
    * Returns a new repeatable Scm configuration that can be used
@@ -32,13 +33,13 @@ trait ProjectResolver {
 /** Helper that uses all known project resolvers. */
 class AggregateProjectResolver(resolvers: Seq[ProjectResolver]) extends ProjectResolver {
   def findResolver(config: ProjectBuildConfig) = {
-    resolvers find (_ canResolve config) match {
+    resolvers find (_ canResolve new java.net.URI(config.uri)) match {
       case Some(r) => r
       case _       => sys.error("Could not find a resolver for: " + config.name)
     }
   }
-  def canResolve(config: ProjectBuildConfig): Boolean = 
-    resolvers exists (_ canResolve config)
+  def canResolve(uri: URI): Boolean = 
+    resolvers exists (_ canResolve uri)
   def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig =
     findResolver(config).resolve(config, dir, log)
 }

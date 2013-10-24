@@ -310,7 +310,7 @@ case class MavenExtraConfig(
  * sbt-specific build parameters
  */
 case class SbtExtraConfig(
-  // None is interpreted as default: use build.option.sbt-version
+  // None is interpreted as default: use build.options.sbt-version
   @JsonProperty("sbt-version") sbtVersion: Option[String] = None,
   directory: String = "",
   @JsonProperty("measure-performance") measurePerformance: Boolean = false,
@@ -324,8 +324,8 @@ case class SbtExtraConfig(
    *  Use "standard" to use the project's standard Scala compiler for extraction,
    *  or a version string to force a different Scala compiler.
    */
-  // None is interpreted as default: use build.option.extraction-compiler
-  @JsonProperty("extraction-compiler") extractionCompiler: Option[String] = None
+  // None is interpreted as default: use build.options.extraction-version
+  @JsonProperty("extraction-version") extractionVersion: Option[String] = None
   ) extends ExtraConfig
 
 object BuildSystemExtras {
@@ -519,7 +519,7 @@ case class BuildOptions(
   @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
   // This option applies to all sbt-based projects, unless overridden.
   // see SbtExtraConfig for details.
-  @JsonProperty("extraction-compiler") extractionCompiler: String = "standard"
+  @JsonProperty("extraction-version") extractionVersion: String = "standard"
 )
 
 /**

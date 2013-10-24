@@ -25,7 +25,7 @@ object SbtExtractor {
   private def runSbtExtractionProject(runner: SbtRunner)(project: File, extra: SbtExtraConfig, log: logging.Logger): String = {
     IO.withTemporaryFile("result", "sbtmeta") { result =>
       log.debug("Extracting SBT build (" + project + ") dependencies into " + result)
-      val scalaCompiler = extra.extractionCompiler getOrElse
+      val scalaCompiler = extra.extractionVersion getOrElse
         sys.error("Internal error: \"compiler\" has not been expanded. Please report.")
       val setScalaCommand: Seq[String] = scalaCompiler match {
         case "standard" =>

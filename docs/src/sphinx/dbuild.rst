@@ -223,7 +223,7 @@ In this case the "extra" argument is a record with the following content:
     "run-tests"           : <run-tests>
     "options"             : [ opt1, opt2,... ]
     "commands"            : [ cmd1, cmd2,... ]
-    "extraction-compiler" : <compiler-option>
+    "extraction-version"  : <compiler-version-string>
    }
 
 Each of these fields is optional; their meaning is:
@@ -278,7 +278,7 @@ commands
   the project dependencies. These commands can be used, for example, to change settings
   using forms like "set setting := ...".
 
-extraction-compiler
+extraction-version
   This value can be used to override the Scala compiler version used during dependency
   extraction. It is optional within each project; it is also possible to specify this
   option for all projects from the global build options (see :doc:`buildOptions`). In
@@ -287,11 +287,11 @@ extraction-compiler
 
   .. code-block:: text
 
-    build.options.extraction-compiler: "2.11.0-M5"
+    build.options.extraction-version: "2.11.0-M5"
     build.projects: [{
       name: "a"
       uri: "..."
-      extra.extraction-compiler: "2.11.0-M4"
+      extra.extraction-version: "2.11.0-M4"
      },{
       name: "b"
       uri: "..."
@@ -301,10 +301,10 @@ extraction-compiler
   dependencies of all projects, except for project "a", for which Scala version
   2.11.0-M4 will be used.
 
-  More in detail, the "extraction-compiler" option 
+  More in detail, the "extraction-version" option 
   can be either a fixed Scala version string, or the string "standard". In the
   latter case, each project will use the Scala version specified in its own build
-  files in order to determine the project's dependencies. If no "extraction-compiler"
+  files in order to determine the project's dependencies. If no "extraction-version"
   option is specified anywhere, "standard" is assumed for all projects.
 
   It is not normally necessary to specify this value explicitly,
@@ -315,11 +315,11 @@ extraction-compiler
   was developed until recently using Scala 2.10.x, and its master branch still
   uses a Scala 2.10.x compiler, but at the same time there is some code that
   adds specific libraries when using the Scala 2.11.x compilers, then it may
-  be useful to specify an "extraction" compiler that belongs to the 2.11
+  be useful to specify an "extraction" compiler version that belongs to the 2.11
   family.
 
   In general, it may be simple and effective to specify the extraction
-  compiler just once, in the global build options, as shown in the example
+  version just once, in the global build options, as shown in the example
   above.
 
 Scala-specific options

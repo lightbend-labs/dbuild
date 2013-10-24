@@ -18,7 +18,7 @@ sections. Its structure is currently:
     options: {
      "cross-version"       : <cross-version-level>
      "sbt-version"         : <sbt-version>
-     "extraction-compiler" : <compiler-option>
+     "extraction-version"  : <compiler-version-string>
     }
    }
 
@@ -81,9 +81,9 @@ sbt-version
   You can optionally specify here the sbt version that should be used to compile
   all the sbt-based projects. If not specified, sbt 0.12.4 will be used.
 
-extraction-compiler
-  Specifies the compiler that should be used during dependency extraction; see the
-  section :ref:`sbt-options`.
+extraction-version
+  Specifies the version of the compiler that should be used during dependency
+  extraction; see the section :ref:`sbt-options`.
 
 |
 

@@ -22,18 +22,18 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
   private def sbtExpandConfig(config: ProjectBuildConfig, buildOptions:BuildOptions) = config.extra match {
     // no 'extra' section in an sbt project? pick default values from build.options
     case None => SbtExtraConfig(sbtVersion = Some(buildOptions.sbtVersion),
-      extractionCompiler = Some(buildOptions.extractionCompiler))
+      extractionVersion = Some(buildOptions.extractionVersion))
     // an 'extra' section is present. One or both of 'sbtVersion' and 'compiler' might be missing.
     case Some(ec: SbtExtraConfig) => {
       val sbtVer = ec.sbtVersion match {
         case None => buildOptions.sbtVersion
         case Some(v) => v
       }
-      val comp = ec.extractionCompiler match {
-        case None => buildOptions.extractionCompiler
+      val extrVer = ec.extractionVersion match {
+        case None => buildOptions.extractionVersion
         case Some(c) => c
       }
-      ec.copy(sbtVersion = Some(sbtVer), extractionCompiler = Some(comp))
+      ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer))
     }
     case _ => throw new Exception("Internal error: sbt build config options are the wrong type in project \""+config.name+"\". Please report")
   }

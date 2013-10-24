@@ -282,6 +282,7 @@ In the case of Scala, the "extra" record is:
 
    {
     "build-target"   : <build-target>,
+    "deploy-target"  : <deploy-target>,
     "build-options"  : [ opt1, opt2,... ]
     "build-number"   : <build-number>,
     "exclude"        : [ subproj1, subproj2,... ]
@@ -294,6 +295,11 @@ build-target
   The Scala build system will normally generate the files by invoking
   the target "distpack-maven-opt". If required, a different target can
   be specified using this option.
+
+deploy-target
+  This is the ant target that is used to copy the generated files as
+  Maven artifacts, to a local repository. The default is "deploy.local",
+  but it can be overridden by using this option.
 
 build-options
   A sequence of strings; they will be appended to the ant options when

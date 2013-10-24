@@ -26,7 +26,7 @@ object ScalaBuildSystem extends BuildSystemCore {
   val name: String = "scala"
 
   private def scalaExpandConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => ScalaExtraConfig(None, None, Seq.empty, Seq.empty, None) // pick default values
+    case None => ScalaExtraConfig(None, None, None, Seq.empty, Seq.empty, None) // pick default values
     case Some(ec: ScalaExtraConfig) => ec
     case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \"" + config.name + "\". Please report")
   }
@@ -155,7 +155,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     val localRepo = input.outRepo
-    Process(Seq("ant", "deploy.local",
+    Process(Seq("ant", ec.deployTarget getOrElse "deploy.local",
       "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
       "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
       "-Dmaven.version.number=" + version) ++ ec.buildOptions, Some(dir / "dists" / "maven" / "latest")) ! log match {

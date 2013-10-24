@@ -265,6 +265,9 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
  * build-target:  Overrides the standard ant target that is invoked in order to
  *                generate the artifacts. The default is 'distpack-maven-opt', and it
  *                is not normally changed.
+ * deploy-target: Overrides the ant target that is invoked in order to
+ *                copy the artifacts to a local repository. The default is
+ *                'deploy.local'.
  * build-options: A sequence of additional options that will be passed to ant.
  *                They can specify properties, or modify in some other way the
  *                build. These options will be passed after the ones set by
@@ -274,6 +277,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
 case class ScalaExtraConfig(
   @JsonProperty("build-number") buildNumber: Option[BuildNumber],
   @JsonProperty("build-target") buildTarget: Option[String],
+  @JsonProperty("deploy-target") deployTarget: Option[String],
   @JsonProperty("build-options") buildOptions: SeqString = Seq.empty,
   exclude: SeqString = Seq.empty, // if empty -> exclude no projects (default)
   // 'modules' contains a sequence of sub-projects,

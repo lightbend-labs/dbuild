@@ -45,7 +45,13 @@ case class DepsModifiers(
 case class DBuildConfiguration(
   build: DistributedBuildConfig,
   options: GeneralOptions = GeneralOptions(), // pick defaults if empty
-  vars: Option[Vars] = Some(Vars())
+  vars: Option[Vars] = Some(Vars()),
+  /**
+   * 'properties' can be one or more URIs to properties lists,
+   * whose content will be merged with the configuration file, and used
+   * during expansion.
+   */
+  properties: SeqString = Seq.empty
 )
 
 /* This section is unchecked, and is used prior to deserialization by

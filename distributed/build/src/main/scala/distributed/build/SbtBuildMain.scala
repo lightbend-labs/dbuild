@@ -7,10 +7,13 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import distributed.project.model.DBuildConfiguration
-import distributed.project.model.Utils.{ writeValue, readValue }
+import distributed.project.model.Utils.{ writeValue, readValue, readProperties }
 import distributed.project.model.ClassLoaderMadness
 import distributed.project.model.{ BuildOutcome, BuildBad }
 import distributed.project.model.TemplateFormatter
+import java.util.Properties
+import com.typesafe.config.ConfigFactory
+import distributed.project.model.Utils.readValueT
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -52,7 +55,18 @@ class SbtBuildMain extends xsbti.AppMain {
           sys.error("Configuration file not found")
         val config =
           try {
-            readValue[DBuildConfiguration](configFile)
+            val properties = readProperties(configFile): Seq[String]
+            val propConfigs = properties map { s =>
+              println("Including properties file: " + s)
+              val syntax = com.typesafe.config.ConfigSyntax.PROPERTIES
+              val parseOptions = com.typesafe.config.ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)
+              val config = com.typesafe.config.ConfigFactory.parseURL(new java.net.URI(s).toURL, parseOptions)
+              config.atKey("vars")
+            }
+            val initialConfig = com.typesafe.config.ConfigFactory.parseFile(configFile)
+            val endConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
+            val conf = readValueT[DBuildConfiguration](endConfig)
+            conf
           } catch {
             case e: Exception =>
               println("Error reading configuration file:")

@@ -60,6 +60,7 @@ in the documentation. The top level of the configuration file is:
     "build"  : <build_section>,
     "options": <options_section>,
     "vars"   : { <substitution_var1, <substitution_var2>, ... }
+    "properties" : [ <props-uri-1>, <props-uri-2>, ... ]
    }
 
 build
@@ -95,6 +96,27 @@ vars
   you can then insert in the rest of the file ``${vars.a}`` and ``${vars.b}``, which will
   be replaced with the specified replacement strings. Sequences, or other arbitrary JSON
   structures, may also be defined and expanded in the same manner.
+
+properties
+  This optional section may be used to define additional variables, by means of properties
+  files. You can specify a single URI (as a string), or an array of URIs (as strings).
+  In order to refer to local files, please use the formats ```file:somefile.props``` for
+  relative pathnames, or ```file:///absolute/path/somefile.props``` for absolute paths.
+  URIs that refer to http/https resources can also be used.
+
+  The variables will be defined using the name of the property, prefixed by "vars."; for
+  example, ```scala.binary.version``` can be referred to as ```${vars.scala.binary.version}```.
+
+  Because of the evaluation order, the strings of the URIs of property files may contain
+  expansions of both system properties and shall environment variables; however, they
+  may not refer to vars defined in the 'vars' section of the same file. Conversely,
+  those 'vars' may contain expansions that refer to properties loaded using this
+  properties list.
+
+  Properties files that come earlier in the list have priority. Variables that are
+  defined locally, in the 'vars' section, take precedence in any case over all of
+  the properties defined in the properties files of this list.
+
 
 The build section
 -----------------

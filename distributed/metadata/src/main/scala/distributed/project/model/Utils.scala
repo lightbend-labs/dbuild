@@ -1,6 +1,7 @@
 package distributed.project.model
 
 import ClassLoaderMadness.withContextLoader
+import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.ConfigFactory.{parseString,parseFile}
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.Config
@@ -12,11 +13,11 @@ import java.io.File
 object Utils {
   private val mapper=JacksMapper.withOptions(CaseClassCheckNulls(true),
       CaseClassSkipNulls(true),CaseClassRequireKnown(true))
-  private def readValueT[T](c: Config)(implicit m: Manifest[T]) =
+  def readValueT[T](c: Config)(implicit m: Manifest[T]) =
     withContextLoader(getClass.getClassLoader) {
       val expanded = c.resolve.root.render(ConfigRenderOptions.concise)
       try {
-        mapper.readValue[T](c.resolve.root.render(ConfigRenderOptions.concise))
+        mapper.readValue[T](expanded)
       } catch {
         case e: JsonMappingException =>
           val m2 = try {
@@ -43,6 +44,22 @@ object Utils {
   def readValue[T](s:String)(implicit m: Manifest[T])=readValueT[T](parseString(s))
   def writeValue[T](t:T)(implicit m: Manifest[T]) = 
     withContextLoader(getClass.getClassLoader){mapper.writeValueAsString[T](t)}
+  def readProperties(f: File) = {
+    val config = parseFile(f)
+    // do not resolve yet! some needed vars may be in prop files which have not been parsed yet
+    // resolve *only* the properties key, in case we are using env vars there
+    val rendered = try {
+      val value = config.root.withOnlyKey("properties").toConfig().resolve().getValue("properties")
+      value.render(ConfigRenderOptions.concise)
+    } catch {
+      case e: Missing => "[]"
+    }
+    try {
+      mapper.readValue[SeqString](rendered)
+    } catch {
+      case e => throw new JsonMappingException("The \"properties\" section contains unexpected data.", e)
+    }
+  }
   
   private val mapper2=JacksMapper
   // specific simplified variant to deal with reading a path from a /possible/ Artifactory response,

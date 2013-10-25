@@ -9,7 +9,7 @@ import DistributedRunner.{getSortedProjects,verifySubProjects}
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
-  
+
   /** Pulls the name/organization/version for each project in the build. */
   private def getProjectInfos(extracted: Extracted, state: State, refs: Iterable[ProjectRef]): Seq[model.Project] =
     (Vector[model.Project]() /: refs) { (dependencies, ref) =>
@@ -26,14 +26,15 @@ object DependencyAnalysis {
         d <- (pdeps ++ ldeps)
         a <- artifactsNoEmpty(d.name, d.explicitArtifacts)
       } yield model.ProjectRef(fixName(a.name), d.organization, a.extension, a.classifier)) :+
+        // We need to add a fictitious, dbuild-only dependency, so that the compiler is compiled
+        // first, and available to create a suitable scalaInstance
         model.ProjectRef("scala-compiler", "org.scala-lang", "jar", None)
-        // the scala-compiler is always needed for the sbt build system!
-      
+
       // Project Artifacts
       val artifacts = for {
         a <- extracted get (Keys.artifacts in ref)
       } yield model.ProjectRef(fixName(a.name), organization, a.extension, a.classifier)
-      
+
       // Append ourselves to the list of projects...
       dependencies :+ model.Project(
         name,

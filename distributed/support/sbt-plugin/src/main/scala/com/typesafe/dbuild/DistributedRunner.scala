@@ -18,6 +18,8 @@ import distributed.project.model.BuildSubArtifactsOut
 
 object DistributedRunner {
 
+  val scalaOrgs = Seq("org.scala-lang", "org.scala-lang.modules")
+
   def timed[A](f: => Stated[A]): Stated[Long] = {
     val start = java.lang.System.currentTimeMillis
     val result = f
@@ -90,7 +92,7 @@ object DistributedRunner {
   // cross version suffix attached to its "name" field; therefore, we apply
   // fixName() only to the ModuleID we are trying to rewrite right now.
   def fixModule(arts: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
-      log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
+    log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
     def expandName(a: Artifact) = {
       import a._
       classifier match {
@@ -136,7 +138,7 @@ object DistributedRunner {
       // (and we should get a warning about that circumstance anyway).
       if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) &&
         // Do not inspect the artifacts that belong to the project we are building at this time:
-        (!(modules exists {i => i.getOrganisation == m.organization && fixName(i.getName) == fixName(m.name)}))) {
+        (!(modules exists { i => i.getOrganisation == m.organization && fixName(i.getName) == fixName(m.name) }))) {
         // If we are here, it means that this is a library dependency that is required,
         // that refers to an artifact that is not provided by any project in this build,
         // and that needs a certain Scala version (range) in order to work as intended.
@@ -296,17 +298,6 @@ object DistributedRunner {
       case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
     }
   }
-  // we want to match against only one and precisely one scala version; therefore any
-  // binary compatibility lookup machinery must be disabled
-  def fixScalaBinaryVersions2(crossSuffix: String) =
-    crossSuffix match {
-      case "full" =>
-        fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
-          val sc = s.key.scope
-          Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
-        }("Setting Scala binary version to full") _
-      case "normal" => { (_: Seq[Setting[_]], _: Logger) => Seq.empty }
-    }
 
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
@@ -376,7 +367,6 @@ object DistributedRunner {
   def fixScalaVersion2(dbuildDir: File, repoDir: File, locs: Seq[model.ArtifactLocation])(oldSettings: Seq[Setting[_]], log: Logger) = {
     customScalaVersion(locs).toSeq flatMap { ver =>
       log.info("Preparing Scala binaries: scala-library version " + ver)
-      val scalaOrgs = Seq("org.scala-lang","org.scala-lang.modules")
       val scalaArts = locs.filter(scalaOrgs contains _.info.organization)
       val scalaHomeSha = hashing sha1 (scalaArts map { _.version })
       val scalaHome = dbuildDir / "scala" / scalaHomeSha
@@ -474,7 +464,8 @@ object DistributedRunner {
 
       def newSettings(oldSettings: Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
-          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts, oldSettings, config.buildOptions.crossVersion)
+          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
+            oldSettings, config.buildOptions.crossVersion)
 
       newState(state, extracted, newSettings)
 
@@ -672,7 +663,8 @@ object DistributedRunner {
         state
       } else {
         val modules = getModuleRevisionIds(state, proj.subproj, log)
-        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _, proj.buildOptions.crossVersion))
+        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _,
+          proj.buildOptions.crossVersion))
       }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")

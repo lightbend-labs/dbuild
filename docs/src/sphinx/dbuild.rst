@@ -108,7 +108,7 @@ properties
   example, ```scala.binary.version``` can be referred to as ```${vars.scala.binary.version}```.
 
   Because of the evaluation order, the strings of the URIs of property files may contain
-  expansions of both system properties and shall environment variables; however, they
+  expansions of both system properties and shell environment variables; however, they
   may not refer to vars defined in the 'vars' section of the same file. Conversely,
   those 'vars' may contain expansions that refer to properties loaded using this
   properties list.

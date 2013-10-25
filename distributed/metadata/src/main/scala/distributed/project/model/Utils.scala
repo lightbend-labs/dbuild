@@ -1,6 +1,7 @@
 package distributed.project.model
 
 import ClassLoaderMadness.withContextLoader
+import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.ConfigFactory.{parseString,parseFile}
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.Config
@@ -47,8 +48,12 @@ object Utils {
     val config = parseFile(f)
     // do not resolve yet! some needed vars may be in prop files which have not been parsed yet
     // resolve *only* the properties key, in case we are using env vars there
-    val value = config.root.withOnlyKey("properties").toConfig().resolve().getValue("properties")
-    val rendered = value.render(ConfigRenderOptions.concise)
+    val rendered = try {
+      val value = config.root.withOnlyKey("properties").toConfig().resolve().getValue("properties")
+      value.render(ConfigRenderOptions.concise)
+    } catch {
+      case e: Missing => "[]"
+    }
     try {
       mapper.readValue[SeqString](rendered)
     } catch {

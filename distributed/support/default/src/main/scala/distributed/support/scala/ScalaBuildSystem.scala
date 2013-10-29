@@ -423,6 +423,10 @@ object ScalaBuildSystem extends BuildSystemCore {
           } getOrElse m
         }).asJava
         val newModel = model.clone
+        // has the artifactId (aka the name) changed? If so, patch that as well.
+        val NameExtractor = """.*/([^/]*)/([^/]*)/\1-[^/]*.pom""".r
+        val NameExtractor(newArtifactId, _) = pom.getCanonicalPath()
+        newModel.setArtifactId(newArtifactId)
         newModel.setDependencies(newDeps)
         // we overwrite in place, there should be no adverse effect at this point
         val writer = new MavenXpp3Writer

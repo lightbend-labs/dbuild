@@ -160,8 +160,8 @@ object ScalaBuildSystem extends BuildSystemCore {
 
     // We do a bunch of in-place file operations in the localRepo, before returning.
     // To avoid problems due to stale files, delete all contents before proceeding.
-    localRepo.*("*").get.foreach{IO.delete}
-    
+    localRepo.*("*").get.foreach { IO.delete }
+
     Process(Seq("ant", ec.deployTarget getOrElse "deploy.local",
       "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
       "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
@@ -174,7 +174,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     def orgDir(repoDir: File, organization: String) =
       organization.split('.').foldLeft(repoDir)(_ / _)
     def artifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
-       orgDir(repoDir, ref.organization) / (ref.name + crossSuffix)
+      orgDir(repoDir, ref.organization) / (ref.name + crossSuffix)
 
     // try to find the right cross suffix and version by inspecting the org dir,
     // and looking for poms
@@ -216,7 +216,6 @@ object ScalaBuildSystem extends BuildSystemCore {
       log.debug("For " + modID + " the cross suffix is \"" + crossSuffixesAndVers.head + "\"")
       crossSuffixesAndVers.head
     }
-
 
     // Since this is a real local maven repo, it also contains
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
@@ -266,9 +265,6 @@ object ScalaBuildSystem extends BuildSystemCore {
     log.debug("scalaCore: " + writeValue(scalaCore))
     log.debug("scalaCoreModulesMap: " + writeValue(scalaCoreModulesMap))
 
-//    val (scalaArtifactsCore,scalaArtifactsModules) = scalaArtifactsOut.results.partition(_.)
-    
-    
     // ok, we have built the main compiler/library/etc. Do we have any nested modules
     // that need to be built? If so, build them now.
     val (preCrossArtifactsMap, repeatableProjectBuilds) = (ec.modules.toSeq flatMap { build =>
@@ -316,7 +312,6 @@ object ScalaBuildSystem extends BuildSystemCore {
     log.debug("into " + localRepo)
     val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, localRepo, uuids)
 
-    
     // ------
     // ok. At this point, we have:
     // preCrossArtifactsMap: map name -> artifacts, from the nested modules. Each mapping corresponds to a real nested project,

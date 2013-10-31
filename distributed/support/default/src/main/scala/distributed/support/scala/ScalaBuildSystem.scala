@@ -160,7 +160,7 @@ object ScalaBuildSystem extends BuildSystemCore {
 
     // We do a bunch of in-place file operations in the localRepo, before returning.
     // To avoid problems due to stale files, delete all contents before proceeding.
-    localRepo.*("*").get.foreach { IO.delete }
+    IO.delete(localRepo.*("*").get)
 
     Process(Seq("ant", ec.deployTarget getOrElse "deploy.local",
       "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,

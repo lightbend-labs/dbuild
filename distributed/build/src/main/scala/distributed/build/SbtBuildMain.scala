@@ -53,6 +53,7 @@ class SbtBuildMain extends xsbti.AppMain {
         val configFile = new File(args(0))
         if (!configFile.isFile())
           sys.error("Configuration file not found")
+        println("Using configuration: " + configFile.getName)
         val config =
           try {
             val properties = readProperties(configFile): Seq[String]

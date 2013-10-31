@@ -366,7 +366,6 @@ object ScalaBuildSystem extends BuildSystemCore {
             val renamedArtifacts = artifacts map {
               _.copy(crossSuffix = crossSuff)
             }
-            val refs = artifacts map (_.info)
             val newSHAs = shas map { sha =>
               val OrgNameVerFilenamesuffix = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
               val oldLocation = sha.location

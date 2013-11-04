@@ -25,7 +25,7 @@ case class ProjectBuildConfig(name: String,
 
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
-  uri: String,
+  uri: String = "nil:",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
   extra: JsonNode = null)
@@ -344,13 +344,15 @@ object BuildSystemExtras {
     "scala" -> classOf[ScalaExtraConfig],
     "ivy" -> classOf[IvyExtraConfig],
     "maven" -> classOf[MavenExtraConfig],
+    "test" -> classOf[TestExtraConfig],
     "nil" -> classOf[NilExtraConfig])
 }
 
 /** configuration for the Nil build system */
-case class NilExtraConfig(
-  /** add the dependencies here, in some fashion to be decided */
-  deps: SeqString = Seq.empty) extends ExtraConfig
+case class NilExtraConfig() extends ExtraConfig
+
+/** configuration for the Test build system */
+case class TestExtraConfig() extends ExtraConfig
 
 // our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner
 @JsonSerialize(using = classOf[SelectorElementSerializer])

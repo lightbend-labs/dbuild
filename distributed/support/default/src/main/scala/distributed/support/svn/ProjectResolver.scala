@@ -6,13 +6,13 @@ import _root_.sbt.Path._
 import project.model._
 import project.resolve.ProjectResolver
 import git.UriUtil
-import _root_.java.net.URI
 
 /** This class knows how to resolve Git projects and
  * update the build configuration for repeatable checkouts.
  */
 class SvnProjectResolver extends ProjectResolver {
-  def canResolve(uri: URI): Boolean = {
+  def canResolve(configUri: String): Boolean = {
+    val uri = new _root_.java.net.URI(configUri)
     ((uri.getScheme == "svn") || 
      (uri.getScheme == "http") ||
      (uri.getScheme == "https")

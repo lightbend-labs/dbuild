@@ -217,8 +217,11 @@ object LocalRepoHelper {
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
+    val fragment = try " (commit: " + (new java.net.URI(meta.project.config.uri)).getFragment + ")" catch {
+      case e: java.net.URISyntaxException => ""
+    }
     val info1 = "Retrieved from project " +
-      meta.project.config.name + " (commit: " + (new java.net.URI(meta.project.config.uri)).getFragment + ")"
+      meta.project.config.name + fragment
     val info2 = ": " + arts.length + " artifacts"
     val msg = if (subprojs.isEmpty) Seq(info1 + info2) else
       Seq(subprojs.mkString(info1 + ", subprojects ", ", ", info2))

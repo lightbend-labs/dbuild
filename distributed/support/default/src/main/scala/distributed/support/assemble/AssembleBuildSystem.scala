@@ -199,7 +199,9 @@ object AssembleBuildSystem extends BuildSystemCore {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)
         }
-        ((p.name, artifactsOut), repeatableProjectBuild)
+        val q=(p.name, artifactsOut)
+        log.debug("---> "+q)
+        (q, repeatableProjectBuild)
       }
     }).unzip
 
@@ -287,25 +289,31 @@ object AssembleBuildSystem extends BuildSystemCore {
         subs map {
           case BuildSubArtifactsOut(name, artifacts, shas) =>
             val renamedArtifacts = artifacts map { l =>
-              if (isScalaCoreArt(l)) l else
+              log.debug("we had : "+l)
+              val newl = if (isScalaCoreArt(l)) l else
                 l.copy(crossSuffix = crossSuff)
+              log.debug("we have: "+newl)
+              newl
             }
             val newSHAs = shas map { sha =>
               val OrgNameVerFilenamesuffix = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
               val oldLocation = sha.location
               try {
                 val OrgNameVerFilenamesuffix(org, oldName, ver, suffix) = oldLocation
-                if (isScalaCore(name, org)) sha else {
+                log.debug("We had : "+org+" "+oldName)
+                if (isScalaCore(name, org)) { log.debug("isScalaCore"); sha } else {
                   val newName = patchName(oldName)
-                  if (newName == oldName) sha else {
+                  if (newName == oldName) { log.debug("unchanged"); sha } else {
                     val newLocation = org + "/" + newName + "/" + ver + "/" + (newName + suffix)
                     def fileDir(name: String) = org.split('/').foldLeft(localRepo)(_ / _) / name / ver
                     def fileLoc(name: String) = fileDir(name) / (name + suffix)
                     val oldFile = fileLoc(oldName)
                     val newFile = fileLoc(newName)
                     fileDir(newName).mkdirs() // ignore if already present
+                    log.debug("renaming "+oldFile)
+                    log.debug("to       "+newFile)
                     if (!oldFile.renameTo(newFile))
-                      log.error("cannot rename " + oldLocation + " to " + newLocation + ". Continuing...")
+                      sys.error("cannot rename " + oldLocation + " to " + newLocation + ".")
                     sha.copy(location = newLocation)
                   }
                 }

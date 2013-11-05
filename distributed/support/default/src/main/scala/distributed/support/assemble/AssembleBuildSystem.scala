@@ -285,6 +285,12 @@ object AssembleBuildSystem extends BuildSystemCore {
     }
     def patchName(s: String) = fixName(s) + crossSuff
 
+    // sanity check: are there two subprojects with the same name?
+    val subProjects = preCrossArtifactsMap.map{_._2}.flatMap{_.results}.flatMap{_.subName}
+    if (subProjects != subProjects.distinct) {
+      sys.error(subProjects.diff(subProjects.distinct).distinct.mkString("Unexpected: these subproject names appear twice: ", ", ", ""))
+    }
+    
     // this is the renaming section: the artifacts are renamed according
     // to the crossSuffix selection
     val artifactsMap = preCrossArtifactsMap map {

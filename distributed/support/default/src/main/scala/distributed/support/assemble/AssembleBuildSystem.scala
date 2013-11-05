@@ -213,9 +213,10 @@ object AssembleBuildSystem extends BuildSystemCore {
     // the organization id "org.scala-lang".
 
     def isScalaCore(name: String, org: String) =
-      org == "org.scala-lang" && name.startsWith("scala")    
+      (org == "org.scala-lang" && name.startsWith("scala")) ||
+      (org == "org.scala-lang.plugins" && name == "continuations")
     def isScalaCoreArt(l: ArtifactLocation) =
-      isScalaCore(l.info.organization, l.info.name)
+      isScalaCore(l.info.name, l.info.organization)
     
     // we also need the new scala version, which we take from the scala-library artifact, among
     // our subprojects. If we cannot find it, then we have none.
@@ -244,8 +245,10 @@ object AssembleBuildSystem extends BuildSystemCore {
     //
     // Before rearranging the poms, we may need to adapt the cross-version strings in the part
     // names. That depends on the value of cross-version in our main build.options.cross-version.
-    // If it is "disabled" (default), the parts already have a version without a cross-version
-    // string, so we are good. If it is anything else, we need to adjust the cross-version suffix
+    // If it is "disabled" (default), the parts should already have a version without a cross-version
+    // string; we might have to remove the cross suffix, if present, from the modules compiled by the
+    // scala ant task, as that is not affected by the cross-version selector. In any case, we just need
+    // to remove all cross suffixes. If it is anything else, we need to adjust the cross-version suffix
     // of all artifacts (except those of the scala core) according to the value of the new scala
     // version, according to the "scala-library" artifact we have in our "Assemble". If we have
     // no scala-library, however, we can't change the suffixes at all, so we stop.
@@ -301,7 +304,7 @@ object AssembleBuildSystem extends BuildSystemCore {
               try {
                 val OrgNameVerFilenamesuffix(org, oldName, ver, suffix) = oldLocation
                 log.debug("We had : "+org+" "+oldName)
-                if (isScalaCore(name, org)) { log.debug("isScalaCore"); sha } else {
+                if (isScalaCore(name, org.replace('/', '.'))) { log.debug("isScalaCore"); sha } else {
                   val newName = patchName(oldName)
                   if (newName == oldName) { log.debug("unchanged"); sha } else {
                     val newLocation = org + "/" + newName + "/" + ver + "/" + (newName + suffix)

@@ -199,7 +199,13 @@ object AssembleBuildSystem extends BuildSystemCore {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)
         }
-        val q=(p.name, artifactsOut)
+        // careful: we might have the subproject "default-sbt-project" in more than one project.
+        // Make it unique if that is the case.
+        val artifactsSafe = BuildArtifactsOut(artifactsOut.results.map { sub =>
+          if (sub.subName == "default-sbt-project")
+            sub.copy(subName = p.name + "-default-sbt-project") else sub
+        })
+        val q = (p.name, artifactsSafe)
         log.debug("---> "+q)
         (q, repeatableProjectBuild)
       }
@@ -286,7 +292,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     def patchName(s: String) = fixName(s) + crossSuff
 
     // sanity check: are there two subprojects with the same name?
-    val subProjects = preCrossArtifactsMap.map{_._2}.flatMap{_.results}.flatMap{_.subName}
+    val subProjects = preCrossArtifactsMap.map{_._2}.flatMap{_.results}.map{_.subName}
     if (subProjects != subProjects.distinct) {
       sys.error(subProjects.diff(subProjects.distinct).distinct.mkString("Unexpected: these subproject names appear twice: ", ", ", ""))
     }

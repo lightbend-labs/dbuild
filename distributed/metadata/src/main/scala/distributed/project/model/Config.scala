@@ -285,13 +285,7 @@ case class ScalaExtraConfig(
   @JsonProperty("build-target") buildTarget: Option[String],
   @JsonProperty("deploy-target") deployTarget: Option[String],
   @JsonProperty("build-options") buildOptions: SeqString = Seq.empty,
-  exclude: SeqString = Seq.empty, // if empty -> exclude no projects (default)
-  // 'modules' contains a sequence of sub-projects,
-  // which will be built using their own default scala compiler, and
-  // whose artifacts will become part of the scala artifacts produced
-  // by this project. The project names of these submodules will be
-  // handled as additional subprojects.
-  modules: Option[DistributedBuildConfig] = None
+  exclude: SeqString = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 
 case class BuildNumber(major: String, minor: String, patch: String, bnum: String)

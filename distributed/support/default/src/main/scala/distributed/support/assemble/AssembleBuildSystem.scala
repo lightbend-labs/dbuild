@@ -83,12 +83,6 @@ object AssembleBuildSystem extends BuildSystemCore {
   def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
     val ec = assembleExpandConfig(config.buildConfig)
 
-    // we have no root sources in the "assemble" project per se; therefore,
-    // we need to have an explicit "set-version" in order to know what the
-    // resulting version number should be.
-    val assembleVersion = config.buildConfig.setVersion getOrElse
-      sys.error("A \"set-version\" clause is required for the Assemble build system.")
-
     // we consider the names of parts in the same way as subprojects, allowing for a
     // partial deploy, etc.
     val subProjects = ec.parts.toSeq.flatMap(_.projects).map(_.name)
@@ -124,8 +118,9 @@ object AssembleBuildSystem extends BuildSystemCore {
       sys.error("Duplicate artifacts found in project")
     }
 
-    // ok, now we just have to merge everything together.
-    val newMeta = ExtractedBuildMeta(assembleVersion, allConfigAndExtracted.flatMap(_.extracted.projects),
+    // ok, now we just have to merge everything together. There is no version number in the assemble
+    // per se, since the versions are decided by the components.
+    val newMeta = ExtractedBuildMeta("0.0.0", allConfigAndExtracted.flatMap(_.extracted.projects),
       partOutcomes.map { _.project })
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta

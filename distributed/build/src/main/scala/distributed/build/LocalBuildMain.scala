@@ -29,6 +29,7 @@ class LocalBuildMain(configuration: xsbti.AppConfiguration) {
       support.scala.ScalaBuildSystem,
       new support.ivy.IvyBuildSystem(repos, targetDir),
       support.mvn.MvnBuildSystem,
+      support.assemble.AssembleBuildSystem,
       support.test.TestBuildSystem,
       support.nil.NilBuildSystem)
 

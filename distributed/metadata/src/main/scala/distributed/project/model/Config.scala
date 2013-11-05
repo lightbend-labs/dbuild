@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ser.impl.StringArraySerializer
 @JsonDeserialize(using = classOf[BuildConfigDeserializer])
 case class ProjectBuildConfig(name: String,
   system: String = "sbt",
-  uri: String,
+  uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
   extra: Option[ExtraConfig]
@@ -25,7 +25,7 @@ case class ProjectBuildConfig(name: String,
 
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
-  uri: String = "nil:",
+  uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
   extra: JsonNode = null)
@@ -344,6 +344,7 @@ object BuildSystemExtras {
     "scala" -> classOf[ScalaExtraConfig],
     "ivy" -> classOf[IvyExtraConfig],
     "maven" -> classOf[MavenExtraConfig],
+    "assemble" -> classOf[AssembleExtraConfig],
     "test" -> classOf[TestExtraConfig],
     "nil" -> classOf[NilExtraConfig])
 }
@@ -353,6 +354,11 @@ case class NilExtraConfig() extends ExtraConfig
 
 /** configuration for the Test build system */
 case class TestExtraConfig() extends ExtraConfig
+
+/** configuration for the Assemble build system */
+case class AssembleExtraConfig(
+  parts: Option[DistributedBuildConfig] = None
+) extends ExtraConfig
 
 // our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner
 @JsonSerialize(using = classOf[SelectorElementSerializer])

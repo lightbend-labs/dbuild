@@ -151,6 +151,20 @@ object AssembleBuildSystem extends BuildSystemCore {
     def artifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
       orgDir(repoDir, ref.organization) / (ref.name + crossSuffix)
 
+    // In order to detect the artifacts that belong to the scala core (non cross-versioned)
+    // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
+    // with cross versioning disabled (it's the default in dbuild). Our only option is going after
+    // the organization id "org.scala-lang".
+    def isScalaCore(name: String, org: String) =
+      (org == "org.scala-lang" && name.startsWith("scala")) ||
+      (org == "org.scala-lang.plugins" && name == "continuations")
+
+    def isScalaCoreRef(p: ProjectRef) =
+      isScalaCore(p.name, p.organization)
+
+    def isScalaCoreArt(l: ArtifactLocation) =
+      isScalaCoreRef(l.info)
+
     // Since this is a real local maven repo, it also contains
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
     //
@@ -162,7 +176,10 @@ object AssembleBuildSystem extends BuildSystemCore {
       // use the list of artifacts as a hint as to which directories should be looked up,
       // but actually scan the dirs rather than using the list of artifacts (there may be
       // additional files like checksums, for instance).
-      artifacts.map(artifactDir(localRepo, _, crossSuffix)).distinct.flatMap { _.***.get }.
+      artifacts.map{ art =>
+        val artCross = if (isScalaCoreRef(art)) "" else crossSuffix
+        artifactDir(localRepo, art, artCross)
+        }.distinct.flatMap { _.***.get }.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map(f)
     }
 
@@ -211,18 +228,7 @@ object AssembleBuildSystem extends BuildSystemCore {
       }
     }).unzip
 
-    // Excellent, we now have in preCrossArtifactsMap a sequence of BuildArtifactsOut from the parts.
-    // Out of them, we need to find out which ones originate from the scala core, and separate them
-    // from the rest.
-    // We cannot rely on the cross suffix, as the non-scala nested projects might also be published
-    // with cross versioning disabled (it's the default in dbuild). Our only option is going after
-    // the organization id "org.scala-lang".
-
-    def isScalaCore(name: String, org: String) =
-      (org == "org.scala-lang" && name.startsWith("scala")) ||
-      (org == "org.scala-lang.plugins" && name == "continuations")
-    def isScalaCoreArt(l: ArtifactLocation) =
-      isScalaCore(l.info.name, l.info.organization)
+    // Excellent, we now have in preCrossArtifactsMap a sequence of BuildArtifactsOut from the parts
     
     // we also need the new scala version, which we take from the scala-library artifact, among
     // our subprojects. If we cannot find it, then we have none.
@@ -388,7 +394,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         }
     }
 
-    // dbuild SHAs must be re-computed (since the POMs changed), and the ArtifactsOuts must be merged
+    // dbuild SHAs must be re-computed (since the POMs changed)
     //
     val out = BuildArtifactsOut(artifactsMap.map {
       case (project, arts) =>

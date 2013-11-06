@@ -439,15 +439,19 @@ object AssembleBuildSystem extends BuildSystemCore {
         // we overwrite in place, there should be no adverse effect at this point
         val writer = new MavenXpp3Writer
         writer.write(new _root_.java.io.FileWriter(pom), newModel)
-        // It's not over, yet. we also have to change the .sha1 and .md5 files
-        // corresponding to this pom, if they exist, otherwise artifactory and ivy
-        // will refuse to use the pom in question.
-        Seq("md5", "sha1") foreach { algorithm =>
-          val checksumFile = new File(pom.getCanonicalPath + "." + algorithm)
-          if (checksumFile.exists) {
-            FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(pom, algorithm))
-          }
+        updateChecksumFiles(pom)
+    }
+
+    def updateChecksumFiles(base: File) = {
+      // We will also have to change the .sha1 and .md5 files
+      // corresponding to this pom, if they exist, otherwise artifactory and ivy
+      // will refuse to use the pom in question.
+      Seq("md5", "sha1") foreach { algorithm =>
+        val checksumFile = new File(base.getCanonicalPath + "." + algorithm)
+        if (checksumFile.exists) {
+          FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(base, algorithm))
         }
+      }
     }
 
     (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { file =>
@@ -508,11 +512,11 @@ object AssembleBuildSystem extends BuildSystemCore {
         val rid = dep.getDependencyRevisionId()
 
         val newDep = available.find { artifact =>
-          log.debug("Trying to match art "+artifact+" against dep rid "+rid.getOrganisation()+"#"+rid.getName())
+          log.debug("Trying to match art " + artifact + " against dep rid " + rid.getOrganisation() + "#" + rid.getName())
           artifact.info.organization == rid.getOrganisation() &&
             artifact.info.name == fixName(rid.getName())
         } map { art =>
-          log.debug("We have matched: "+art)
+          log.debug("We have matched: " + art)
           ivy.core.module.descriptor.DefaultDependencyDescriptor.transformInstance(dep,
             new ivy.plugins.namespace.NamespaceTransformer {
               def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
@@ -526,10 +530,11 @@ object AssembleBuildSystem extends BuildSystemCore {
               def isIdentity() = false
             }, false)
         } getOrElse dep
-        log.debug("After the rewriting: "+newDep.getDependencyRevisionId().getOrganisation()+"#"+newDep.getDependencyRevisionId().getName()+";"+newDep.getDependencyRevisionId().getRevision())
+        log.debug("After the rewriting: " + newDep.getDependencyRevisionId().getOrganisation() + "#" + newDep.getDependencyRevisionId().getName() + ";" + newDep.getDependencyRevisionId().getRevision())
         newModel.addDependency(newDep)
       }
       ivy.plugins.parser.xml.XmlModuleDescriptorWriter.write(newModel, file)
+      updateChecksumFiles(file)
     }
 
     // dbuild SHAs must be re-computed (since the POMs changed)

@@ -139,11 +139,11 @@ object AssembleBuildSystem extends BuildSystemCore {
     // To avoid problems due to stale files, delete all contents before proceeding.
     IO.delete(localRepo.*("*").get)
 
-    // initial part of the artifacts dir, including only the organization
-    def orgDir(repoDir: File, organization: String) =
-      organization.split('.').foldLeft(repoDir)(_ / _)
-    def artifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
-      orgDir(repoDir, ref.organization) / (ref.name + crossSuffix)
+    def mavenArtifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
+      ref.organization.split('.').foldLeft(repoDir)(_ / _) / (ref.name + crossSuffix)
+
+    def ivyArtifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
+      repoDir / ref.organization / (ref.name + crossSuffix)
 
     // In order to detect the artifacts that belong to the scala core (non cross-versioned)
     // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
@@ -172,9 +172,10 @@ object AssembleBuildSystem extends BuildSystemCore {
       // use the list of artifacts as a hint as to which directories should be looked up,
       // but actually scan the dirs rather than using the list of artifacts (there may be
       // additional files like checksums, for instance).
-      artifacts.map { art =>
+      artifacts.flatMap { art =>
         val artCross = if (isScalaCoreRef(art)) "" else crossSuffix
-        artifactDir(localRepo, art, artCross)
+        Seq(mavenArtifactDir(localRepo, art, artCross),
+          ivyArtifactDir(localRepo, art, artCross))
       }.distinct.flatMap { _.***.get }.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map(f)
     }
@@ -522,7 +523,7 @@ object AssembleBuildSystem extends BuildSystemCore {
               def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
                 ivy.core.module.id.ModuleRevisionId.newInstance(
                   revID.getOrganisation(),
-                  fixName(rid.getOrganisation()) + art.crossSuffix,
+                  fixName(rid.getName()) + art.crossSuffix,
                   revID.getBranch(),
                   art.version,
                   revID.getExtraAttributes())

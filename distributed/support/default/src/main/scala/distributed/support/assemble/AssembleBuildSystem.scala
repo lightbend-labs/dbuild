@@ -507,34 +507,84 @@ object AssembleBuildSystem extends BuildSystemCore {
       newModel.setLastModified(model.getLastModified())
       model.getDependencies() foreach { d =>
         val dep = d match {
-          case t: org.apache.ivy.core.module.descriptor.DefaultDependencyDescriptor => t
+          case t: ivy.core.module.descriptor.DefaultDependencyDescriptor => t
           case t => sys.error("Unknown Dependency Descriptor: " + t)
         }
         val rid = dep.getDependencyRevisionId()
 
+        //        val newDep = available.find { artifact =>
+        //          log.debug("Trying to match art " + artifact + " against dep rid " + rid.getOrganisation() + "#" + rid.getName())
+        //          artifact.info.organization == rid.getOrganisation() &&
+        //            artifact.info.name == fixName(rid.getName())
+        //        } map { art =>
+        //          log.debug("We have matched: " + art)
+        //          val transformer = new ivy.plugins.namespace.NamespaceTransformer {
+        //            def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
+        //              ivy.core.module.id.ModuleRevisionId.newInstance(
+        //                revID.getOrganisation(),
+        //                fixName(rid.getName()) + art.crossSuffix,
+        //                revID.getBranch(),
+        //                art.version,
+        //                revID.getExtraAttributes())
+        //            }
+        //            def isIdentity() = false
+        //          }
+        //          ivy.core.module.descriptor.DefaultDependencyDescriptor.transformInstance(dep, transformer, false)
+        //        } getOrElse dep
+        //
         val newDep = available.find { artifact =>
           log.debug("Trying to match art " + artifact + " against dep rid " + rid.getOrganisation() + "#" + rid.getName())
           artifact.info.organization == rid.getOrganisation() &&
             artifact.info.name == fixName(rid.getName())
         } map { art =>
-          log.debug("We have matched: " + art)
-          ivy.core.module.descriptor.DefaultDependencyDescriptor.transformInstance(dep,
-            new ivy.plugins.namespace.NamespaceTransformer {
-              def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
-                ivy.core.module.id.ModuleRevisionId.newInstance(
-                  revID.getOrganisation(),
-                  fixName(rid.getName()) + art.crossSuffix,
-                  revID.getBranch(),
-                  art.version,
-                  revID.getExtraAttributes())
-              }
-              def isIdentity() = false
-            }, false)
+          log.debug("We matched: " + art)
+          val transformer = new ivy.plugins.namespace.NamespaceTransformer {
+            def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
+              ivy.core.module.id.ModuleRevisionId.newInstance(
+                revID.getOrganisation(),
+                art.info.name + art.crossSuffix,
+                revID.getBranch(),
+                art.version,
+                revID.getExtraAttributes())
+            }
+            def isIdentity() = false
+          }
+          // ivy.core.module.descriptor.DefaultDependencyDescriptor.transformInstance(dep, transformer, false)
+          // val transformParentId = transformer.transform(dep.getParentRevisionId())
+          val transformMrid = transformer.transform(dep.getDependencyRevisionId())
+          val transformDynamicMrid = transformer.transform(dep.getDynamicConstraintDependencyRevisionId())
+          val newdd = new ivy.core.module.descriptor.DefaultDependencyDescriptor(
+            null, transformMrid, transformDynamicMrid,
+            dep.isForce(), dep.isChanging(), dep.isTransitive())
+          val moduleConfs = dep.getModuleConfigurations()
+          moduleConfs foreach { conf =>
+            dep.getDependencyConfigurations(conf).foreach { newdd.addDependencyConfiguration(conf, _) }
+            dep.getExcludeRules(conf).foreach { newdd.addExcludeRule(conf, _) }
+            dep.getIncludeRules(conf).foreach { newdd.addIncludeRule(conf, _) }
+            dep.getDependencyArtifacts(conf).foreach {
+              case depArt: ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor =>
+                val newDepArt = if (art.info.name != fixName(depArt.getName())) depArt else {
+                  val n = new ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(depArt.getDependencyDescriptor(),
+                    art.info.name + art.crossSuffix, depArt.getType(), depArt.getExt(), depArt.getUrl(), depArt.getExtraAttributes())
+                  depArt.getConfigurations().foreach(n.addConfiguration)
+                  n
+                }
+                log.debug("era: "+depArt.toString)
+                log.debug("ora: "+newDepArt.toString)
+                newdd.addDependencyArtifact(conf, newDepArt)
+              case d => sys.error("Unknown DependencyArtifactDescriptor: " + d)
+            }
+          }
+          newdd
         } getOrElse dep
+
         log.debug("After the rewriting: " + newDep.getDependencyRevisionId().getOrganisation() + "#" + newDep.getDependencyRevisionId().getName() + ";" + newDep.getDependencyRevisionId().getRevision())
+        //        newModel.addDependency(newDep)
         newModel.addDependency(newDep)
       }
+      _root_.scala.io.Source.fromFile(file).getLines.foreach(log.debug(_))
       ivy.plugins.parser.xml.XmlModuleDescriptorWriter.write(newModel, file)
+      _root_.scala.io.Source.fromFile(file).getLines.foreach(log.debug(_))
       updateChecksumFiles(file)
     }
 

@@ -495,8 +495,11 @@ object AssembleBuildSystem extends BuildSystemCore {
       model.getConfigurations() foreach { c =>
         newModel.addConfiguration(c)
         val conf = c.getName
-        model.getArtifacts(conf) foreach {
-          newModel.addArtifact(conf, _)
+        model.getArtifacts(conf) foreach { mArt =>
+          val newArt =
+            if (fixName(newArtifactId) != fixName(mArt.getName())) mArt else
+              ivy.core.module.descriptor.DefaultArtifact.cloneWithAnotherName(mArt, newArtifactId)
+          newModel.addArtifact(conf, newArt)
         }
       }
       model.getAllExcludeRules() foreach { newModel.addExcludeRule }
@@ -561,18 +564,16 @@ object AssembleBuildSystem extends BuildSystemCore {
             dep.getDependencyConfigurations(conf).foreach { newdd.addDependencyConfiguration(conf, _) }
             dep.getExcludeRules(conf).foreach { newdd.addExcludeRule(conf, _) }
             dep.getIncludeRules(conf).foreach { newdd.addIncludeRule(conf, _) }
-            dep.getDependencyArtifacts(conf).foreach {
-              case depArt: ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor =>
-                val newDepArt = if (art.info.name != fixName(depArt.getName())) depArt else {
-                  val n = new ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(depArt.getDependencyDescriptor(),
-                    art.info.name + art.crossSuffix, depArt.getType(), depArt.getExt(), depArt.getUrl(), depArt.getExtraAttributes())
-                  depArt.getConfigurations().foreach(n.addConfiguration)
-                  n
-                }
-                log.debug("era: "+depArt.toString)
-                log.debug("ora: "+newDepArt.toString)
-                newdd.addDependencyArtifact(conf, newDepArt)
-              case d => sys.error("Unknown DependencyArtifactDescriptor: " + d)
+            dep.getDependencyArtifacts(conf).foreach { depArt =>
+              val newDepArt = if (art.info.name != fixName(depArt.getName())) depArt else {
+                val n = new ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(depArt.getDependencyDescriptor(),
+                  art.info.name + art.crossSuffix, depArt.getType(), depArt.getExt(), depArt.getUrl(), depArt.getExtraAttributes())
+                depArt.getConfigurations().foreach(n.addConfiguration)
+                n
+              }
+              log.debug("era: " + depArt.toString)
+              log.debug("ora: " + newDepArt.toString)
+              newdd.addDependencyArtifact(conf, newDepArt)
             }
           }
           newdd

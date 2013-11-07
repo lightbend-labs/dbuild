@@ -10,7 +10,7 @@ import java.io.File
  */
 class NilProjectResolver() extends ProjectResolver {
   def canResolve(uri: String): Boolean = {
-    uri == "nil" || uri.take(4) == "nil:"
+    uri == "nil" || uri.startsWith("nil:")
   }
 
   def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = config

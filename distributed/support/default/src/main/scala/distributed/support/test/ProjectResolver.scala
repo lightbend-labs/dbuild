@@ -11,7 +11,7 @@ import _root_.java.net.URI
  */
 class TestProjectResolver() extends ProjectResolver {
   def canResolve(uri: String): Boolean = {
-    uri == "test" || uri.take(5) == "test:"
+    uri == "test" || uri.startsWith("test:")
   }
 
   def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = {

@@ -37,8 +37,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         if (projectNames.intersect(Seq("default", "standard", "dbuild", "root", ".")).nonEmpty) {
           sys.error("The project names \"dbuild\", \"root\", \"default\", \"standard\", and \".\" are reserved; please choose a different name.")
         }
-        val validCharset = ('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_'
-        val illegalProjectNames = projectNames.filter(_.exists(!validCharset.contains(_)))
+        val validCharset = (('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_').toSet
+        val illegalProjectNames = projectNames.filterNot(_ forall validCharset)
         if (illegalProjectNames.nonEmpty) {
           sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed:",
               ", ",""))

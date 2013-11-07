@@ -93,7 +93,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val ivyRepo = baseDir / ".ivy2" / "cache"
 
     IvyMachinery.publishIvy(response, localRepo, rewrittenDeps, version, log)
-    val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("",
+    val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("default-ivy-project",
       publishArts,
       localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) })))
     log.debug(q.toString)

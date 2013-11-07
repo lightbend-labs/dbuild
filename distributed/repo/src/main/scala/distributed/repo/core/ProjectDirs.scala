@@ -11,7 +11,7 @@ import java.io.File
 object ProjectDirs {
   // TODO - Pull from config!
   val builddir = new File(".")
-  val targetDir = { println("Defaults.version is: "+Defaults.version); new File(builddir, "target-"+Defaults.version)}
+  val targetDir = new File(builddir, "target-"+Defaults.version)
   val clonesDir = new File(targetDir, "clones")
   val userhome = new File(sys.props("user.home"))
   val dbuildDir = new File(userhome, ".dbuild")

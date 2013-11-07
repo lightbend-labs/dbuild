@@ -538,7 +538,8 @@ object DistributedRunner {
     val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
     def buildTestPublish(ref: ProjectRef, state6: State, previous: (Seq[File], Seq[BuildSubArtifactsOut])): (State, (Seq[File], BuildSubArtifactsOut)) = {
-
+      println("----------------------")
+      println("Processing subproject: " + normalizedProjectName(ref, baseDirectory))
       val (_, libDeps) = Project.extract(state6).runTask(Keys.allDependencies in ref, state)
       println("All Dependencies for subproject " + normalizedProjectName(ref, baseDirectory) + ":")
       libDeps foreach { m => println("   " + m) }

@@ -7,6 +7,7 @@ import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.FileUtils
 import _root_.java.io.File
 import _root_.sbt.Path._
+import _root_.sbt.IO
 import _root_.sbt.IO.relativize
 import logging.Logger
 import sys.process._
@@ -20,48 +21,16 @@ import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import distributed.support.NameFixer.fixName
+import _root_.sbt.NameFilter
 
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystemCore {
   val name: String = "scala"
 
   private def scalaExpandConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => ScalaExtraConfig(None, None, None, Seq.empty, Seq.empty, None) // pick default values
+    case None => ScalaExtraConfig(None, None, None, Seq.empty, Seq.empty) // pick default values
     case Some(ec: ScalaExtraConfig) => ec
     case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \"" + config.name + "\". Please report")
-  }
-
-  private def modulesDir(base: File, config: ProjectBuildConfig) = {
-    // don't use the entire nested project config, as it changes after resolution (for submodules)
-    // also, avoid using the name as-is as the last path component (it might confuse the dbuild's heuristic
-    // used to determine sbt's default project names, see dbuild's issue #66)
-    val uuid = hashing sha1 config.name
-    base / ".dbuild-scala-modules" / uuid
-  }
-
-  // overriding resolve, as we need to resolve its nested projects as well
-  override def resolve(config: ProjectBuildConfig, dir: File, extractor: Extractor, log: Logger): ProjectBuildConfig = {
-    // resolve the main URI
-    val rootResolved = super.resolve(config, dir, extractor, log)
-    // and then the nested projects (if any)
-    val newExtra = rootResolved.extra match {
-      case None => None
-      case Some(extra: ScalaExtraConfig) =>
-        val newModules = extra.modules map { buildConfig =>
-          val nestedResolvedProjects =
-            buildConfig.projects.foldLeft(Seq[ProjectBuildConfig]()) { (s, p) =>
-              log.info("----------")
-              log.info("Resolving module: " + p.name)
-              val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
-              val moduleConfig = extractor.dependencyExtractor.resolve(nestedExtractionConfig.buildConfig, modulesDir(dir, p), extractor, log)
-              s :+ moduleConfig
-            }
-          DistributedBuildConfig(nestedResolvedProjects, buildConfig.options)
-        }
-        Some(extra.copy(modules = newModules))
-      case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \"" + config.name + "\". Please report")
-    }
-    rootResolved.copy(extra = newExtra)
   }
 
   def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
@@ -70,46 +39,20 @@ object ScalaBuildSystem extends BuildSystemCore {
     val meta = readMeta(dir, ec.exclude, log)
     val configAndExtracted = ProjectConfigAndExtracted(config.buildConfig, meta) // use the original config
 
-    // we consider the names of modules in the same way as subprojects, allowing for a
-    // partial deploy, exclusions, etc.
-    val coreSubProjects = meta.subproj
-    val moduleSubProjects = ec.modules.toSeq.flatMap(_.projects).map(_.name)
-    val subProjects = coreSubProjects ++ moduleSubProjects
+    // do we happen to have duplicate subprojects?
+    val subProjects = meta.subproj
     if (subProjects != subProjects.distinct) {
       sys.error(subProjects.diff(subProjects.distinct).distinct.mkString("These subproject names appear twice: ", ", ", ""))
     }
-    val moduleOutcomes = ec.modules.toSeq flatMap { buildConfig =>
-      buildConfig.projects map { p =>
-        log.info("----------")
-        val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
-        extractor.extractedResolvedWithCache(nestedExtractionConfig, modulesDir(dir, p), log)
-      }
-    }
-    if (moduleOutcomes.exists(_.isInstanceOf[ExtractionFailed])) {
-      sys.error(moduleOutcomes.filter { _.isInstanceOf[ExtractionFailed] }.map { _.project }.mkString("failed: ", ", ", ""))
-    }
-    val modulesOK = moduleOutcomes.collect({ case e: ExtractionOK => e })
-    val allConfigAndExtracted = (modulesOK flatMap { _.pces }) :+ configAndExtracted
 
-    // time to do some more checking:
-    // - do we have a duplication in provided artifacts?
-    // let's start building a sequence of all modules, with the name of the subproject they come from
-    val artiSeq = allConfigAndExtracted.flatMap { pce => pce.extracted.projects.map(art => ((art.organization + "#" + art.name), pce.config.name)) }
-    log.info(artiSeq.toString)
-    // group by module ID, and check for duplications
-    val artiMap = artiSeq.groupBy(_._1)
-    log.info(artiMap.toString)
-    val duplicates = artiMap.filter(_._2.size > 1)
-    if (duplicates.nonEmpty) {
-      duplicates.foreach { z =>
-        log.error(z._2.map(_._2).mkString(z._1 + " is provided by: ", ", ", ""))
-      }
-      sys.error("Duplicate artifacts found in project")
+    // do we have a duplication in provided artifacts?
+    val artiSeq = configAndExtracted.extracted.projects.map(art => art.organization + "#" + art.name)
+    if (artiSeq.distinct != artiSeq) {
+      sys.error(artiSeq.diff(artiSeq.distinct).distinct.mkString("These artifacts are provided twice: ", ", ", ""))
     }
 
     // ok, now we just have to merge everything together.
-    val newMeta = ExtractedBuildMeta(meta.version, allConfigAndExtracted.flatMap(_.extracted.projects),
-      meta.subproj ++ moduleOutcomes.map { _.project })
+    val newMeta = ExtractedBuildMeta(meta.version, configAndExtracted.extracted.projects, meta.subproj)
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta
   }
@@ -155,6 +98,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     val localRepo = input.outRepo
+
     Process(Seq("ant", ec.deployTarget getOrElse "deploy.local",
       "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
       "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
@@ -163,8 +107,52 @@ object ScalaBuildSystem extends BuildSystemCore {
       case n => sys.error("Could not run scala ant build, error code: " + n)
     }
 
+    // initial part of the artifacts dir, including only the organization
+    def orgDir(repoDir: File, organization: String) =
+      organization.split('.').foldLeft(repoDir)(_ / _)
     def artifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
-      ref.organization.split('.').foldLeft(repoDir)(_ / _) / (ref.name + crossSuffix)
+      orgDir(repoDir, ref.organization) / (ref.name + crossSuffix)
+
+    // try to find the right cross suffix and version by inspecting the org dir,
+    // and looking for poms
+    def findCrossAndVer(repoDir: File, org: String, name: String): (String, String) = {
+      def modID = org + "#" + name
+      val od = orgDir(repoDir, org)
+      // possible patterns:
+      // org-with-dots/name/var/name-ver.pom
+      // org-with-dots/name_suff/var/name_suff-ver.pom
+      val nameFilter = (name: NameFilter) | ((name + "_*"): NameFilter)
+      val potentialDirs = od.*(nameFilter).get
+      if (potentialDirs.isEmpty) {
+        sys.error("Cannot find artifacts dir for: " + modID)
+      }
+      // due to the renaming we perform later, we might actually end up
+      // with multiple directories (some empty or containing only
+      // the "maven-metadata-local.xml" file.
+      //
+      // let's look for var/nameWithCross-ver.pom
+      val SearchPattern = """([^/]*)/([^/]*)-\1.pom""".r
+      val crossSuffixesAndVers = potentialDirs.flatMap { d =>
+        d.***.get.filterNot(file => file.isDirectory).map { f =>
+          val relative = relativize(d, f) getOrElse sys.error("Internal error in relative paths creation. Please report.")
+          relative match {
+            case SearchPattern(ver, nameAndCross) =>
+              if (d.getName != nameAndCross) {
+                log.error("Found unexpected pom " + f.getName + " in dir " + d.getName + "/" + relative)
+              }
+              Some((nameAndCross.substring(name.length), ver))
+            case _ => None
+          }
+        }.flatten
+      }
+      if (crossSuffixesAndVers.isEmpty) {
+        sys.error("Cannot find any pom file for " + modID)
+      } else if (crossSuffixesAndVers.length > 1) {
+        sys.error("Found multiple pom files for " + modID + ": " + (crossSuffixesAndVers.mkString(", ")))
+      }
+      log.debug("For " + modID + " the cross suffix is \"" + crossSuffixesAndVers.head + "\"")
+      crossSuffixesAndVers.head
+    }
 
     // Since this is a real local maven repo, it also contains
     // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
@@ -185,182 +173,21 @@ object ScalaBuildSystem extends BuildSystemCore {
       LocalRepoHelper.makeArtifactSha(_, localRepo)
     }
 
-    def getScalaArtifactsOut() = BuildArtifactsOut(meta.projects map {
-      proj =>
-        BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, version, "") },
-          projSHAs(proj.artifacts, "")) // "" means: no cross suffix for scala core artifacts
-    })
+    // Scala artifacts used to be always with a plain version number. However, now some modules may be built
+    // as part of the core; they should use the suffix "org.scala-lang.modules". To complicate matters,
+    // the suffix may not necessarily match the scala version we are trying to build.
+    // Therefore we need to inspect the files (we try to locate the poms), and determine the proper cross
+    // suffix for each.
+    def getScalaArtifactsOut() =
+      BuildArtifactsOut(meta.projects map {
+        proj =>
+          val (cross, ver) = findCrossAndVer(localRepo, proj.organization, proj.name)
+          BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, ver, cross) },
+            projSHAs(proj.artifacts, cross))
+      })
 
-    val scalaArtifactsOut = getScalaArtifactsOut()
-
-    // ok, we have built the main compiler/library/etc. Do we have any modules
-    // that need to be built? If so, build them now.
-    val (preCrossArtifactsMap, repeatableProjectBuilds) = (ec.modules.toSeq flatMap { build =>
-      build.projects map { p =>
-        // the modules are build ENTIRELY independently from one another. Their list
-        // of dependencies is cleared before building, so that they do not rely on one another
-
-        // first, we need to build a RepeatableProjectBuild. In order to do that, we need
-        // again the ExtractedBuildMeta, but we no longer have it (it was dissolved into the
-        // main one). So, we extract again (it is cached at this point, anyway).
-
-        log.info("----------")
-        log.info("Building module: " + p.name)
-        val nestedExtractionConfig = ExtractionConfig(p, build.options getOrElse BuildOptions())
-        val moduleConfigAndExtracted = localBuildRunner.extractor.cachedExtractOr(nestedExtractionConfig, log) {
-          // if it's not cached, something wrong happened.
-          sys.error("Internal error: extraction metadata not found for module " + p.name)
-        } match {
-          case outcome: ExtractionOK => outcome.pces.headOption getOrElse
-            sys.error("Internal error: PCES empty after cachedExtractOr(); please report")
-          case _ => sys.error("Internal error: cachedExtractOr() returned incorrect outcome; please report.")
-        }
-        val repeatableProjectBuild = RepeatableProjectBuild(moduleConfigAndExtracted.config, moduleConfigAndExtracted.extracted.version,
-          Seq.empty, // remove all dependencies, and pretend this project stands alone
-          moduleConfigAndExtracted.extracted.subproj, build.options getOrElse BuildOptions())
-        val outcome = localBuildRunner.checkCacheThenBuild(modulesDir(dir, p), repeatableProjectBuild, Seq.empty, Seq.empty, log)
-        val artifactsOut = outcome match {
-          case o: BuildGood => o.artsOut
-          case o: BuildBad => sys.error("Module " + p.name + ": " + o.status)
-        }
-        ((p.name, artifactsOut), repeatableProjectBuild)
-      }
-    }).unzip
-
-    // excellent, we now have in preCrossArtifactsMap a sequence of BuildArtifactsOut from the modules,
-    // and in scalaArtifactsOut the BuildArtifactsOut from the core. We just need to mix them
-    // together, while rewiring the various poms together so that they all refer to one another.
-    //
-    // ------
-    //
-    // The scala artifacts are already deployed via the "deploy.local" ant task to the localRepo dir.
-    // now, we retrieve the artifacts' modules (they have already been published)
-    val uuids = repeatableProjectBuilds map { _.uuid }
-    log.info("Retrieving module artifacts")
-    log.debug("into " + localRepo)
-    val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, localRepo, uuids)
-
-    // ------
-    //
-    // Before rearranging the poms, we may need to adapt the cross-version strings in the module
-    // names. That depends on the value of cross-version in our main build.options.cross-version.
-    // If it is "disabled" (default), the modules already have a version without a cross-version
-    // string, so we are good. If it "full", the modules will have a cross suffix like
-    // "_2.11.0-M5"; we should replace that with the full Scala version string we have now.
-    // For "standard" it may be either "_2.11.0-M5" or "_2.11", depending on what the modules
-    // decides. For binaryFull, it will be "_2.11" even for milestones.
-    // The cross suffix for modules depends on their own build.options.
-    // 
-    // We change that in conformance to project.crossVersion, so that:
-    // - disabled => no suffix
-    // - full => full version string
-    // - binaryFull => binaryScalaVersion
-    // - standard => binary if stable, full otherwise
-    // For "standard" we rely on the simple 0.12 algorithm (contains "-"), as opposed to the
-    // algorithms detailed in sbt's pull request #600.
-    //
-    // We have to patch both the list of BuildSubArtifactsOut, as well as the actual filenames
-    // (including checksums, if any)
-
-    val Part = """(\d+\.\d+)(?:\..+)?""".r
-    def binary(s: String) = s match {
-      case Part(z) => z
-      case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
-    }
-    val crossSuff = project.buildOptions.crossVersion match {
-      case "disabled" => ""
-      case "full" => "_" + version
-      case "binary" => "_" + binary(version)
-      case "standard" => "_" + (if (version.contains('-')) version else binary(version))
-      case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
-    }
-    def patchName(s: String) = fixName(s) + crossSuff
-
-    val artifactsMap = preCrossArtifactsMap map {
-      case (projName, BuildArtifactsOut(subs)) => (projName, BuildArtifactsOut(
-        subs map {
-          case BuildSubArtifactsOut(name, artifacts, shas) =>
-            val renamedArtifacts = artifacts map {
-              _.copy(crossSuffix = crossSuff)
-            }
-            val refs = artifacts map (_.info)
-            val newSHAs = shas map { sha =>
-              val OrgNameVerFilenamesuffix = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
-              val oldLocation = sha.location
-              try {
-                val OrgNameVerFilenamesuffix(org, oldName, ver, suffix) = oldLocation
-                val newName = patchName(oldName)
-                if (newName == oldName) sha else {
-                  val newLocation = org + "/" + newName + "/" + ver + "/" + (newName + suffix)
-                  def fileDir(name: String) = org.split('/').foldLeft(localRepo)(_ / _) / name / ver
-                  def fileLoc(name: String) = fileDir(name) / (name + suffix)
-                  val oldFile = fileLoc(oldName)
-                  val newFile = fileLoc(newName)
-                  fileDir(newName).mkdirs() // ignore if already present
-                  if (!oldFile.renameTo(newFile))
-                    log.error("cannot rename " + oldLocation + " to " + newLocation + ". Continuing...")
-                  sha.copy(location = newLocation)
-                }
-              } catch {
-                case e: _root_.scala.MatchError =>
-                  log.error("Path cannot be parsed: " + oldLocation + ". Continuing...")
-                  sha
-              }
-            }
-            BuildSubArtifactsOut(name, renamedArtifacts, newSHAs)
-        }))
-    }
-    val moduleArtifacts = artifactsMap.map { _._2 }
-
-    //
-    // we have all our artifacts ready. Time to rewrite the POMs!
-    // Note that we will also have to recalculate the shas
-    //
-    // Let's collect the list of available artifacts:
-    //
-    val allArtifactsOut = moduleArtifacts :+ scalaArtifactsOut
-    val available = allArtifactsOut.flatMap { _.results }.flatMap { _.artifacts }
-
-    (localRepo.***.get).filter(_.getName.endsWith(".pom")).map {
-      pom =>
-        val reader = new MavenXpp3Reader()
-        val model = reader.read(new _root_.java.io.FileReader(pom))
-        // transform dependencies
-        val deps: Seq[Dependency] = model.getDependencies.asScala
-        val newDeps: _root_.java.util.List[Dependency] = (deps map { m =>
-          available.find { artifact =>
-            artifact.info.organization == m.getGroupId &&
-              artifact.info.name == fixName(m.getArtifactId)
-          } map { art =>
-            val m2 = m.clone
-            m2.setArtifactId(fixName(m.getArtifactId) + art.crossSuffix)
-            m2.setVersion(art.version)
-            m2
-          } getOrElse m
-        }).asJava
-        val newModel = model.clone
-        newModel.setDependencies(newDeps)
-        // we overwrite in place, there should be no adverse effect at this point
-        val writer = new MavenXpp3Writer
-        writer.write(new _root_.java.io.FileWriter(pom), newModel)
-        // It's not over, yet. we also have to change the .sha1 and .md5 files
-        // corresponding to this pom, if they exist, otherwise artifactory and ivy
-        // will refuse to use the pom in question.
-        Seq("md5", "sha1") foreach { algorithm =>
-          val checksumFile = new File(pom.getCanonicalPath + "." + algorithm)
-          if (checksumFile.exists) {
-            FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(pom, algorithm))
-          }
-        }
-    }
-
-    // dbuild SHAs must be re-computed (since the POMs changed), and the ArtifactsOuts must be merged
-    val out = BuildArtifactsOut(getScalaArtifactsOut().results ++ artifactsMap.map {
-      case (project, arts) =>
-        val modArtLocs = arts.results.flatMap { _.artifacts }
-        BuildSubArtifactsOut(project, modArtLocs, projSHAs(modArtLocs.map { _.info }, crossSuff))
-    })
-
+    val out = getScalaArtifactsOut()
+    log.debug("out: " + writeValue(out))
     out
   }
 

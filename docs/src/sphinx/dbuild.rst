@@ -164,8 +164,8 @@ name
 
 system
   A string that describes the build system used by this software project. Valid values are currently
-  "scala" (custom for the Scala project), "sbt", and "ivy"; additional mechanisms will be added soon (Maven
-  support is in the works). If not specified, "sbt" is assumed.
+  "scala" (custom for the Scala project), "sbt", "ivy", and "assemble". Additional mechanisms will
+  be added soon (Maven support is in the works). If not specified, "sbt" is assumed.
 
 uri
   A string pointing to the source repository for this project. It can be git-based (if the uri begins
@@ -492,6 +492,73 @@ the configuration ``default`` will be used. For example, the javadoc jar of a mo
 can also be obtained by specifying an artifact in which the classifier is
 "javadoc", the type is "doc", the file extension is "jar", and the configuration
 is "javadoc".
+
+Assemble-specific options
+-------------------------
+
+The "assemble" build system is especially designed to work in
+conjunction with 2.11-style Scala modules, and in particular
+to address the case in which a cycle exists between the core
+(library/compiler) and the modules. It works by specifying a
+nested list of projects, each of which will be built
+independently. At the end, all of the resulting artifacts
+will be collected, and their pom/ivy description files will
+be rearranged so that they all refer to one another, as if
+all of the artifacts were produced by a single project.
+
+In this build system, the "uri" section need not be
+specified, as all the source files are specified by the
+nested projects. The syntax of the "extra" block is just:
+
+.. code-block:: javascript
+
+   {
+    "parts"  : <sub-build>
+   }
+
+where "sub-build" is a build definition identical to the
+"build" section of the top-level configuration file: a
+record with a list of projects and a further optional
+section "option". For example:
+
+.. code-block:: text
+
+   build.options.cross-version: full
+   build.projects:[
+     {
+     system: assemble
+     name:   scala2
+     extra.parts.options: {
+       cross-version: standard
+       sbt-version: "0.13.0"
+     }
+     extra.parts.projects: [
+       {
+         name:   scala-xml
+         system: ivy
+         uri:    "ivy:org.scala-lang.modules#scala-xml_2.11.0-M6;1.0.0-RC6"
+         set-version: "1.2.5-RC33"
+       }, {
+         name:   scala-parser-combinators
+         system: ivy
+         uri:    "ivy:org.scala-lang.modules#scala-parser-combinators_2.11.0-M6;1.0.0-RC4"
+         set-version: "1.7.20-RC11"
+       }, {
+         ...
+
+The nested projects can use any build system (including
+"assemble" itself), and can generate artifacts either
+in Maven or Ivy format.
+
+Since the nested projects are built independently, each
+in isolation, in case any of them relies on further
+dependencies dbuild will be unable to find them, and
+will stop with an error message to that effect. In that
+case, you can set "extra.parts.options.cross-version"
+to "standard", as shown above, in order to disable
+the dependency checking for the nested projects only
+(the corresponding option for the top-level file
+will remain unaffected).
 
 |
 

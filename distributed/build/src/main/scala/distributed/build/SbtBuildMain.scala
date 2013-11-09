@@ -86,8 +86,8 @@ class SbtBuildMain extends xsbti.AppMain {
         //      println("Classloader:")
         //      printClassLoaders(getClass.getClassLoader)
         val main = new LocalBuildMain(configuration)
-        val outcome = try {
-          def time(f: => BuildOutcome) = {
+        val (outcome, time) = try {
+          def timed(f: => BuildOutcome) = {
             val s = System.nanoTime
             val ret = f
             val t = System.nanoTime - s
@@ -96,17 +96,17 @@ class SbtBuildMain extends xsbti.AppMain {
             val tenths = (t / 100000000L) % 10L
             val sdf = new SimpleDateFormat("HH'h' mm'm' ss'.'")
             sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
-            Thread.sleep(250) // have no way to sync on log msgs; just wait
-            println("Result: " + ret.status)
-            println("Build " + (if (ret.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + sdf.format(time) + tenths + "s")
-            ret
+            (ret,sdf.format(time) + tenths)
           }
-          time { main.build(config, configFile.getName) }
+          timed { main.build(config, configFile.getName) }
         } finally main.dispose()
+        println("Result: " + outcome.status)
+        println("Build " + (if (outcome.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + time + "s")
         println("All done.")
         if (outcome.isInstanceOf[BuildBad]) Exit(1) else Exit(0)
       } catch {
         case e: Exception =>
+          println("An exception occurred.")
           e.printStackTrace
           Exit(1)
       }

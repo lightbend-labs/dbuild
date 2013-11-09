@@ -12,6 +12,8 @@ import distributed.repo.core._
 import distributed.project.model.ClassLoaderMadness
 import distributed.project.dependencies.Extractor
 import distributed.support.BuildSystemCore
+import akka.pattern.ask
+import akka.util.duration._
 
 class LocalBuildMain(configuration: xsbti.AppConfiguration) {
   val launcher = configuration.provider.scalaProvider.launcher
@@ -48,12 +50,16 @@ class LocalBuildMain(configuration: xsbti.AppConfiguration) {
   // TODO - Look up target elsewhere...
 
   def build(conf: DBuildConfiguration, confName: String): BuildOutcome = {
-    import akka.pattern.ask
     implicit val timeout: Timeout = Timeouts.dbuildTimeout
     val result = builder ? RunLocalBuild(conf, confName, targetDir)
     Await.result(result.mapTo[BuildOutcome], akka.util.Duration.Inf)
   }
-  def dispose(): Unit = system.shutdown()
+  def dispose(): Unit = {
+    implicit val timeout: Timeout = 5.minutes
+    Await.result((logMgr ? "exit").mapTo[String], akka.util.Duration.Inf)
+    system.shutdown() // pro forma, as all loggers should already be stopped at this point
+    system.awaitTermination(1.minute)
+  }
 }
 /*
 object LocalBuildMain {

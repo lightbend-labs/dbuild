@@ -8,6 +8,8 @@ import Path._
 import _root_.java.io.File
 import sys.process.Process
 import distributed.project.model.Utils.{writeValue,readValue}
+import distributed.logging.Logger.logFullStackTrace
+
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
 // script...
@@ -42,7 +44,7 @@ object SbtBuilder {
       )(config.config.commands.:+("dbuild-build"):_*)
       try readValue[BuildArtifactsOut](resultFile)
       catch { case e:Exception =>
-        e.printStackTrace
+        logFullStackTrace(log, e)
         sys.error("Failed to generate or load build results!")
       }
     }

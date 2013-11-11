@@ -8,6 +8,7 @@ import Path._
 import _root_.java.io.File
 import sys.process.Process
 import distributed.project.model.Utils.readValue
+import distributed.logging.Logger.logFullStackTrace
 
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
@@ -17,7 +18,7 @@ object SbtExtractor {
   def extractMetaData(runner: SbtRunner)(projectDir: File, extra: SbtExtraConfig, log: logging.Logger): ExtractedBuildMeta =
     try readValue[ExtractedBuildMeta](runSbtExtractionProject(runner)(projectDir, extra, log)) 
     catch { case e:Exception =>
-      e.printStackTrace
+      logFullStackTrace(log, e)
       sys.error("Failure to parse build metadata in sbt extractor!")
     }
 

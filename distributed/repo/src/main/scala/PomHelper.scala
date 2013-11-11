@@ -31,6 +31,7 @@ object PomHelper {
     try writer.write(out, pom)
     catch {
       case e => 
+        // should be: logFullStackTrace(log, e)
         e.printStackTrace
         throw e
     }

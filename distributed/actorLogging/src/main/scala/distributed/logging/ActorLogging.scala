@@ -1,7 +1,7 @@
 package distributed
 package logging
 
-import akka.actor.{ActorRef, Actor, Props}
+import akka.actor.{ActorRef, Actor, Props, PoisonPill, Terminated}
 import sbt.{ 
   Level, 
   LogEvent,
@@ -56,15 +56,26 @@ object ActorLogHelper {
 class LogDirManagerActor(logDir: java.io.File) extends Actor {
   // TODO - evicting cache and other magikz.
   var loggers = Map.empty[String, ActorRef]
-  
-   def receive = {
+
+  def receive = {
     case log: LogCmd =>
       findOrCreateLogger(log.path) ! log
+    case "exit" =>
+      loggers.values.foreach { _ ! PoisonPill }
+    case Terminated(p) =>
+      val name = p.path.name
+      if (!loggers.valuesIterator.contains(p))
+        sys.error("Internal error: loggers of LogDirManagerActor does not contain " + p.path)
+      loggers = loggers.filterNot(_._2 == p)
+      if (loggers.isEmpty) {
+        context.stop(self)
+      }
   }
-  
+
   def findOrCreateLogger(path: String): ActorRef =
     loggers get path getOrElse {
       val logger = context.actorOf(Props(new LoggerFileWriteActor(logDir, path)), "Logger-" + ActorLogHelper.cleanPath(path))
+      context.watch(logger)
       loggers = loggers.updated(path, logger)
       logger
     }
@@ -141,6 +152,8 @@ class SystemOutLoggerActor extends Actor with LogToOutput {
   
   def receive = {
     case l : LogCmd => log(l)
+    case "exit" =>
+      context.stop(self)
   }
     
    def writeLog(msg: String): Unit = {
@@ -152,11 +165,24 @@ class SystemOutLoggerActor extends Actor with LogToOutput {
 /** An actor that chains to other loggers. */
 class ChainedLoggerSupervisorActor extends Actor {
   var loggers: Seq[ActorRef] = List.empty
+  var terminationSender:ActorRef = self
   def receive = {
     case p: Props => 
       val logger = context actorOf p
+      context.watch(logger)
       loggers = logger +: loggers
       sender ! logger
     case l: LogCmd => loggers foreach (_ forward l)
+    case "exit" =>
+      terminationSender = sender
+      loggers.foreach { _ ! "exit" }
+    case Terminated(p) =>
+      if (!(loggers.contains(p)))
+        sys.error("Internal error: loggers of ChainedLoggerSupervisorActor does not contain " + p.path)
+      loggers = loggers.filter(_ != p)
+      if (loggers.isEmpty) {
+        terminationSender ! "stopped"
+        context.stop(self)
+      }
   }
 }

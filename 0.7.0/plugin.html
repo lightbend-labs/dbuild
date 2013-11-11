@@ -1,0 +1,168 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>The sbt plugin &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.7.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Known issues and caveats" href="caveats.html" />
+    <link rel="prev" title="Repositories" href="repositories.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/distributed-build">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">The sbt plugin</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="caveats.html">Known issues and caveats</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="repositories.html">Repositories</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.7.0">Version 0.7.0</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="the-sbt-plugin">
+<h1>The sbt plugin<a class="headerlink" href="#the-sbt-plugin" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>The dbuild sbt plugin should be configured beforehand, either as a global plugin
+(as described in the section <a class="reference internal" href="download.html#installing-sbt"><em>Installing the sbt plugin</em></a>), or by adding it to your current project (see
+<a class="reference external" href="http://www.scala-sbt.org/release/docs/Extending/Plugins">the sbt manual</a> for more details).</p>
+<p>Once that is done, just start sbt for your project as usual.</p>
+</div>
+<div class="section" id="reloading-a-dbuild-configuration">
+<h2>Reloading a dbuild configuration<a class="headerlink" href="#reloading-a-dbuild-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Once sbt has started, you can reload the artifacts and prepare your debugging environment by using the
+<tt class="docutils literal"><span class="pre">dbuild-setup</span></tt> command, as follows:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/dbuild &lt;dbuild-build-hash&gt; <span class="o">[</span>&lt;dbuild-project-name&gt;<span class="o">]</span>
+</pre></div>
+</div>
+<p>Where <tt class="docutils literal"><span class="pre">dbuild-build-hash</span></tt> is the ID of the build, and the optional <tt class="docutils literal"><span class="pre">dbuild-project-name</span></tt> is the name of
+your project, as specified in the build configuration file. For example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>sbt
+<span class="o">[</span>...<span class="o">]</span>
+<span class="o">[</span>info<span class="o">]</span> Set current project to sperformance <span class="o">(</span>in build file:<span class="o">[</span>...<span class="o">]</span>/sperformance/<span class="o">)</span>
+&gt; dbuild-setup 48baab8156458005cb2e0569e8e8c2c39221d56e sperformance
+<span class="o">[</span>info<span class="o">]</span> Retrieving dependencies <span class="k">for </span>9fc2901cdc4f1e4ce4209bfad5dfbf02633fcd5f sperformance
+<span class="o">[</span>info<span class="o">]</span> Retrieved from project 26a265808a6abe8e8451a9f0b43d6dc02176ed16: 10 artifacts
+<span class="o">[</span>info<span class="o">]</span> Updating dependencies...
+<span class="o">[</span>info<span class="o">]</span> Adding resolvers to retrieve build artifacts in 1 scopes
+<span class="o">[</span>info<span class="o">]</span> Updating library dependencies in 2 scopes
+<span class="o">[</span>info<span class="o">]</span> Setting Scala version to: 2.10.2-20130320-161312-2f3a7fa417 in 2 scopes
+<span class="o">[</span>info<span class="o">]</span> Disabling cross building in 2 scopes
+<span class="o">[</span>info<span class="o">]</span> Preparing Scala binaries: version 2.10.2-20130320-161312-2f3a7fa417
+<span class="o">[</span>info<span class="o">]</span> Setting Scala home in 1 scopes
+<span class="o">[</span>info<span class="o">]</span> Set current project to sperformance <span class="o">(</span>in build file:/<span class="o">[</span>...<span class="o">]</span>/sperformance/<span class="o">)</span>
+&gt;
+</pre></div>
+</div>
+<p>This command will reload all the artifacts that are dependencies of the specified project, as built by that
+dbuild run, adapt the sbt resolvers, and prepare your environment for debugging. If you leave out the project
+name, all of the artifacts of all known projects in the dbuild will be reloaded; this can be useful to test
+a different project that was <em>not</em> part of the build against the full set of custom versioned artifacts
+generated by that dbuild run.</p>
+<p>Notably, the code version of the project that you are debugging need not match the version of the same project
+tested during the dbuild build. That makes it possible to test the generated artifacts against an arbitrary
+version, for instance your custom development or debugging branch.</p>
+</div>
+<div class="section" id="reloading-artifacts">
+<h2>Reloading artifacts<a class="headerlink" href="#reloading-artifacts" title="Permalink to this headline">¶</a></h2>
+<p>The dbuild repository uses a custom layout, and the artifacts that it contains are not directly accessible by Maven/Ivy.
+It is possible to publish the artifacts by using the configuration described in <a class="reference internal" href="deploy.html#section-deploy"><em>The deploy section</em></a>. Even if the
+artifacts have not been deployed, however, it is very easy to reconstruct a Maven/Ivy repository containing the
+artifacts generated by dbuild for a given project. After setting up the dbuild sbt plugin, just cd to an empty
+directory, and type a line like:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>sbt <span class="s1">&#39;dbuild-setup 48baab8156458005cb2e0569e8e8c2c39221d56e akka&#39;</span>
+</pre></div>
+</div>
+<p>where the hash is the repeateable build UUID, and it is followed by the name of the project whose artifacts should be
+reloaded. Once sbt completes, you will find a local repository in the subdirectory <tt class="docutils literal"><span class="pre">.dbuild/local-repo</span></tt> of your
+current directory.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="caveats.html"><em>Known issues and caveats</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">The sbt plugin</a><ul>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+<li><a class="reference internal" href="#reloading-a-dbuild-configuration">Reloading a dbuild configuration</a></li>
+<li><a class="reference internal" href="#reloading-artifacts">Reloading artifacts</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

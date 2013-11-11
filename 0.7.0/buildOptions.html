@@ -1,0 +1,186 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Build options &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.7.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Deploying" href="deploy.html" />
+    <link rel="prev" title="Using dbuild" href="dbuild.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/distributed-build">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Build options</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="deploy.html">Deploying</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="dbuild.html">Using dbuild</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.7.0">Version 0.7.0</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="build-options">
+<h1>Build options<a class="headerlink" href="#build-options" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-build-options-section">
+<span id="section-build-options"></span><h2>The build options section<a class="headerlink" href="#the-build-options-section" title="Permalink to this headline">¶</a></h2>
+<p>Some additional options can modify the behavior of dbuild during the building stage;
+these options have an effect on all projects. They are specified in the build &quot;options&quot;
+section, which is entirely optional and lives at the same level as the &quot;projects&quot;
+sections. Its structure is currently:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">build</span><span class="o">:</span><span class="p">{</span>
+ <span class="nx">projects</span><span class="o">:</span> <span class="p">[...]</span>
+ <span class="nx">options</span><span class="o">:</span> <span class="p">{</span>
+  <span class="s2">&quot;cross-version&quot;</span>       <span class="o">:</span> <span class="o">&lt;</span><span class="nx">cross</span><span class="o">-</span><span class="nx">version</span><span class="o">-</span><span class="nx">level</span><span class="o">&gt;</span>
+  <span class="s2">&quot;sbt-version&quot;</span>         <span class="o">:</span> <span class="o">&lt;</span><span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span><span class="o">&gt;</span>
+  <span class="s2">&quot;extraction-version&quot;</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">compiler</span><span class="o">-</span><span class="nx">version</span><span class="o">-</span><span class="nx">string</span><span class="o">&gt;</span>
+ <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>cross-version</dt>
+<dd><p class="first">This option controls the way in which the various sbt-based projects will use the cross-version
+facility, which appends a Scala version suffix to the artifact id. Consider the following two cases.</p>
+<ol class="arabic simple">
+<li>If a dbuild configuration file includes a project that has a Scala-based dependent project,
+but the dependency is not included, sbt may try to resolve the dependency against an external
+Maven repositories, built with a different version of Scala. This is undesirable during
+the development and testing of a new Scala version, as the aim is to compile all of the
+dependencies against the same new version of Scala. Dbuild, in this case, is able to
+enforce the policy that all the dependencies must use the exact same version of scala:
+compilation will fail with an informative message otherwise.</li>
+<li>Conversely, when releasing, it is desirable to preserve the same cross-version policy
+that the various projects normally use. In this case, we can ask dbuild not to adjust
+cross-versioning, so that the published artifacts follow their native publishing scheme.</li>
+</ol>
+<p>This option can therefore control how strict or lax the cross-version suffix should be
+during building, and how sbt will look for alternatives in case of dependencies that
+are not part of the current configuration file.</p>
+<p>The available options are:</p>
+<dl class="docutils">
+<dt>disabled</dt>
+<dd>This is the default setting, and it will be used if a &quot;build-options&quot; section is not
+specified. The cross-version suffixes are disabled, and each project is published
+using just a single version, which contains a dbuild-specific version suffix
+(unless &quot;set-version&quot; is used).
+The library dependencies that refer to Scala projects that are not included in this build
+configuration, and which have &quot;binary&quot; or &quot;full&quot; CrossVersion, will be adjusted;
+as a result, missing dependent projects will be detected.</dd>
+<dt>standard</dt>
+<dd>Each project will compile with its own natural cross-version suffix.
+This setting is necessary when releasing, usually in conjunction with &quot;set-version&quot;,
+in order to make sure that the standard suffix is used while publishing.</dd>
+<dt>full</dt>
+<dd>Similar to &quot;disabled&quot;, except the full Scala version string is used as a
+cross-version suffix while publishing (even for those projects that would normally
+have cross-version disabled). Missing dependent projects will be detected.</dd>
+<dt>binaryFull</dt>
+<dd>The sbt projects that publish artifacts using the &quot;Binary&quot; cross-version setting are
+forced to use the full Scala version string in place of a shortened version (&quot;_2.10&quot;);
+however, the projects that publish without cross-version will remain unchanged.
+Missing dependent projects will be detected. This option exists mainly for testing,
+and is not intended for regular use.</dd>
+</dl>
+<p class="last">In practice, you can omit the &quot;build-options&quot; section entirely during normal use, and
+just add the following if you are releasing using &quot;set-version&quot;:</p>
+</dd>
+</dl>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">build</span><span class="p">.</span><span class="nx">options</span><span class="o">:</span><span class="p">{</span><span class="nx">cross</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="nx">standard</span><span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>sbt-version</dt>
+<dd>You can optionally specify here the sbt version that should be used to compile
+all the sbt-based projects. If not specified, sbt 0.12.4 will be used.</dd>
+<dt>extraction-version</dt>
+<dd>Specifies the version of the compiler that should be used during dependency
+extraction; see the section <a class="reference internal" href="dbuild.html#sbt-options"><em>sbt-specific options</em></a>.</dd>
+</dl>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="deploy.html"><em>Deploying</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Build options</a><ul>
+<li><a class="reference internal" href="#the-build-options-section">The build options section</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

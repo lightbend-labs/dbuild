@@ -227,6 +227,8 @@ object AssembleBuildSystem extends BuildSystemCore {
     }
 
     // Excellent, we now have in preCrossArtifactsMap a sequence of BuildArtifactsOut from the parts
+    log.info("----------")
+    log.info("Assembling:")
 
     // we also need the new scala version, which we take from the scala-library artifact, among
     // our subprojects. If we cannot find it, then we have none.

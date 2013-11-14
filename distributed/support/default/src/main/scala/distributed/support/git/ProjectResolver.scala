@@ -28,22 +28,22 @@ class GitProjectResolver extends ProjectResolver {
     // working files checked out in the cache clone: the directories
     // contain only a ".git" subdirectory.
     // TODO: locking
-    if(!cloneDir.exists) {
+    val clone = if(!cloneDir.exists) {
       cloneDir.mkdirs()
-      Git.clone(uri, cloneDir, log)
+      Git.clone(uriString, cloneDir, log)
+    } else {
+      Git.getRepo(cloneDir)
     }
-    Git.fetchSafe(uriString, cloneDir, ref.startsWith("pull/"), log)
-    Git.setupRemoteBranches(cloneDir,log)
+    Git.fetch(clone, uriString, cloneDir, true /* ignore failures*/, log)
 
     // Now: clone into the directory or fetch
     if(!dir.exists) dir.mkdirs()
     // NB: clone does not check out anything in particular.
     // An explicit checkout follows later
-    if(!(dir / ".git").exists) Git.cloneLocal(cloneDir, dir, log)
+    val localRepo = if(!(dir / ".git").exists) Git.clone(cloneDir.getCanonicalPath, dir, log) else Git.getRepo(dir)
     
     // Make sure we pull down all the refs from origin for our repeatable builds...
-    Git.fetch("origin", dir, ref.startsWith("pull/"), log)
-    Git.setupRemoteBranches(dir,log)
+    Git.fetch(localRepo, uriString + " (cached)", dir, false /* stop on failures*/, log)
     
     // Now clean the directory so only desired artifacts are there...
     if(config.name != "scala") Git.clean(dir, log)

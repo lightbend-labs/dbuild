@@ -560,6 +560,37 @@ the dependency checking for the nested projects only
 (the corresponding option for the top-level file
 will remain unaffected).
 
+.. warning::
+
+  The resulting aggregate project may rely on some
+  external libraries; since all its parts are built
+  independently, those libraries will be used at
+  compile time with whatever version is requested
+  by the standard build file of each part, even if
+  those libraries are provided by other dbuild
+  projects in the same dbuild configuration file.
+
+  Consequently, dbuild will not "see" the dependency
+  in its dependency graph. That is ok as long as
+  the dependency is only needed at compile time;
+  you should make sure that no ignored dependency
+  is needed at runtime, as library conflicts may
+  arise otherwise. A warning message will be
+  displayed by dbuild during extraction (only when
+  the dependencies are first extracted).
+
+.. note::
+
+  The "assemble" system is designed to provide a transitional
+  compatibility with the initial stages of the Scala 2.11
+  modularization process. Due to its limitations, and due
+  to the fact that the parts are built independently, it
+  does not offer the same advantages and checks of a
+  standard build file, in which all projects are built
+  on top of one another. It is therefore advisable to
+  adopt a regular (non-cyclic) build as soon as that
+  is feasible.
+
 |
 
 *Next:* :doc:`buildOptions`.

@@ -119,7 +119,18 @@ object AssembleBuildSystem extends BuildSystemCore {
 
     // ok, now we just have to merge everything together. There is no version number in the assemble
     // per se, since the versions are decided by the components.
-    val newMeta = ExtractedBuildMeta("0.0.0", allConfigAndExtracted.flatMap(_.extracted.projects),
+    val artifacts = allConfigAndExtracted.flatMap(_.extracted.projects.flatMap(_.artifacts))
+    val newMeta = ExtractedBuildMeta("0.0.0",
+      allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>
+        // remove all dependencies that are not already provided by this
+        // assembled project (we pretend the resulting assembled set has
+        // no external dependency)
+        val ignoredDeps=p.dependencies.filterNot(artifacts contains _)
+        ignoredDeps.foreach { d =>
+          log.warn("WARN: The dependency of " + p.name + " on " + d.organization + "#" + d.name + " will be ignored.")
+          }
+        p.copy(dependencies = p.dependencies.diff(ignoredDeps))
+      }),
       partOutcomes.map { _.project })
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta

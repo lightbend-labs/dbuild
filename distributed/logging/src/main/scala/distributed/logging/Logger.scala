@@ -9,32 +9,27 @@ trait Logger extends SbtLogger with ProcessLogger {
   def newNestedLogger(name: String): Logger
 }
 object Logger {
-  def prepareLogMsg(log: Logger, t: Throwable) = {
-    val errors = createErrors(t)
-    errors.toString.split("\n").take(6) foreach { log.error(_) }
-    val msg1 = t.getClass.getSimpleName + (Option(t.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")
-    if (msg1.length < 60) msg1 else msg1.take(57) + "..."
-  }
-  def logFullStackTrace(log: Logger, t: Throwable) = {
-    val errors = createErrors(t)
-    errors.toString.split("\n") foreach { log.error(_) }
-  }
-  
-  private def createErrors(t: Throwable) = {
-    val errors = new java.io.StringWriter
-    val pw = new java.io.PrintWriter(errors)
+  private def processLogMsg(log: Logger, t: Throwable, short: Boolean) = {
     // usually, prepareLogMsg only prints the first
     // few lines of the stack trace. However, a graph cycle
     // description may be longer than that, so we print out
     // the description separately
-    t match {
+    val longDescription = t match {
       case e:graph.CycleException =>
-        e.description.split("\n") foreach {pw.println}
-      case _ =>
+        e.description.split("\n") foreach {log.error(_)}
+        true
+      case _ => false
     }
+    val errors = new java.io.StringWriter
+    val pw = new java.io.PrintWriter(errors)
     t.printStackTrace(pw)
-    errors
+    val errStack=errors.toString.split("\n")
+    (if (short) errStack.take(6) else errStack) foreach { log.error(_) }
+    val msg1 = t.getClass.getSimpleName + (Option(t.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")
+    if (msg1.length < 60) msg1 else msg1.take(57) + "..."
   }
+  def prepareLogMsg(log: Logger, t: Throwable): String = processLogMsg(log, t, true)
+  def logFullStackTrace(log: Logger, t: Throwable): Unit = processLogMsg(log, t, false)
 }
 
 abstract class BasicLogger extends sbt.BasicLogger with Logger

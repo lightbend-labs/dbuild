@@ -8,10 +8,6 @@ import akka.util.Timeout
 import akka.util.Duration
 import akka.util.NonFatal
 import akka.dispatch.{ ExecutionContext, Promise, Future }
-import java.util.Date
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
 
 object Timeouts {
   // overall timeout for the entire dbuild to complete;
@@ -59,18 +55,4 @@ object Timeouts {
   // some time will be required for notifications (and possibly deploy) to complete
   assert((extractionPlusBuildTimeout.duration + 25.minutes) < dbuildTimeout.duration,
     "extractionPlusBuildTimeout must be a bit shorter than dbuildTimeout")
-
-  /** Returns the time it took some command to run */
-  def timed[A](f: => A) = {
-    val s = System.nanoTime
-    val ret = f
-    val t = System.nanoTime - s
-    // Braindead SimpleDateFormat messes up 'S' format
-    val time = new Date(t / 1000000L)
-    val tenths = (t / 100000000L) % 10L
-    val sdf = new SimpleDateFormat("HH'h' mm'm' ss'.'")
-    sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
-    (ret, sdf.format(time) + tenths + "s")
-  }
-
 }

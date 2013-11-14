@@ -10,7 +10,7 @@ import distributed.project.model.TemplateFormatter
 import java.util.Properties
 import com.typesafe.config.ConfigFactory
 import distributed.project.model.Utils.readValueT
-import Timeouts.timed
+import distributed.utils.Time.timed
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {

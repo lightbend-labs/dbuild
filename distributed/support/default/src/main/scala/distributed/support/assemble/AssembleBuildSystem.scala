@@ -66,7 +66,7 @@ object AssembleBuildSystem extends BuildSystemCore {
           val nestedResolvedProjects =
             buildConfig.projects.foldLeft(Seq[ProjectBuildConfig]()) { (s, p) =>
               log.info("----------")
-              log.info("Resolving module: " + p.name)
+              log.info("Resolving part: " + p.name)
               val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
               val moduleConfig = extractor.dependencyExtractor.resolve(nestedExtractionConfig.buildConfig, projectsDir(dir, p), extractor, log)
               s :+ moduleConfig
@@ -243,7 +243,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     //
     // now, let's retrieve the parts' artifacts again (they have already been published)
     val uuids = repeatableProjectBuilds map { _.uuid }
-    log.info("Retrieving module artifacts")
+    log.info("Retrieving artifacts")
     log.debug("into " + localRepo)
     val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, localRepo, uuids)
 

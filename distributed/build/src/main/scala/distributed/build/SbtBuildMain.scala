@@ -2,10 +2,6 @@ package distributed
 package build
 
 import java.io.File
-import java.util.Date
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
 import distributed.project.model.DBuildConfiguration
 import distributed.project.model.Utils.{ writeValue, readValue, readProperties }
 import distributed.project.model.ClassLoaderMadness
@@ -14,6 +10,7 @@ import distributed.project.model.TemplateFormatter
 import java.util.Properties
 import com.typesafe.config.ConfigFactory
 import distributed.project.model.Utils.readValueT
+import Timeouts.timed
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -87,21 +84,10 @@ class SbtBuildMain extends xsbti.AppMain {
         //      printClassLoaders(getClass.getClassLoader)
         val main = new LocalBuildMain(configuration)
         val (outcome, time) = try {
-          def timed(f: => BuildOutcome) = {
-            val s = System.nanoTime
-            val ret = f
-            val t = System.nanoTime - s
-            // Braindead SimpleDateFormat messes up 'S' format
-            val time = new Date(t / 1000000L)
-            val tenths = (t / 100000000L) % 10L
-            val sdf = new SimpleDateFormat("HH'h' mm'm' ss'.'")
-            sdf.setTimeZone(TimeZone.getTimeZone("GMT"))
-            (ret,sdf.format(time) + tenths)
-          }
           timed { main.build(config, configFile.getName) }
         } finally main.dispose()
         println("Result: " + outcome.status)
-        println("Build " + (if (outcome.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + time + "s")
+        println("Build " + (if (outcome.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + time)
         println("All done.")
         if (outcome.isInstanceOf[BuildBad]) Exit(1) else Exit(0)
       } catch {

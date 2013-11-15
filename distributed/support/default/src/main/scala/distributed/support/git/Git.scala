@@ -93,7 +93,7 @@ object GitJGit extends GitImplementation {
       // adapter class should be added
       // t.setProgressMonitor(new TextProgressMonitor(writer)).call()
       val (ret, time) = timed(c.call())
-      log.debug("Took: " + time)
+      log.info("Took: " + time)
       ret
     }
   }
@@ -125,8 +125,8 @@ object GitJGit extends GitImplementation {
   def fetch(repo: JGit, ignoreFailures: Boolean, log: Logger) = {
     val dir = repo.getRepository().getDirectory().getParentFile()
     val originURI = repo.getRepository().getConfig().getString("remote", "origin", "url")
-    log.debug("Fetching " + originURI)
-    log.debug("In " + dir.getAbsolutePath())
+    log.info("Fetching " + originURI)
+    log.info("into " + dir.getAbsolutePath())
     log.debug("Refspecs:")
     refSpecs foreach { rs => log.debug("  " + rs) }
     tryFetch(ignoreFailures, log, originURI) {
@@ -202,7 +202,7 @@ object GitGit extends GitImplementation {
           base,
           tempDir.getAbsolutePath),
         tempDir, log))
-    log.debug("Took: " + time)
+    log.info("Took: " + time)
     GitRepo(base, tempDir)
   }
 
@@ -210,15 +210,15 @@ object GitGit extends GitImplementation {
   // but we want to use our current local cache. The flag "ignoreFailures" reflects that.
   // The flag "usePR" is true if we need to add the refSpecs of GitHub's pull requests.
   def fetch(repo: GitRepo, ignoreFailures: Boolean, log: Logger) = {
-    log.debug("Fetching " + repo.sourceURI)
-    log.debug("In " + repo.dir)
+    log.info("Fetching " + repo.sourceURI)
+    log.info("into " + repo.dir)
     log.debug("Refspecs:")
     refSpecs foreach { rs => log.debug("  " + rs) }
     tryFetch(ignoreFailures, log, repo.sourceURI) {
       val (ret, time) = timed(
         // will automatically fix all branches, tags, and pull/* refs
         apply(Seq("fetch", "-f", "-u", "-q", "origin") ++ refSpecs, repo.dir, log))
-      log.debug("Took: " + time)
+      log.info("Took: " + time)
     }
   }
 

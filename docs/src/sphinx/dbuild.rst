@@ -170,7 +170,9 @@ system
 uri
   A string pointing to the source repository for this project. It can be git-based (if the uri begins
   with ``git://`` or ends with ``.git``), or svn (schemes ``http://``, ``https://``, ``svn://``, only
-  if an svn repository is detected). Other source repository formats may be added in the future.
+  if an svn repository is detected). For git repositories, the scheme ``jgit://`` can also be used,
+  which will use jgit rather than the command-line Git tool. Other source repository formats may
+  be added in the future.
 
   The uri may optionally be prefixed with a ``'#'`` and either a commit hash, an svn version, or a
   branch name. For example:

@@ -34,6 +34,8 @@ object Dependencies {
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
   val commonsLang    = "commons-lang" % "commons-lang" % "2.6"
 
+  val jgit           = "org.eclipse.jgit" % "org.eclipse.jgit" % "3.1.0.201310021548-r"
+
   def sbtIo(v:String)          = "org.scala-sbt" % "io" % v
   def sbtIvy(v:String)         = "org.scala-sbt" % "ivy" % v
   def sbtLogging(v:String)     = "org.scala-sbt" % "logging" % v

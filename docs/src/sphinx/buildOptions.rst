@@ -19,6 +19,7 @@ sections. Its structure is currently:
      "cross-version"       : <cross-version-level>
      "sbt-version"         : <sbt-version>
      "extraction-version"  : <compiler-version-string>
+     "use-jgit"            : <true-or-false>
     }
    }
 
@@ -84,6 +85,13 @@ sbt-version
 extraction-version
   Specifies the version of the compiler that should be used during dependency
   extraction; see the section :ref:`sbt-options`.
+
+use-jgit
+  The default is false: dbuild will normally invoke the regular git command in
+  order to resolve a git repository. As an alternative, a jgit-based implementation
+  can also be selected by setting this flag to true. Be aware that, due to the
+  lack of hard-linking in jgit, more disk space will be necessary in order to
+  compile the projects in that case.
 
 |
 

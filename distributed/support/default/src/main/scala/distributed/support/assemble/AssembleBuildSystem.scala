@@ -66,7 +66,7 @@ object AssembleBuildSystem extends BuildSystemCore {
           val nestedResolvedProjects =
             buildConfig.projects.foldLeft(Seq[ProjectBuildConfig]()) { (s, p) =>
               log.info("----------")
-              log.info("Resolving module: " + p.name)
+              log.info("Resolving part: " + p.name)
               val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
               val moduleConfig = extractor.dependencyExtractor.resolve(nestedExtractionConfig.buildConfig,
                   nestedExtractionConfig.buildOptions, projectsDir(dir, p), extractor, log)
@@ -120,7 +120,18 @@ object AssembleBuildSystem extends BuildSystemCore {
 
     // ok, now we just have to merge everything together. There is no version number in the assemble
     // per se, since the versions are decided by the components.
-    val newMeta = ExtractedBuildMeta("0.0.0", allConfigAndExtracted.flatMap(_.extracted.projects),
+    val artifacts = allConfigAndExtracted.flatMap(_.extracted.projects.flatMap(_.artifacts))
+    val newMeta = ExtractedBuildMeta("0.0.0",
+      allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>
+        // remove all dependencies that are not already provided by this
+        // assembled project (we pretend the resulting assembled set has
+        // no external dependency)
+        val ignoredDeps=p.dependencies.filterNot(artifacts contains _)
+        ignoredDeps.foreach { d =>
+          log.warn("WARN: The dependency of " + p.name + " on " + d.organization + "#" + d.name + " will be ignored.")
+          }
+        p.copy(dependencies = p.dependencies.diff(ignoredDeps))
+      }),
       partOutcomes.map { _.project })
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta
@@ -228,6 +239,8 @@ object AssembleBuildSystem extends BuildSystemCore {
     }
 
     // Excellent, we now have in preCrossArtifactsMap a sequence of BuildArtifactsOut from the parts
+    log.info("----------")
+    log.info("Assembling:")
 
     // we also need the new scala version, which we take from the scala-library artifact, among
     // our subprojects. If we cannot find it, then we have none.
@@ -242,7 +255,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     //
     // now, let's retrieve the parts' artifacts again (they have already been published)
     val uuids = repeatableProjectBuilds map { _.uuid }
-    log.info("Retrieving module artifacts")
+    log.info("Retrieving artifacts")
     log.debug("into " + localRepo)
     val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, localRepo, uuids)
 

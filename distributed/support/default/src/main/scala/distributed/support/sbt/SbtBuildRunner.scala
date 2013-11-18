@@ -10,7 +10,6 @@ import sys.process.Process
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.logging.Logger.logFullStackTrace
 
-
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
 // script...
 object SbtBuilder {

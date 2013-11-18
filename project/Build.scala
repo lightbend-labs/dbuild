@@ -19,8 +19,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   
   lazy val root = (
     Project("root", file(".")) 
-    dependsOn(defaultSupport, dbuild, drepo)
-    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, drepo, dmeta, ddocs)
+    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, gitSupport, drepo, dmeta, ddocs)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
     settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
@@ -102,7 +101,7 @@ object Defaults {
   )
   lazy val dbuild = (
       DmodProject("build")
-      dependsOn(dactorProjects, defaultSupport, drepo, dmeta)
+      dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib)
       dependsOnSbt(sbtLaunchInt)
       settings(skip210:_*)
@@ -112,9 +111,18 @@ object Defaults {
   lazy val defaultSupport = (
       SupportProject("default") 
       dependsOn(dcore, drepo, dmeta, dprojects)
+      dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
+      dependsOnSbt(sbtLaunchInt, sbtIvy)
+      settings(SbtSupport.settings:_*)
+    ) 
+  // A separate support project for git/jgit
+  lazy val gitSupport = (
+      SupportProject("git") 
+      dependsOn(dcore, drepo, dmeta, dprojects, defaultSupport)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
+      settings(skip210:_*)
     ) 
 
   // Distributed SBT plugin

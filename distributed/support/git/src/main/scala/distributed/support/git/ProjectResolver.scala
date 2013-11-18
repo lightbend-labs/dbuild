@@ -6,6 +6,7 @@ import _root_.sbt.Path._
 import project.model._
 import project.resolve.ProjectResolver
 import distributed.logging.Logger.prepareLogMsg
+import distributed.support.UriUtil
 
 /**
  * This class knows how to resolve Git projects and

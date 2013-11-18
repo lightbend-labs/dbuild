@@ -8,8 +8,7 @@ import _root_.java.io.File
 import _root_.java.net.URI
 import _root_.sbt.IO
 import logging.Logger
-import git.OS._
-import git.UriUtil
+import OS._
 
 /** A svn runner.  This class exists solely for Scalatest. */
 object Svn {

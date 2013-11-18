@@ -5,7 +5,6 @@ package svn
 import _root_.sbt.Path._
 import project.model._
 import project.resolve.ProjectResolver
-import git.UriUtil
 
 /** This class knows how to resolve Git projects and
  * update the build configuration for repeatable checkouts.

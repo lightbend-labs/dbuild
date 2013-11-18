@@ -1,6 +1,5 @@
 package distributed
 package support
-package git
 
 import _root_.java.net.URI
 

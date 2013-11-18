@@ -14,7 +14,7 @@ class TestProjectResolver() extends ProjectResolver {
     uri == "test" || uri.startsWith("test:")
   }
 
-  def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = {
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, baseDir: File, log: Logger): ProjectBuildConfig = {
     val rand = new java.util.Random
     // abort resolution 10% of the times
     if (rand.nextInt(10)==0)

@@ -18,7 +18,7 @@ class SvnProjectResolver extends ProjectResolver {
     ) && Svn.isSvnRepo(uri)
   }
     
-  def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
     val uri = new _root_.java.net.URI(config.uri)
 
     // First clone into the directory or fetch

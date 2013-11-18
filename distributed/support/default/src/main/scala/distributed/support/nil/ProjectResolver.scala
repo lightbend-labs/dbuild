@@ -13,5 +13,5 @@ class NilProjectResolver() extends ProjectResolver {
     uri == "nil" || uri.startsWith("nil:")
   }
 
-  def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = config
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, baseDir: File, log: Logger): ProjectBuildConfig = config
 }

@@ -24,13 +24,13 @@ class GitProjectResolver extends ProjectResolver {
    *  Use the scheme "jgit" if you prefer jgit (will not use hardlinks, hence more disk space will be used).
    *  The regular scheme "git" will use the command line tool by default.
    */
-  def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
-    val (git: GitImplementation, uriStart) = if (config.uri.startsWith("jgit:"))
-      (GitJGit, config.uri.substring(1))
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
+    val git: GitImplementation = if (opts.useJGit)
+      GitJGit
     else
-      (GitGit, config.uri)
-    val uri = new _root_.java.net.URI(uriStart)
+      GitGit
 
+    val uri = new _root_.java.net.URI(config.uri)
     val uriString = UriUtil.dropFragment(uri).toASCIIString
     val cloneDir = distributed.repo.core.ProjectDirs.clonesDir / (hashing sha1 uriString)
     val ref = Option(uri.getFragment()) getOrElse "master"

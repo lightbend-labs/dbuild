@@ -54,7 +54,7 @@ class Extractor(
       // extractor.resolver.resolve() only resolves the main URI,
       // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
-      val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, dir, this, logger), extractionConfig.buildOptions)
+      val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, extractionConfig.buildOptions, dir, this, logger), extractionConfig.buildOptions)
       logger.debug("Repeatable Config: " + writeValue(config))
       extractedResolvedWithCache(config, dir, logger)
     }

@@ -52,12 +52,12 @@ object AssembleBuildSystem extends BuildSystemCore {
   }
 
   // overriding resolve, as we need to resolve its nested projects as well
-  override def resolve(config: ProjectBuildConfig, dir: File, extractor: Extractor, log: Logger): ProjectBuildConfig = {
+  override def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: File, extractor: Extractor, log: Logger): ProjectBuildConfig = {
     if (config.uri != "nil" && !config.uri.startsWith("nil:"))
       sys.error("Fatal: the uri in Assemble " + config.name + " must start with the string \"nil:\"")
     // resolve the main URI (which will do nothing since it is "nil", but we may have
     // some debugging diagnostic, so let's call it anyway)
-    val rootResolved = super.resolve(config, dir, extractor, log)
+    val rootResolved = super.resolve(config, opts, dir, extractor, log)
     // and then the nested projects (if any)
     val newExtra = rootResolved.extra match {
       case None => None
@@ -68,7 +68,8 @@ object AssembleBuildSystem extends BuildSystemCore {
               log.info("----------")
               log.info("Resolving module: " + p.name)
               val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
-              val moduleConfig = extractor.dependencyExtractor.resolve(nestedExtractionConfig.buildConfig, projectsDir(dir, p), extractor, log)
+              val moduleConfig = extractor.dependencyExtractor.resolve(nestedExtractionConfig.buildConfig,
+                  nestedExtractionConfig.buildOptions, projectsDir(dir, p), extractor, log)
               s :+ moduleConfig
             }
           DistributedBuildConfig(nestedResolvedProjects, buildConfig.options)

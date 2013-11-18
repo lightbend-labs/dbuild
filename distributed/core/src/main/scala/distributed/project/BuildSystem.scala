@@ -67,6 +67,7 @@ trait BuildSystem[Extractor, LocalBuildRunner] {
    * all of the nested projects are recursively resolved in turn.
    * 
    * @param config    The project configuration.
+   * @param opts      The associated build options
    * @param dir       The directory that will receive the code checkout
    * @param extractor The extractor currently in use (for nested calls)
    * @param log       The logger to send output to for this build.
@@ -74,5 +75,5 @@ trait BuildSystem[Extractor, LocalBuildRunner] {
    * @return The updated configuration with resolved URIs, now in a repeatable form.
    * 
    */
-  def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor: Extractor, log: Logger): ProjectBuildConfig
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: java.io.File, extractor: Extractor, log: Logger): ProjectBuildConfig
 }

@@ -24,7 +24,7 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
 
   // This is our chance to fetch changing snapshots; if we don't make ProjectBuildConfig
   // unique, extraction will think '-SNAPSHOT' never changes, and incorrectly use its cache.
-  def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = {
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, baseDir: File, log: Logger): ProjectBuildConfig = {
     if (!config.uri.startsWith("ivy:"))
       sys.error("Fatal: the uri in Ivy project " + config.name + " must start with the string \"ivy:\"")
     val module = config.uri.substring(4)

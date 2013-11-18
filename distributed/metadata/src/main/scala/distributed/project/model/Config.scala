@@ -531,7 +531,12 @@ case class BuildOptions(
   @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
   // This option applies to all sbt-based projects, unless overridden.
   // see SbtExtraConfig for details.
-  @JsonProperty("extraction-version") extractionVersion: String = "standard"
+  @JsonProperty("extraction-version") extractionVersion: String = "standard",
+  // Select jgit rather than the command-line git. It is in the BuildOptions,
+  // rather than in the GeneralOptions, as its value may conceivably have
+  // an effect on building (for instance due to a difference in checkout because
+  // of an implementation bug)
+  @JsonProperty("use-jgit") useJGit: Boolean = false
 )
 
 /**

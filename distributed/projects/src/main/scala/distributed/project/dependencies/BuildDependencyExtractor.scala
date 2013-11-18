@@ -23,7 +23,7 @@ trait BuildDependencyExtractor {
    * For those build systems that support nested projects, this routine will
    * also recursively resolve all nested projects
    */
-  def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ProjectBuildConfig
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: java.io.File, extractor:Extractor, log: logging.Logger): ProjectBuildConfig
 }
 
 class MultiBuildDependencyExtractor(buildSystems: Seq[BuildSystem[Extractor, LocalBuildRunner]]) extends BuildDependencyExtractor {
@@ -36,6 +36,6 @@ class MultiBuildDependencyExtractor(buildSystems: Seq[BuildSystem[Extractor, Loc
   }
   def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ExtractedBuildMeta =
     findSystem(config.buildConfig).extractDependencies(config, dir, extractor, log)
-  def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ProjectBuildConfig =
-    findSystem(config).resolve(config, dir, extractor, log)
+  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: java.io.File, extractor:Extractor, log: logging.Logger): ProjectBuildConfig =
+    findSystem(config).resolve(config, opts: BuildOptions, dir, extractor, log)
 }

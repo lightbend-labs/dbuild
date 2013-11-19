@@ -2,6 +2,7 @@ package distributed
 package build
 
 import java.io.File
+
 import distributed.project.model.DBuildConfiguration
 import distributed.project.model.Utils.{ writeValue, readValue, readProperties }
 import distributed.project.model.ClassLoaderMadness
@@ -11,6 +12,9 @@ import java.util.Properties
 import com.typesafe.config.ConfigFactory
 import distributed.project.model.Utils.readValueT
 import distributed.utils.Time.timed
+import com.typesafe.config.ConfigException.Missing
+import com.typesafe.config.ConfigValue
+import collection.immutable.SortedMap
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -51,7 +55,7 @@ class SbtBuildMain extends xsbti.AppMain {
         if (!configFile.isFile())
           sys.error("Configuration file not found")
         println("Using configuration: " + configFile.getName)
-        val config =
+        val (config, resolvers) =
           try {
             val properties = readProperties(configFile): Seq[String]
             val propConfigs = properties map { s =>
@@ -63,8 +67,30 @@ class SbtBuildMain extends xsbti.AppMain {
             }
             val initialConfig = com.typesafe.config.ConfigFactory.parseFile(configFile)
             val endConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
+            //
+            // deserialization will empty the Vars section. Before doing so, let's save beforehand the
+            // (possible) list of resolvers defined in the configuration file, or in properties
+            //
+            val resolvedConfig = endConfig.resolve
+            val explicitResolvers = SortedMap[String, (String, Option[String])]() ++ (if (resolvedConfig.hasPath("vars.dbuild.resolvers")) {
+              import collection.JavaConverters._
+              val map = resolvedConfig.getObject("vars.dbuild.resolvers").unwrapped().asScala
+              map.map {
+                case (k, v) => (k,
+                  v match {
+                    case s: String =>
+                      s.split(":", 2) match {
+                        case Array(x) => (x, None)
+                        case Array(x, y) => (x, Some(y))
+                        case z => sys.error("Internal error, unexpected split result: " + z)
+                      }
+                    case z => sys.error("Illegal resolver specification: must be a string, found :" + z)
+                  })
+              }
+            } else Map.empty)
+            //
             val conf = readValueT[DBuildConfiguration](endConfig)
-            conf
+            (conf, explicitResolvers.values)
           } catch {
             case e: Exception =>
               println("Error reading configuration file:")
@@ -82,7 +108,13 @@ class SbtBuildMain extends xsbti.AppMain {
         //      println("Config: " + writeValue(config))
         //      println("Classloader:")
         //      printClassLoaders(getClass.getClassLoader)
-        val main = new LocalBuildMain(configuration)
+        val repos = if (resolvers.isEmpty)
+          configuration.provider.scalaProvider.launcher.ivyRepositories.toList
+        else {
+          val listMap = xsbt.boot.ListMap(resolvers.toSeq: _*)
+          (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
+        }
+        val main = new LocalBuildMain(repos)
         val (outcome, time) = try {
           timed { main.build(config, configFile.getName) }
         } finally main.dispose()

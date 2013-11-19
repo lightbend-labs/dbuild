@@ -41,7 +41,7 @@ object Dependencies {
   def sbtLogging(v:String)     = "org.scala-sbt" % "logging" % v
   def sbtLaunchInt(v:String)   = "org.scala-sbt" % "launcher-interface" % v % "provided"
 //  def sbtCollections(v:String)     = "org.scala-sbt" % "collections" % v
-//  def sbtLauncher(v:String)    = "org.scala-sbt" % "launcher" % v
+  def sbtLauncher(v:String)    = "org.scala-sbt" % "launcher" % v
 
 
 }

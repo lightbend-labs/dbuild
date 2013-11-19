@@ -15,10 +15,8 @@ import distributed.support.BuildSystemCore
 import akka.pattern.ask
 import akka.util.duration._
 
-class LocalBuildMain(configuration: xsbti.AppConfiguration) {
-  val launcher = configuration.provider.scalaProvider.launcher
+class LocalBuildMain(repos: List[xsbti.Repository]) {
 
-  val repos = launcher.ivyRepositories.toList
   val targetDir = ProjectDirs.targetDir
   val resolvers = Seq(
     new support.git.GitProjectResolver,

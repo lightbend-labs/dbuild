@@ -103,7 +103,7 @@ object Defaults {
       DmodProject("build")
       dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib)
-      dependsOnSbt(sbtLaunchInt)
+      dependsOnSbt(sbtLaunchInt, sbtLauncher)
       settings(skip210:_*)
     )
 

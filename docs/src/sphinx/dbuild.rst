@@ -27,11 +27,10 @@ adequate for most projects. However, you can modify this file if you would like 
 behavior in some way (for instance, relocating the default ``~/.dbuild`` directory, or the location of
 the Ivy cache it uses).
 
-One important case, however, is the customization of the resolvers list: you can just change the
-``[repositories]`` stanza in this properties file, adding or removing resolvers as needed. The list
-specified in this properties file will completely override the normal list of library resolvers,
-for all of the projects invoked by dbuild. By specifying here a local Artifactory cache, for instance,
-the artifacts resolution can be made considerably faster.
+The properties file also contains the list of resolvers that are used by default in order to resolve
+artifacts: this list will override the list of library resolvers defined by the various projects
+invoked by dbuild. It is possible to override the list of resolvers directly in this file, but it is
+more convenient to use the ``vars`` mechanism instead, as described below.
 
 The build configuration file
 ----------------------------
@@ -590,6 +589,60 @@ will remain unaffected).
   on top of one another. It is therefore advisable to
   adopt a regular (non-cyclic) build as soon as that
   is feasible.
+
+
+Customizing the list of repositories
+-------------------------------------
+While compiling the various projects, dbuild will look for
+artifacts (either Maven or Ivy) in a list of repositories.
+This list can be customized, for instance in order to add
+a local Artifactory instance that acts a a proxy. Such a
+setup is strongly recommended, in order to speed up the
+artifact resolution process.
+
+The default list of repositories is defined in the 
+``dbuild.properties`` file, located in the ``bin``
+subdirectory of the dbuild distribution. Although it
+is possible to change the list in the file, it is
+generally more convenient to use a different mechanism,
+by which the repositories can be defined directly within
+the dbuild configuration file, or in properties files.
+
+That works by defining variables in the Vars section
+(see above for details), within the path ``vars.dbuild.resolvers``.
+All of the variables that are defined in that manner are
+collected, and sorted alphabetically; the resulting list
+is then used to resolve artifacts for that dbuild run.
+
+For example, a configuration file could define:
+
+.. code-block:: text
+
+  vars: {
+    ivyPat: ", [organization]/[module]/(scala_[scalaVersion]/)...
+    dbuild.resolvers: {
+      0: "local"
+      1: "cachemvn: http://localhost:8088/artifactory/repo"
+      2: "cacheivy: http://localhost:8088/artifactory/repo"${vars.ivyPat}
+    }
+  }
+
+Remember that the various fields in the configuration file are not
+ordered: in the list above, the label "2" could appear between "0"
+and "1", and the result would be identical: the labels are just sorted
+alphabetically in the end. The labels can indeed be any string,
+not necessarily numbers as in this example.
+
+As we described in the subsection "properties", earlier in this file,
+variables can also be defined in external properties files. For instance,
+if we wanted to insert an additional resolver between "1" and "2", we could
+also use an external properties file:
+
+  .. code-block:: javascript
+
+  dbuild.properties.1a: other: http://somehost/somepath
+
+The syntax for the resolvers is exactly the same that is also used by sbt.
 
 |
 

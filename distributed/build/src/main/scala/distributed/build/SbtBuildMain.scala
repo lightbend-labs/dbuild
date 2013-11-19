@@ -2,7 +2,6 @@ package distributed
 package build
 
 import java.io.File
-
 import distributed.project.model.DBuildConfiguration
 import distributed.project.model.Utils.{ writeValue, readValue, readProperties }
 import distributed.project.model.ClassLoaderMadness
@@ -12,8 +11,6 @@ import java.util.Properties
 import com.typesafe.config.ConfigFactory
 import distributed.project.model.Utils.readValueT
 import distributed.utils.Time.timed
-import com.typesafe.config.ConfigException.Missing
-import com.typesafe.config.ConfigValue
 import collection.immutable.SortedMap
 
 /** An Sbt buiild runner. */

@@ -613,6 +613,8 @@ That works by defining variables in the Vars section
 All of the variables that are defined in that manner are
 collected, and sorted alphabetically; the resulting list
 is then used to resolve artifacts for that dbuild run.
+If at least one variable is defined in ``vars.dbuild.resolvers``,
+the default list specified in ``dbuild.properties`` will be ignored.
 
 For example, a configuration file could define:
 
@@ -643,7 +645,6 @@ also use an external properties file:
   dbuild.properties.1a: other: http://somehost/somepath
 
 The syntax for the resolvers is exactly the same that is also used by sbt.
-
 |
 
 *Next:* :doc:`buildOptions`.

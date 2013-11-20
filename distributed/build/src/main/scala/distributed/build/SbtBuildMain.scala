@@ -108,7 +108,9 @@ class SbtBuildMain extends xsbti.AppMain {
         val repos = if (resolvers.isEmpty)
           configuration.provider.scalaProvider.launcher.ivyRepositories.toList
         else {
-          val listMap = xsbt.boot.ListMap(resolvers.toSeq: _*)
+          val listMap = xsbt.boot.ListMap(resolvers.toSeq.reverse: _*)
+          // getRepositories contains a ListMap.toList, where sbt's definition
+          // of toList is "backing.reverse". So we have to reverse again.
           (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
         }
         val main = new LocalBuildMain(repos)

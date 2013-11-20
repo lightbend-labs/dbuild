@@ -640,7 +640,7 @@ variables can also be defined in external properties files. For instance,
 if we wanted to insert an additional resolver between "1" and "2", we could
 also use an external properties file:
 
-  .. code-block:: javascript
+.. code-block:: javascript
 
   dbuild.properties.1a: other: http://somehost/somepath
 

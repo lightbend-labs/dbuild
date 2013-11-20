@@ -27,10 +27,9 @@ adequate for most projects. However, you can modify this file if you would like 
 behavior in some way (for instance, relocating the default ``~/.dbuild`` directory, or the location of
 the Ivy cache it uses).
 
-The properties file also contains the list of resolvers that are used by default in order to resolve
-artifacts: this list will override the list of library resolvers defined by the various projects
-invoked by dbuild. It is possible to override the list of resolvers directly in this file, but it is
-more convenient to use the ``vars`` mechanism instead, as described below.
+The ``dbuild.properties`` file also contains the default list of resolvers that are used to resolve
+artifacts within dbuild. The list can be modified here, or via variables or further properties files,
+as explained in the section :ref:`custom-resolvers`, below.
 
 The build configuration file
 ----------------------------
@@ -95,6 +94,8 @@ vars
   you can then insert in the rest of the file ``${vars.a}`` and ``${vars.b}``, which will
   be replaced with the specified replacement strings. Sequences, or other arbitrary JSON
   structures, may also be defined and expanded in the same manner.
+
+.. _properties:
 
 properties
   This optional section may be used to define additional variables, by means of properties
@@ -591,32 +592,52 @@ will remain unaffected).
   is feasible.
 
 
+.. _custom-resolvers:
+
 Customizing the list of repositories
 -------------------------------------
 While compiling the various projects, dbuild will look for
 artifacts (either Maven or Ivy) in a list of repositories.
-This list can be customized, for instance in order to add
-a local Artifactory instance that acts a a proxy. Such a
-setup is strongly recommended, in order to speed up the
-artifact resolution process.
+The list can be customized, for instance in order to use
+a local Artifactory instance that acts as a proxy (useful
+to speed up resolution), or to add further custom repositories.
 
-The default list of repositories is defined in the 
-``dbuild.properties`` file, located in the ``bin``
-subdirectory of the dbuild distribution. Although it
-is possible to change the list in the file, it is
-generally more convenient to use a different mechanism,
-by which the repositories can be defined directly within
-the dbuild configuration file, or in properties files.
+There are various ways in which the list of resolvers can
+be customized. The simplest approach is just to modify the
+stanza ``[repositories]`` of the file ``dbuild.properties``,
+in the ``bin`` subdirectory. This is a
+simple way to customize the list of resolvers for all of
+the dbuild invocations on a development machine.
 
-That works by defining variables in the Vars section
-(see above for details), within the path ``vars.dbuild.resolvers``.
-All of the variables that are defined in that manner are
-collected, and sorted alphabetically; the resulting list
-is then used to resolve artifacts for that dbuild run.
-If at least one variable is defined in ``vars.dbuild.resolvers``,
-the default list specified in ``dbuild.properties`` will be ignored.
+As a more flexible alternative, the list can also be
+customized for each individual configuration file. That
+is done by defining a set of properties under the
+``dbuild.resolvers`` path.
 
-For example, a configuration file could define:
+For example, they can be described in a Java-style
+properties file as in this example:
+
+.. code-block:: text
+
+  dbuild.resolvers.0: local
+  dbuild.resolvers.1: cachemvn: http://localhost:8088/artifactory/repo
+  dbuild.resolvers.2: cacheivy: http://localhost:8088/artifactory/repo, [organization]/[...
+  ...
+
+The list can then be included in a dbuild configuration file
+just by adding:
+
+.. code-block:: javascript
+
+  properties: "file:/some/path/file.props"
+
+This is especially convenient if you have multiple lists
+of repositories: just by changing the file referred to by
+the "properties" field, you can select the appropriate one.
+
+In case you prefer to embed the list of resolvers directly in
+the configuration file, the properties can be defined
+there instead, as follows:
 
 .. code-block:: text
 
@@ -629,22 +650,35 @@ For example, a configuration file could define:
     }
   }
 
-Remember that the various fields in the configuration file are not
-ordered: in the list above, the label "2" could appear between "0"
-and "1", and the result would be identical: the labels are just sorted
-alphabetically in the end. The labels can indeed be any string,
-not necessarily numbers as in this example.
+This last approach may be more convenient in the case in which
+the dbuild job runs under Jenkins, as the list of
+repository can be customized together with the
+rest of the configuration file, without having to change
+the local setup.
 
-As we described in the subsection "properties", earlier in this file,
-variables can also be defined in external properties files. For instance,
-if we wanted to insert an additional resolver between "1" and "2", we could
-also use an external properties file:
+It is also possible to combine variables defined in the
+configuration file together with multiple properties files,
+as described in more detail in the subsection
+:ref:`custom-resolvers`, above.
 
-.. code-block:: javascript
+All of the properties defined under `dbuild.resolvers` in that
+manner are collected, and sorted alphabetically by key; the
+resulting list is then used to resolve artifacts for that dbuild run.
 
-  dbuild.properties.1a: other: http://somehost/somepath
+The order of the definitions in the JSON configuration file
+is not important; all of the resolvers found within
+``vars.dbuild.resolver`` are collected at the end, and
+sorted alphabetically by key. In the example above,
+"local" (with label "0") would come before "cachemvn"
+(label "1") even if the lines were swapped. The
+labels need not be numerical al all, but can be any string.
 
-The syntax for the resolvers is exactly the same that is also used by sbt.
+If at least one resolver has been defined via properties,
+as described above, the list of default resolvers that
+is specified in ``dbuild.properties`` will be ignored.
+
+The syntax for the each resolver specification is exactly
+the same that is also used by sbt.
 |
 
 *Next:* :doc:`buildOptions`.

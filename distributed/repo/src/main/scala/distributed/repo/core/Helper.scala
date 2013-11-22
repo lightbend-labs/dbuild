@@ -81,7 +81,7 @@ object LocalRepoHelper {
     }
 
   /** Publishes the given repeatable build configuration to the repository. */
-  def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository, log: Logger): Unit =
+  def publishBuildMeta(build: DBuildConfiguration, remote: Repository, log: Logger): Unit =
     publishMeta(build, remote, makeBuildMetaKey, log)
 
   def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {
@@ -217,7 +217,7 @@ object LocalRepoHelper {
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
-    val fragment = try " (commit: " + (new java.net.URI(meta.project.config.uri)).getFragment + ")" catch {
+    val fragment = try " (commit: " + (Option((new java.net.URI(meta.project.config.uri)).getFragment) getOrElse "none") + ")" catch {
       case e: java.net.URISyntaxException => ""
     }
     val info1 = "Retrieved from project " +

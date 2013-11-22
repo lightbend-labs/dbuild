@@ -59,7 +59,6 @@ object RepeatableDistributedBuild {
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
     buildOptions: Option[BuildOptions]) {
   def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), buildOptions)
-  def repeatableBuildString = writeValue(this)
   
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)
@@ -82,7 +81,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
         val sortedDeps = dependencies.toSeq.sortBy (_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
             sortedDeps, head.extracted.subproj,
-            buildOptions getOrElse BuildOptions()) // pick defaults if no GlobalBuildOptions specified
+            buildOptions getOrElse BuildOptions()) // pick defaults if no BuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     // we need to check for duplicates /before/ checking for cycles, otherwise spurious
@@ -106,8 +105,4 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
     val orderedBuilds = (graph.safeTopological map (_.value)).reverse
     makeMeta(orderedBuilds, Map.empty, Seq.empty)
   }
-    
-  /** The unique SHA for this build. */
-  def uuid: String = hashing sha1 (repeatableBuilds map (_.uuid))
-  
 }

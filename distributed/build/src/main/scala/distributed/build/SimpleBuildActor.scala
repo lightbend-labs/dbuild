@@ -41,7 +41,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val illegalProjectNames = projectNames.filterNot(_ forall validCharset)
         if (illegalProjectNames.nonEmpty) {
           sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed:",
-              ", ",""))
+            ", ", ""))
         }
         //
         val notifTask = new Notifications(conf, confName, log)
@@ -161,14 +161,22 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               nest(RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)) { fullBuild =>
                 // evaluate repeatableBuilds in order to force cycles to be checked at this time
                 nest(fullBuild.repeatableBuilds) { rb =>
-                  val fullLogger = log.newNestedLogger(fullBuild.uuid)
-                  nest(publishFullBuild(fullBuild, fullLogger)) { unit =>
-                    val futureBuildResult = runBuild(target, fullBuild, fullLogger)
+                  // what we call "RepeatableDistributedBuild" is actually only the portion of data that
+                  // affect the build. Further options that do /not/ affect the build, but control dbuild in
+                  // other ways (notifications, resolvers, etc), are in the GeneralOptions.
+                  // In order to present to the user a new complete configuration that can be used as-is to
+                  // restart dbuild, and which contains the RepeatableDistributedBuild data, we create
+                  // a new full DBuildConfiguration.
+                  val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, conf.options)
+                  val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
+                  writeDependencies(fullBuild, fullLogger)
+                  nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
+                    val futureBuildResult = runBuild(target, fullBuild, expandedDBuildConfig.uuid, fullLogger)
                     afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                   }
                 }
               }
-              
+
             case _ => sys.error("Internal error: extraction did not return ExtractionOutcome. Please report.")
           }
         }
@@ -198,21 +206,26 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
    * Publishing the full build to the repository and logs the output for
    * re-use.
    */
-  def publishFullBuild(build: RepeatableDistributedBuild, log: Logger): Unit = {
-    log.info("---==  RepeatableBuild ==---")
-    log.info(" uuid = " + build.uuid)
-    log.debug("---==   Repeatable Build Config   ===---")
-    log.debug(build.repeatableBuildString)
-    log.debug("---== End Repeatable Build Config ===---")
+  def publishFullBuild(expandedDBuildConfig: DBuildConfiguration, log: Logger): Unit = {
+    log.info("---==  Repeatable Build Info ==---")
+    log.info(" uuid = " + expandedDBuildConfig.uuid)
+    log.info("---== Repeatable dbuild Configuration ===---")
+    log.info("You can repeat this build (except for -SNAPSHOT references) using this configuration:\n" +
+      Utils.writeValueFormatted(expandedDBuildConfig))
+    log.info("---== End Repeatable dbuild Configuration ===---")
+    log.info("---== Writing dbuild Metadata ===---")
+    LocalRepoHelper.publishBuildMeta(expandedDBuildConfig, repository, log)
+    log.info("---== End Writing dbuild Metadata ===---")
+    log.info("---==  End Repeatable Build Info ==---")
+  }
+
+  def writeDependencies(build: RepeatableDistributedBuild, log: Logger) = {
     log.info("---== Dependency Information ===---")
     build.repeatableBuilds foreach { b =>
       log.info("Project " + b.config.name)
       log.info(b.dependencies.map { _.config.name } mkString ("  depends on: ", ", ", ""))
     }
     log.info("---== End Dependency Information ===---")
-    log.info("---== Writing dbuild Metadata ===---")
-    LocalRepoHelper.publishBuildMeta(build, repository, log)
-    log.info("---== End Writing dbuild Metadata ===---")
   }
 
   def logPoms(build: RepeatableDistributedBuild, arts: BuildArtifactsIn, log: Logger): Unit =
@@ -228,8 +241,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
 
   implicit val buildTimeout: Timeout = 4 hours
 
-  // Chain together some Asynch to run this build.
-  def runBuild(target: File, build: RepeatableDistributedBuild, log: Logger): Future[BuildOutcome] = {
+  def runBuild(target: File, build: RepeatableDistributedBuild, uuid: String, log: Logger): Future[BuildOutcome] = {
     implicit val ctx = context.system
     val tdir = ProjectDirs.targetDir
     type State = Future[BuildOutcome]
@@ -252,7 +264,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               val watchdog = Timeouts.after(buildDuration,
                 using = ctx.scheduler)(
                   Future(new BuildFailed(b.config.name, outcomes,
-                      "Timeout: building project " + b.config.name + " took longer than " + buildDuration) with TimedOut))
+                    "Timeout: building project " + b.config.name + " took longer than " + buildDuration) with TimedOut))
               val buildOutcome = buildProject(tdir, b, outProjects, outcomes, log.newNestedLogger(b.config.name))
               Future.firstCompletedOf(Seq(watchdog, buildOutcome))
             }
@@ -260,7 +272,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       }(Some((a, b) => a.config.name < b.config.name))
 
     // TODO - REpository management here!!!!
-    ProjectDirs.userRepoDirFor(build) { localRepo =>
+    ProjectDirs.userRepoDirFor(uuid) { localRepo =>
       // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
       Future.sequence(runBuild()).map { outcomes =>
         if (outcomes exists { case _: BuildBad => true; case _ => false })
@@ -289,7 +301,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val watchdog = Timeouts.after(extractionDuration,
           using = ctx.scheduler)(
             Future(new ExtractionFailed(projConfig.name, Seq(),
-                "Timeout: extraction of project " + projConfig.name + " took longer than " + extractionDuration) with TimedOut))
+              "Timeout: extraction of project " + projConfig.name + " took longer than " + extractionDuration) with TimedOut))
         val outcome =
           extract(tdir, log)(ExtractionConfig(projConfig, config.options getOrElse BuildOptions()))
         Future.firstCompletedOf(Seq(watchdog, outcome))

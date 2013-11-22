@@ -52,7 +52,10 @@ case class DBuildConfiguration(
    * during expansion.
    */
   properties: SeqString = Seq.empty
-)
+) {
+  /** The unique SHA for this configuration */
+  def uuid = hashing sha1 this
+}
 
 /* This section is unchecked, and is used prior to deserialization by
  * the Typesafe config library. Its contents are no longer used once we
@@ -95,7 +98,8 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
  * General options for dbuild, that do not affect the actual build.
  */
 case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
-  notifications: NotificationOptions = NotificationOptions())
+  notifications: NotificationOptions = NotificationOptions(),
+  resolvers: Map[String, String] = Map[String, String]())
 
 /**
  * This class acts as a useful wrapper for parameters that are Seqs of Strings: it makes it

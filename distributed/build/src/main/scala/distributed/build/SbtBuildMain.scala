@@ -65,28 +65,29 @@ class SbtBuildMain extends xsbti.AppMain {
             val initialConfig = com.typesafe.config.ConfigFactory.parseFile(configFile)
             val endConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
             //
-            // deserialization will empty the Vars section. Before doing so, let's save beforehand the
-            // (possible) list of resolvers defined in the configuration file, or in properties
-            //
+            // Let's extract the (possible) list of resolvers defined in the configuration file
             val resolvedConfig = endConfig.resolve
-            val explicitResolvers = SortedMap[String, (String, Option[String])]() ++ (if (resolvedConfig.hasPath("vars.dbuild.resolvers")) {
-              import collection.JavaConverters._
-              val map = resolvedConfig.getObject("vars.dbuild.resolvers").unwrapped().asScala
-              map.map {
-                case (k, v) => (k,
-                  v match {
-                    case s: String =>
-                      s.split(":", 2) match {
-                        case Array(x) => (x, None)
-                        case Array(x, y) => (x, Some(y))
-                        case z => sys.error("Internal error, unexpected split result: " + z)
-                      }
-                    case z => sys.error("Illegal resolver specification: must be a string, found :" + z)
-                  })
-              }
-            } else Map.empty)
+            val explicitResolvers = SortedMap[String, (String, Option[String])]() ++
+              (if (resolvedConfig.hasPath("options.resolvers")) {
+                import collection.JavaConverters._
+                val map = resolvedConfig.getObject("options.resolvers").unwrapped().asScala
+                map.map {
+                  case (k, v) => (k,
+                    v match {
+                      case s: String =>
+                        s.split(":", 2) match {
+                          case Array(x) => (x, None)
+                          case Array(x, y) => (x, Some(y))
+                          case z => sys.error("Internal error, unexpected split result: " + z)
+                        }
+                      case z => sys.error("Illegal resolver specification: must be a string, found :" + z)
+                    })
+                }
+              } else Map.empty)
             //
-            val conf = readValueT[DBuildConfiguration](endConfig)
+            // After deserialization, Vars is empty (see VarDeserializer)
+            // Let's also empty the list of property files, which is now no longer needed
+            val conf = readValueT[DBuildConfiguration](endConfig).copy(properties=Seq.empty)
             (conf, explicitResolvers.values)
           } catch {
             case e: Exception =>

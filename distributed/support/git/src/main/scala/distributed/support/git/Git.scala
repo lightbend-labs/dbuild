@@ -126,9 +126,7 @@ object GitJGit extends GitImplementation {
     val dir = repo.getRepository().getDirectory().getParentFile()
     val originURI = repo.getRepository().getConfig().getString("remote", "origin", "url")
     log.info("Fetching " + originURI)
-    log.info("into " + dir.getAbsolutePath())
-    log.debug("Refspecs:")
-    refSpecs foreach { rs => log.debug("  " + rs) }
+    log.info("into " + dir.getCanonicalPath)
     tryFetch(ignoreFailures, log, originURI) {
       repo.fetch().setRemote("origin").setRemoveDeletedRefs(true).
         setTagOpt(NO_TAGS).setRefSpecs(refSpecs.map { new RefSpec(_) }: _*).run(log)
@@ -198,9 +196,7 @@ object GitGit extends GitImplementation {
   // The flag "usePR" is true if we need to add the refSpecs of GitHub's pull requests.
   def fetch(repo: GitRepo, ignoreFailures: Boolean, log: Logger) = {
     log.info("Fetching " + repo.sourceURI)
-    log.info("into " + repo.dir)
-    log.debug("Refspecs:")
-    refSpecs foreach { rs => log.debug("  " + rs) }
+    log.info("into " + repo.dir.getCanonicalPath)
     tryFetch(ignoreFailures, log, repo.sourceURI) {
       val (ret, time) = timed(
         // will automatically fix all branches, tags, and pull/* refs

@@ -40,9 +40,9 @@ object ProjectDirs {
     file
   }
   
-  def userRepoDirFor[A](build: RepeatableDistributedBuild)(f: File => A) = {
+  def userRepoDirFor[A](uuid: String)(f: File => A) = {
     val dir = new File(targetDir, "repositories")
-    val repodir = new File(dir, build.uuid)
+    val repodir = new File(dir, uuid)
     repodir.mkdirs()
     f(repodir)
   }

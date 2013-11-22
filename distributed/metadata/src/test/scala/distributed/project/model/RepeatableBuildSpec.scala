@@ -107,11 +107,6 @@ object RepeatableDistributedBuildSpec extends Specification {
       union.size must equalTo(3)
     }
     
-    "Must make build UUIDs" in {
-      sample.uuid must not(equalTo(sample2.uuid))
-      sample.uuid must not(equalTo(hashing sha1 ""))
-    }
-    
     "Must have transitive dependencies" in {
       val d = sample.repeatableBuilds find (_.config.name == "d") getOrElse sys.error("Could not find repeatable build for d")
       (d.dependencies find (_.config.name == "b")) must equalTo(sample.repeatableBuilds find (_.config.name == "b"))

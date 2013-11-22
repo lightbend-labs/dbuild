@@ -18,7 +18,7 @@ import distributed.project.model.BuildSubArtifactsOut
 
 object DistributedRunner {
 
-  val scalaOrgs = Seq("org.scala-lang", "org.scala-lang.modules")
+  val scalaOrgs = Seq("org.scala-lang", "org.scala-lang.modules", "org.scala-lang.plugins")
 
   def timed[A](f: => Stated[A]): Stated[Long] = {
     val start = java.lang.System.currentTimeMillis

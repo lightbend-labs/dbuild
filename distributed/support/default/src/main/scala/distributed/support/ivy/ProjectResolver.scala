@@ -39,11 +39,18 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
       // it gets included in the hash calculation, making it unique
       val dateFormat = new MailDateFormat()
       dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-      val date = dateFormat.format(report.getAllArtifactsReports()(0).getArtifact.getPublicationDate)
+      
+      // Try to find, if it exists, the report for the main jar. If not present,
+      // pick the first artifact in the list
+      val artReport = {
+        val all = report.getAllArtifactsReports()
+        all.find(_.getArtifact.getType == "jar") getOrElse all(0)
+      }
+      val date = dateFormat.format(artReport.getArtifact.getPublicationDate)
       // even better, in case of unique artifacts we can look at the real origin jar, for diagnostic purposes.
       // Unfortunately. we cannot replace the original revision, as it needs to remain "-SNAPSHOT" for
       // resolution to succeed (the artifacts are published in a /...-SNAPSHOT/ directory).
-      val localFile = new File(report.getAllArtifactsReports()(0).getArtifactOrigin.getLocation).getName.replaceAll("(\\.[^\\.]*$)", "")
+      val localFile = new File(artReport.getArtifactOrigin.getLocation).getName.replaceAll("(\\.[^\\.]*$)", "")
       val baseName = modRevId.getName + "-"
       val newRevision = if (localFile.startsWith(baseName)) {
         localFile.substring(baseName.length)
@@ -51,19 +58,20 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
       // this will turn com.typesafe.sbt#incremental-compiler;0.13.0-on-2.10.2-for-IDE-SNAPSHOT
       // into the actual com.typesafe.sbt#incremental-compiler;0.13.0-on-2.10.2-for-IDE-20130725.100115-3
       val newModRevId = new ModuleRevisionId(modRevId.getModuleId, modRevId.getBranch, newRevision)
-      val marker = newModRevId + ", published on: " + date
+      val marker = newRevision + ", published on: " + date
       log.info("The resolved SNAPSHOT is: " + marker)
       // Are we trying to repeat a build from a repeatable build configuration? If so, the
       // snapshot marker may already be set to some value. In that case, we check that we
       // are still using the same snapshot, and issue a warning if we are not.
-      // This may also happen if, by unlucky chance, the snapshot changes between extraction and building
       val expandedExtra = IvyMachinery.ivyExpandConfig(config)
       expandedExtra.snapshotMarker.map { previous =>
         // yep, the marker was already set
         if (previous != marker) {
-          log.warn("WARNING: The requested snapshot changed!")
-          log.warn("It was    : "+previous)
-          log.warn("But now is: "+marker)
+          log.warn("")
+          log.warn("  WARNING:  The requested snapshot changed!")
+          log.warn("  WARNING:  It was    : "+previous)
+          log.warn("  WARNING:  But now is: "+marker)
+          log.warn("")
         }
       }
       config.copy(extra=Some(expandedExtra.copy(snapshotMarker = Some(marker))))

@@ -210,8 +210,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     log.info("---==  Repeatable Build Info ==---")
     log.info(" uuid = " + expandedDBuildConfig.uuid)
     log.info("---== Repeatable dbuild Configuration ===---")
-    log.info("You can repeat this build (except for -SNAPSHOT references) using:")
-    log.info(Utils.writeValueFormatted(expandedDBuildConfig))
+    log.info("You can repeat this build (except for -SNAPSHOT references) using this configuration:\n" +
+      Utils.writeValueFormatted(expandedDBuildConfig))
     log.info("---== End Repeatable dbuild Configuration ===---")
     log.info("---== Writing dbuild Metadata ===---")
     LocalRepoHelper.publishBuildMeta(expandedDBuildConfig, repository, log)

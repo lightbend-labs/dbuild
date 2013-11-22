@@ -611,17 +611,17 @@ the dbuild invocations on a development machine.
 
 As a more flexible alternative, the list can also be
 customized for each individual configuration file. That
-is done by defining a set of properties under the
-``dbuild.resolvers`` path.
+is done by defining a set of repositories under the
+``options.resolvers`` path.
 
 For example, they can be described in a Java-style
 properties file as in this example:
 
 .. code-block:: text
 
-  dbuild.resolvers.0: local
-  dbuild.resolvers.1: cachemvn: http://localhost:8088/artifactory/repo
-  dbuild.resolvers.2: cacheivy: http://localhost:8088/artifactory/repo, [organization]/[...
+  resolvers.0: local
+  resolvers.1: cachemvn: http://localhost:8088/artifactory/repo
+  resolvers.2: cacheivy: http://localhost:8088/artifactory/repo, [organization]/[...
   ...
 
 The list can then be included in a dbuild configuration file
@@ -630,6 +630,7 @@ just by adding:
 .. code-block:: javascript
 
   properties: "file:/some/path/file.props"
+  options.resolvers: ${vars.resolvers}
 
 This is especially convenient if you have multiple lists
 of repositories: just by changing the file referred to by
@@ -637,17 +638,16 @@ the "properties" field, you can select the appropriate one.
 
 In case you prefer to embed the list of resolvers directly in
 the configuration file, the properties can be defined
-there instead, as follows:
+there instead, as in this example:
 
 .. code-block:: text
 
-  vars: {
-    ivyPat: ", [organization]/[module]/(scala_[scalaVersion]/)...
-    dbuild.resolvers: {
-      0: "local"
-      1: "cachemvn: http://localhost:8088/artifactory/repo"
-      2: "cacheivy: http://localhost:8088/artifactory/repo"${vars.ivyPat}
-    }
+  vars.ivyPat: ", [organization]/[module]/(scala_[scalaVersion]/)...
+  options.resolvers: {
+    0: "local"
+    1: "cachemvn: http://localhost:8088/artifactory/repo"
+    2: "cacheivy: http://localhost:8088/artifactory/repo"${vars.ivyPat}
+    ...
   }
 
 This last approach may be more convenient in the case in which
@@ -661,13 +661,13 @@ configuration file together with multiple properties files,
 as described in more detail in the subsection
 :ref:`custom-resolvers`, above.
 
-All of the properties defined under `dbuild.resolvers` in that
+All of the properties defined under `options.resolvers` in that
 manner are collected, and sorted alphabetically by key; the
 resulting list is then used to resolve artifacts for that dbuild run.
 
 The order of the definitions in the JSON configuration file
 is not important; all of the resolvers found within
-``vars.dbuild.resolver`` are collected at the end, and
+``options.resolver`` are collected at the end, and
 sorted alphabetically by key. In the example above,
 "local" (with label "0") would come before "cachemvn"
 (label "1") even if the lines were swapped. The

@@ -51,8 +51,22 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
       // this will turn com.typesafe.sbt#incremental-compiler;0.13.0-on-2.10.2-for-IDE-SNAPSHOT
       // into the actual com.typesafe.sbt#incremental-compiler;0.13.0-on-2.10.2-for-IDE-20130725.100115-3
       val newModRevId = new ModuleRevisionId(modRevId.getModuleId, modRevId.getBranch, newRevision)
-      log.info("The resolved SNAPSHOT is: " + newModRevId + ", published on: " + date)
-      config.copy(extra=Some(IvyMachinery.ivyExpandConfig(config).copy(snapshotMarker = Some(date))))
+      val marker = newModRevId + ", published on: " + date
+      log.info("The resolved SNAPSHOT is: " + marker)
+      // Are we trying to repeat a build from a repeatable build configuration? If so, the
+      // snapshot marker may already be set to some value. In that case, we check that we
+      // are still using the same snapshot, and issue a warning if we are not.
+      // This may also happen if, by unlucky chance, the snapshot changes between extraction and building
+      val expandedExtra = IvyMachinery.ivyExpandConfig(config)
+      expandedExtra.snapshotMarker.map { previous =>
+        // yep, the marker was already set
+        if (previous != marker) {
+          log.warn("WARNING: The requested snapshot changed!")
+          log.warn("It was    : "+previous)
+          log.warn("But now is: "+marker)
+        }
+      }
+      config.copy(extra=Some(expandedExtra.copy(snapshotMarker = Some(marker))))
     } else config
   }
 }

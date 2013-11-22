@@ -44,6 +44,8 @@ object Utils {
   def readValue[T](s:String)(implicit m: Manifest[T])=readValueT[T](parseString(s))
   def writeValue[T](t:T)(implicit m: Manifest[T]) = 
     withContextLoader(getClass.getClassLoader){mapper.writeValueAsString[T](t)}
+  def writeValueFormatted[T](t:T)(implicit m: Manifest[T]) = 
+    com.typesafe.config.ConfigFactory.parseString(writeValue(t)).root.render(ConfigRenderOptions.concise.setFormatted(true))
   def readProperties(f: File) = {
     val config = parseFile(f)
     // do not resolve yet! some needed vars may be in prop files which have not been parsed yet

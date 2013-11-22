@@ -52,7 +52,10 @@ case class DBuildConfiguration(
    * during expansion.
    */
   properties: SeqString = Seq.empty
-)
+) {
+  /** The unique SHA for this configuration */
+  def uuid = hashing sha1 this
+}
 
 /* This section is unchecked, and is used prior to deserialization by
  * the Typesafe config library. Its contents are no longer used once we

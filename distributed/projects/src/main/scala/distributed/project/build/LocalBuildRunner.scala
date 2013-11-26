@@ -10,6 +10,7 @@ import java.io.File
 import distributed.repo.core._
 import sbt.Path._
 import dependencies.Extractor
+import distributed.utils.Time.updateTimeStamp
 
 /** This class encodes the logic to resolve a project and run its build given
  * a local repository, a resolver and a build runner.
@@ -36,6 +37,7 @@ class LocalBuildRunner(builder: BuildRunner,
   
   def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildArtifactsOut =
     distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
+      updateTimeStamp(dir)
       // extractor.resolver.resolve() only resolves the main URI,
       // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
       // here we only resolve the ROOT project, as we will later call the runBuild()

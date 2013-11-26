@@ -14,6 +14,7 @@ import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.logging.Logger.prepareLogMsg
 import org.apache.ivy.core.module.id.ModuleId
 import distributed.project.model.ProjectRef
+import distributed.utils.Time.updateTimeStamp
 
 /** This is used to extract dependencies from projects. */
 class Extractor(
@@ -50,6 +51,7 @@ class Extractor(
   def extract(tdir: File, extractionConfig: ExtractionConfig, logger: logging.Logger): ExtractionOutcome = try {
     val build = extractionConfig.buildConfig
     distributed.repo.core.ProjectDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
+      updateTimeStamp(dir)
       // NB: while resolving projects:
       // extractor.resolver.resolve() only resolves the main URI,
       // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively

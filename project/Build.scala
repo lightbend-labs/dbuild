@@ -163,8 +163,8 @@ trait BuildHelper extends Build {
 
   def skip210 = 
     Seq(skip in compile <<= scalaVersion.map(_.startsWith("2.10")),
-        compileInputs in doc in Compile <<= (compileInputs in doc in Compile,skip in compile).map( (c,s) =>
-          if(s) c.copy(config = c.config.copy(sources = List())) else c ) )
+        sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
+          if(s) List() else c ) )
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,

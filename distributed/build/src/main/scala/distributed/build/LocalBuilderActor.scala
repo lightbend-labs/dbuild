@@ -14,7 +14,7 @@ import distributed.repo.core.Repository
 import distributed.project.controller.Controller
 import distributed.project.dependencies.Extractor
 
-case class RunLocalBuild(config: DBuildConfiguration, configName: String, targetDir: File)
+case class RunLocalBuild(config: DBuildConfiguration, configName: String)
 /** This is an actor which executes builds locally given a
  * set of resolvers and build systems.
  * 
@@ -24,6 +24,7 @@ class LocalBuilderActor(
     resolvers: Seq[ProjectResolver],
     buildSystems: Seq[BuildSystemCore],
     repository: Repository,
+    targetDir: File,
     log: Logger) extends Actor {
 
   val concurrencyLevel = 1
@@ -34,12 +35,12 @@ class LocalBuilderActor(
   val buildRunner = new project.build.AggregateBuildRunner(buildSystems)
   val localBuildRunner = new project.build.LocalBuildRunner(buildRunner, extractor, repository)
   
-  val extractorActor = Controller(context, Props(new ExtractorActor(extractor)), "Project-Dependency-Extractor", concurrencyLevel)
+  val extractorActor = Controller(context, Props(new ExtractorActor(extractor, targetDir)), "Project-Dependency-Extractor", concurrencyLevel)
   val baseBuildActor = Controller(context, Props(new BuildRunnerActor(localBuildRunner)), "Project-Builder", concurrencyLevel)
   val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository)), "simple-distributed-builder")
 
   def receive = {
-    case RunLocalBuild(config, configName, target) =>
-      fullBuilderActor forward RunDistributedBuild(config, configName, target, log)
+    case RunLocalBuild(config, configName) =>
+      fullBuilderActor forward RunDistributedBuild(config, configName, targetDir, log)
   }
 }

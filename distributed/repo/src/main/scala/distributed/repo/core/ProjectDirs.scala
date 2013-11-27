@@ -19,8 +19,10 @@ object ProjectDirs {
   val repoCredFile = new File(dbuildDir, "remote.cache.properties")
   
   def logDir = new File(targetDir, "logs")
+
+  def extractionDir(tdir: File) = new File(tdir, "extraction")
   
-  def useProjectExtractionDirectory[A](build: ExtractionConfig, tdir: File = targetDir)(f: File => A) = {
+  def useProjectExtractionDirectory[A](build: ExtractionConfig, tdir: File)(f: File => A) = {
     val dir = new File(tdir, "projects")
     val projdir = new File(dir, build.uuid)
     projdir.mkdirs()

@@ -10,14 +10,15 @@ import java.io.File
 import distributed.repo.core._
 import sbt.Path._
 import dependencies.Extractor
-import distributed.utils.Time.updateTimeStamp
+import distributed.utils.Time.{ updateTimeStamp, markSuccess }
 
-/** This class encodes the logic to resolve a project and run its build given
+/**
+ * This class encodes the logic to resolve a project and run its build given
  * a local repository, a resolver and a build runner.
  */
-class LocalBuildRunner(builder: BuildRunner, 
-    val extractor: Extractor, 
-    val repository: Repository) {
+class LocalBuildRunner(builder: BuildRunner,
+  val extractor: Extractor,
+  val repository: Repository) {
 
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger): BuildOutcome = {
     try {
@@ -34,7 +35,7 @@ class LocalBuildRunner(builder: BuildRunner,
         BuildFailed(build.config.name, children, prepareLogMsg(log, t))
     }
   }
-  
+
   def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildArtifactsOut =
     distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       updateTimeStamp(dir)
@@ -49,7 +50,7 @@ class LocalBuildRunner(builder: BuildRunner,
       val dbuildDir = builder.projectDbuildDir(dir, build)
       val readRepo = dbuildDir / "local-repo"
       val writeRepo = dbuildDir / "local-publish-repo"
-      if(!writeRepo.exists()) writeRepo.mkdirs()
+      if (!writeRepo.exists()) writeRepo.mkdirs()
       val uuids = build.transitiveDependencyUUIDs.toSeq
       val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
       // TODO - Load this while resolving!
@@ -99,9 +100,10 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       val results = builder.runBuild(build, dir,
-          BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, log)
+        BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, log)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
+      markSuccess(dir)
       results
     }
-  
+
 }

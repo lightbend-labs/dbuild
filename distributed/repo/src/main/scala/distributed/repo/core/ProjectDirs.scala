@@ -21,9 +21,10 @@ object ProjectDirs {
   def logDir = new File(targetDir, "logs")
 
   def extractionDir(tdir: File) = new File(tdir, "extraction")
+  def projectExtractionDir(dir: File) = new File(dir, "projects")
   
-  def useProjectExtractionDirectory[A](build: ExtractionConfig, tdir: File)(f: File => A) = {
-    val dir = new File(tdir, "projects")
+  def useProjectExtractionDirectory[A](build: ExtractionConfig, edir: File)(f: File => A) = {
+    val dir = projectExtractionDir(edir)
     val projdir = new File(dir, build.uuid)
     projdir.mkdirs()
     f(projdir)

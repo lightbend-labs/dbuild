@@ -9,6 +9,7 @@ import java.util.Date
 import java.io.File
 import org.apache.commons.io.FileUtils.writeStringToFile
 import org.apache.commons.io.FileUtils.touch
+import distributed.project.model.CleanupExpirations
 
 /**
  * Contains some time-related utils for general usage.
@@ -74,15 +75,29 @@ object Time {
   }
 
   // expiration timeouts are in hours
-  def upForDeletion(dir: File, expirationFailure: Int, expirationSuccess: Int) = {
+  // the ">=" comes from the following case:
+  // if expiration is zero, even a newly created dir should be deleted right away 
+  def upForDeletion(dir: File, exp: CleanupExpirations) = {
     val isSuccess = successFile(dir).isFile()
     timeStampAgeHours(dir) match {
       case None => false
       case Some(age) =>
         if (isSuccess)
-          age > expirationSuccess
+          age >= exp.success
         else
-          age > expirationFailure
+          age >= exp.failure
     }
+  }
+  
+  // this routine is not really time-related, but since we placed in this file
+  // the timestamp logic, we keep everything together
+  // Note that we also have to get rid of the timestamp and success file
+  def prepareForDeletion(dir: File) = {
+    val name = dir.getName()
+    val parent = dir.getParentFile()
+    val dest = new File(parent,"deleted-"+name)
+    dir.renameTo(dest)
+    timeStampFile(dir).delete()
+    successFile(dir).delete()
   }
 }

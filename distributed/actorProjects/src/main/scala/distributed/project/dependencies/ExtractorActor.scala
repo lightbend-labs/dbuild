@@ -8,7 +8,9 @@ import actorpatterns.forwardingErrorsToFutures
 import _root_.java.io.File
 import sbt.Path._
 import distributed.project.controller.{ Controller, Controlled, Done }
-import distributed.repo.core.ProjectDirs.extractionDir
+import distributed.repo.core.ProjectDirs.{ extractionDir, projectExtractionDir }
+import distributed.project.model.CleanupExpirations
+import distributed.utils.Time._
 
 case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, log: logging.Logger)
 
@@ -17,16 +19,41 @@ case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, l
  *  plus an uuid that represents the entire dbuild configuration. In that, extract()
  *  will nest "project/uuid", with uuid referring to the single project being extracted.
  */
-class ExtractorActor(e: Extractor, target: File) extends Actor {
+class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extends Actor {
   override def preStart() = {
-    // TODO: implement initial stage of cleanup, then spawn an auxiliary actor that
-    // will clean in the background (possibly being interrupted at any time, should
-    // dbuild exit half-way through).
+    // Cleanup works in two stages.
+    // Before any extraction is performed, in a quick pass the extraction directory
+    // is scanned, and the directories that are eligible for cleanup are renamed to
+    // "delete-...". This is done synchronously in the preStart() initialization stage
+    // of the actor.
+    // Once that is done, a further actor (which may be killed at any time) is spawned
+    // to actually do the cleanup, and this second stage is performed asynchronously.
+    // Thanks to this mechanism, even if dbuild stops half-way through the deletion,
+    // the next iteration will find the directories that have been previously renamed
+    // as eligibile for deletion anyway.
+    // Further, renaming the directories gets them out of the way, in case the extractor
+    // needs to use the same directory name again, for a new extraction.
+
+    val extrDir = extractionDir(target)
+    // There are two levels in the hierarchy, so we mark for deletion first the nested
+    // ones and, if all the content can be deleted, the outer one as well.
+    extrDir.*(sbt.DirectoryFilter).get.foreach { d1 =>
+      val candidates = projectExtractionDir(d1).*(sbt.DirectoryFilter).get
+      val (delete, doNotDelete) = candidates.partition(upForDeletion(_, exp))
+      if (doNotDelete.isEmpty) // everything can be deleted inside this dir, or there is
+        prepareForDeletion(d1) // nothing left, so remove the dir
+      else
+        delete.foreach(prepareForDeletion) // mark for deletion only the relevant subdirs
+    }
+    // TODO: spawn the auxiliary actor that will clean in the background
     // TODO: distinguish between successful and unsuccessful extractions, by touching
     // a file ".dbuild-success" at the end of a successful extraction.
     // TODO: add some sort of locking, in case multiple extractor actors start in the
     // same dir, from two instances of dbuild (this has to be done in the general
-    // context of adding locking to everything)
+    // context of adding locking to everything). Note that although renaming is atomic,
+    // we also have to get rid of the timestamp and success files; further, we cannot
+    // determine accurately the age of directories if unrelated extractors are running
+    // at the same time, so some form of auxiliary locking is needed anyway.
   }
   def receive: Receive = {
     case Controlled(ExtractBuildDependencies(build, uuidDir, log), from) =>

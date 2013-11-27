@@ -25,6 +25,7 @@ class LocalBuilderActor(
     buildSystems: Seq[BuildSystemCore],
     repository: Repository,
     targetDir: File,
+    cleanup: CleanupOptions,
     log: Logger) extends Actor {
 
   val concurrencyLevel = 1
@@ -35,12 +36,16 @@ class LocalBuilderActor(
   val buildRunner = new project.build.AggregateBuildRunner(buildSystems)
   val localBuildRunner = new project.build.LocalBuildRunner(buildRunner, extractor, repository)
   
-  val extractorActor = Controller(context, Props(new ExtractorActor(extractor, targetDir)), "Project-Dependency-Extractor", concurrencyLevel)
-  val baseBuildActor = Controller(context, Props(new BuildRunnerActor(localBuildRunner)), "Project-Builder", concurrencyLevel)
+  val extractorActor = Controller(context,
+      Props(new ExtractorActor(extractor, targetDir, cleanup.extraction)),
+      "Project-Dependency-Extractor", concurrencyLevel)
+  val baseBuildActor = Controller(context,
+      Props(new BuildRunnerActor(localBuildRunner, targetDir, cleanup.build)),
+      "Project-Builder", concurrencyLevel)
   val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository)), "simple-distributed-builder")
 
   def receive = {
     case RunLocalBuild(config, configName) =>
-      fullBuilderActor forward RunDistributedBuild(config, configName, targetDir, log)
+      fullBuilderActor forward RunDistributedBuild(config, configName, log)
   }
 }

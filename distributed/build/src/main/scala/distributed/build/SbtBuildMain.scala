@@ -118,7 +118,7 @@ class SbtBuildMain extends xsbti.AppMain {
           // of toList is "backing.reverse". So we have to reverse again.
           (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
         }
-        val main = new LocalBuildMain(repos)
+        val main = new LocalBuildMain(repos, config.options.cleanup)
         val (outcome, time) = try {
           timed { main.build(config, configFile.getName) }
         } finally main.dispose()

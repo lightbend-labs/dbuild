@@ -62,8 +62,6 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
     }
     // spawn the cleaning actor
     context.actorOf(Props(new CleaningExtractionActor)) ! target
-    // TODO: distinguish between successful and unsuccessful extractions, by touching
-    // a file ".dbuild-success" at the end of a successful extraction.
     // TODO: add some sort of locking, in case multiple extractor actors start in the
     // same dir, from two instances of dbuild (this has to be done in the general
     // context of adding locking to everything). Note that although renaming is atomic,

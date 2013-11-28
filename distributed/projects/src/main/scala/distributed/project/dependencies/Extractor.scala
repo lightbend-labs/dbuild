@@ -14,7 +14,7 @@ import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.logging.Logger.prepareLogMsg
 import org.apache.ivy.core.module.id.ModuleId
 import distributed.project.model.ProjectRef
-import distributed.utils.Time.{ updateTimeStamp, markSuccess }
+import distributed.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
 import distributed.project.model.ExtractionOK
 
 /** This is used to extract dependencies from projects. */

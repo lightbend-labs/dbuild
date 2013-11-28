@@ -10,7 +10,7 @@ import sbt.Path._
 import distributed.project.controller.{ Controller, Controlled, Done }
 import distributed.repo.core.ProjectDirs.{ extractionDir, projectExtractionDir }
 import distributed.project.model.CleanupExpirations
-import distributed.utils.Time._
+import distributed.project.cleanup.Recycling._
 import sbt.{ IO, DirectoryFilter }
 
 case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, log: logging.Logger)

@@ -10,7 +10,7 @@ import java.io.File
 import distributed.repo.core._
 import sbt.Path._
 import dependencies.Extractor
-import distributed.utils.Time.{ updateTimeStamp, markSuccess }
+import distributed.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
 
 /**
  * This class encodes the logic to resolve a project and run its build given

@@ -11,8 +11,8 @@ import java.io.File
 import distributed.repo.core._
 import sbt.IO
 import distributed.project.controller.{ Controller, Controlled, Done }
+import distributed.project.cleanup.Recycling._
 import sbt.Path._
-import distributed.utils.Time._
 import distributed.repo.core.ProjectDirs.buildDir
 
 case class RunBuild(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger)

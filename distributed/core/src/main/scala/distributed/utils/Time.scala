@@ -100,7 +100,6 @@ object Time {
   // the ">=" comes from the following case:
   // if expiration is zero, even a newly created dir should be deleted right away 
   def upForDeletion(dir: File, exp: CleanupExpirations) = {
-    println("dir is: " + dir + " and is marked: " + markedForDeletion(dir))
     if (markedForDeletion(dir))
       false
     else {

@@ -75,6 +75,26 @@ object Time {
   }
 
   private val deletePrefix = "delete-"
+  // Sometimes it may happen that we have a directory that has been
+  // renamed to "delete-...", but a new directory with the same name
+  // has been created. If this second directory were to be deleted
+  // as well, a collision would occur.
+  // This method takes care of locating a suitable destination name
+  // even in that unlikely case
+  private def toDeleted(dir: File) = {
+    val name = dir.getName()
+    val parent = dir.getParentFile()
+    def dest(n: Int) = new File(parent, deletePrefix + name +
+      (if (n == 0) "" else "-" + n.toString))
+    def attempt(n: Int): File = {
+      val d = dest(n)
+      if (!d.exists())
+        d
+      else
+        attempt(n + 1)
+    }
+    attempt(0)
+  }
 
   // expiration timeouts are in hours
   // the ">=" comes from the following case:
@@ -98,14 +118,11 @@ object Time {
   // the routines below are not really time-related, but since we placed in this file
   // the timestamp logic, we keep everything together for now. TODO: move this elsewhere
   def prepareForDeletion(dir: File) = {
-    val name = dir.getName()
-    val parent = dir.getParentFile()
-    val dest = new File(parent, deletePrefix + name)
-    dir.renameTo(dest)
+    dir.renameTo(toDeleted(dir))
     // We also have to get rid of the timestamp and success file
     timeStampFile(dir).delete()
     successFile(dir).delete()
   }
-  
+
   def markedForDeletion(dir: File) = dir.getName.startsWith(deletePrefix)
 }

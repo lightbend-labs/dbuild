@@ -50,7 +50,7 @@ object Time {
     val dateFormat = new MailDateFormat()
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
     val date = dateFormat.format(new Date())
-    writeStringToFile(timeStampFile(dir), date, "UTF-8")
+    writeStringToFile(timeStampFile(dir), date + "\n", "UTF-8")
     successFile(dir).delete()
   }
 
@@ -74,28 +74,34 @@ object Time {
     } else None
   }
 
+  private val deletePrefix = "delete-"
+
   // expiration timeouts are in hours
   // the ">=" comes from the following case:
   // if expiration is zero, even a newly created dir should be deleted right away 
   def upForDeletion(dir: File, exp: CleanupExpirations) = {
-    val isSuccess = successFile(dir).isFile()
-    timeStampAgeHours(dir) match {
-      case None => false
-      case Some(age) =>
-        if (isSuccess)
-          age >= exp.success
-        else
-          age >= exp.failure
+    if (dir.getName.startsWith(deletePrefix))
+      false
+    else {
+      val isSuccess = successFile(dir).isFile()
+      timeStampAgeHours(dir) match {
+        case None => false
+        case Some(age) =>
+          if (isSuccess)
+            age >= exp.success
+          else
+            age >= exp.failure
+      }
     }
   }
-  
+
   // this routine is not really time-related, but since we placed in this file
   // the timestamp logic, we keep everything together
   // Note that we also have to get rid of the timestamp and success file
   def prepareForDeletion(dir: File) = {
     val name = dir.getName()
     val parent = dir.getParentFile()
-    val dest = new File(parent,"deleted-"+name)
+    val dest = new File(parent, deletePrefix + name)
     dir.renameTo(dest)
     timeStampFile(dir).delete()
     successFile(dir).delete()

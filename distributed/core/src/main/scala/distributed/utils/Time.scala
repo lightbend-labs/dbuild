@@ -80,7 +80,7 @@ object Time {
   // the ">=" comes from the following case:
   // if expiration is zero, even a newly created dir should be deleted right away 
   def upForDeletion(dir: File, exp: CleanupExpirations) = {
-    if (dir.getName.startsWith(deletePrefix))
+    if (markedForDeletion(dir))
       false
     else {
       val isSuccess = successFile(dir).isFile()
@@ -95,15 +95,17 @@ object Time {
     }
   }
 
-  // this routine is not really time-related, but since we placed in this file
-  // the timestamp logic, we keep everything together
-  // Note that we also have to get rid of the timestamp and success file
+  // the routines below are not really time-related, but since we placed in this file
+  // the timestamp logic, we keep everything together for now. TODO: move this elsewhere
   def prepareForDeletion(dir: File) = {
     val name = dir.getName()
     val parent = dir.getParentFile()
     val dest = new File(parent, deletePrefix + name)
     dir.renameTo(dest)
+    // We also have to get rid of the timestamp and success file
     timeStampFile(dir).delete()
     successFile(dir).delete()
   }
+  
+  def markedForDeletion(dir: File) = dir.getName.startsWith(deletePrefix)
 }

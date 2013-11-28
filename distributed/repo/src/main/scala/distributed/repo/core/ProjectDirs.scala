@@ -2,6 +2,7 @@ package distributed.repo.core
 
 import distributed.project.model._
 import java.io.File
+import sbt.Path._
 
 // TODO - Locally configured area for projects
 // With some kind of locking to prevent more than one 
@@ -11,11 +12,15 @@ import java.io.File
 object ProjectDirs {
   // TODO - Pull from config!
   val baseDir = new File(".")
-  val targetDir = new File(baseDir, "target-" + Defaults.version)
+  val targetBaseDirName = "target"
+  val targetDirName = targetBaseDirName + "-" + Defaults.version
+  val targetDir = new File(baseDir, targetDirName)
   val clonesDir = new File(targetDir, "clones")
   val userhome = new File(sys.props("user.home"))
   val dbuildDir = new File(userhome, ".dbuild")
-  val userCache = new File(dbuildDir, "cache-" + Defaults.version)
+  val userCacheDirBaseName = "cache"
+  val userCacheDirName = userCacheDirBaseName + "-" + Defaults.version
+  val userCache = new File(dbuildDir, userCacheDirName)
   val repoCredFile = new File(dbuildDir, "remote.cache.properties")
 
   def logDir = new File(targetDir, "logs")
@@ -50,5 +55,16 @@ object ProjectDirs {
     val repodir = new File(dir, uuid)
     repodir.mkdirs()
     f(repodir)
+  }
+
+  def checkForObsoleteDirs(f: (=> String) => Unit) = {
+    def issueWarnings(root: File, baseDirName: String, dirName: String) = {
+      import sbt.{ FileFilter => FF, DirectoryFilter => DF }
+      root.*(DF && ((baseDirName: FF) || baseDirName + "-*") && -(dirName: FF)).get.foreach { z =>
+        f("WARNING: This directory is no longer used, and can be removed: " + z.getCanonicalPath)
+      }
+    }
+    issueWarnings(baseDir, targetBaseDirName, targetDirName)
+    issueWarnings(dbuildDir, userCacheDirBaseName, userCacheDirName)
   }
 }

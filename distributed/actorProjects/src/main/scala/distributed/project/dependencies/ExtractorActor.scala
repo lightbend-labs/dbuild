@@ -51,12 +51,14 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
     // There are two levels in the hierarchy, so we mark for deletion first the nested
     // ones and, if all the content can be deleted, the outer one as well.
     extractionDir(target).*(DirectoryFilter).get.foreach { d1 =>
-      val candidates = projectExtractionDir(d1).*(DirectoryFilter).get
-      val (delete, doNotDelete) = candidates.partition(upForDeletion(_, exp))
-      if (doNotDelete.isEmpty) // everything can be deleted inside this dir, or there is
-        prepareForDeletion(d1) // nothing left, so remove the dir
-      else
-        delete.foreach(prepareForDeletion) // mark for deletion only the relevant subdirs
+      if (!markedForDeletion(d1)) { // skip if already marked
+        val candidates = projectExtractionDir(d1).*(DirectoryFilter).get
+        val (delete, doNotDelete) = candidates.partition(upForDeletion(_, exp))
+        if (doNotDelete.isEmpty) // everything can be deleted inside this dir, or there is
+          prepareForDeletion(d1) // nothing left, so remove the dir
+        else
+          delete.foreach(prepareForDeletion) // mark for deletion only the relevant subdirs
+      }
     }
     // spawn the cleaning actor
     context.actorOf(Props(new CleaningExtractionActor)) ! target

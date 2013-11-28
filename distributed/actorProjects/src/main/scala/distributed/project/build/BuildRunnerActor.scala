@@ -13,13 +13,14 @@ import sbt.IO
 import distributed.project.controller.{ Controller, Controlled, Done }
 import sbt.Path._
 import distributed.utils.Time._
+import distributed.repo.core.ProjectDirs.buildDir
 
 case class RunBuild(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger)
 
 class CleaningBuildActor extends Actor {
   def receive = {
     case target: File =>
-      IO.delete(target.*(sbt.DirectoryFilter).get.filter(markedForDeletion))
+      IO.delete(buildDir(target).*(sbt.DirectoryFilter).get.filter(markedForDeletion))
       self ! PoisonPill
   }
 }
@@ -28,7 +29,7 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
   override def preStart() = {
     // Cleanup works in two stages; see ExtractorActor for details.
     // Note that cleanup is performed independently for the extraction and build directories
-    target.*(sbt.DirectoryFilter).get.filter(upForDeletion(_, exp)).foreach(prepareForDeletion)
+    buildDir(target).*(sbt.DirectoryFilter).get.filter(upForDeletion(_, exp)).foreach(prepareForDeletion)
     // spawn the cleaning actor
     context.actorOf(Props(new CleaningBuildActor)) ! target
   }

@@ -100,6 +100,7 @@ object Time {
   // the ">=" comes from the following case:
   // if expiration is zero, even a newly created dir should be deleted right away 
   def upForDeletion(dir: File, exp: CleanupExpirations) = {
+    println("dir is: " + dir + " and is marked: " + markedForDeletion(dir))
     if (markedForDeletion(dir))
       false
     else {
@@ -118,10 +119,13 @@ object Time {
   // the routines below are not really time-related, but since we placed in this file
   // the timestamp logic, we keep everything together for now. TODO: move this elsewhere
   def prepareForDeletion(dir: File) = {
-    dir.renameTo(toDeleted(dir))
-    // We also have to get rid of the timestamp and success file
-    timeStampFile(dir).delete()
-    successFile(dir).delete()
+    // let's recheck, in case we mistakenly forget to check if a given dir is already marked
+    if (!markedForDeletion(dir)) {
+      dir.renameTo(toDeleted(dir))
+      // We also have to get rid of the timestamp and success file
+      timeStampFile(dir).delete()
+      successFile(dir).delete()
+    }
   }
 
   def markedForDeletion(dir: File) = dir.getName.startsWith(deletePrefix)

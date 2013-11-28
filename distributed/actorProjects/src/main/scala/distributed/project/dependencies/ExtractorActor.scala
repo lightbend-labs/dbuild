@@ -3,7 +3,7 @@ package project
 package dependencies
 
 import akka.actor.Actor
-import model.{ProjectBuildConfig, ExtractionConfig}
+import model.{ ProjectBuildConfig, ExtractionConfig }
 import actorpatterns.forwardingErrorsToFutures
 import _root_.java.io.File
 import sbt.Path._
@@ -14,7 +14,8 @@ import distributed.utils.Time._
 
 case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, log: logging.Logger)
 
-/** An actor that given a BuildConfig can return the completed build artifacts.
+/**
+ * An actor that given a BuildConfig can return the completed build artifacts.
  *  "target" is the target dir, e.g. "../target-0.7.1". Inside it, we nest "extraction",
  *  plus an uuid that represents the entire dbuild configuration. In that, extract()
  *  will nest "project/uuid", with uuid referring to the single project being extracted.
@@ -34,10 +35,9 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
     // Further, renaming the directories gets them out of the way, in case the extractor
     // needs to use the same directory name again, for a new extraction.
 
-    val extrDir = extractionDir(target)
     // There are two levels in the hierarchy, so we mark for deletion first the nested
     // ones and, if all the content can be deleted, the outer one as well.
-    extrDir.*(sbt.DirectoryFilter).get.foreach { d1 =>
+    extractionDir(target).*(sbt.DirectoryFilter).get.foreach { d1 =>
       val candidates = projectExtractionDir(d1).*(sbt.DirectoryFilter).get
       val (delete, doNotDelete) = candidates.partition(upForDeletion(_, exp))
       if (doNotDelete.isEmpty) // everything can be deleted inside this dir, or there is

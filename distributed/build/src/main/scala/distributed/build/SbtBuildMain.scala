@@ -44,8 +44,8 @@ class SbtBuildMain extends xsbti.AppMain {
     println("Starting dbuild...")
     val args = configuration.arguments
     //      println("Args (" + (configuration.arguments mkString ",") + ")")
-    if (args.length != 1) {
-      println("Usage: dbuild {build-file}")
+    if (args.length != 1 && args.length != 2) {
+      println("Usage: dbuild {build-file} [{build-target}]")
       Exit(1)
     } else {
       try {
@@ -53,6 +53,8 @@ class SbtBuildMain extends xsbti.AppMain {
         if (!configFile.isFile())
           sys.error("Configuration file not found")
         println("Using configuration: " + configFile.getName)
+        val buildTarget = if (args.length == 2) Some(args(1)) else None
+        buildTarget foreach { t => println("Build target: " + t) }
         val (config, resolvers) =
           try {
             val properties = readProperties(configFile): Seq[String]
@@ -91,7 +93,7 @@ class SbtBuildMain extends xsbti.AppMain {
             //
             // After deserialization, Vars is empty (see VarDeserializer)
             // Let's also empty the list of property files, which is now no longer needed
-            val conf = readValueT[DBuildConfiguration](endConfig).copy(properties=Seq.empty)
+            val conf = readValueT[DBuildConfiguration](endConfig).copy(properties = Seq.empty)
             (conf, explicitResolvers.values)
           } catch {
             case e: Exception =>
@@ -120,7 +122,7 @@ class SbtBuildMain extends xsbti.AppMain {
         }
         val main = new LocalBuildMain(repos, config.options.cleanup)
         val (outcome, time) = try {
-          timed { main.build(config, configFile.getName) }
+          timed { main.build(config, configFile.getName, buildTarget) }
         } finally main.dispose()
         println("Result: " + outcome.status)
         println("Build " + (if (outcome.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + time)

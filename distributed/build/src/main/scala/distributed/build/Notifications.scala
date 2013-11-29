@@ -66,11 +66,11 @@ class FlowdockNotificationContext(log: Logger) extends NotificationContext[Flowd
       checkField(n.from, "from")
       val token = (scala.io.Source.fromFile(n.token)).getLines.next
       val msg = n.detail match {
-          case "summary" => templ.summary
-          case "short" => templ.short
-          case "long" => templ.long
-          case s => throw new RuntimeException("The Flowdock detail level must be one of: summary, short, long. (found: \""+s+"\"")
-        }
+        case "summary" => templ.summary
+        case "short" => templ.short
+        case "long" => templ.long
+        case s => throw new RuntimeException("The Flowdock detail level must be one of: summary, short, long. (found: \"" + s + "\"")
+      }
       val descriptor = new FlowdockJSON(content = msg, external_user_name = n.from, tags = n.tags)
       val json = Utils.writeValue(descriptor)
       val uri = "https://api.flowdock.com/v1/messages/chat/" + token
@@ -217,6 +217,7 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
     }
     (conf.options.notifications.send ++ conf.options.notifications.default) foreach { n =>
       // just a sanity check on the project list (we don't use the result)
+      // flattenAndCheckProjectList() will check that the listed project names actually exist
       val _ = n.flattenAndCheckProjectList(conf.build.projects.map { _.name }.toSet)
     }
   }
@@ -274,11 +275,18 @@ class Notifications(conf: DBuildConfiguration, confName: String, log: Logger) ex
       // the root (no expansion).
       runRememberingExceptions(true, n.projects) { p =>
         val projectOutcomes = (rootOutcome +: outcomes).filter(_.project == p.name)
+        // due to the possible explicit target selection in the dbuild invocation,
+        // it may be that certain projects are listed in repeatableBuilds, but do not
+        // have a corresponding outcome. The check using flattenAndCheckProjectList(),
+        // above, should have already verified that all listed names exist, therefore
+        // if an outcome is missing do not stop, but just issue a notice.
         if (projectOutcomes.isEmpty)
-          sys.error("Internal error: no outcome detected for project " + p.name + ". Please report.")
-        if (projectOutcomes.length > 1)
-          sys.error("Internal error: multiple outcomes detected for project " + p.name + ". Please report.")
-        processOneNotification(combined, projectOutcomes.head)
+          log.info("No outcome for project " + p.name + " (skipped)")
+        else {
+          if (projectOutcomes.length > 1)
+            sys.error("Internal error: multiple outcomes detected for project " + p.name + ". Please report.")
+          processOneNotification(combined, projectOutcomes.head)
+        }
       }
     }
   }

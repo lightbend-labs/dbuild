@@ -50,9 +50,9 @@ class LocalBuildMain(repos: List[xsbti.Repository], cleanup: CleanupOptions) {
   val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, targetDir, cleanup, logger)))
   // TODO - Look up target elsewhere...
 
-  def build(conf: DBuildConfiguration, confName: String): BuildOutcome = {
+  def build(conf: DBuildConfiguration, confName: String, buildTarget: Option[String]): BuildOutcome = {
     implicit val timeout: Timeout = Timeouts.dbuildTimeout
-    val result = builder ? RunLocalBuild(conf, confName)
+    val result = builder ? RunLocalBuild(conf, confName, buildTarget)
     Await.result(result.mapTo[BuildOutcome], akka.util.Duration.Inf)
   }
   def dispose(): Unit = {

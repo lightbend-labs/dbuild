@@ -159,7 +159,7 @@ always
   generated at each run, regardless of the result.
 
 good
-  The "good" outcome roups all of the successful results of a dbuild or project run.
+  The "good" outcome groups all of the successful results of a dbuild or project run.
 
 bad
   Something went wrong, either when extracting dependencies, or while building,

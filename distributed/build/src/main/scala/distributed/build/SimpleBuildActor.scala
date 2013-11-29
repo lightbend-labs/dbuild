@@ -18,12 +18,12 @@ import distributed.repo.core.ProjectDirs
 import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
-case class RunDistributedBuild(conf: DBuildConfiguration, confName: String, logger: Logger)
+case class RunDistributedBuild(conf: DBuildConfiguration, confName: String, buildTarget: Option[String], logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository) extends Actor {
   def receive = {
-    case RunDistributedBuild(conf, confName, log) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(conf, confName, buildTarget, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       implicit val ctx = context.system
       val extractionPhaseDuration = Timeouts.extractionPhaseTimeout.duration
@@ -171,7 +171,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
                   writeDependencies(fullBuild, fullLogger)
                   nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
-                    val futureBuildResult = runBuild(fullBuild, expandedDBuildConfig.uuid, fullLogger)
+                    val futureBuildResult = runBuild(fullBuild, expandedDBuildConfig.uuid, buildTarget, fullLogger)
                     afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                   }
                 }
@@ -241,12 +241,21 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
 
   implicit val buildTimeout: Timeout = 4 hours
 
-  def runBuild(build: RepeatableDistributedBuild, uuid: String, log: Logger): Future[BuildOutcome] = {
+  def runBuild(build: RepeatableDistributedBuild, uuid: String, buildTarget: Option[String], log: Logger): Future[BuildOutcome] = {
     implicit val ctx = context.system
     val tdir = ProjectDirs.targetDir
     type State = Future[BuildOutcome]
-    def runBuild(): Seq[State] =
-      build.graph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
+    def runBuild(): Seq[State] = {
+      // are we building a specific target? If so, filter the graph
+      import build.graph
+      val targetGraph = buildTarget match {
+        case None => graph
+        case Some(target) =>
+          graph.FilteredByNodesGraph(graph.subGraphFrom(graph.nodeForName(target)))
+          // if you want to extend buildTarget to make it a SeqString, just use this instead:
+          // graph.FilteredByNodesGraph(targets.toSet.flatMap { p: String => graph.subGraphFrom(graph.nodeForName(p)) })
+      }
+      targetGraph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
         val b = build.buildMap(p.config.name)
         Future.sequence(children) flatMap {
           // excess of caution? In theory all Future.sequence()s
@@ -270,7 +279,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             }
         }
       }(Some((a, b) => a.config.name < b.config.name))
-
+    }
     // TODO - REpository management here!!!!
     ProjectDirs.userRepoDirFor(uuid) { localRepo =>
       // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]

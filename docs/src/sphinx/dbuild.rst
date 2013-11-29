@@ -695,6 +695,20 @@ is specified in ``dbuild.properties`` will be ignored.
 The syntax for the each resolver specification is exactly
 the same that is also used by sbt.
 
+Building a single target project
+--------------------------------
+
+It is sometimes useful, during debugging, to build just
+one specific project, out of all those listed in a configuration
+file, together with its required dependencies.
+
+That can be done by specifying the required project as
+an additional argument on the command line, for example:
+
+.. code-block:: bash
+
+   $ bin/dbuild config.dbuild project
+
 Automatic cleanup
 -----------------
 

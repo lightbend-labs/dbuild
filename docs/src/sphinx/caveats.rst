@@ -10,10 +10,10 @@ Limitations
 - There is no locking. If you run more than one dbuild at the same time on the same machine, rather
   bad things may happen.
 
-- dbuild does not cleans up the build files: the "./target" and "~/.dbuild/cache" directory will grow indefinitely; the first
-  directory contains the build directories, and the second the published artifacts and other metadata.
-  A cleanup tool may be added in the future, but in the meantime the size of the directories should be
-  kept in check.
+- dbuild does not cleans up all the generated files: the "~/.dbuild/cache-{ver}" directory, containing
+  the generated artifacts and some metadata, will grow indefinitely. Usually the size is rather modest,
+  but you may want to keep it in check. The much larger directories containing the actual build files,
+  located in "./target-{ver}", are instead cleaned automatically.
 
 - dbuild-setup will modify your running sbt environment by running the equivalent of 'set' commands. These
   will show up in the session list as comments, but the session cannot be saved and restored using the

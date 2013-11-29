@@ -12,6 +12,7 @@ import com.typesafe.config.ConfigFactory
 import distributed.project.model.Utils.readValueT
 import distributed.utils.Time.timed
 import collection.immutable.SortedMap
+import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -57,16 +58,19 @@ class SbtBuildMain extends xsbti.AppMain {
             val properties = readProperties(configFile): Seq[String]
             val propConfigs = properties map { s =>
               println("Including properties file: " + s)
-              val syntax = com.typesafe.config.ConfigSyntax.PROPERTIES
-              val parseOptions = com.typesafe.config.ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)
-              val config = com.typesafe.config.ConfigFactory.parseURL(new java.net.URI(s).toURL, parseOptions)
+              val syntax = ConfigSyntax.PROPERTIES
+              val parseOptions = ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)
+              val config = ConfigFactory.parseURL(new java.net.URI(s).toURL, parseOptions)
               config.atKey("vars")
             }
-            val initialConfig = com.typesafe.config.ConfigFactory.parseFile(configFile)
-            val endConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
-            //
-            // Let's extract the (possible) list of resolvers defined in the configuration file
+            val initialConfig = ConfigFactory.parseFile(configFile)
+            val foldConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
+            val systemVars = ConfigFactory.systemProperties().atPath("vars.sys")
+            // let system properties take precedence over values in the config file
+            // which should happen to be in the same vars.sys space
+            val endConfig = systemVars.withFallback(foldConfig)
             val resolvedConfig = endConfig.resolve
+            // Let's extract the (possible) list of resolvers defined in the configuration file
             val explicitResolvers = SortedMap[String, (String, Option[String])]() ++
               (if (resolvedConfig.hasPath("options.resolvers")) {
                 import collection.JavaConverters._

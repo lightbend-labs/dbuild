@@ -85,15 +85,26 @@ vars
 
   .. code-block:: javascript
 
-   vars: {
-    a : "string1"
-    b : "string2"
-   }
+    vars: {
+     a : "string1"
+     b : "string2"
+    }
 
 
   you can then insert in the rest of the file ``${vars.a}`` and ``${vars.b}``, which will
   be replaced with the specified replacement strings. Sequences, or other arbitrary JSON
   structures, may also be defined and expanded in the same manner.
+
+  All of the standard Java system properties are automatically available under the
+  ``vars.sys`` path, for example ``${vars.sys.user.name}`` or
+  ``${vars.sys.java.runtime.version}``. The same applies to properties passed via the
+  command line. For instance in:
+
+  .. code-block:: text
+
+    $ bin/dbuild -Dx.y=test config.dbuild
+
+  you can refer to the value of the property by using ``${vars.sys.x.y}``.  
 
 .. _properties:
 

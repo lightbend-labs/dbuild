@@ -99,7 +99,23 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
  */
 case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
   notifications: NotificationOptions = NotificationOptions(),
-  resolvers: Map[String, String] = Map[String, String]())
+  resolvers: Map[String, String] = Map[String, String](),
+  cleanup: CleanupOptions = CleanupOptions())
+
+// expiration times are in hours. Dirs are cleaned if the (truncated)
+// number of hours between now and the time in which a build was last
+// attempted (the initial time) is >= than the number specified here 
+case class CleanupExpirations(success: Int, failure: Int)
+/**
+ * The default maximum ages before reclaiming disk space are:
+ * - successful build: 2 days
+ * - failed build: 7 days
+ * - successful extraction: 5 days
+ * - failed extraction: 7 days
+ */
+case class CleanupOptions(
+  build: CleanupExpirations = CleanupExpirations(success = 48, failure = 168),
+  extraction: CleanupExpirations = CleanupExpirations(success = 120, failure = 168))
 
 /**
  * This class acts as a useful wrapper for parameters that are Seqs of Strings: it makes it

@@ -71,12 +71,16 @@ options
   to control other aspects of dbuild, in particular options and tasks that should be executed
   after the build. At this time, the section may contain the following:
 
-.. code-block:: javascript
+  .. code-block:: javascript
 
-   {
-    "deploy"        : [ <deploy_1>, <deploy_2>,...],
-    "notifications" : <notifications>
-   }
+     {
+      "deploy"        : [ <deploy_1>, <deploy_2>,...]
+      "notifications" : <notifications>
+      "resolvers"     : { label1: resolv1, label2: resolv2, ...}
+      "cleanup"       : <cleanup_options>
+     }
+
+   The various options are described in detail in the rest of this guide.
 
 vars
   This section is optional; it may contain a list of variables, in JSON format, whose content
@@ -690,6 +694,55 @@ is specified in ``dbuild.properties`` will be ignored.
 
 The syntax for the each resolver specification is exactly
 the same that is also used by sbt.
+
+Automatic cleanup
+-----------------
+
+During its operation, dbuild creates temporary directories
+in which to perform dependency extraction and the actual
+building of the various projects. Those directories are
+left around at the end of the build, in case you would
+like to inspect their content, for debugging purposes.
+
+In order to avoid letting those directories accumulate
+over time, dbuild will automatically clean up the
+data directories that are older than a configurable
+age. Such cleanup is performed in the background, while
+dbuild compiles new projects.
+
+It is not normally necessary to change anything in
+the cleanup configuration, as everything is done
+automatically. If, however, for some reason you prefer
+to keep temporary data around for longer, or rather
+to delete them sooner, the expiration deadlines can
+be explicitly configured as follows:
+
+.. code-block:: text
+
+  options.cleanup: {
+    extraction: {
+      success: 120
+      failure: 168
+    }
+    build: {
+      success: 48
+      failure: 168
+    }
+  }
+
+The numbers are the maximum age, specified in hours;
+the values in this example are the defaults. This means
+that, for example, the temporary data for a failed build
+will be kept around for seven days, while the build
+files for a successful build will, by default, be deleted
+after two days. You can of course specify only one or
+more of the parameters above.
+
+If all ages are set to zero, all prior data will be
+removed when dbuild starts; the temporary files
+corresponding to the current run of dbuild will
+be preserved in any case.
+
 |
 
 *Next:* :doc:`buildOptions`.

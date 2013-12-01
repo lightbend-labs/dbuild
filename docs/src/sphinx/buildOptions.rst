@@ -176,4 +176,4 @@ inside each project.
 
 |
 
-*Next:* :doc:`deploy`.
+*Next:* :doc:`spaces`.

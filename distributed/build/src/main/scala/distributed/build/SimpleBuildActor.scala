@@ -40,7 +40,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val validCharset = (('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_').toSet
         val illegalProjectNames = projectNames.filterNot(_ forall validCharset)
         if (illegalProjectNames.nonEmpty) {
-          sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed:",
+          sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed: ",
             ", ", ""))
         }
         //

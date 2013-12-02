@@ -22,6 +22,7 @@ case class ProjectBuildConfig(name: String,
   deps: Option[DepsModifiers] = None,
   @JsonProperty("cross-version") crossVersion: Option[String] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
+  space: Option[Space] = Some(new Space("default")),
   extra: Option[ExtraConfig]
 ) {
   // after the initial expansion
@@ -42,6 +43,7 @@ case class ProjectBuildConfig(name: String,
   }
 }
 
+// Do keep the one above and the one below in sync
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String = "nil",
@@ -49,6 +51,7 @@ private case class ProjectBuildConfigShadow(name: String,
   deps: Option[DepsModifiers] = None,
   crossVersion: Option[String] = None,
   useJGit: Option[Boolean] = None,
+  space: Option[Space] = Some(new Space("default")),
   extra: JsonNode = null)
 
 case class DepsModifiers(
@@ -56,6 +59,52 @@ case class DepsModifiers(
     // They will not be rewired by dbuild
     ignore: SeqString = Seq.empty
 )
+
+/**
+ * A specification for Spaces, as used by projects.
+ * It can be deserialized from:
+ *
+ *   space: xyz
+ *   space: {from: xyz, to: xyz}
+ *   space: {from: xyz, to: [ xyz, zyx,... ]}
+ *
+ */
+@JsonDeserialize(using = classOf[SpaceDeserializer])
+@JsonSerialize(using = classOf[SpaceSerializer])
+case class Space(from: String, to: SeqString) {
+  def this(s:String) = this(s, Seq(s))
+}
+class SpaceDeserializer extends JsonDeserializer[Space] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): Space = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    if (generic.isTextual()) {
+      val s = valueAs(classOf[String])
+      Space(s, Seq(s))
+    } else {
+      valueAs(classOf[Space])
+    }
+  }
+}
+class SpaceSerializer extends JsonSerializer[Space] {
+  override def serialize(value: Space, g: JsonGenerator, p: SerializerProvider) {
+    if (value.to.length == 1 && value.to(0) == value.from) {
+      val vs = p.findValueSerializer(classOf[String], null)
+      vs.serialize(value.from, g, p)
+    } else {
+      val vs = p.findValueSerializer(classOf[Space], null)
+      vs.serialize(value, g, p)
+    }
+  }
+}
+
 
 /**
  * The initial dbuild configuration. The "build" section is a complete
@@ -399,7 +448,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
     ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion,
-        generic.deps, generic.crossVersion, generic.useJGit, newData)
+        generic.deps, generic.crossVersion, generic.useJGit, generic.space, newData)
   }
 }
 /**

@@ -74,4 +74,26 @@ object Utils {
         case e:JsonMappingException => None
       }
     }
+  
+  // verify whether project/space names are legal
+  //
+  private val reserved = Seq("default", "standard", "dbuild", "root", ".")
+  private val validChars = (('a' to 'z') ++ ('0' to '9') ++ Seq('-', '_')).toSet
+  private def testName(name: String, dotsAllowed: Boolean) = {
+    val lower = name.toLowerCase
+    if (reserved.contains(lower)) {
+      sys.error("The names \"dbuild\", \"root\", \"default\", \"standard\", and \".\" are reserved; please choose a different name: \"" + name + "\".")
+    }
+    if (!(lower forall (c => validChars(c) || (dotsAllowed && c == '.')))) {
+      sys.error("Names can only contain letters, numbers, dashes, underscores"+(if (dotsAllowed) ", and dots" else "")+", found: \"" + name + "\".")
+    }
+    if (dotsAllowed && (name.startsWith(".")|| name.endsWith("."))) {
+      sys.error("Names cannot start or end with a dot, found: \"" + name + "\".")
+    }
+    if (dotsAllowed && name.contains("..")) {
+      sys.error("Names cannot contain two consecutive dots, found: \"" + name + "\".")
+    }
+  }
+  def testProjectName(name: String) = testName(name, dotsAllowed = false)
+  def testSpaceName(name: String) = testName(name, dotsAllowed = true)
 }

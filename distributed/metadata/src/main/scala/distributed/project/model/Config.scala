@@ -41,6 +41,9 @@ case class ProjectBuildConfig(name: String,
     val jg = useJGit getOrElse defaults.useJGit
     copy(crossVersion = Some(cv), useJGit = Some(jg))
   }
+
+  // sanity check on the project name
+  Utils.testProjectName(name)
 }
 
 // Do keep the one above and the one below in sync
@@ -73,6 +76,8 @@ case class DepsModifiers(
 @JsonSerialize(using = classOf[SpaceSerializer])
 case class Space(from: String, to: SeqString) {
   def this(s:String) = this(s, Seq(s))
+  Utils.testSpaceName(from)
+  to foreach Utils.testSpaceName
 }
 class SpaceDeserializer extends JsonDeserializer[Space] {
   override def deserialize(p: JsonParser, ctx: DeserializationContext): Space = {

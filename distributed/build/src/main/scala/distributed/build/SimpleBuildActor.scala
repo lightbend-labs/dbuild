@@ -40,20 +40,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       //  After this point, inputConf and its BuildOptions are never used again.
       //
       val result = try {
-        //
-        // A quick sanity check on the list of project names
-        //
-        val projectNames = projects map (_.name)
-        if (projectNames.map (_.toLowerCase).intersect(Seq("default", "standard", "dbuild", "root", ".")).nonEmpty) {
-          sys.error("The project names \"dbuild\", \"root\", \"default\", \"standard\", and \".\" are reserved; please choose a different name.")
-        }
-        val validCharset = (('A' to 'Z') ++ ('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_').toSet
-        val illegalProjectNames = projectNames.filterNot(_ forall validCharset)
-        if (illegalProjectNames.nonEmpty) {
-          sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed: ",
-            ", ", ""))
-        }
-        //
         val notifTask = new Notifications(generalOptions, confName, log)
         // add further new tasks at the beginning of this list, leave notifications at the end
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(generalOptions, log), notifTask)

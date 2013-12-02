@@ -26,10 +26,16 @@ class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectCo
   def edges(n: Nd): Seq[Ed] = edgeMap get n getOrElse Seq.empty
   private val edgeMap: Map[Nd, Seq[Ed]] =
     buildNodes.map(n => n -> edgesImpl(n))(collection.breakOut)
-  private def edgesImpl(n: Nd): Seq[Ed] = (for {
-    p <- n.value.extracted.projects
-    d <- p.dependencies
-    m <- buildNodes
-    if (m != n) && (m hasProject d)
-  } yield EmptyEdge(n, m)).toSet.toSeq
+  private def edgesImpl(n: Nd): Seq[Ed] = {
+    def getSpace(n: Nd) =
+      n.value.config.space getOrElse sys.error("Internal error: space is still None in " + n.value.config.name)
+    (for {
+      p <- n.value.extracted.projects
+      nSpace = getSpace(n).from
+      d <- p.dependencies
+      m <- buildNodes
+      mSpaces = getSpace(n).to
+      if (m != n) && (m.hasProject(d) && Utils.canSeeSpace(nSpace, mSpaces))
+    } yield EmptyEdge(n, m)).toSet.toSeq // n depends on m (n.deps contains something provided by m)
+  }
 }

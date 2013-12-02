@@ -96,4 +96,19 @@ object Utils {
   }
   def testProjectName(name: String) = testName(name, dotsAllowed = false)
   def testSpaceName(name: String) = testName(name, dotsAllowed = true)
+
+  /**
+   * Returns true if a project that has dependencies coming from space "from"
+   * can see what is inside one of the spaces listed in "to".
+   */
+  def canSeeSpace(from: String, to: Seq[String]) = {
+    // returns the list of space + all containing spaces
+    def allParents(name: String): Seq[String] = {
+      name.split('.').toList match {
+        case first :: rest => rest.scanLeft(first)(_ + "." + _)
+        case Nil => sys.error("Internal error: split space name was empty")
+      }
+    }
+    allParents(from).toSet.intersect(to.toSet).nonEmpty
+  }
 }

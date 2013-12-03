@@ -106,8 +106,8 @@ class SpaceSerializer extends JsonSerializer[Space] {
       val vs = p.findValueSerializer(classOf[String], null)
       vs.serialize(value.from, g, p)
     } else {
-      val vs = p.findValueSerializer(classOf[Space], null)
-      vs.serialize(value, g, p)
+      val vs = p.findValueSerializer(classOf[SpaceAux], null)
+      vs.serialize(SpaceAux(value.from, value.to), g, p)
     }
   }
 }

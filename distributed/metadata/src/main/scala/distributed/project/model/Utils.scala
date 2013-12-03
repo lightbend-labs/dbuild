@@ -123,12 +123,13 @@ object Utils {
    * of the spaces listed in the "to" list.
    * Meaning that either "from" or one of its parents is exactly found
    * in the "to" list.
+   * if from is "", the project cannot see any other project's dependencies
    */
   def canSeeSpace(from: String, to: Seq[String]) = {
     // like:
     // allParents(from).toSet.intersect(to.toSet).nonEmpty
-    // but done using simple string comparisons
-    to.exists(t => t == from || from.startsWith(t + "."))
+    // but done using simple string comparisons.
+    from != "" && to.exists(t => t == from || from.startsWith(t + "."))
   }
 
   /**
@@ -139,12 +140,16 @@ object Utils {
    * same artifacts to both spaces, you get a collision.
    * It actually returns Some(space) if that is where
    * the collision occurs, or None if no collision.
+   * if a space is "", then artifacts end in /dev/null
+   * and they are never retrieved, so no conflict
    */
   // Conceptually, this is equivalent to:
   //   allParents(one).contains(two) || allParents(two).contains(one)
   // but we can do less work by comparing just the strings.
   def collidingSpaces(one: String, two: String) =
-    if (one == two || two.startsWith(one + "."))
+    if (one == "" || two == "")
+      None
+    else if (one == two || two.startsWith(one + "."))
       Some(one)
     else if (one.startsWith(two + "."))
       Some(two)

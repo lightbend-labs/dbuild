@@ -20,8 +20,7 @@ class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectCo
   private val nodeMap: Map[ProjectConfigAndExtracted, graph.Node[ProjectConfigAndExtracted]] =
     buildNodes.map(b => b.value -> b)(collection.breakOut)
   def nodeFor(build: ProjectConfigAndExtracted): Option[Nd] = nodeMap.get(build)
-  def nodeForName(name: String):Nd = nodes find (_.value.config.name == name) getOrElse
-    sys.error("Project " + name + " was not found in this configuration file.")
+  def nodeForName(name: String): Option[Nd] = nodes find (_.value.config.name == name)
 
   // Memoized ok?
   def edges(n: Nd): Seq[Ed] = edgeMap get n getOrElse Seq.empty

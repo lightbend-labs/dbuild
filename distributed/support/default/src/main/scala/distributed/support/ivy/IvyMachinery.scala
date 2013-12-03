@@ -36,6 +36,13 @@ object IvyMachinery {
   case class ResolveResponse(theIvy: Ivy, report: ResolveReport, resolveOptions: ResolveOptions,
     modRevId: ModuleRevisionId, allConfigs: Array[String])
 
+  def getIvyProjectModuleID(config: ProjectBuildConfig) = {
+    if (!config.uri.startsWith("ivy:"))
+      sys.error("Fatal: the uri in Ivy project " + config.name + " does not start with \"ivy:\"")
+    val module = config.uri.substring(4)
+    ModuleRevisionId.parse(module)
+  }
+  
   def resolveIvy(config: ProjectBuildConfig, baseDir: File, repos: List[xsbti.Repository], log: Logger,
     transitive: Boolean = true, useOptional: Boolean = true): ResolveResponse = {
     log.info("Running Ivy to extract project info: " + config.name)
@@ -43,10 +50,6 @@ object IvyMachinery {
     import extra._
     // this is the one local to the project (extraction or build)
     val ivyHome = (baseDir / ".ivy2")
-    if (!config.uri.startsWith("ivy:"))
-      sys.error("Fatal: the uri in Ivy project " + config.name + " does not start with \"ivy:\"")
-    val module = config.uri.substring(4)
-    log.debug("requested module is: " + module)
     val settings = new IvySettings()
     settings.setDefaultIvyUserDir(ivyHome)
     val dbuildRepoDir = baseDir / ".dbuild" / "local-repo"
@@ -59,7 +62,8 @@ object IvyMachinery {
       val outer = ModuleRevisionId.newInstance("dbuild-ivy", "dbuild-ivy", "working")
       val md = new DefaultModuleDescriptor(outer, "integration", new java.util.Date())
       md.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")
-      val modRevId = ModuleRevisionId.parse(module)
+      val modRevId = getIvyProjectModuleID(config)
+      log.debug("requested module is: " + modRevId)
       val dd = new DefaultDependencyDescriptor(md,
         modRevId, /*force*/ true, /*changing*/ modRevId.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ transitive && mainJar)
       // if !mainJar and no other source/javadoc/classifier, will pick default artifact (usually the jar)

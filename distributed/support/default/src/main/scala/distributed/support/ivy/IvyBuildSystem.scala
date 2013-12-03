@@ -38,14 +38,13 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   val dbuildIvyHome = (distributed.repo.core.ProjectDirs.dbuildDir / ".ivy2").getAbsolutePath
 
   def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
-//  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     case None => IvyExtraConfig(false, false, true, Seq.empty, None) // pick default values
     case Some(ec: IvyExtraConfig) => ec
     case _ => throw new Exception("Internal error: ivy build config options have the wrong type. Please report")
   }
 
-  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor:Extractor, log: Logger): ExtractedBuildMeta = {
-    val config=extractionConfig.buildConfig
+  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+    val config = extractionConfig.buildConfig
     val response = IvyMachinery.resolveIvy(config, baseDir, repos, log)
     val report = response.report
     val artifactReports = report.getAllArtifactsReports()
@@ -66,24 +65,62 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
       val firstNode = nodes(0)
       val first = firstNode.getModuleId
-      val deps = nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq }.distinct
+      // the first element of "loaded", below, is the module that we have just resolved; in principle
+      // we should exclude it from the list of dependencies (the artifact doesn't really depend
+      // on itself), but be keep it in the list. Why? Because:
+      // - If we are working within a single space, a dependency of an artifact on itself
+      //   is always ignored, so no problems there.
+      // - If we are working across multiple spaces, we may be interested in grabbing an
+      //   artifact from one space, and republishing the same artifact to another. So it is
+      //   not really circular, but rather we move it across spaces.
+      // That is the reason why the first element of loaded, here, is not skipped.
+      val loaded = nodes. /*tail.*/ filter(_.isLoaded)
+      val deps = loaded.flatMap { _.getAllArtifacts.toSeq }.distinct
       if (deps.nonEmpty) log.info("Dependencies of project " + config.name + ":")
       deps foreach { d => log.info("  " + d) }
       val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
         firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
-        nodes.drop(1).filter(_.isLoaded).flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))
+        loaded.flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))
       log.debug(q.toString)
       q
     }
   }
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: Logger): BuildArtifactsOut = {
-    log.debug("BuildInput is: "+input)
+    log.debug("BuildInput is: " + input)
+    // first, get the dependencies
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)
+
+    // At this point we have in project.config.uri the module revision that we originally asked
+    // for in the project.
+    //
+    // If one of the projects listed in "input" provides the same module, however, we need to
+    // change the request in order to grab the corresponding module revision, instead.
+    // All the work concerning spaces has already been done before calling runBuild(), therefore
+    // we don't have to do anything special at all concerning spaces.
+    val module = IvyMachinery.getIvyProjectModuleID(project.config)
+    // Do the incoming artifacts provide some artifacts corresponding to this ModuleID?
+    val republishArt = input.artifacts.artifacts.find(a =>
+      module.getOrganisation == a.info.organization &&
+        fixName(module.getName) == a.info.name)
+    // if found, generate an updated project config
+    val newProjectConfig = republishArt.map { art =>
+      val newModRevID = art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version
+      log.info("Republishing artifacts. Dependencies were extracted from:")
+      log.info("  " + module.getOrganisation + "#" + module.getName + ";" + module.getRevision)
+      log.info("These artifacts will be republished:")
+      log.info("  " + newModRevID)
+      val newURI = "ivy:" + newModRevID
+      project.config.copy(uri = newURI)
+    } getOrElse project.config
+
     val version = input.version
-    val localRepo = input.outRepo
+    log.info("Will publish as:")
+    log.info("  " + module.getOrganisation + "#" + module.getName + ";" + version)
+
+
     // this is transitive = false, only used to retrieve the jars that should be republished later
-    val response = IvyMachinery.resolveIvy(project.config, baseDir, repos, log, transitive = false)
+    val response = IvyMachinery.resolveIvy(newProjectConfig, baseDir, repos, log, transitive = false)
     val report = response.report
     import scala.collection.JavaConversions._
     def artifactToArtifactLocation(a: Artifact) = {
@@ -93,15 +130,17 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val trimName = fixName(name)
       val cross = if (trimName != name) name.substring(trimName.length) else ""
       val classifier = Option(a.getExtraAttributes.get("classifier").asInstanceOf[String])
-      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/, cross)
+      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/ , cross)
     }
 
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
     val firstNode = nodes(0)
     val publishArts = firstNode.getAllArtifacts.map(artifactToArtifactLocation).distinct
+
     val ivyArts = (firstNode.getAllArtifacts.toSeq map { _.getModuleRevisionId }).distinct.flatMap { report.getArtifactsReports(_) } map { _.getLocalFile }
     val ivyRepo = baseDir / ".ivy2" / "cache"
 
+    val localRepo = input.outRepo
     IvyMachinery.publishIvy(response, localRepo, rewrittenDeps, version, log)
     val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("default-ivy-project",
       publishArts,
@@ -124,13 +163,14 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
     val firstNode = nodes(0)
     val first = firstNode.getModuleId
-    val deps = nodes.drop(1).filter(_.isLoaded).map { n =>
-      (n.getAllRealCallers.map(_.getModuleRevisionId.getModuleId).contains(first), // is direct dependency?
-       n.getConfigurations("optional").nonEmpty, // is the dependency optional?
-       n.getAllArtifacts.toSeq)
+    // We skip the first element (the artifacts resolved) and keep only the dependencies
+    val deps = nodes.tail.filter(_.isLoaded).map { n =>
+      (n.getAllRealCallers.map(_.getModuleRevisionId.getModuleId).contains(first), // flag: is it a direct dependency?
+        n.getConfigurations("optional").nonEmpty, // is the dependency optional?
+        n.getAllArtifacts.toSeq) // list of artifacts for this module
     }
 
-    // let's check.
+    // let's check the dependencies, rewriting them as needed
     def currentName = fixName(first.getName)
     def currentOrg = first.getOrganisation
     if (deps.isEmpty)
@@ -149,7 +189,9 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
           } yield artifact).headOption
         def printIvyDependency(someArt: Option[ArtifactLocation]) {
           log.info("  " + a.getModuleRevisionId.getOrganisation + "#" + a.getName + ";" + a.getModuleRevisionId.getRevision +
-            (someArt map { art => " --> " + art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version } getOrElse "") +
+            (someArt map { art =>
+              " --> " + art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version
+            } getOrElse "") +
             (if (direct) "" else " (transitive)") + (if (optional) " (optional)" else ""))
         }
         findArt map { art =>

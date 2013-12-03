@@ -1,6 +1,6 @@
 package distributed.project.model
 
-import Utils.writeValue
+import Utils.{ writeValue, canSeeSpace }
 import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
@@ -81,7 +81,10 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
         val subgraph = graph.subGraphFrom(node) map (_.value)
         val dependencies =
           for {
-            dep <- (subgraph - head)
+            // only list as dependencies those that have produced artifacts that
+            // the project in "head" can actually see. These will be the projects
+            // that are eventually reloaded (rematerialized) right before each project build starts
+            dep <- (subgraph - head) if canSeeSpace(head.getSpace.from, dep.getSpace.to)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,

@@ -588,7 +588,7 @@ object DistributedRunner {
     val cache = Repository.default
     val project = findRepeatableProjectBuild(builduuid, thisProject, log)
     log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
-    val uuids = project.transitiveDependencyUUIDs.toSeq
+    val uuids = project.dependencyUUIDs.toSeq
     (project, LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids))
   }
 

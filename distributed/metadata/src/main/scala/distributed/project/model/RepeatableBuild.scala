@@ -43,15 +43,9 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
 
   def extra[T](implicit m: Manifest[T]) = config.getExtra[T]
 
-  def transitiveDependencyUUIDs: Set[String] = {
-    def loop(current: Seq[RepeatableProjectBuild], seen: Set[String]): Set[String] = current match {
-      case Seq(head, tail @ _*) =>
-        if (seen contains head.uuid) loop(tail, seen)
-        else loop(tail ++ head.dependencies, seen + head.uuid)
-      case _ => seen
-    }
-    loop(dependencies, Set.empty)
-  }
+  // The "dependencies" list is already transitive (within the boundaries
+  // of the relevant spaces, see below)
+  def dependencyUUIDs = dependencies.map{_.uuid}
 }
 
 object RepeatableDistributedBuild {

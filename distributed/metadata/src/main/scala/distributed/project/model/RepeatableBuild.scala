@@ -11,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * Note that the global build options are not included, therefore this is not
  * the entire information that can guarantee a unique build.
  */
-case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: ExtractedBuildMeta)
+case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: ExtractedBuildMeta) {
+  // in theory space should never be None
+  def getSpace = config.space getOrElse sys.error("Internal error: space is None in " + config.name)
+}
 
 /**
  * This class represents *ALL* IMMUTABLE information about a project such
@@ -95,19 +98,26 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
     // cycles may be detected, leading to unhelpful error messages
     // TODO: if model.Project is ever associated with the subproject name, it would be
     // more appropriate to print the actual subproject name, rather than the Project
-    val generatedArtifacts = builds flatMap { _.extracted.projects } map { a => (a.organization, a.name) }
-    val uniq = generatedArtifacts.distinct
-    if (uniq.size != generatedArtifacts.size) {
-      val conflicting = generatedArtifacts.diff(uniq).distinct
-      val conflictSeq = conflicting map {
-        a =>
-          (builds filter {
-            b =>
-              b.extracted.projects.exists(p => p.organization == a._1 && p.name == a._2)
-          } map { _.config.name }).mkString("  " + a._1 + "#" + a._2 + ", from:  ", ", ", "")
+    case class Origin(fromProject: String, spaces: SeqString)
+    case class Info(artOrg: String, artName: String, origin: Origin)
+    val generatedArtifacts = builds flatMap { b => b.extracted.projects.map { a => Info(a.organization, a.name, Origin(b.config.name, b.getSpace.to)) } }
+    val byArt = (generatedArtifacts.groupBy { case Info(org, name, origin) => (org, name) }).toSeq
+    val collisions = byArt flatMap {
+      case ((org, name), seqInfo) =>
+        val origins = seqInfo.map { _.origin }
+        // this could probably be further optimized,
+        // but hopefully the collision sets are of modest size
+        for {
+          List(one,two) <- origins.combinations(2)
+          colliding <- Utils.collidingSeqSpaces(one.spaces, two.spaces)
+        } yield (org, name, one.fromProject, two.fromProject, colliding)
+    }
+    if (collisions.nonEmpty) {
+      val msgs = collisions.map {
+        case (org, name, fromOne, fromTwo, space) =>
+          "  " + org + "#" + name + "  from " + fromOne + " and " + fromTwo + ", space \"" + space + "\""
       }
-      sys.error(conflictSeq.
-        mkString("\n\nFatal: multiple projects produce the same artifacts. Please exclude them from some of the conflicting projects.\n\n", "\n", "\n"))
+      sys.error(msgs.mkString("\n\nFatal: multiple projects produce the same artifacts in the same space.\n\n", "\n", "\n"))
     }
     graph.checkCycles()
   }

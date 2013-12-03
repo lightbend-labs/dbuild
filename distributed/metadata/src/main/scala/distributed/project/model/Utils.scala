@@ -97,13 +97,7 @@ object Utils {
   def testProjectName(name: String) = testName(name, dotsAllowed = false)
   def testSpaceName(name: String) = testName(name, dotsAllowed = true)
 
-  /**
-   * Returns true if a project that has dependencies coming from space "from"
-   * can see what is inside one of the spaces listed in "to".
-   */
-  def canSeeSpace(from: String, to: Seq[String]) = {
-    allParents(from).toSet.intersect(to.toSet).nonEmpty
-  }
+  // spaces-related utilities
 
   // returns the list of this space + all containing spaces
   def allParents(name: String): Seq[String] = {
@@ -120,26 +114,57 @@ object Utils {
   }
 
   /**
-   * Returns true if two spaces are identical, or one is
+   * Returns true if a project that requires that its dependencies are
+   * visible in the "from" space will be able to find them in one
+   * of the spaces listed in the "to" list.
+   * Meaning that either "from" or one of its parents is exactly found
+   * in the "to" list.
+   */
+  def canSeeSpace(from: String, to: Seq[String]) = {
+    // like:
+    // allParents(from).toSet.intersect(to.toSet).nonEmpty
+    // but done using simple string comparisons
+    to.exists(t => t == from || from.startsWith(t + "."))
+  }
+
+  /**
+   * Determine if two spaces are identical, or one is
    * in a space that is hierarchically a parent of the
    * other.
+   * The meaning is: return true if, when publishing the
+   * same artifacts to both spaces, you get a collision.
+   * It actually returns Some(space) if that is where
+   * the collision occurs, or None if no collision.
    */
   // Conceptually, this is equivalent to:
   //   allParents(one).contains(two) || allParents(two).contains(one)
-  // but we can do less work. Since each artifact published in a
-  // nested space is also visible to all parents, we just have to
-  // check whether the top parent is the same. Faster!
+  // but we can do less work by comparing just the strings.
   def collidingSpaces(one: String, two: String) =
-    topParent(one) == topParent(two)
+    if (one == two || two.startsWith(one + "."))
+      Some(one)
+    else if (one.startsWith(two + "."))
+      Some(two)
+    else
+      None
 
   /**
    * Check whether any pair of elements from the first and second
    * sequences, respectively, are colliding.
    * Returns Some(collidingElement), or None if no collision.
    */
-  def collidingSeqSpaces(one: Seq[String], two: Seq[String]) = {
-    // Similarly to the above, we just extract the top parents, and compare those.
-    def topSet(s: Seq[String]): Set[String] = s.map(topParent)(collection.breakOut)
-    topSet(one).find(topSet(two).contains)
+  def collidingSeqSpaces(one: Seq[String], two: Seq[String]): Option[String] = {
+    // In principle the algorithm could be more efficient,
+    // but the sizes of our sequences will normally be absolutely
+    // tiny (one or two elements in most cases)
+    def traverse[T](seq: Seq[String], item: T, f: (String, T) => Option[String]): Option[String] = seq match {
+      case Nil => None
+      case first :: rest =>
+        f(first, item) match {
+          case None => traverse(rest, item, f)
+          case some => some
+        }
+    }
+    def collidingSeq(item: String, seq: Seq[String]): Option[String] = traverse(seq, item, collidingSpaces)
+    traverse(one, two, collidingSeq)
   }
 }

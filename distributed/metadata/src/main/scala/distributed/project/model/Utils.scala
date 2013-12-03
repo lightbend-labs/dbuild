@@ -150,9 +150,9 @@ object Utils {
     if (one == "" || two == "")
       None
     else if (one == two || two.startsWith(one + "."))
-      Some(one)
-    else if (one.startsWith(two + "."))
       Some(two)
+    else if (one.startsWith(two + "."))
+      Some(one)
     else
       None
 

@@ -82,7 +82,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
         val dependencies =
           for {
             // only list as dependencies those that have produced artifacts that
-            // the project in "head" can actually see. These will be the projects
+            // the project in "head" can actually see. These will be the dependent projects
             // that are eventually reloaded (rematerialized) right before each project build starts
             dep <- (subgraph - head) if canSeeSpace(head.getSpace.from, dep.getSpace.to)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
@@ -118,7 +118,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
     if (collisions.nonEmpty) {
       val msgs = collisions.map {
         case (org, name, fromOne, fromTwo, space) =>
-          "  " + org + "#" + name + "  from " + fromOne + " and " + fromTwo + ", space \"" + space + "\""
+          "  " + org + "#" + name + "  from " + fromOne + " and " + fromTwo + ", both visible in space \"" + space + "\""
       }
       sys.error(msgs.mkString("\n\nFatal: multiple projects have the same artifacts visible in the same space.\n\n", "\n", "\n"))
     }

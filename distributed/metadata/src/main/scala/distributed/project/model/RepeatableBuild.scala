@@ -117,7 +117,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
         case (org, name, fromOne, fromTwo, space) =>
           "  " + org + "#" + name + "  from " + fromOne + " and " + fromTwo + ", space \"" + space + "\""
       }
-      sys.error(msgs.mkString("\n\nFatal: multiple projects produce the same artifacts in the same space.\n\n", "\n", "\n"))
+      sys.error(msgs.mkString("\n\nFatal: multiple projects have the same artifacts visible in the same space.\n\n", "\n", "\n"))
     }
     graph.checkCycles()
   }

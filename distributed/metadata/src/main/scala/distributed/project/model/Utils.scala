@@ -77,12 +77,16 @@ object Utils {
 
   // verify whether project/space names are legal
   //
-  private val reserved = Seq("default", "standard", "dbuild", "root", ".")
+  private val reserved = Seq("standard", "dbuild", "root", ".")
   private val validChars = (('a' to 'z') ++ ('0' to '9') ++ Seq('-', '_')).toSet
   private def testName(name: String, dotsAllowed: Boolean) = {
     val lower = name.toLowerCase
     if (reserved.contains(lower)) {
-      sys.error("The names \"dbuild\", \"root\", \"default\", \"standard\", and \".\" are reserved; please choose a different name: \"" + name + "\".")
+      sys.error("The names \"dbuild\", \"root\", \"standard\", and \".\" are reserved; please choose a different name: \"" + name + "\".")
+    }
+    // for projects, "default" is also illegal (but it's legal for spaces)
+    if (!dotsAllowed && lower == "default") {
+      sys.error("The project name \"default\"is reserved; please choose a different name.")
     }
     if (!(lower forall (c => validChars(c) || (dotsAllowed && c == '.')))) {
       sys.error("Names can only contain letters, numbers, dashes, underscores" + (if (dotsAllowed) ", and dots" else "") + ", found: \"" + name + "\".")

@@ -79,6 +79,7 @@ case class Space(from: String, to: SeqString) {
   Utils.testSpaceName(from)
   to foreach Utils.testSpaceName
 }
+case class SpaceAux(from: String, to: SeqString)
 class SpaceDeserializer extends JsonDeserializer[Space] {
   override def deserialize(p: JsonParser, ctx: DeserializationContext): Space = {
     val tf = ctx.getConfig.getTypeFactory()
@@ -94,7 +95,8 @@ class SpaceDeserializer extends JsonDeserializer[Space] {
       val s = valueAs(classOf[String])
       Space(s, Seq(s))
     } else {
-      valueAs(classOf[Space])
+      val aux = valueAs(classOf[SpaceAux])
+      Space(aux.from, aux.to)
     }
   }
 }

@@ -86,6 +86,11 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     }
   }
 
+  // TODO: the Ivy build system ignores project.buildOptions.crossVersion!! It rather always republishes
+  // using the same cross-versioning format of whatever it resolved.
+  // Adding support involves renaming the resolved artifacts, which is more or less what the Assemble
+  // build system is doing at this time
+
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: Logger): BuildArtifactsOut = {
     log.debug("BuildInput is: " + input)
     // first, get the dependencies

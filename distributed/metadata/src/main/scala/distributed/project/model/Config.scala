@@ -565,8 +565,8 @@ abstract class BuildOptions {
   def extractionVersion: String
   def useJGit: Boolean
 }
-object BuildOptions{
-  def apply() = sys.error("Internal error: no buildOptions")
+object BuildOptions {
+  def dummy() = sys.error("Internal error: no buildOptions")
 }
 @JsonDeserialize(using = classOf[DeprecatedBuildOptionsDeserializer])
 abstract class DeprecatedBuildOptions

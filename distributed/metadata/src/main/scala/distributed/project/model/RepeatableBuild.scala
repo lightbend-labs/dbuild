@@ -52,7 +52,7 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
 
 object RepeatableDistributedBuild {
   def fromExtractionOutcome(conf: DBuildConfiguration, outcome: ExtractionOK) =
-    RepeatableDistributedBuild(outcome.pces, Some(conf.build))
+    RepeatableDistributedBuild(outcome.pces, conf.build)
 }
 /**
  * A distributed build containing projects in *build order*
@@ -60,14 +60,14 @@ object RepeatableDistributedBuild {
  *  are not included, as they have no effect on builds.
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
-  buildOptions: Option[BuildOptions]) {
+  buildOptions: BuildOptions) {
   def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config),
       options = None,
       // TODO: this is just temporary code, while I refactor
-      crossVersion = (buildOptions getOrElse BuildOptions()).crossVersion,
-      sbtVersion = (buildOptions getOrElse BuildOptions()).sbtVersion,
-      extractionVersion = (buildOptions getOrElse BuildOptions()).extractionVersion,
-      useJGit = (buildOptions getOrElse BuildOptions()).useJGit)
+      crossVersion = buildOptions.crossVersion,
+      sbtVersion = buildOptions.sbtVersion,
+      extractionVersion = buildOptions.extractionVersion,
+      useJGit = buildOptions.useJGit)
   
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)
@@ -90,7 +90,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
         val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
           sortedDeps, head.extracted.subproj,
-          buildOptions getOrElse BuildOptions()) // pick defaults if no BuildOptions specified
+          buildOptions) // pick defaults if no BuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     val orderedBuilds = (graph.safeTopological map (_.value)).reverse

@@ -142,13 +142,11 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
         // to make sure all is in order
         try IO.withTemporaryDirectory { dir =>
           val cache = Repository.default
-          // let's expand "."
-          // flattenAndCheckProjectList() will check that the listed project names exist
+          // let's expand ".":
+          // flattenAndCheckProjectList() will check that the listed project names listed in the
+          // deploy options exist and are used legally. From the RepeatableDistributedBuild,
+          // here we only use the list of project names. 
           val projList = options.flattenAndCheckProjectList(build.builds.map { _.config.name }.toSet)
-          // due to the possible explicit target selection in the dbuild invocation,
-          // it may be that certain projects are listed in repeatableBuilds, but do not
-          // have a corresponding outcome. So check the former to verify the validity of
-          // the project name, but do not be surprised if the outcome is subsequently missing.
 
           val selected = projList.map { depl =>
             build.repeatableBuilds.find(_.config.name == depl.name) match {
@@ -158,6 +156,8 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
             }
           }
 
+          // It may be that certain projects listed in the Seq[RepeatableProjectBuild] have been
+          // skipped, for whatever reason. If there is no outcome, the project was not built.
           val (good, bad) = selected partition {
             case (depl, proj) =>
               val optOutcome = projectOutcomes.get(proj.config.name)

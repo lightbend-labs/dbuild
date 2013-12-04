@@ -159,21 +159,18 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               }
 
               nest(RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)) { fullBuild =>
-                // evaluate repeatableBuilds in order to force cycles to be checked at this time
-                nest(fullBuild.repeatableBuilds) { rb =>
-                  // what we call "RepeatableDistributedBuild" is actually only the portion of data that
-                  // affect the build. Further options that do /not/ affect the build, but control dbuild in
-                  // other ways (notifications, resolvers, etc), are in the GeneralOptions.
-                  // In order to present to the user a new complete configuration that can be used as-is to
-                  // restart dbuild, and which contains the RepeatableDistributedBuild data, we create
-                  // a new full DBuildConfiguration.
-                  val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, conf.options)
-                  val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
-                  writeDependencies(fullBuild, fullLogger)
-                  nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
-                    val futureBuildResult = runBuild(fullBuild, expandedDBuildConfig.uuid, buildTarget, fullLogger)
-                    afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
-                  }
+                // what we call "RepeatableDistributedBuild" is actually only the portion of data that
+                // affect the build. Further options that do /not/ affect the build, but control dbuild in
+                // other ways (notifications, resolvers, etc), are in the GeneralOptions.
+                // In order to present to the user a new complete configuration that can be used as-is to
+                // restart dbuild, and which contains the RepeatableDistributedBuild data, we create
+                // a new full DBuildConfiguration.
+                val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, conf.options)
+                val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
+                writeDependencies(fullBuild, fullLogger)
+                nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
+                  val futureBuildResult = runBuild(fullBuild, expandedDBuildConfig.uuid, buildTarget, fullLogger)
+                  afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                 }
               }
 
@@ -253,8 +250,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         case Some(target) =>
           graph.FilteredByNodesGraph(graph.subGraphFrom(graph.nodeForName(target) getOrElse
             sys.error("The selected target project " + target + " was not found in this configuration file.")))
-          // if you want to extend buildTarget to make it a SeqString, just use this instead:
-          // graph.FilteredByNodesGraph(targets.toSet.flatMap { p: String => graph.subGraphFrom(graph.nodeForName(p)) })
+        // if you want to extend buildTarget to make it a SeqString, just use this instead:
+        // graph.FilteredByNodesGraph(targets.toSet.flatMap { p: String => graph.subGraphFrom(graph.nodeForName(p)) })
       }
       targetGraph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
         val b = build.buildMap(p.config.name)

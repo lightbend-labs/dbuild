@@ -309,7 +309,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             Future(new ExtractionFailed(projConfig.name, Seq(),
               "Timeout: extraction of project " + projConfig.name + " took longer than " + extractionDuration) with TimedOut))
         val outcome =
-          extract(uuid, log)(ExtractionConfig(projConfig, config.options getOrElse BuildOptions()))
+          extract(uuid, log)(ExtractionConfig(projConfig, config))
         Future.firstCompletedOf(Seq(watchdog, outcome))
       }
     futureOutcomes map { s: Seq[ExtractionOutcome] =>

@@ -67,7 +67,7 @@ object AssembleBuildSystem extends BuildSystemCore {
             buildConfig.projects.foldLeft(Seq[ProjectBuildConfig]()) { (s, p) =>
               log.info("----------")
               log.info("Resolving part: " + p.name)
-              val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
+              val nestedExtractionConfig = ExtractionConfig(p, buildConfig)
               val moduleConfig = extractor.dependencyExtractor.resolve(nestedExtractionConfig.buildConfig,
                   nestedExtractionConfig.buildOptions, projectsDir(dir, p), extractor, log)
               s :+ moduleConfig
@@ -92,7 +92,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val partOutcomes = ec.parts.toSeq flatMap { buildConfig =>
       buildConfig.projects map { p =>
         log.info("----------")
-        val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
+        val nestedExtractionConfig = ExtractionConfig(p, buildConfig)
         extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p), log)
       }
     }
@@ -201,7 +201,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         // of dependencies is cleared before building, so that they do not rely on one another
         log.info("----------")
         log.info("Building part: " + p.name)
-        val nestedExtractionConfig = ExtractionConfig(p, build.options getOrElse BuildOptions())
+        val nestedExtractionConfig = ExtractionConfig(p, build)
         val partConfigAndExtracted = localBuildRunner.extractor.cachedExtractOr(nestedExtractionConfig, log) {
           // if it's not cached, something wrong happened.
           sys.error("Internal error: extraction metadata not found for part " + p.name)
@@ -212,7 +212,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         }
         val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted.config, partConfigAndExtracted.extracted.version,
           Seq.empty, // remove all dependencies, and pretend that this project stands alone
-          partConfigAndExtracted.extracted.subproj, build.options getOrElse BuildOptions())
+          partConfigAndExtracted.extracted.subproj, build)
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild, Seq.empty, Seq.empty, log)
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut

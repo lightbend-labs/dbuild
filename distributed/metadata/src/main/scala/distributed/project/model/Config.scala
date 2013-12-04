@@ -90,9 +90,64 @@ case class ExtractionConfig(
  * affects the actual build; the parts that do not affect the actual build,
  * and do not belong into the repeatable build configuration, go into the
  * GeneralOptions class instead.
+ *
+ * Apart for "projects", these are options that affect all of the projects, but must not affect extraction:
+ * extraction fully relies on the fact that the project is fully described by the
+ * ProjectBuildConfig record. However, it may contain defaults that are used to
+ * fill in the ProjectBuildConfig (like, for example, extraction-version).
+ * 
+ * These options, however, can affect the building stage; a copy of the record is
+ * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
+ * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
+ * Therefore *ONLY* place in this section the global options that affect the repeatability of the
+ * builds!! Place other global options elsewhere, in other top-level sections. Similarly, do no place
+ * options that do not impact on the repeatability of the build inside the projects section; instead,
+ * place them in a separate section, specifying the list of projects to which they apply (like deploy
+ * and notifications).
+ *
+ * This section contains the option "cross-version, which controls the
+ * crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
+ *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
+ *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
+ *     However, the library dependencies that refer to Scala projects that are not included in this build
+ *     configuration, and that have "binary" or "full" CrossVersion will have their scala version set to
+ *     the full scala version string: as a result, missing dependent projects will be detected.
+ *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x, for example).
+ *     Further, library dependencies that refer to Scala projects that are not included in this build
+ *     configuration will not be rewritten: they might end up being fetched from Maven if a compatible
+ *     version is found.
+ *     This settings must be used when releasing, typically in conjunction with "set-version", in order
+ *     to make sure cross-versioning works as it would in the original projects.
+ *   - "full": Similar in concept to "disabled", except the all the sbt projects are changed so that
+ *     the full Scala version string is used as a cross-version suffix (even those that would normally
+ *     have cross-version disabled). Missing dependent projects will be detected.
+ *   - "binaryFull": It is a bit of a hybrid between standard and full. This option will cause
+ *     the projects that would normally publish with a binary suffix (like "_2.10") to publish using the
+ *     full scala version string instead. The projects that have cross building disabled, however, will be
+ *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
+ *
+ * In practice, do not include an "options" section at all in normal use, and just add "{cross-version:standard}"
+ * if you are planning to release using "set-version".
+ * 
+ * This section also contains the sbt version that should be used by default (unless overridden in the individual
+ * projects) to compile all the projects. If not specified, the string "0.12.4" is used.
  */
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
-  options: Option[BuildOptions])
+  /* deprecated, see deserializer */
+  options: Option[DeprecatedBuildOptions],
+  @JsonProperty("cross-version") crossVersion: String = "disabled",
+  // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
+  // also in the future (for repeatability); if the user wants a default of 0.13.0,
+  // they can specify "build.options.sbt-version = 0.13.0"
+  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
+  // This option applies to all sbt-based projects, unless overridden.
+  // see SbtExtraConfig for details.
+  @JsonProperty("extraction-version") extractionVersion: String = "standard",
+  // Select jgit rather than the command-line git. It is in the BuildOptions,
+  // rather than in the GeneralOptions, as its value may conceivably have
+  // an effect on building (for instance due to a difference in checkout because
+  // of an implementation bug)
+  @JsonProperty("use-jgit") useJGit: Boolean = false) extends BuildOptions
 
 /**
  * General options for dbuild, that do not affect the actual build.
@@ -503,61 +558,23 @@ object SeqNotification {
   implicit def SeqNotificationToSeq(a: SeqNotification): Seq[Notification] = a.s
 }
 
-/**
- * These are options that affect all of the projects, but must not affect extraction:
- * extraction fully relies on the fact that the project is fully described by the
- * ProjectBuildConfig record.
- * Conversely, these options can affect the building stage; a copy of the record is
- * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
- * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
- * Therefore *ONLY* place in this section the global options that affect the repeatebility of the
- * builds!! Place other global options elsewhere, in other top-level sections. Similarly, do no place
- * options that do not impact on the repeatability of the build inside the projects section; instead,
- * place them in a separate section, specifying the list of projects to which they apply (like deploy
- * and notifications).
- *
- * This section contains the option "cross-version, which controls the
- * crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
- *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
- *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
- *     However, the library dependencies that refer to Scala projects that are not included in this build
- *     configuration, and that have "binary" or "full" CrossVersion will have their scala version set to
- *     the full scala version string: as a result, missing dependent projects will be detected.
- *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x, for example).
- *     Further, library dependencies that refer to Scala projects that are not included in this build
- *     configuration will not be rewritten: they might end up being fetched from Maven if a compatible
- *     version is found.
- *     This settings must be used when releasing, typically in conjunction with "set-version", in order
- *     to make sure cross-versioning works as it would in the original projects.
- *   - "full": Similar in concept to "disabled", except the all the sbt projects are changed so that
- *     the full Scala version string is used as a cross-version suffix (even those that would normally
- *     have cross-version disabled). Missing dependent projects will be detected.
- *   - "binaryFull": It is a bit of a hybrid between standard and full. This option will cause
- *     the projects that would normally publish with a binary suffix (like "_2.10") to publish using the
- *     full scala version string instead. The projects that have cross building disabled, however, will be
- *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
- *
- * In practice, do not include an "options" section at all in normal use, and just add "{cross-version:standard}"
- * if you are planning to release using "set-version".
- * 
- * This section also contains the sbt version that should be used by default (unless overridden in the individual
- * projects) to compile all the projects. If not specified, the string "0.12.4" is used.
- */
-case class BuildOptions(
-  @JsonProperty("cross-version") crossVersion: String = "disabled",
-  // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
-  // also in the future (for repeatability); if the user wants a default of 0.13.0,
-  // they can specify "build.options.sbt-version = 0.13.0"
-  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
-  // This option applies to all sbt-based projects, unless overridden.
-  // see SbtExtraConfig for details.
-  @JsonProperty("extraction-version") extractionVersion: String = "standard",
-  // Select jgit rather than the command-line git. It is in the BuildOptions,
-  // rather than in the GeneralOptions, as its value may conceivably have
-  // an effect on building (for instance due to a difference in checkout because
-  // of an implementation bug)
-  @JsonProperty("use-jgit") useJGit: Boolean = false
-)
+/** see DistributedBuildConfig for details. */
+abstract class BuildOptions {
+  def crossVersion: String
+  def sbtVersion: String
+  def extractionVersion: String
+  def useJGit: Boolean
+}
+object BuildOptions{
+  def apply() = sys.error("Internal error: no buildOptions")
+}
+@JsonDeserialize(using = classOf[DeprecatedBuildOptionsDeserializer])
+abstract class DeprecatedBuildOptions
+class DeprecatedBuildOptionsDeserializer extends JsonDeserializer[BuildOptions] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): BuildOptions = {
+    sys.error("\"build.options\" have moved. Please rename \"build.options.xxx\" to just \"build.xxx\".")
+  }
+}
 
 /**
  * This section is used to notify users, by using some notification system.

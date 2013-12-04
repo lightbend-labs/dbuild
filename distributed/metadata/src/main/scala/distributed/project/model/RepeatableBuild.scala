@@ -52,7 +52,7 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
 
 object RepeatableDistributedBuild {
   def fromExtractionOutcome(conf: DBuildConfiguration, outcome: ExtractionOK) =
-    RepeatableDistributedBuild(outcome.pces, conf.build.options)
+    RepeatableDistributedBuild(outcome.pces, Some(conf.build))
 }
 /**
  * A distributed build containing projects in *build order*
@@ -61,8 +61,14 @@ object RepeatableDistributedBuild {
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
   buildOptions: Option[BuildOptions]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), buildOptions)
-
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config),
+      options = None,
+      // TODO: this is just temporary code, while I refactor
+      crossVersion = (buildOptions getOrElse BuildOptions()).crossVersion,
+      sbtVersion = (buildOptions getOrElse BuildOptions()).sbtVersion,
+      extractionVersion = (buildOptions getOrElse BuildOptions()).extractionVersion,
+      useJGit = (buildOptions getOrElse BuildOptions()).useJGit)
+  
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)
   /** All of our repeatable build configuration in build order. */

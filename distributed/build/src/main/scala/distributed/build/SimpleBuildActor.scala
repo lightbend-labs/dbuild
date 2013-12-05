@@ -169,7 +169,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
                 writeDependencies(fullBuild, fullLogger)
                 nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
-                  val futureBuildResult = runBuild(fullBuild, expandedDBuildConfig.uuid, buildTarget, fullLogger)
+                  // are we building a specific target? If so, filter the graph
+                  // are we building a specific target? If so, filter the graph
+                  val targetGraph = filterGraph(buildTarget, fullBuild)
+                  val findBuild = fullBuild.buildMap
+                  val futureBuildResult = runBuild(targetGraph, findBuild, expandedDBuildConfig.uuid, fullLogger)
                   afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                 }
               }
@@ -237,24 +241,28 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     }
 
   implicit val buildTimeout: Timeout = 4 hours
+  type ProjectGraph = graph.Graph[ProjectConfigAndExtracted, Nothing]
+  type BuildFinder = Function1[String, RepeatableProjectBuild]
+  
+  def filterGraph(buildTarget: Option[String], fullBuild: RepeatableDistributedBuild): ProjectGraph = {
+    import fullBuild.graph
+    buildTarget match {
+      case None => graph
+      case Some(target) =>
+        graph.FilteredByNodesGraph(graph.subGraphFrom(graph.nodeForName(target) getOrElse
+          sys.error("The selected target project " + target + " was not found in this configuration file.")))
+      // if you want to extend buildTarget to make it a SeqString, just use this instead:
+      // graph.FilteredByNodesGraph(targets.toSet.flatMap { p: String => graph.subGraphFrom(graph.nodeForName(p)) })
+    }
+  }
 
-  def runBuild(build: RepeatableDistributedBuild, uuid: String, buildTarget: Option[String], log: Logger): Future[BuildOutcome] = {
+  def runBuild(targetGraph: ProjectGraph, findBuild: BuildFinder, uuid: String, log: Logger): Future[BuildOutcome] = {
     implicit val ctx = context.system
     val tdir = ProjectDirs.targetDir
     type State = Future[BuildOutcome]
     def runBuild(): Seq[State] = {
-      // are we building a specific target? If so, filter the graph
-      import build.graph
-      val targetGraph = buildTarget match {
-        case None => graph
-        case Some(target) =>
-          graph.FilteredByNodesGraph(graph.subGraphFrom(graph.nodeForName(target) getOrElse
-            sys.error("The selected target project " + target + " was not found in this configuration file.")))
-        // if you want to extend buildTarget to make it a SeqString, just use this instead:
-        // graph.FilteredByNodesGraph(targets.toSet.flatMap { p: String => graph.subGraphFrom(graph.nodeForName(p)) })
-      }
       targetGraph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
-        val b = build.buildMap(p.config.name)
+        val b = findBuild(p.config.name)
         Future.sequence(children) flatMap {
           // excess of caution? In theory all Future.sequence()s
           // should be wrapped, but in practice even if we receive

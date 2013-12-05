@@ -22,7 +22,7 @@ case class ProjectBuildConfig(name: String,
   deps: Option[DepsModifiers] = None,
   @JsonProperty("cross-version") crossVersion: Option[String] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
-  space: Option[Space] = Some(new Space("default")),
+  space: Option[Space] = None,
   extra: Option[ExtraConfig]
 ) {
   // after the initial expansion
@@ -39,7 +39,8 @@ case class ProjectBuildConfig(name: String,
   def expandDefaults(defaults: ProjectOptions) = {
     val cv = crossVersion getOrElse defaults.crossVersion
     val jg = useJGit getOrElse defaults.useJGit
-    copy(crossVersion = Some(cv), useJGit = Some(jg))
+    val sp = space getOrElse defaults.space
+    copy(crossVersion = Some(cv), useJGit = Some(jg), space = Some(sp))
   }
 
   // sanity check on the project name
@@ -54,7 +55,7 @@ private case class ProjectBuildConfigShadow(name: String,
   deps: Option[DepsModifiers] = None,
   @JsonProperty("cross-version") crossVersion: Option[String] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
-  space: Option[Space] = Some(new Space("default")),
+  space: Option[Space] = None,
   extra: JsonNode = null)
 
 case class DepsModifiers(
@@ -221,7 +222,9 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   // rather than in the GeneralOptions, as its value may conceivably have
   // an effect on building (for instance due to a difference in checkout because
   // of an implementation bug)
-  @JsonProperty("use-jgit") useJGit: Boolean = false) extends BuildOptions
+  @JsonProperty("use-jgit") useJGit: Boolean = false,
+  // Default space for regular project
+  space: Space = new Space("default")) extends BuildOptions
 
 /**
  * General options for dbuild, that do not affect the actual build.
@@ -687,6 +690,7 @@ trait ExtraOptions {
 trait ProjectOptions {
   def crossVersion: String
   def useJGit: Boolean
+  def space: Space
 }
 abstract class BuildOptions extends ExtraOptions with ProjectOptions
 

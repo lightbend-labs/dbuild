@@ -344,26 +344,28 @@ that needs to be built against multiple versions of Scala, each of which lives i
 a different space. We can easily define the common structure of the project once,
 then define the three occurrences. For example:
 
-vars.p: {
-  uri: "git://github.com/user/repo#branch"
-  sbt-version: "0.13.0"
-  extra.projects: "core"
-  ...more stuff...
-}
+.. code-block:: javascript
 
-build.projects: [ 
- ${vars.p} {
-  space: one
-  name: t1
- }
- ${vars.p} {
-  space: two
-  name: t2
- }
- ${vars.p} {
-  space: three
-  name: t3
- }
+  vars.p: {
+    uri: "git://github.com/user/repo#branch"
+    sbt-version: "0.13.0"
+    extra.projects: "core"
+    ...more stuff...
+  }
+  
+  build.projects: [ 
+   ${vars.p} {
+    space: one
+    name: t1
+   }
+   ${vars.p} {
+    space: two
+    name: t2
+   }
+   ${vars.p} {
+    space: three
+    name: t3
+   }
 
 |
 

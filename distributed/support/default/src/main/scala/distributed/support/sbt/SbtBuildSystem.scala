@@ -22,7 +22,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
   final val extractor = new SbtRunner(repos, buildBase / "extractor")
   
   def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
-    // no 'extra' section in an sbt project? pick default values from build.options
+    // no 'extra' section in an sbt project? pick default values from ExtraOptions
     case None => SbtExtraConfig(sbtVersion = Some(defaults.sbtVersion),
       extractionVersion = Some(defaults.extractionVersion))
     // an 'extra' section is present. One or both of 'sbtVersion' and 'compiler' might be missing.

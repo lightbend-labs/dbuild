@@ -213,7 +213,7 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   @JsonProperty("cross-version") crossVersion: String = "disabled",
   // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
   // also in the future (for repeatability); if the user wants a default of 0.13.0,
-  // they can specify "build.options.sbt-version = 0.13.0"
+  // they can specify "build.sbt-version = 0.13.0"
   @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
   // This option applies to all sbt-based projects, unless overridden.
   // see SbtExtraConfig for details.
@@ -513,7 +513,7 @@ case class MavenExtraConfig(
  * sbt-specific build parameters
  */
 case class SbtExtraConfig(
-  // None is interpreted as default: use build.options.sbt-version
+  // None is interpreted as default: use build.sbt-version
   @JsonProperty("sbt-version") sbtVersion: Option[String] = None,
   directory: String = "",
   @JsonProperty("measure-performance") measurePerformance: Boolean = false,
@@ -527,7 +527,7 @@ case class SbtExtraConfig(
    *  Use "standard" to use the project's standard Scala compiler for extraction,
    *  or a version string to force a different Scala compiler.
    */
-  // None is interpreted as default: use build.options.extraction-version
+  // None is interpreted as default: use build.extraction-version
   @JsonProperty("extraction-version") extractionVersion: Option[String] = None
   ) extends ExtraConfig
 

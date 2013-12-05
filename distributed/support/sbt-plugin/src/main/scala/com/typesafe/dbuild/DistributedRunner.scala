@@ -150,7 +150,7 @@ object DistributedRunner {
           case "binaryFull" | "disabled" | "full" =>
             log.error(msg)
             log.error("In order to control which version is used, please add the corresponding project to the build file")
-            log.error("(or use \"build.options:{cross-version:standard}\" to ignore (not recommended)).")
+            log.error("(or use \"cross-version:standard\" to ignore (not recommended)).")
             sys.error("Required dependency not found")
           case "standard" =>
             log.warn(msg)

@@ -269,7 +269,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     // ------
     //
     // Before rearranging the poms, we may need to adapt the cross-version strings in the part
-    // names. That depends on the value of cross-version in our main build.options.cross-version.
+    // names. That depends on the value of cross-version in our main project.
     // If it is "disabled" (default), the parts should already have a version without a cross-version
     // string; we might have to remove the cross suffix, if present, from the modules compiled by the
     // scala ant task, as that is not affected by the cross-version selector. In any case, we just need
@@ -281,7 +281,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     // "_2.11.0-M5"; we should replace that with the new full Scala version.
     // For "standard" it may be either "_2.11.0-M5" or "_2.11", depending on what each part
     // decides. For binaryFull, it will be "_2.11" even for milestones.
-    // The cross suffix for the parts depends on their own build.options.
+    // The cross suffix for the parts depends on their own cross-version selection.
     // 
     // We change that in conformance to project.crossVersion, so that:
     // - disabled => no suffix

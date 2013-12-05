@@ -43,6 +43,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val notifTask = new Notifications(generalOptions, confName, log)
         // add further new tasks at the beginning of this list, leave notifications at the end
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(generalOptions, log), notifTask)
+        val projectNames = projects.map { _.name }
         tasks foreach { _.beforeBuild(projectNames) }
         // afterTasks may be called when the build is complete, or when something went wrong.
         // Some tasks (for instance deploy) may be unable to run when some error conditions

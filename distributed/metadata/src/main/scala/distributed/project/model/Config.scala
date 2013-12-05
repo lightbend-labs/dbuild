@@ -64,7 +64,7 @@ case class DepsModifiers(
  * affect other parts of the dbuild behavior.
  */
 case class DBuildConfiguration(
-  build: Seq[DistributedBuildConfig],
+  build: SeqDBC, // auto-wrapped Seq[DistributedBuildConfig]
   options: GeneralOptions = GeneralOptions(), // pick defaults if empty
   vars: Option[Vars] = Some(Vars()),
   /**
@@ -242,6 +242,52 @@ object SeqString {
   implicit def SeqToSeqString(s: Seq[String]): SeqString = SeqString(s)
   implicit def SeqStringToSeq(a: SeqString): Seq[String] = a.s
 }
+
+/**
+ * Similar to the above, but for DistributedBuildConfig elements:
+ * a single one in the config file will automatically be turned into an array.
+ */
+@JsonSerialize(using = classOf[SeqDBCSerializer])
+@JsonDeserialize(using = classOf[SeqDBCDeserializer])
+case class SeqDBC(s: Seq[DistributedBuildConfig])
+class SeqDBCDeserializer extends JsonDeserializer[SeqDBC] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqDBC = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    if (generic.isArray()) {
+      // The valueAs() returns a WrappedArray; we use
+      // its values to build a new Seq, in order to keep
+      // the same sha1 UUID (just in case)
+      SeqDBC(Seq(valueAs(classOf[Array[DistributedBuildConfig]]):_*))
+    } else {
+      SeqDBC(Seq(valueAs(classOf[DistributedBuildConfig])))
+    }
+  }
+}
+class SeqDBCSerializer extends JsonSerializer[SeqDBC] {
+  override def serialize(value: SeqDBC, g: JsonGenerator, p: SerializerProvider) {
+    value.s.length match {
+      case 1 =>
+        val vs = p.findValueSerializer(classOf[DistributedBuildConfig], null)
+        vs.serialize(value.s(0), g, p)
+      case _ =>
+        val vs = p.findValueSerializer(classOf[Array[DistributedBuildConfig]], null)
+        vs.serialize(value.s.toArray, g, p)
+    }
+  }
+}
+object SeqDBC {
+  implicit def SeqToSeqDBC(s: Seq[DistributedBuildConfig]): SeqDBC = SeqDBC(s)
+  implicit def SeqDBCToSeq(a: SeqDBC): Seq[DistributedBuildConfig] = a.s
+}
+
 
 /** a generic options section that relies on a list of projects/subprojects */
 abstract class ProjectBasedOptions {

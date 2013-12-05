@@ -1,6 +1,7 @@
 package distributed.support.test
 
 import distributed.project.model.TestExtraConfig
+import distributed.project.BuildSystem
 import distributed.support.BuildSystemCore
 import distributed.project.model._
 import distributed.logging.Logger
@@ -12,15 +13,16 @@ import distributed.project.build.LocalBuildRunner
 /** The Test build system does essentially nothing; it just fails every now and then. It is used for testing */
 object TestBuildSystem extends BuildSystemCore {
   val name: String = "test"  
+  type ExtraType = TestExtraConfig
 
-  private def testExpandConfig(config: ProjectBuildConfig) = config.extra match {
+  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     case None => TestExtraConfig() // pick default values
     case Some(ec:TestExtraConfig) => ec
-    case _ => throw new Exception("Internal error: Test build config options are the wrong type in project \""+config.name+"\". Please report.")
+    case _ => throw new Exception("Internal error: Test build config options have the wrong type. Please report.")
   }
 
   def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
-    val ec = testExpandConfig(config.buildConfig)
+    val ec = config.extra[ExtraType]
     val meta=readMeta(config.buildConfig)
     val projects=meta.projects map {_.name}
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
@@ -28,7 +30,7 @@ object TestBuildSystem extends BuildSystemCore {
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
-    val ec = testExpandConfig(project.config)
+    val ec = project.extra[ExtraType]
 
     val version = input.version
     val meta=readMeta(project.config)

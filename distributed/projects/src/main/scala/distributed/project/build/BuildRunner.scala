@@ -5,6 +5,7 @@ package build
 import java.io.File
 import model._
 import distributed.project.dependencies.Extractor
+import distributed.project.model.ProjectBuildConfig
 
 /** Runs a build in the given directory. */
 trait BuildRunner {
@@ -32,9 +33,8 @@ trait BuildRunner {
 
 /** Aggregate builder. */
 class AggregateBuildRunner(systems: Seq[BuildSystem[Extractor, LocalBuildRunner]]) extends BuildRunner {
-  private def findBuildSystem(proj: distributed.project.model.ProjectBuildConfig): distributed.project.BuildSystem[Extractor, LocalBuildRunner] = {
-    systems find (_.name == proj.system) getOrElse sys.error("Could not find build system for " + proj.system)
-  }
+  private def findBuildSystem(proj: ProjectBuildConfig): BuildSystem[Extractor, LocalBuildRunner] =
+    BuildSystem.forName(proj.system, systems)
 
   def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut =
     findBuildSystem(b.config).runBuild(b, dir, input, localBuildRunner, log)

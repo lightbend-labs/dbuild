@@ -20,14 +20,35 @@ case class ProjectBuildConfig(name: String,
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
+  crossVersion: Option[String] = None,
+  useJGit: Option[Boolean] = None,
   extra: Option[ExtraConfig]
-)
+) {
+  // after the initial expansion
+  // you can use getExtra() to obtain the extra content
+  def getExtra[T](implicit m: Manifest[T]) = extra match {
+    case Some(t: T) => t
+    case None => sys.error("Internal error: \"extra\" has not been expanded in project " + name + ". Please report.")
+    case _ => sys.error("Internal error: \"extra\" has the wrong type in project " + name + ". Please report.")
+  }
+  // after the initial expansion
+  // you can use getCrossVersion() to obtain the cross version selector
+  def getCrossVersion = crossVersion.getOrElse { sys.error("Internal error: after expansion, crossVersion is None in " + name) }
+  
+  def expandDefaults(defaults: ProjectOptions) = {
+    val cv = crossVersion getOrElse defaults.crossVersion
+    val jg = useJGit getOrElse defaults.useJGit
+    copy(crossVersion = Some(cv), useJGit = Some(jg))
+  }
+}
 
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
+  crossVersion: Option[String] = None,
+  useJGit: Option[Boolean] = None,
   extra: JsonNode = null)
 
 case class DepsModifiers(
@@ -74,15 +95,12 @@ class VarDeserializer extends JsonDeserializer[Vars] {
 }
 
 /**
- *  Some of the options within the DistributedBuildConfig may affect
- *  the extraction of all the projects (for example, the default sbt version).
- *  We pack a copy of the BuildOptions together with the ProjectBuildConfig,
- *  and pass it to extraction.
+ *  At this time, only the ProjectBuildConfig is required; the BuildOptions
+ *  have already been replaced into the corresponding project records.
  */
-case class ExtractionConfig(
-    buildConfig:ProjectBuildConfig,
-    buildOptions:BuildOptions) {
-    def uuid = hashing sha1 this
+case class ExtractionConfig(buildConfig: ProjectBuildConfig) {
+  def uuid = hashing sha1 this
+  def extra[T](implicit m: Manifest[T]) = buildConfig.getExtra[T]
 }
 
 /**
@@ -334,7 +352,8 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.deps, newData)
+    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion,
+        generic.deps, generic.crossVersion, generic.useJGit, newData)
   }
 }
 /**
@@ -559,14 +578,17 @@ object SeqNotification {
 }
 
 /** see DistributedBuildConfig for details. */
-abstract class BuildOptions {
-  def crossVersion: String
+trait ExtraOptions {
   def sbtVersion: String
   def extractionVersion: String
+}
+trait ProjectOptions {
+  def crossVersion: String
   def useJGit: Boolean
 }
+abstract class BuildOptions extends ExtraOptions with ProjectOptions
 object BuildOptions {
-  def dummy() = sys.error("Internal error: no buildOptions")
+  def dummy() = sys.error("Internal error: no buildOptions.")
 }
 @JsonDeserialize(using = classOf[DeprecatedBuildOptionsDeserializer])
 abstract class DeprecatedBuildOptions

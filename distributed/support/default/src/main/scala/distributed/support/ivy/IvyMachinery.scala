@@ -28,12 +28,6 @@ import org.apache.ivy.core.module.descriptor.Configuration
 import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
 
 object IvyMachinery {
-  def ivyExpandConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => IvyExtraConfig(false, false, true, Seq.empty, None) // pick default values
-    case Some(ec: IvyExtraConfig) => ec
-    case _ => throw new Exception("Internal error: ivy build config options are the wrong type in project \"" + config.name + "\". Please report")
-  }
-
   // there are two stages to the madness below. The first: we create a dummy caller, and add the module we need as a dependency.
   // That is used for extraction, and also later during build to re-download the artifacts we need.
   // The second (optional) stage: we retrieve those artifacts (storing them in a given directory), and then we create a new
@@ -45,7 +39,7 @@ object IvyMachinery {
   def resolveIvy(config: ProjectBuildConfig, baseDir: File, repos: List[xsbti.Repository], log: Logger,
     transitive: Boolean = true, useOptional: Boolean = true): ResolveResponse = {
     log.info("Running Ivy to extract project info: " + config.name)
-    val extra = ivyExpandConfig(config)
+    val extra = config.getExtra[IvyExtraConfig]
     import extra._
     // this is the one local to the project (extraction or build)
     val ivyHome = (baseDir / ".ivy2")

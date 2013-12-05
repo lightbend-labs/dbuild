@@ -24,8 +24,8 @@ class GitProjectResolver extends ProjectResolver {
    *  Use the scheme "jgit" if you prefer jgit (will not use hardlinks, hence more disk space will be used).
    *  The regular scheme "git" will use the command line tool by default.
    */
-  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
-    val git: GitImplementation = if (opts.useJGit)
+  def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
+    val git: GitImplementation = if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
       GitJGit
     else
       GitGit

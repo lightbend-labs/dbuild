@@ -42,7 +42,7 @@ class LocalBuilderActor(
   val baseBuildActor = Controller(context,
       Props(new BuildRunnerActor(localBuildRunner, targetDir, cleanup.build)),
       "Project-Builder", concurrencyLevel)
-  val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository)), "simple-distributed-builder")
+  val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository, buildSystems)), "simple-distributed-builder")
 
   def receive = {
     case RunLocalBuild(config, configName, buildTarget) =>

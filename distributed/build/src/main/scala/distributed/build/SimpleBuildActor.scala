@@ -5,6 +5,8 @@ import project.model._
 import project.build._
 import repo.core.{ Repository, LocalRepoHelper }
 import project.dependencies.ExtractBuildDependencies
+import support.BuildSystemCore
+import project.BuildSystem
 import logging.Logger
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.pattern.{ ask, pipe }
@@ -18,20 +20,26 @@ import distributed.repo.core.ProjectDirs
 import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
-case class RunDistributedBuild(conf: DBuildConfiguration, confName: String, buildTarget: Option[String], logger: Logger)
+case class RunDistributedBuild(conf: DBuildConfiguration, confName: String,
+  buildTarget: Option[String], logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
-class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository) extends Actor {
+class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository, systems: Seq[BuildSystemCore]) extends Actor {
   def receive = {
-    case RunDistributedBuild(conf, confName, buildTarget, log) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(inputConf, confName, buildTarget, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       implicit val ctx = context.system
       val extractionPhaseDuration = Timeouts.extractionPhaseTimeout.duration
       val extractionPlusBuildDuration = Timeouts.extractionPlusBuildTimeout.duration
+      //
+      // Before doing anything else, expand all the "extra" fields in the project configs,
+      // replacing in the process the default values as needed.
+      val conf = inputConf.copy(build = BuildSystem.expandDistributedBuildConfig(inputConf.build, systems))
+      //      
       val result = try {
         val logger = log.newNestedLogger(hashing sha1 conf.build)
         //
-        // First, a quick sanity check on the list of project names
+        // A quick sanity check on the list of project names
         //
         val projectNames = conf.build.projects map (_.name.toLowerCase)
         if (projectNames.intersect(Seq("default", "standard", "dbuild", "root", ".")).nonEmpty) {
@@ -309,7 +317,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             Future(new ExtractionFailed(projConfig.name, Seq(),
               "Timeout: extraction of project " + projConfig.name + " took longer than " + extractionDuration) with TimedOut))
         val outcome =
-          extract(uuid, log)(ExtractionConfig(projConfig, config))
+          extract(uuid, log)(ExtractionConfig(projConfig))
         Future.firstCompletedOf(Seq(watchdog, outcome))
       }
     futureOutcomes map { s: Seq[ExtractionOutcome] =>

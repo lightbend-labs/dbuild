@@ -24,7 +24,7 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
 
   // This is our chance to fetch changing snapshots; if we don't make ProjectBuildConfig
   // unique, extraction will think '-SNAPSHOT' never changes, and incorrectly use its cache.
-  def resolve(config: ProjectBuildConfig, opts: BuildOptions, baseDir: File, log: Logger): ProjectBuildConfig = {
+  def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = {
     if (!config.uri.startsWith("ivy:"))
       sys.error("Fatal: the uri in Ivy project " + config.name + " must start with the string \"ivy:\"")
     val module = config.uri.substring(4)
@@ -63,7 +63,7 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
       // Are we trying to repeat a build from a repeatable build configuration? If so, the
       // snapshot marker may already be set to some value. In that case, we check that we
       // are still using the same snapshot, and issue a warning if we are not.
-      val expandedExtra = IvyMachinery.ivyExpandConfig(config)
+      val expandedExtra = config.getExtra[IvyExtraConfig]
       expandedExtra.snapshotMarker.map { previous =>
         // yep, the marker was already set
         if (previous != marker) {

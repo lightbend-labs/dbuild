@@ -10,36 +10,38 @@ import _root_.java.io.File
 import distributed.repo.core.{Defaults,ProjectDirs}
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
+import distributed.project.BuildSystem
 
 /** Implementation of the SBT build system. */
 class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends BuildSystemCore {
-  val name: String = "sbt"  
+  val name: String = "sbt"
+  type ExtraType = SbtExtraConfig
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"
   final val runner = new SbtRunner(repos, buildBase / "runner")
   final val extractor = new SbtRunner(repos, buildBase / "extractor")
   
-  private def sbtExpandConfig(config: ProjectBuildConfig, buildOptions:BuildOptions) = config.extra match {
+  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     // no 'extra' section in an sbt project? pick default values from build.options
-    case None => SbtExtraConfig(sbtVersion = Some(buildOptions.sbtVersion),
-      extractionVersion = Some(buildOptions.extractionVersion))
+    case None => SbtExtraConfig(sbtVersion = Some(defaults.sbtVersion),
+      extractionVersion = Some(defaults.extractionVersion))
     // an 'extra' section is present. One or both of 'sbtVersion' and 'compiler' might be missing.
     case Some(ec: SbtExtraConfig) => {
       val sbtVer = ec.sbtVersion match {
-        case None => buildOptions.sbtVersion
+        case None => defaults.sbtVersion
         case Some(v) => v
       }
       val extrVer = ec.extractionVersion match {
-        case None => buildOptions.extractionVersion
+        case None => defaults.extractionVersion
         case Some(c) => c
       }
       ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer))
     }
-    case _ => throw new Exception("Internal error: sbt build config options are the wrong type in project \""+config.name+"\". Please report")
+    case _ => throw new Exception("Internal error: sbt build config options have the wrong type. Please report.")
   }
 
   override def projectDbuildDir(baseDir: File, config: RepeatableProjectBuild): File = {
-    val ec = sbtExpandConfig(config.config, config.buildOptions)
+    val ec = config.extra[ExtraType]
     projectDir(baseDir, ec) / ".dbuild"
   }
 
@@ -52,17 +54,17 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
   }
 
   def extractDependencies(config: ExtractionConfig, baseDir: File, extr: Extractor, log: Logger): ExtractedBuildMeta = {
-    val ec = sbtExpandConfig(config.buildConfig, config.buildOptions)
+    val ec = config.extra[ExtraType]
     val projDir = projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
-    val ec = sbtExpandConfig(project.config, project.buildOptions)
+    val ec = project.extra[ExtraType]
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
-    val config = SbtBuildConfig(ec, info, project.buildOptions)
+    val config = SbtBuildConfig(ec, project.config.getCrossVersion, info)
     SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log)
   }
 

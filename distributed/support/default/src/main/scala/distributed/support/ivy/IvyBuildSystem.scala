@@ -1,6 +1,7 @@
 package distributed.support.ivy
 
 import distributed.support.BuildSystemCore
+import distributed.project.BuildSystem
 import distributed.project.model._
 import distributed.repo.core.LocalArtifactMissingException
 import java.io.File
@@ -31,8 +32,17 @@ import distributed.project.build.LocalBuildRunner
 class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystemCore {
 
   val name = "ivy"
+  type ExtraType = IvyExtraConfig
+
   // this is the general dbuild one (we don't use it here)
   val dbuildIvyHome = (distributed.repo.core.ProjectDirs.dbuildDir / ".ivy2").getAbsolutePath
+
+  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
+//  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
+    case None => IvyExtraConfig(false, false, true, Seq.empty, None) // pick default values
+    case Some(ec: IvyExtraConfig) => ec
+    case _ => throw new Exception("Internal error: ivy build config options have the wrong type. Please report")
+  }
 
   def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor:Extractor, log: Logger): ExtractedBuildMeta = {
     val config=extractionConfig.buildConfig
@@ -104,7 +114,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
     // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
     import scala.collection.JavaConversions._
-    import project.buildOptions.crossVersion
+    val crossVersion = project.config.getCrossVersion
     val arts = input.artifacts.artifacts
     // I need to get my dependencies again during build; although in theory I could pass
     // this information to here from extraction, in practice I just run Ivy once more

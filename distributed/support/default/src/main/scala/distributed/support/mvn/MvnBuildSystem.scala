@@ -13,25 +13,25 @@ import distributed.project.build.LocalBuildRunner
 
 object MvnBuildSystem extends BuildSystemCore {
   val name = "maven"
+  type ExtraType = MavenExtraConfig
+
+  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
+      case Some(ec:MavenExtraConfig) => ec
+      case None => MavenExtraConfig()
+      case _ => throw new Exception("Internal error: Maven build config options have the wrong type. Please report")
+    }
+
   def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
-    val mc = mvnConfig(config.buildConfig)
+    val mc = config.extra[ExtraType]
     val pom = 
       if(mc.directory.isEmpty) dir / "pom.xml"
       else  dir / mc.directory / "pom.xml"
     DependencyExtractor extract pom
   }
   
-  
-  def mvnConfig(config: ProjectBuildConfig) =
-    config.extra match {
-      case Some(ec:MavenExtraConfig) => ec
-      case None => MavenExtraConfig()
-      case _ => throw new Exception("Internal error: Maven build config options are the wrong type. Please report")
-    }
-  
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
     log.info("Running maven...")
-    val mc = mvnConfig(project.config)
+    val mc = project.extra[ExtraType]
     val pom = 
       if(mc.directory.isEmpty) dir / "pom.xml"
       else  dir / mc.directory / "pom.xml"

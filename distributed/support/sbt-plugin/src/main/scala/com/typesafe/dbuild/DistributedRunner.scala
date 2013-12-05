@@ -465,7 +465,7 @@ object DistributedRunner {
       def newSettings(oldSettings: Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
           prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
-            oldSettings, config.buildOptions.crossVersion)
+            oldSettings, config.crossVersion)
 
       newState(state, extracted, newSettings)
 
@@ -665,7 +665,7 @@ object DistributedRunner {
       } else {
         val modules = getModuleRevisionIds(state, proj.subproj, log)
         newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _,
-          proj.buildOptions.crossVersion))
+          proj.config.getCrossVersion))
       }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")

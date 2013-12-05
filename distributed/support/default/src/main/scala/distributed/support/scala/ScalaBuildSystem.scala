@@ -15,6 +15,7 @@ import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
+import distributed.project.BuildSystem
 import collection.JavaConverters._
 import org.apache.maven.model.{ Model, Dependency }
 import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
@@ -26,15 +27,16 @@ import _root_.sbt.NameFilter
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystemCore {
   val name: String = "scala"
+  type ExtraType = ScalaExtraConfig
 
-  private def scalaExpandConfig(config: ProjectBuildConfig) = config.extra match {
+  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     case None => ScalaExtraConfig(None, None, None, Seq.empty, Seq.empty) // pick default values
     case Some(ec: ScalaExtraConfig) => ec
-    case _ => throw new Exception("Internal error: scala build config options are the wrong type in project \"" + config.name + "\". Please report")
+    case _ => throw new Exception("Internal error: scala build config options have the wrong type. Please report")
   }
 
   def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
-    val ec = scalaExpandConfig(config.buildConfig)
+    val ec = config.extra[ExtraType]
     // for the root (main Scala project):
     val meta = readMeta(dir, ec.exclude, log)
     val configAndExtracted = ProjectConfigAndExtracted(config.buildConfig, meta) // use the original config
@@ -61,7 +63,7 @@ object ScalaBuildSystem extends BuildSystemCore {
   // but not for the submodules. After building the core, we will call localBuildRunner.checkCacheThenBuild() on each module,
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
-    val ec = scalaExpandConfig(project.config)
+    val ec = project.extra[ExtraType]
 
     // if requested, overwrite build.number. This is unrelated to
     // the version that is possibly overridden by "set-version".

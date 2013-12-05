@@ -26,7 +26,7 @@ trait ProjectResolver {
   // TODO: it would be nice it resolve() could also return a Boolean
   // informing the caller of whether the checkout changed (this is a
   // bit tricky to detect with the current git resolver, however)
-  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: java.io.File, log: logging.Logger): ProjectBuildConfig
+  def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig
 }
 
 /** Helper that uses all known project resolvers. */
@@ -43,6 +43,6 @@ class AggregateProjectResolver(resolvers: Seq[ProjectResolver]) extends ProjectR
   }
   def canResolve(config: String): Boolean = 
     resolvers exists (_ canResolve config)
-  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: java.io.File, log: logging.Logger): ProjectBuildConfig =
-    findResolver(config).resolve(config, opts, dir, log)
+  def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig =
+    findResolver(config).resolve(config, dir, log)
 }

@@ -100,11 +100,11 @@ object BuildSystem {
    * "extra" component of each with suitable defaults.
    * After this substitution is complete for all projects, the BuildOptions are no longer used.
    */
-  def expandDistributedBuildConfig[A, B](build: DistributedBuildConfig, systems: Seq[BuildSystem[A, B]]) = {
+  def expandDistributedBuildConfig[A, B](build: Seq[DistributedBuildConfig], systems: Seq[BuildSystem[A, B]]) = {
     def expandProject(config: ProjectBuildConfig, defaults: BuildOptions): ProjectBuildConfig = {
       val system = BuildSystem.forName(config.system, systems)
       config.expandDefaults(defaults).copy(extra = Some(system.expandExtra(config.extra, systems, defaults)))
     }
-    build.projects.map { expandProject(_, build) }
+    build.flatMap {b => b.projects.map { expandProject(_, b) }}
   }
 }

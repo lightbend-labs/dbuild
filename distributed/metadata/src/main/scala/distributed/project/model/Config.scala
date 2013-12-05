@@ -64,7 +64,7 @@ case class DepsModifiers(
  * affect other parts of the dbuild behavior.
  */
 case class DBuildConfiguration(
-  build: DistributedBuildConfig,
+  build: Seq[DistributedBuildConfig],
   options: GeneralOptions = GeneralOptions(), // pick defaults if empty
   vars: Option[Vars] = Some(Vars()),
   /**
@@ -445,7 +445,7 @@ case class TestExtraConfig() extends ExtraConfig
 
 /** configuration for the Assemble build system */
 case class AssembleExtraConfig(
-  parts: Option[DistributedBuildConfig] = None
+  parts: Seq[DistributedBuildConfig] = Seq()
 ) extends ExtraConfig
 
 // our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner

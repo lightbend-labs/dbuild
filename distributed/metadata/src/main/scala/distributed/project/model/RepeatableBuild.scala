@@ -60,8 +60,7 @@ object RepeatableDistributedBuild {
  *  are not included, as they have no effect on builds.
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config),
-      options = None)
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), options = None)
   
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)

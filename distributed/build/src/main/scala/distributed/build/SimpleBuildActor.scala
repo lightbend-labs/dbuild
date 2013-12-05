@@ -175,7 +175,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 // In order to present to the user a new complete configuration that can be used as-is to
                 // restart dbuild, and which contains the RepeatableDistributedBuild data, we create
                 // a new full DBuildConfiguration.
-                val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, generalOptions)
+                val expandedDBuildConfig = DBuildConfiguration(Seq(fullBuild.repeatableBuildConfig), generalOptions)
                 val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
                 writeDependencies(fullBuild, fullLogger)
                 nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>

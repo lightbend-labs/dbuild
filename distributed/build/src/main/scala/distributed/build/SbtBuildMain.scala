@@ -101,7 +101,7 @@ class SbtBuildMain extends xsbti.AppMain {
               throw e
           }
         // Unique names?
-        val allNames = config.build.projects map { _.name }
+        val allNames = config.build.flatMap { _.projects map { _.name } }
         val uniqueNames = allNames.distinct
         if (uniqueNames.size != allNames.size) {
           sys.error("Project names must be unique! Duplicates found: " + (allNames diff uniqueNames).mkString(","))

@@ -40,12 +40,10 @@ object AssembleBuildSystem extends BuildSystemCore {
   type ExtraType = AssembleExtraConfig
 
   def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
-    case None => AssembleExtraConfig(None) // pick default values
+    case None => AssembleExtraConfig() // pick default values
     case Some(ec: AssembleExtraConfig) =>
       // perform the defaults substitution in turn on the nested projects
-      ec.copy(parts = ec.parts.map { nestedConf =>
-        nestedConf.copy(projects = BuildSystem.expandDistributedBuildConfig(nestedConf, systems))
-      })
+      ec.copy(parts = Seq(DistributedBuildConfig(BuildSystem.expandDistributedBuildConfig(ec.parts, systems),None)))
     case _ => throw new Exception("Internal error: Assemble build config options have the wrong type. Please report")
   }
 

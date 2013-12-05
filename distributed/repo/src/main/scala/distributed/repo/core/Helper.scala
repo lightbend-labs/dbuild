@@ -66,7 +66,7 @@ object LocalRepoHelper {
         case e =>
           // failed to deserialize. Should be impossible.
           log.error("The data already present in the dbuild repository for this data (uuid = " + data.uuid + ")")
-          log.error("does not seem a valid " + data.getClass.getSimpleName + ". This shouldn't happen! Please report.")
+          log.error("does not seem to be a valid " + data.getClass.getSimpleName + ". This shouldn't happen! Please report.")
           log.error("Key: " + key)
           throw new Exception("Repository consistency check failed", e)
       }

@@ -49,7 +49,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
     val projectDir=if(ec.directory.isEmpty) baseDir else baseDir / ec.directory
     // sanity check, in case "directory" is something like "../xyz" or "/xyz/..."
     if (!(projectDir.getAbsolutePath().startsWith(baseDir.getAbsolutePath())))
-        sys.error("The specified subdirectory \""+ec.directory+"\" does not seem not be a subdir of the project directory")
+        sys.error("The specified subdirectory \""+ec.directory+"\" does not seem to be a subdir of the project directory")
     projectDir
   }
 

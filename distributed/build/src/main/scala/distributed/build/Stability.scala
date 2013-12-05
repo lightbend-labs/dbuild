@@ -6,9 +6,10 @@ import Path._
 import project.model._
 import java.io.File
 import distributed.repo.core.{ LocalRepoHelper, Repository }
+import org.apache.commons.io.FileUtils
 
 class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
-  def id = "Deploy"
+  def id = "Stability"
 
   def beforeBuild(projectNames: Seq[String]) = {
     options.stability.foreach { check =>
@@ -43,18 +44,54 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
         IO.withTemporaryDirectory { dirA =>
           IO.withTemporaryDirectory { dirB =>
             log.info("Checking pair:")
-            def rematerializeStability(request: SeqSelectorElement, dir: File) =
+            def rematerializeStability(request: SeqSelectorElement, dir: File, c: String) =
               rematerialize(request, outcome, build, dir,
                 stage = "stability",
-                msgGood = "  ",
-                msgBad = "  Cannot compare, unavailable: ",
+                msgGood = c + ")  ",
+                msgBad = c + ")  Cannot compare, unavailable: ",
                 partialOK = false, log)
-            val (goodA, badA) = rematerializeStability(check.a, dirA)
+            val (goodA, badA) = rematerializeStability(check.a, dirA, "a")
             if (badA.isEmpty) {
-              val (goodB, badB) = rematerializeStability(check.b, dirB)
+              val (goodB, badB) = rematerializeStability(check.b, dirB, "b")
               if (badB.isEmpty) {
+                val logLimit = 10
                 // excellent! We just need to compare the jars in dirA and dirB
-                
+                val jarsA = dirA.**("*.jar").get
+                val jarsB = dirB.**("*.jar").get
+                def checkPaths(x: Seq[String], y: Seq[String], xName: String, yName: String) = {
+                  val xNotY = x.diff(y)
+                  val ok = xNotY.isEmpty
+                  if (!ok) {
+                    log.info("Some jars are in " + xName + " but not in " + yName + ":")
+                    xNotY.take(logLimit).foreach { s =>
+                      log.info("  " + s)
+                    }
+                    if (xNotY.length > logLimit) log.info("  ... and others")
+                  }
+                  ok
+                }
+                def getPaths(dir: File, jars: Seq[File]): Seq[String] = {
+                  jars.map { IO.relativize(dir, _) getOrElse sys.error("Internal error while relativizing (stability). Please report.") }
+                }
+                log.info("Comparing....")
+                val pathsA = getPaths(dirA, jarsA)
+                val pathsB = getPaths(dirB, jarsB)
+                val sameAB = checkPaths(pathsA, pathsB, "a", "b")
+                val sameBA = checkPaths(pathsB, pathsA, "b", "a")
+                if (!(sameAB && sameBA)) {
+                  sys.error("Stability comparison failed: file lists differ")
+                }
+                val results = pathsA.toSet.map { p: String =>
+                  val same = FileUtils.contentEquals(new File(dirA, p), new File(dirB, p))
+                  if (!same) Some("Files differ: " + p) else None
+                }
+                val badResults = results.flatten
+                if (badResults.nonEmpty) {
+                  badResults.take(logLimit).foreach { s =>
+                    log.info("  " + s)
+                  }
+                  if (badResults.size > logLimit) log.info("  ... and others")
+                } else log.info("Comparison OK.")
               }
             }
           }

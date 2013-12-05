@@ -218,7 +218,7 @@ class Notifications(options: GeneralOptions, confName: String, log: Logger) exte
     (options.notifications.send ++ options.notifications.default) foreach { n =>
       // just a sanity check on the project list (we don't use the result)
       // flattenAndCheckProjectList() will check that the listed project names actually exist
-      val _ = n.flattenAndCheckProjectList(projectNames.toSet)
+      val _ = n.projects.flattenAndCheckProjectList(projectNames.toSet)
     }
   }
 

@@ -233,6 +233,7 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
  */
 case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
   notifications: NotificationOptions = NotificationOptions(),
+  stability: Seq[StabilityOptions] = Seq(),
   resolvers: Map[String, String] = Map[String, String](),
   cleanup: CleanupOptions = CleanupOptions())
 
@@ -350,52 +351,6 @@ object SeqDBC {
 }
 
 
-/** a generic options section that relies on a list of projects/subprojects */
-abstract class ProjectBasedOptions {
-  def projects: SeqSelectorElement
-
-  /**
-   * From its list of selected projects, which may include '.' for the root, and
-   *  the BuildOutcome of the root, flattens the definition in order to select a
-   *  subset of the root children.
-   *  If '.' is present as a project, return the list of all the children.
-   *  If '.' is present in a subproject definition, consider the list of
-   *  subprojects as children (they are the subprojects of root, in a sense).
-   *  Combine that list with the of remaining requested projects. If multiple
-   *  project/subproject requests exist for the same project name, combine them together.
-   *  NOTE: there is no assumption that the project names in the various request actually exist.
-   *
-   *  An auxiliary role of this method is that of performing a sanity check on
-   *  the list of projects/subprojects, which is directly the list that
-   *  the user wrote in the configuration file, and may contain errors.
-   */
-  def flattenAndCheckProjectList(allProjNames: Set[String]): Set[SelectorElement] = {
-    def reqFromNames(n: Set[String]): Set[SelectorElement] = n map SelectorProject
-    // let's split the requests by type
-    val projReqs = projects.collect { case p: SelectorProject => p }.toSet
-    val subProjReqs = projects.collect { case p: SelectorSubProjects => p }.toSet
-
-    val fromRoot = if (projReqs.exists(_.name == ".")) allProjNames else Set[String]()
-    // list of names of projects mentioned in subprojects from root
-    val fromDotSubs = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
-    // are you kidding me?
-    if (fromDotSubs.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
-    // ok, this is the complete list of full project requests
-    val allProjReqs: Set[SelectorElement] = reqFromNames(fromRoot) ++ reqFromNames(fromDotSubs) ++ projReqs.filterNot(_.name == ".")
-    // remove the subproj requests that are already in the full proj set.
-    val restSubProjReqs = subProjReqs.filterNot { p => allProjReqs.map { _.name }.contains(p.name) }
-    // and now we flatten together those with the same 'from'
-    val allSubProjReqsMap = restSubProjReqs.filterNot(_.name == ".").groupBy(_.name).toSet
-    val allSubProjReq: Set[SelectorElement] = allSubProjReqsMap map {
-      case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.publish }.flatten.toSeq))
-    }
-    val reqs = allSubProjReq ++ allProjReqs
-    val unknown = reqs.map(_.name).diff(allProjNames)
-    if (unknown.nonEmpty) sys.error(unknown.mkString("These project names are unknown: ", ",", ""))
-    reqs
-  }
-}
-
 /** Deploy information. */
 case class DeployOptions(
   /** deploy target */
@@ -405,7 +360,7 @@ case class DeployOptions(
   /** names of the projects that should be deployed. Default: ".", meaning all */
   projects: SeqSelectorElement = Seq(SelectorProject(".")),
   /** signing options */
-  sign: Option[DeploySignOptions]) extends ProjectBasedOptions
+  sign: Option[DeploySignOptions])
 /** used to select subprojects from one project */
 case class SubProjects(from: String, publish: SeqString)
 
@@ -419,6 +374,11 @@ case class DeploySignOptions(
   @JsonProperty("secret-ring") secretRing: Option[String],
   id: Option[String],
   passphrase: String)
+
+/** Stability information. */
+case class StabilityOptions(
+  a: SeqSelectorElement = Seq(),
+  b: SeqSelectorElement = Seq())
 
 /**
  * Configuration used for SBT and other builds.
@@ -606,7 +566,48 @@ class SelectorElementDeserializer extends JsonDeserializer[SelectorElement] {
  */
 @JsonSerialize(using = classOf[SeqElementSerializer])
 @JsonDeserialize(using = classOf[SeqElementDeserializer])
-case class SeqSelectorElement(s: Seq[SelectorElement])
+case class SeqSelectorElement(s: Seq[SelectorElement]) {
+    /**
+   * From its list of selected projects, which may include '.' for the root, and
+   *  the BuildOutcome of the root, flattens the definition in order to select a
+   *  subset of the root children.
+   *  If '.' is present as a project, return the list of all the children.
+   *  If '.' is present in a subproject definition, consider the list of
+   *  subprojects as children (they are the subprojects of root, in a sense).
+   *  Combine that list with the of remaining requested projects. If multiple
+   *  project/subproject requests exist for the same project name, combine them together.
+   *  NOTE: there is no assumption that the project names in the various request actually exist.
+   *
+   *  An auxiliary role of this method is that of performing a sanity check on
+   *  the list of projects/subprojects, which is directly the list that
+   *  the user wrote in the configuration file, and may contain errors.
+   */
+  def flattenAndCheckProjectList(allProjNames: Set[String]): Set[SelectorElement] = {
+    def reqFromNames(n: Set[String]): Set[SelectorElement] = n map SelectorProject
+    // let's split the requests by type
+    val projReqs = s.collect { case p: SelectorProject => p }.toSet
+    val subProjReqs = s.collect { case p: SelectorSubProjects => p }.toSet
+
+    val fromRoot = if (projReqs.exists(_.name == ".")) allProjNames else Set[String]()
+    // list of names of projects mentioned in subprojects from root
+    val fromDotSubs = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
+    // are you kidding me?
+    if (fromDotSubs.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
+    // ok, this is the complete list of full project requests
+    val allProjReqs: Set[SelectorElement] = reqFromNames(fromRoot) ++ reqFromNames(fromDotSubs) ++ projReqs.filterNot(_.name == ".")
+    // remove the subproj requests that are already in the full proj set.
+    val restSubProjReqs = subProjReqs.filterNot { p => allProjReqs.map { _.name }.contains(p.name) }
+    // and now we flatten together those with the same 'from'
+    val allSubProjReqsMap = restSubProjReqs.filterNot(_.name == ".").groupBy(_.name).toSet
+    val allSubProjReq: Set[SelectorElement] = allSubProjReqsMap map {
+      case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.publish }.flatten.toSeq))
+    }
+    val reqs = allSubProjReq ++ allProjReqs
+    val unknown = reqs.map(_.name).diff(allProjNames)
+    if (unknown.nonEmpty) sys.error(unknown.mkString("These project names are unknown: ", ",", ""))
+    reqs
+  }
+}
 class SeqElementSerializer extends JsonSerializer[SeqSelectorElement] {
   override def serialize(value: SeqSelectorElement, g: JsonGenerator, p: SerializerProvider) {
     value.s.length match {
@@ -784,7 +785,7 @@ case class Notification(
    *  dbuild is able to build a list automatically
    *  if a single string is specified.
    */
-  projects: SeqSelectorElement = Seq(SelectorProject("."))) extends ProjectBasedOptions {
+  projects: SeqSelectorElement = Seq(SelectorProject("."))) {
   /*
  *  example:
   

@@ -26,7 +26,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
   def beforeBuild(projectNames: Seq[String]) = {
     options.deploy foreach { d =>
       // just a sanity check on the project list (we don't use the result)
-      val _ = d.flattenAndCheckProjectList(projectNames.toSet)
+      val _ = d.projects.flattenAndCheckProjectList(projectNames.toSet)
     }
     checkDeployFullBuild(options.deploy, log)
   }
@@ -146,50 +146,12 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         // for build.uuid. We stage them in a temporary directory first,
         // to make sure all is in order
         try IO.withTemporaryDirectory { dir =>
-          val cache = Repository.default
-          // let's expand ".":
-          // flattenAndCheckProjectList() will check that the listed project names listed in the
-          // deploy options exist and are used legally. From the RepeatableDistributedBuild,
-          // here we only use the list of project names. 
-          val projList = options.flattenAndCheckProjectList(build.builds.map { _.config.name }.toSet)
-
-          val selected = projList.map { depl =>
-            build.repeatableBuilds.find(_.config.name == depl.name) match {
-              // It should always find it: flattenAndCheckProjectList(), above, is supposed to check the same condition
-              case None => sys.error("Internal error during deploy: \"" + depl.name + "\" is not a project name.")
-              case Some(proj) => (depl, proj) // (deploy request,RepeatableProjectBuild)
-            }
-          }
-
-          // It may be that certain projects listed in the Seq[RepeatableProjectBuild] have been
-          // skipped, for whatever reason. If there is no outcome, the project was not built.
-          val (good, bad) = selected partition {
-            case (depl, proj) =>
-              val optOutcome = projectOutcomes.get(proj.config.name)
-              optOutcome match {
-                case None =>
-                  log.info("No outcome for project " + proj.config.name + " (skipped)")
-                  false
-                case Some(outcome) => outcome.isInstanceOf[BuildGood]
-              }
-          }
-
-          def logDepl(elems: Set[(SelectorElement, RepeatableProjectBuild)]) =
-            ": " + elems.map(_._1.name).toSeq.sorted.mkString("", ", ", "")
-          if (good.nonEmpty) log.info("Deploying" + logDepl(good))
-          if (bad.nonEmpty) log.warn("Cannot deploy" + logDepl(bad))
+          val (good, bad) = rematerialize(options.projects, outcome, build, dir, "deploy",
+            msgGood = "Deploying: ",
+            msgBad = "Cannot deploy: ",
+            partialOK = true, log)
 
           if (good.nonEmpty) try {
-            good map {
-              case (depl, proj) =>
-                val subprojs: Seq[String] = depl match {
-                  case SelectorSubProjects(SubProjects(from, publish)) => publish
-                  case SelectorProject(_) => Seq[String]()
-                }
-                val (arts, msg) = LocalRepoHelper.materializePartialProjectRepository(proj.uuid, subprojs, cache, dir)
-                msg foreach { log.info(_) }
-            }
-
             // Are we signing? If so, proceed
             options.sign foreach { signOptions =>
               val secretRingFile = signOptions.secretRing map { new File(_) } getOrElse (ProjectDirs.userhome / ".gnupg" / "secring.gpg")

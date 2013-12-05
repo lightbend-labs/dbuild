@@ -44,13 +44,19 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
           IO.withTemporaryDirectory { dirB =>
             log.info("Checking pair:")
             def rematerializeStability(request: SeqSelectorElement, dir: File) =
-              rematerialize(request, outcome, build, dir, "stability",
-                  msgGood = "  ",
-                  msgBad = "Some projects are unavailable: ",
-                  partialOK = false, log)
+              rematerialize(request, outcome, build, dir,
+                stage = "stability",
+                msgGood = "  ",
+                msgBad = "  Cannot compare, unavailable: ",
+                partialOK = false, log)
             val (goodA, badA) = rematerializeStability(check.a, dirA)
-            val (goodB, badB) = rematerializeStability(check.b, dirB)
-            // TODO: do the actual comparison; use sys.error or another exception if comparison fails
+            if (badA.isEmpty) {
+              val (goodB, badB) = rematerializeStability(check.b, dirB)
+              if (badB.isEmpty) {
+                // excellent! We just need to compare the jars in dirA and dirB
+                
+              }
+            }
           }
         }
       }

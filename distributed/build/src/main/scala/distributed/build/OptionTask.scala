@@ -111,14 +111,14 @@ abstract class OptionTask(log: Logger) {
 
     if (partialOK) {
       issueMsg(good, msgGood, log.info)
-      issueMsg(bad, msgGood, log.warn)
+      issueMsg(bad, msgBad, log.warn)
       reloadGood()
     } else {
       if (bad.isEmpty) {
         issueMsg(good, msgGood, log.info)
         reloadGood()
       } else {
-        issueMsg(bad, msgGood, log.warn)
+        issueMsg(bad, msgBad, log.warn)
       }
     }
     (good, bad)

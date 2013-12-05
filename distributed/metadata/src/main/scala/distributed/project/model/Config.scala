@@ -201,8 +201,8 @@ case class ExtractionConfig(buildConfig: ProjectBuildConfig) {
  *     full scala version string instead. The projects that have cross building disabled, however, will be
  *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
  *
- * In practice, do not include an "options" section at all in normal use, and just add "{cross-version:standard}"
- * if you are planning to release using "set-version".
+ * In practice, do not include the cross-version option at all in normal use, and just
+ * add "{cross-version:standard}" if you are planning to release using "set-version".
  * 
  * This section also contains the sbt version that should be used by default (unless overridden in the individual
  * projects) to compile all the projects. If not specified, the string "0.12.4" is used.

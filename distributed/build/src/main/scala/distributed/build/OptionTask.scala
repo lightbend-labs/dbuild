@@ -15,7 +15,7 @@ abstract class OptionTask(log: Logger) {
    * This method is called at the very beginning of the build; it should perform
    *  a sanity check on the configuration file.
    */
-  def beforeBuild(): Unit
+  def beforeBuild(projectNames: Seq[String]): Unit
   /**
    * the afterBuild() may be called after build, if the build succeeded/failed, or
    *  after extraction, if extraction failed. In the latter case, repBuild will be

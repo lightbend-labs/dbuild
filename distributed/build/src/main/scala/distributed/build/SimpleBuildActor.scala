@@ -31,31 +31,33 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       implicit val ctx = context.system
       val extractionPhaseDuration = Timeouts.extractionPhaseTimeout.duration
       val extractionPlusBuildDuration = Timeouts.extractionPlusBuildTimeout.duration
+      val logger = log.newNestedLogger(hashing sha1 inputConf)
       //
       // Before doing anything else, expand all the "extra" fields in the project configs,
       // replacing in the process the default values as needed.
-      val conf = inputConf.copy(build = BuildSystem.expandDistributedBuildConfig(inputConf.build, systems))
-      //      
+      val projects = BuildSystem.expandDistributedBuildConfig(inputConf.build, systems)
+      val generalOptions = inputConf.options
+      //  After this point, inputConf and its BuildOptions are never used again.
+      //
       val result = try {
-        val logger = log.newNestedLogger(hashing sha1 conf.build)
         //
         // A quick sanity check on the list of project names
         //
-        val projectNames = conf.build.projects map (_.name.toLowerCase)
-        if (projectNames.intersect(Seq("default", "standard", "dbuild", "root", ".")).nonEmpty) {
+        val projectNames = projects map (_.name)
+        if (projectNames.map (_.toLowerCase).intersect(Seq("default", "standard", "dbuild", "root", ".")).nonEmpty) {
           sys.error("The project names \"dbuild\", \"root\", \"default\", \"standard\", and \".\" are reserved; please choose a different name.")
         }
-        val validCharset = (('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_').toSet
+        val validCharset = (('A' to 'Z') ++ ('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_').toSet
         val illegalProjectNames = projectNames.filterNot(_ forall validCharset)
         if (illegalProjectNames.nonEmpty) {
           sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed: ",
             ", ", ""))
         }
         //
-        val notifTask = new Notifications(conf, confName, log)
+        val notifTask = new Notifications(generalOptions, confName, log)
         // add further new tasks at the beginning of this list, leave notifications at the end
-        val tasks: Seq[OptionTask] = Seq(new DeployBuild(conf, log), notifTask)
-        tasks foreach { _.beforeBuild }
+        val tasks: Seq[OptionTask] = Seq(new DeployBuild(generalOptions, log), notifTask)
+        tasks foreach { _.beforeBuild(projectNames) }
         // afterTasks may be called when the build is complete, or when something went wrong.
         // Some tasks (for instance deploy) may be unable to run when some error conditions
         // occurred. Each should detect the error conditions; what we offer for them to check is:
@@ -133,11 +135,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             // subproject also fails in the same manner.
             val msg = "Timeout: extraction plus building took longer than " + extractionPlusBuildDuration
             def timeoutOutcome(name: String) = BuildFailed(name, Seq(), msg)
-            val outcomes = conf.build.projects.map { p => timeoutOutcome(p.name) }
+            val outcomes = projects.map { p => timeoutOutcome(p.name) }
             Future(new BuildFailed(".", outcomes, msg) with TimedOut)
           }
 
-        val extractionOutcome = analyze(conf.build, log.newNestedLogger(hashing sha1 conf.build))
+        val extractionOutcome = analyze(projects, log.newNestedLogger(hashing sha1 projects))
         Future.firstCompletedOf(Seq(extractionWatchdog, extractionOutcome)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>
@@ -166,14 +168,14 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 case Right(o) => o
               }
 
-              nest(RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)) { fullBuild =>
+              nest(RepeatableDistributedBuild.fromExtractionOutcome(extractionOutcome)) { fullBuild =>
                 // what we call "RepeatableDistributedBuild" is actually only the portion of data that
                 // affect the build. Further options that do /not/ affect the build, but control dbuild in
                 // other ways (notifications, resolvers, etc), are in the GeneralOptions.
                 // In order to present to the user a new complete configuration that can be used as-is to
                 // restart dbuild, and which contains the RepeatableDistributedBuild data, we create
                 // a new full DBuildConfiguration.
-                val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, conf.options)
+                val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, generalOptions)
                 val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
                 writeDependencies(fullBuild, fullLogger)
                 nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
@@ -306,11 +308,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   }
 
   // Asynchronously extract information from builds.
-  def analyze(config: DistributedBuildConfig, log: Logger): Future[ExtractionOutcome] = {
+  def analyze(projects: Seq[ProjectBuildConfig], log: Logger): Future[ExtractionOutcome] = {
     implicit val ctx = context.system
-    val uuid = hashing sha1 config
+    val uuid = hashing sha1 projects
     val futureOutcomes: Future[Seq[ExtractionOutcome]] =
-      Future.traverse(config.projects) { projConfig =>
+      Future.traverse(projects) { projConfig =>
         val extractionDuration = Timeouts.extractionTimeout.duration
         val watchdog = Timeouts.after(extractionDuration,
           using = ctx.scheduler)(

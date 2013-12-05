@@ -587,9 +587,7 @@ trait ProjectOptions {
   def useJGit: Boolean
 }
 abstract class BuildOptions extends ExtraOptions with ProjectOptions
-object BuildOptions {
-  def dummy() = sys.error("Internal error: no buildOptions.")
-}
+
 @JsonDeserialize(using = classOf[DeprecatedBuildOptionsDeserializer])
 abstract class DeprecatedBuildOptions
 class DeprecatedBuildOptionsDeserializer extends JsonDeserializer[BuildOptions] {

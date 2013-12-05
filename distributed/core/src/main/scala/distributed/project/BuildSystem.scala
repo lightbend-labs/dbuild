@@ -105,6 +105,6 @@ object BuildSystem {
       val system = BuildSystem.forName(config.system, systems)
       config.expandDefaults(defaults).copy(extra = Some(system.expandExtra(config.extra, systems, defaults)))
     }
-    build.copy(projects = build.projects.map { expandProject(_, build) })
+    build.projects.map { expandProject(_, build) }
   }
 }

@@ -44,7 +44,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     case Some(ec: AssembleExtraConfig) =>
       // perform the defaults substitution in turn on the nested projects
       ec.copy(parts = ec.parts.map { nestedConf =>
-        BuildSystem.expandDistributedBuildConfig(nestedConf, systems)
+        nestedConf.copy(projects = BuildSystem.expandDistributedBuildConfig(nestedConf, systems))
       })
     case _ => throw new Exception("Internal error: Assemble build config options have the wrong type. Please report")
   }

@@ -52,8 +52,8 @@ private case class ProjectBuildConfigShadow(name: String,
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
-  crossVersion: Option[String] = None,
-  useJGit: Option[Boolean] = None,
+  @JsonProperty("cross-version") crossVersion: Option[String] = None,
+  @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = Some(new Space("default")),
   extra: JsonNode = null)
 

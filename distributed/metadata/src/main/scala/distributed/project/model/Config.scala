@@ -20,8 +20,8 @@ case class ProjectBuildConfig(name: String,
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
-  crossVersion: Option[String] = None,
-  useJGit: Option[Boolean] = None,
+  @JsonProperty("cross-version") crossVersion: Option[String] = None,
+  @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   extra: Option[ExtraConfig]
 ) {
   // after the initial expansion

@@ -142,27 +142,37 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
         // to make sure all is in order
         try IO.withTemporaryDirectory { dir =>
           val cache = Repository.default
-          // let's expand "."
+          // let's expand ".":
+          // flattenAndCheckProjectList() will check that the listed project names listed in the
+          // deploy options exist and are used legally. From the RepeatableDistributedBuild,
+          // here we only use the list of project names. 
           val projList = options.flattenAndCheckProjectList(build.builds.map { _.config.name }.toSet)
 
           val selected = projList.map { depl =>
             build.repeatableBuilds.find(_.config.name == depl.name) match {
-              case None => sys.error("Error during deploy: \"" + depl.name + "\" is not a project name.")
+              // It should always find it: flattenAndCheckProjectList(), above, is supposed to check the same condition
+              case None => sys.error("Internal error during deploy: \"" + depl.name + "\" is not a project name.")
               case Some(proj) => (depl, proj) // (deploy request,RepeatableProjectBuild)
             }
           }
 
+          // It may be that certain projects listed in the Seq[RepeatableProjectBuild] have been
+          // skipped, for whatever reason. If there is no outcome, the project was not built.
           val (good, bad) = selected partition {
             case (depl, proj) =>
-              val outcome = projectOutcomes.
-                getOrElse(proj.config.name, sys.error("Internal map error in deploy, unknown \"" + proj.config.name + "\". Please report."))
-              outcome.isInstanceOf[BuildGood]
+              val optOutcome = projectOutcomes.get(proj.config.name)
+              optOutcome match {
+                case None =>
+                  log.info("No outcome for project " + proj.config.name + " (skipped)")
+                  false
+                case Some(outcome) => outcome.isInstanceOf[BuildGood]
+              }
           }
 
           def logDepl(elems: Set[(SelectorElement, RepeatableProjectBuild)]) =
             ": " + elems.map(_._1.name).toSeq.sorted.mkString("", ", ", "")
           if (good.nonEmpty) log.info("Deploying" + logDepl(good))
-          if (bad.nonEmpty) log.warn("Currently broken, cannot deploy" + logDepl(bad))
+          if (bad.nonEmpty) log.warn("Cannot deploy" + logDepl(bad))
 
           if (good.nonEmpty) try {
             good map {

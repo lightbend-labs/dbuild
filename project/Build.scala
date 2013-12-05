@@ -15,7 +15,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.7.0"
+  def MyVersion: String = "0.7.1-SNAPSHOT"
   
   lazy val root = (
     Project("root", file(".")) 
@@ -65,12 +65,14 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val dcore = (
       DmodProject("core")
+      dependsOnRemote(javaMail)
       dependsOn(dmeta, graph, hashing, logging, drepo)
       dependsOnSbt(sbtIo)
     )
   lazy val dprojects = (
       DmodProject("projects")
       dependsOn(dcore, logging)
+      dependsOnRemote(javaMail, commonsIO)
       dependsOnSbt(sbtIo, sbtIvy)
     )
   lazy val dactorProjects = (
@@ -163,8 +165,8 @@ trait BuildHelper extends Build {
 
   def skip210 = 
     Seq(skip in compile <<= scalaVersion.map(_.startsWith("2.10")),
-        compileInputs in doc in Compile <<= (compileInputs in doc in Compile,skip in compile).map( (c,s) =>
-          if(s) c.copy(config = c.config.copy(sources = List())) else c ) )
+        sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
+          if(s) List() else c ) )
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,

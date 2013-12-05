@@ -18,12 +18,12 @@ import distributed.repo.core.ProjectDirs
 import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
-case class RunDistributedBuild(conf: DBuildConfiguration, confName: String, target: File, logger: Logger)
+case class RunDistributedBuild(conf: DBuildConfiguration, confName: String, buildTarget: Option[String], logger: Logger)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository) extends Actor {
   def receive = {
-    case RunDistributedBuild(conf, confName, target, log) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(conf, confName, buildTarget, log) => forwardingErrorsToFutures(sender) {
       val listener = sender
       implicit val ctx = context.system
       val extractionPhaseDuration = Timeouts.extractionPhaseTimeout.duration
@@ -40,7 +40,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val validCharset = (('a' to 'z') ++ ('0' to '9') :+ '-' :+ '_').toSet
         val illegalProjectNames = projectNames.filterNot(_ forall validCharset)
         if (illegalProjectNames.nonEmpty) {
-          sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed:",
+          sys.error(illegalProjectNames.mkString("Some project names contain an illegal character: only letters, numbers, dash and underscore are allowed: ",
             ", ", ""))
         }
         //
@@ -129,7 +129,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             Future(new BuildFailed(".", outcomes, msg) with TimedOut)
           }
 
-        val extractionOutcome = analyze(conf.build, target, log.newNestedLogger(hashing sha1 conf.build))
+        val extractionOutcome = analyze(conf.build, log.newNestedLogger(hashing sha1 conf.build))
         Future.firstCompletedOf(Seq(extractionWatchdog, extractionOutcome)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>
@@ -159,21 +159,18 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               }
 
               nest(RepeatableDistributedBuild.fromExtractionOutcome(conf, extractionOutcome)) { fullBuild =>
-                // evaluate repeatableBuilds in order to force cycles to be checked at this time
-                nest(fullBuild.repeatableBuilds) { rb =>
-                  // what we call "RepeatableDistributedBuild" is actually only the portion of data that
-                  // affect the build. Further options that do /not/ affect the build, but control dbuild in
-                  // other ways (notifications, resolvers, etc), are in the GeneralOptions.
-                  // In order to present to the user a new complete configuration that can be used as-is to
-                  // restart dbuild, and which contains the RepeatableDistributedBuild data, we create
-                  // a new full DBuildConfiguration.
-                  val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, conf.options)
-                  val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
-                  writeDependencies(fullBuild, fullLogger)
-                  nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
-                    val futureBuildResult = runBuild(target, fullBuild, expandedDBuildConfig.uuid, fullLogger)
-                    afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
-                  }
+                // what we call "RepeatableDistributedBuild" is actually only the portion of data that
+                // affect the build. Further options that do /not/ affect the build, but control dbuild in
+                // other ways (notifications, resolvers, etc), are in the GeneralOptions.
+                // In order to present to the user a new complete configuration that can be used as-is to
+                // restart dbuild, and which contains the RepeatableDistributedBuild data, we create
+                // a new full DBuildConfiguration.
+                val expandedDBuildConfig = DBuildConfiguration(fullBuild.repeatableBuildConfig, conf.options)
+                val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
+                writeDependencies(fullBuild, fullLogger)
+                nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
+                  val futureBuildResult = runBuild(fullBuild, expandedDBuildConfig.uuid, buildTarget, fullLogger)
+                  afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                 }
               }
 
@@ -241,12 +238,22 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
 
   implicit val buildTimeout: Timeout = 4 hours
 
-  def runBuild(target: File, build: RepeatableDistributedBuild, uuid: String, log: Logger): Future[BuildOutcome] = {
+  def runBuild(build: RepeatableDistributedBuild, uuid: String, buildTarget: Option[String], log: Logger): Future[BuildOutcome] = {
     implicit val ctx = context.system
     val tdir = ProjectDirs.targetDir
     type State = Future[BuildOutcome]
-    def runBuild(): Seq[State] =
-      build.graph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
+    def runBuild(): Seq[State] = {
+      // are we building a specific target? If so, filter the graph
+      import build.graph
+      val targetGraph = buildTarget match {
+        case None => graph
+        case Some(target) =>
+          graph.FilteredByNodesGraph(graph.subGraphFrom(graph.nodeForName(target) getOrElse
+            sys.error("The selected target project " + target + " was not found in this configuration file.")))
+        // if you want to extend buildTarget to make it a SeqString, just use this instead:
+        // graph.FilteredByNodesGraph(targets.toSet.flatMap { p: String => graph.subGraphFrom(graph.nodeForName(p)) })
+      }
+      targetGraph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
         val b = build.buildMap(p.config.name)
         Future.sequence(children) flatMap {
           // excess of caution? In theory all Future.sequence()s
@@ -265,12 +272,12 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 using = ctx.scheduler)(
                   Future(new BuildFailed(b.config.name, outcomes,
                     "Timeout: building project " + b.config.name + " took longer than " + buildDuration) with TimedOut))
-              val buildOutcome = buildProject(tdir, b, outProjects, outcomes, log.newNestedLogger(b.config.name))
+              val buildOutcome = buildProject(b, outProjects, outcomes, log.newNestedLogger(b.config.name))
               Future.firstCompletedOf(Seq(watchdog, buildOutcome))
             }
         }
       }(Some((a, b) => a.config.name < b.config.name))
-
+    }
     // TODO - REpository management here!!!!
     ProjectDirs.userRepoDirFor(uuid) { localRepo =>
       // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
@@ -291,10 +298,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   }
 
   // Asynchronously extract information from builds.
-  def analyze(config: DistributedBuildConfig, target: File, log: Logger): Future[ExtractionOutcome] = {
+  def analyze(config: DistributedBuildConfig, log: Logger): Future[ExtractionOutcome] = {
     implicit val ctx = context.system
     val uuid = hashing sha1 config
-    val tdir = target / "extraction" / uuid
     val futureOutcomes: Future[Seq[ExtractionOutcome]] =
       Future.traverse(config.projects) { projConfig =>
         val extractionDuration = Timeouts.extractionTimeout.duration
@@ -303,7 +309,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             Future(new ExtractionFailed(projConfig.name, Seq(),
               "Timeout: extraction of project " + projConfig.name + " took longer than " + extractionDuration) with TimedOut))
         val outcome =
-          extract(tdir, log)(ExtractionConfig(projConfig, config.options getOrElse BuildOptions()))
+          extract(uuid, log)(ExtractionConfig(projConfig, config.options getOrElse BuildOptions()))
         Future.firstCompletedOf(Seq(watchdog, outcome))
       }
     futureOutcomes map { s: Seq[ExtractionOutcome] =>
@@ -318,12 +324,12 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   }
 
   // Our Asynchronous API.
-  def extract(target: File, logger: Logger)(config: ExtractionConfig): Future[ExtractionOutcome] =
-    (extractor ? ExtractBuildDependencies(config, target, logger.newNestedLogger(config.buildConfig.name))).mapTo[ExtractionOutcome]
+  def extract(uuidDir: String, logger: Logger)(config: ExtractionConfig): Future[ExtractionOutcome] =
+    (extractor ? ExtractBuildDependencies(config, uuidDir, logger.newNestedLogger(config.buildConfig.name))).mapTo[ExtractionOutcome]
 
   // TODO - Repository Knowledge here
   // outProjects is the list of Projects that will be generated by this build, as reported during extraction.
   // we will need it to calculate the version string in LocalBuildRunner, but won't need it any further 
-  def buildProject(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], logger: Logger): Future[BuildOutcome] =
-    (builder ? RunBuild(target, build, outProjects, children, logger)).mapTo[BuildOutcome]
+  def buildProject(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], logger: Logger): Future[BuildOutcome] =
+    (builder ? RunBuild(build, outProjects, children, logger)).mapTo[BuildOutcome]
 }

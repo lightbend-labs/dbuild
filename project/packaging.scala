@@ -56,6 +56,7 @@ object Packaging {
   local
   maven-central
   sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots
+  sonatype-releases: https://oss.sonatype.org/content/repositories/releases
   java-annoying-cla-shtuff: http://download.java.net/maven/2/
   typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases
   typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]

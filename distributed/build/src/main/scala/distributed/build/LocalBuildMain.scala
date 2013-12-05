@@ -14,8 +14,9 @@ import distributed.project.dependencies.Extractor
 import distributed.support.BuildSystemCore
 import akka.pattern.ask
 import akka.util.duration._
+import distributed.repo.core.ProjectDirs.checkForObsoleteDirs
 
-class LocalBuildMain(repos: List[xsbti.Repository]) {
+class LocalBuildMain(repos: List[xsbti.Repository], cleanup: CleanupOptions) {
 
   val targetDir = ProjectDirs.targetDir
   val resolvers = Seq(
@@ -44,12 +45,14 @@ class LocalBuildMain(repos: List[xsbti.Repository]) {
   }
   val repository = Repository.default
   val logger = new logging.ActorLogger(logMgr)
-  val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, logger)))
+  checkForObsoleteDirs(logger.warn _)
+
+  val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, targetDir, cleanup, logger)))
   // TODO - Look up target elsewhere...
 
-  def build(conf: DBuildConfiguration, confName: String): BuildOutcome = {
+  def build(conf: DBuildConfiguration, confName: String, buildTarget: Option[String]): BuildOutcome = {
     implicit val timeout: Timeout = Timeouts.dbuildTimeout
-    val result = builder ? RunLocalBuild(conf, confName, targetDir)
+    val result = builder ? RunLocalBuild(conf, confName, buildTarget)
     Await.result(result.mapTo[BuildOutcome], akka.util.Duration.Inf)
   }
   def dispose(): Unit = {

@@ -30,9 +30,10 @@ object Dependencies {
   val aws            = "com.amazonaws" % "aws-java-sdk" % "1.3.29"
   val uriutil        = "org.eclipse.equinox" % "org.eclipse.equinox.common" % "3.6.0.v20100503"
 
-  val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.1"
+  val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.2"
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
   val commonsLang    = "commons-lang" % "commons-lang" % "2.6"
+  val commonsIO      = "commons-io" % "commons-io" % "2.4"
 
   val jgit           = "org.eclipse.jgit" % "org.eclipse.jgit" % "3.1.0.201310021548-r"
 

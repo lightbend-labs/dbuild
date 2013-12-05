@@ -1,5 +1,6 @@
 import com.typesafe.config.ConfigValue
 import collection.JavaConverters._
+import java.nio.ByteBuffer
 package object hashing {
 
   def sha1(t: Any): String =
@@ -11,6 +12,10 @@ package object hashing {
   def messageDigestHex(md: java.security.MessageDigest)(t: Any): String = {
     def addBytes(obj: Any): Unit = obj match {
       case b: Byte            => md update b
+      case i: Int             => {
+        // convert into array of bytes
+        md update ByteBuffer.allocate(4).putInt(i).array()
+      }
       case bytes: Array[Byte] => md update bytes
       case s: String          => md update s.getBytes
       case s: Product         =>

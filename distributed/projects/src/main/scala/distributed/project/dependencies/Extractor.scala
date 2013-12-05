@@ -14,6 +14,8 @@ import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.logging.Logger.prepareLogMsg
 import org.apache.ivy.core.module.id.ModuleId
 import distributed.project.model.ProjectRef
+import distributed.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
+import distributed.project.model.ExtractionOK
 
 /** This is used to extract dependencies from projects. */
 class Extractor(
@@ -50,13 +52,19 @@ class Extractor(
   def extract(tdir: File, extractionConfig: ExtractionConfig, logger: logging.Logger): ExtractionOutcome = try {
     val build = extractionConfig.buildConfig
     distributed.repo.core.ProjectDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
+      updateTimeStamp(dir)
       // NB: while resolving projects:
       // extractor.resolver.resolve() only resolves the main URI,
       // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
       val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, extractionConfig.buildOptions, dir, this, logger), extractionConfig.buildOptions)
       logger.debug("Repeatable Config: " + writeValue(config))
-      extractedResolvedWithCache(config, dir, logger)
+      val outcome = extractedResolvedWithCache(config, dir, logger)
+      outcome match {
+        case _: ExtractionOK => markSuccess(dir)
+        case _ =>
+      }
+      outcome
     }
   } catch {
     case e =>

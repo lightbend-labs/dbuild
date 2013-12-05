@@ -12,6 +12,7 @@ import com.typesafe.config.ConfigFactory
 import distributed.project.model.Utils.readValueT
 import distributed.utils.Time.timed
 import collection.immutable.SortedMap
+import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -43,8 +44,8 @@ class SbtBuildMain extends xsbti.AppMain {
     println("Starting dbuild...")
     val args = configuration.arguments
     //      println("Args (" + (configuration.arguments mkString ",") + ")")
-    if (args.length != 1) {
-      println("Usage: dbuild {build-file}")
+    if (args.length != 1 && args.length != 2) {
+      println("Usage: dbuild {build-file} [{build-target}]")
       Exit(1)
     } else {
       try {
@@ -52,21 +53,26 @@ class SbtBuildMain extends xsbti.AppMain {
         if (!configFile.isFile())
           sys.error("Configuration file not found")
         println("Using configuration: " + configFile.getName)
+        val buildTarget = if (args.length == 2) Some(args(1)) else None
+        buildTarget foreach { t => println("Build target: " + t) }
         val (config, resolvers) =
           try {
             val properties = readProperties(configFile): Seq[String]
             val propConfigs = properties map { s =>
               println("Including properties file: " + s)
-              val syntax = com.typesafe.config.ConfigSyntax.PROPERTIES
-              val parseOptions = com.typesafe.config.ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)
-              val config = com.typesafe.config.ConfigFactory.parseURL(new java.net.URI(s).toURL, parseOptions)
+              val syntax = ConfigSyntax.PROPERTIES
+              val parseOptions = ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)
+              val config = ConfigFactory.parseURL(new java.net.URI(s).toURL, parseOptions)
               config.atKey("vars")
             }
-            val initialConfig = com.typesafe.config.ConfigFactory.parseFile(configFile)
-            val endConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
-            //
-            // Let's extract the (possible) list of resolvers defined in the configuration file
+            val initialConfig = ConfigFactory.parseFile(configFile)
+            val foldConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
+            val systemVars = ConfigFactory.systemProperties().atPath("vars.sys")
+            // let system properties take precedence over values in the config file
+            // which should happen to be in the same vars.sys space
+            val endConfig = systemVars.withFallback(foldConfig)
             val resolvedConfig = endConfig.resolve
+            // Let's extract the (possible) list of resolvers defined in the configuration file
             val explicitResolvers = SortedMap[String, (String, Option[String])]() ++
               (if (resolvedConfig.hasPath("options.resolvers")) {
                 import collection.JavaConverters._
@@ -87,7 +93,7 @@ class SbtBuildMain extends xsbti.AppMain {
             //
             // After deserialization, Vars is empty (see VarDeserializer)
             // Let's also empty the list of property files, which is now no longer needed
-            val conf = readValueT[DBuildConfiguration](endConfig).copy(properties=Seq.empty)
+            val conf = readValueT[DBuildConfiguration](endConfig).copy(properties = Seq.empty)
             (conf, explicitResolvers.values)
           } catch {
             case e: Exception =>
@@ -114,9 +120,9 @@ class SbtBuildMain extends xsbti.AppMain {
           // of toList is "backing.reverse". So we have to reverse again.
           (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
         }
-        val main = new LocalBuildMain(repos)
+        val main = new LocalBuildMain(repos, config.options.cleanup)
         val (outcome, time) = try {
-          timed { main.build(config, configFile.getName) }
+          timed { main.build(config, configFile.getName, buildTarget) }
         } finally main.dispose()
         println("Result: " + outcome.status)
         println("Build " + (if (outcome.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + time)

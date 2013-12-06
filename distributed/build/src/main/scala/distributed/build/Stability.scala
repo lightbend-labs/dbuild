@@ -6,7 +6,12 @@ import Path._
 import project.model._
 import java.io.File
 import distributed.repo.core.{ LocalRepoHelper, Repository }
-import org.apache.commons.io.FileUtils
+import org.apache.commons.io.{ FileUtils, IOUtils }
+import collection.JavaConversions._
+import java.util.jar.JarInputStream
+import java.util.jar.JarFile
+import java.util.jar.JarEntry
+import java.io.FileInputStream
 
 class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Stability"
@@ -62,11 +67,11 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
                   val xNotY = x.diff(y)
                   val ok = xNotY.isEmpty
                   if (!ok) {
-                    log.info("Some jars are in " + xName + " but not in " + yName + ":")
+                    log.error("Some jars are in " + xName + " but not in " + yName + ":")
                     xNotY.take(logLimit).foreach { s =>
-                      log.info("  " + s)
+                      log.error("  " + s)
                     }
-                    if (xNotY.length > logLimit) log.info("  ... and others")
+                    if (xNotY.length > logLimit) log.error("  ... and others")
                   }
                   ok
                 }
@@ -79,20 +84,77 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
                 val sameAB = checkPaths(pathsA, pathsB, "a", "b")
                 val sameBA = checkPaths(pathsB, pathsA, "b", "a")
                 if (!(sameAB && sameBA)) {
-                  sys.error("Stability comparison failed: file lists differ")
+                  sys.error("Comparison failed: file lists differ")
                 }
-                val results = pathsA.toSet.map { p: String =>
-                  val same = FileUtils.contentEquals(new File(dirA, p), new File(dirB, p))
-                  // INSUFFICIENT! I need to expand the jar, unfortunately the jar compression is not deterministic
-                  if (!same) Some("Files differ: " + p) else None
-                }
-                val badResults = results.flatten
-                if (badResults.nonEmpty) {
-                  badResults.take(logLimit).foreach { s =>
-                    log.info("  " + s)
+                pathsA.foreach { p: String =>
+                  def getEntries(jf: JarFile) = {
+                    jf.entries.map { je =>
+                      val name = je.getName()
+                      if (je.isDirectory() || name == JarFile.MANIFEST_NAME)
+                        None
+                      else
+                        Some(je.getName, je)
+                    }.flatten.toMap
                   }
-                  if (badResults.size > logLimit) log.info("  ... and others")
-                } else log.info("Comparison OK.")
+                  val fa = new File(dirA, p)
+                  val jfa = new JarFile(fa)
+                  val fb = new File(dirB, p)
+                  val jfb = new JarFile(fb)
+                  val aMap = getEntries(jfa)
+                  val bMap = getEntries(jfb)
+                  def compareJar(xMap: Map[String, JarEntry], yMap: Map[String, JarEntry], xName: String, yName: String, jar: String) = {
+                    val xNotY = xMap.keySet.diff(yMap.keySet)
+                    val ok = xNotY.isEmpty
+                    if (!ok) {
+                      log.error("Within two corresponding jar files, some files are in " + xName + " but not in " + yName + ":")
+                      log.error("jar file: " + jar)
+                      xNotY.take(logLimit).foreach { s =>
+                        log.error("  " + s)
+                      }
+                      if (xNotY.size > logLimit) log.error("  ... and others")
+                    }
+                    ok
+                  }
+                  val sameJarAB = compareJar(aMap, bMap, "a", "b", p)
+                  val sameJarBA = compareJar(bMap, aMap, "b", "a", p)
+                  if (!(sameJarAB && sameJarBA)) {
+                    sys.error("Comparison failed: two corresponding jar files do not contain the same file names")
+                  }
+
+                  // same jar files, and the jar files contain the same file names. Are the files inside the jars
+                  // actually identical?
+                  //
+                  // To begin with, compare CRCs. If no CRCs, resort to comparing the files.
+                  val files = aMap.keySet
+                  files.foreach { f =>
+                    val aCRC = aMap(f).getCrc()
+                    val bCRC = bMap(f).getCrc()
+                    if (aCRC != -1 && bCRC != -1) {
+                      if (aCRC != bCRC) {
+                        log.error("Within two corresponding jar files, two files have different CRCs.")
+                        log.error("jar file: " + p)
+                        log.error("file in the jar: " + f)
+                        def toHex(l: Long) = {
+                          val h = java.lang.Long.toHexString(l).toUpperCase()
+                          "0000000000000000".substring(Math.min(16, h.length)) + h;
+                        }
+                        log.error("a: " + toHex(aCRC) + ", b: " + toHex(bCRC))
+                        sys.error("Comparison failed: two files in corresponding jar files have different CRCs.")
+                      }
+                    } else {
+                      val ia = jfa.getInputStream(aMap(f))
+                      val ib = jfb.getInputStream(bMap(f))
+                      if (!IOUtils.contentEquals(ia, ib)) {
+                        log.error("Within two corresponding jar files, two files have different contents.")
+                        log.error("jar file: " + p)
+                        log.error("file in the jar: " + f)
+                        log.error("The two files in a and in b are not the same.")
+                        sys.error("Comparison failed: two files in corresponding jar files have different contents.")
+                      }
+                    }
+                  }
+                }
+                log.info("Comparison OK.")
               }
             }
           }

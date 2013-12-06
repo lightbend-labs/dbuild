@@ -83,6 +83,7 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
                 }
                 val results = pathsA.toSet.map { p: String =>
                   val same = FileUtils.contentEquals(new File(dirA, p), new File(dirB, p))
+                  // INSUFFICIENT! I need to expand the jar, unfortunately the jar compression is not deterministic
                   if (!same) Some("Files differ: " + p) else None
                 }
                 val badResults = results.flatten

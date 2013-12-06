@@ -30,6 +30,7 @@ Contents
    spaces
    deploy
    notifications
+   stability
    repositories
    plugin
    caveats

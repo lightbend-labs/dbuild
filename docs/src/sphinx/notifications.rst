@@ -17,12 +17,10 @@ Notifications are controlled using the following description:
    {
     build: {projects:..., options:...}
 
-    options: {
-     notifications: {
-      send      : [<notification1>,<notification2>,...]
-      default   : [<recipient-pattern1>,<recipient-pattern2>,...]
-      templates : [<optional-template1>,
-     }
+    notifications: {
+     send      : [<notification1>,<notification2>,...]
+     default   : [<recipient-pattern1>,<recipient-pattern2>,...]
+     templates : [<optional-template1>,
     }
    }
 
@@ -501,5 +499,5 @@ For example, the long format of the standard "email" template is:
 
 |
 
-*Next:* :doc:`repositories`.
+*Next:* :doc:`stability`.
 

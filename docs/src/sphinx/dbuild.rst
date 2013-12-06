@@ -74,8 +74,9 @@ options
   .. code-block:: javascript
 
      {
-      "deploy"        : [ <deploy_1>, <deploy_2>,...]
+      "deploy"        : [ <deploy_1>, <deploy_2>, ... ]
       "notifications" : <notifications>
+      "stability"     : [ <stability_1>, <stability_2>, ... ]
       "resolvers"     : { label1: resolv1, label2: resolv2, ...}
       "cleanup"       : <cleanup_options>
      }

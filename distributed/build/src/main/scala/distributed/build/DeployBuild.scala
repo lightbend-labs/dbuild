@@ -252,16 +252,29 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
                     JSch.setConfig("StrictHostKeyChecking", "no")
                     import log.{ debug => ld, info => li, warn => lw, error => le }
                     JSch.setLogger(new com.jcraft.jsch.Logger {
-                      def isEnabled(level:Int) = true
-                      def log(level:Int,message:String) = level match {
-                        // levels are arranged so that ssh info is debug for us
-                        case com.jcraft.jsch.Logger.DEBUG => ld(message)
-                        case com.jcraft.jsch.Logger.INFO => ld(message)
-                        case com.jcraft.jsch.Logger.WARN => li(message)
-                        case com.jcraft.jsch.Logger.ERROR => lw(message)
-                        case com.jcraft.jsch.Logger.FATAL => le(message)
+                      def isEnabled(level: Int) = true
+                      import com.jcraft.jsch.Logger._
+                      def log(level: Int, message: String) = level match {
+                        // levels are arranged so that ssh info is debug for dbuild
+                        case DEBUG => ld(message)
+                        case INFO => ld(message)
+                        case WARN => li(message)
+                        case ERROR => lw(message)
+                        case FATAL => le(message)
                       }
                     })
+                    // try to locate a private key; if it exists, add
+                    // the identity (for passwordless authentication)
+                    // Only the default location is supported, and no passphrase
+                    val privateKeyLocation = new File(System.getProperty("user.home")) / ".ssh" / "id_rsa"
+                    try {
+                      val is = new java.io.FileInputStream(privateKeyLocation)
+                      val privateKey = org.apache.commons.io.IOUtils.toByteArray(is)
+                      val passPrivateKey = "".getBytes()
+                      jsch.addIdentity(credentials.user, privateKey, null, passPrivateKey)
+                    } catch {
+                      case e: java.io.FileNotFoundException => // ignore
+                    }
                     val session = jsch.getSession(credentials.user, credentials.host, 22)
                     session.setPassword(credentials.pass)
                     session.connect(900)

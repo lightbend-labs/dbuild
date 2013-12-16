@@ -250,6 +250,18 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
                   init = { credentials =>
                     val jsch = new JSch()
                     JSch.setConfig("StrictHostKeyChecking", "no")
+                    import log.{ debug => ld, info => li, warn => lw, error => le }
+                    JSch.setLogger(new com.jcraft.jsch.Logger {
+                      def isEnabled(level:Int) = true
+                      def log(level:Int,message:String) = level match {
+                        // levels are arranged so that ssh info is debug for us
+                        case com.jcraft.jsch.Logger.DEBUG => ld(message)
+                        case com.jcraft.jsch.Logger.INFO => ld(message)
+                        case com.jcraft.jsch.Logger.WARN => li(message)
+                        case com.jcraft.jsch.Logger.ERROR => lw(message)
+                        case com.jcraft.jsch.Logger.FATAL => le(message)
+                      }
+                    })
                     val session = jsch.getSession(credentials.user, credentials.host, 22)
                     session.setPassword(credentials.pass)
                     session.connect(900)

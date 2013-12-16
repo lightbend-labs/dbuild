@@ -18,6 +18,7 @@ import org.omg.PortableInterceptor.SUCCESSFUL
 import logging.Logger.prepareLogMsg
 import distributed.logging.Logger
 import Creds.loadCreds
+import com.jcraft.jsch.{ IO => sshIO, _ }
 
 class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
@@ -45,7 +46,7 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
       uri.getScheme match {
         case "file" =>
           if (options.credentials != None) log.warn("Credentials will be ignored while deploying to " + uri)
-        case "http" | "https" | "s3" =>
+        case "ssh" | "http" | "https" | "s3" =>
           options.credentials match {
             case None => sys.error("Credentials are required when deploying to " + uri)
             case Some(credsFile) =>
@@ -238,6 +239,36 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
                       val out = response.get.path.get.replaceFirst("^/", "")
                       if (out != relative) log.info("Deployed:  " + out)
                     }
+                  })
+
+              case "ssh" =>
+                // deploy to a Maven repository
+                deployStuff[Unit](options, dir, log,
+                  init = { credentials =>
+                    val userInfo = new UserInfo {
+                      def promptPassphrase(message: String) = false
+                      def promptPassword(message: String) = true
+                      def getPassphrase() = sys.error("Internal error: getPassphrase() was called.")
+                      def showMessage(message: String) = log.info(message)
+                      def promptYesNo(message: String) = {
+                        log.info("SSH session asked: "+message)
+                        log.info("we answer \"yes\".")
+                        true
+                      }
+                      def getPassword() = credentials.pass
+                    }
+                    val jsch=new JSch()
+                    val session=jsch.getSession(credentials.user, credentials.host, 22)
+                    session.setUserInfo(userInfo)
+                    session.connect()
+                    session
+                    },
+                  message = { (log, relative) =>
+                    log.info("Deploying: " + relative)
+                  },
+                  deploy = { (session, credentials, relative, file, uri) =>
+                    // see http://www.jcraft.com/jsch/examples/ScpTo.java.html
+                    
                   })
 
               case "s3" =>

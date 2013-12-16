@@ -248,23 +248,13 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
                 // deploy to a Maven repository
                 deployStuff[ChannelSftp](options, dir, log,
                   init = { credentials =>
-                    val userInfo = new UserInfo {
-                      def promptPassphrase(message: String) = false
-                      def promptPassword(message: String) = true
-                      def getPassphrase() = sys.error("Internal error: getPassphrase() was called.")
-                      def showMessage(message: String) = log.info(message)
-                      def promptYesNo(message: String) = {
-                        log.info("SSH session asked: " + message)
-                        log.info("we answer \"yes\".")
-                        true
-                      }
-                      def getPassword() = credentials.pass
-                    }
                     val jsch = new JSch()
+                    JSch.setConfig("StrictHostKeyChecking", "no")
                     val session = jsch.getSession(credentials.user, credentials.host, 22)
-                    session.setUserInfo(userInfo)
-                    session.connect()
+                    session.setPassword(credentials.pass)
+                    session.connect(900)
                     val channel = session.openChannel("sftp")
+                    channel.connect(900)
                     channel match {
                       case sftp: ChannelSftp => sftp
                       case _ => sys.error("Could not open an SFTP channel.")
@@ -274,7 +264,21 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
                     log.info("Deploying: " + relative)
                   },
                   deploy = { (sftp, credentials, relative, file, uri) =>
-                    sftp.put(file.getCanonicalPath, uri.getPath)
+                    val path = uri.getPath
+                    def mkParents(s: String): Unit = {
+                      val l = s.lastIndexOf('/')
+                      val dir = s.substring(0, l)
+                      try {
+                        sftp.cd(dir)
+                      } catch {
+                        case e: Exception =>
+                          mkParents(dir)
+                          sftp.mkdir(dir)
+                      }
+                    }
+                    if (!path.startsWith("/")) sys.error("Internal error: ssh upload uri path is not absolute")
+                    mkParents(path)
+                    sftp.put(file.getCanonicalPath, path)
                   },
                   close = { sftp =>
                     if (sftp != null) {

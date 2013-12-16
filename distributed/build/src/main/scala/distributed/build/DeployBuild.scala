@@ -62,64 +62,67 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
     !(path.endsWith(".sha1") || path.endsWith(".md5"))
 
   def deployStuff[T](options: DeployOptions, dir: File, log: Logger, init: Creds => T,
-    message: (Logger, String) => Unit, deploy: (T, Creds, String, File, java.net.URI) => Unit) {
+    message: (Logger, String) => Unit, deploy: (T, Creds, String, File, java.net.URI) => Unit,
+    close: T => Unit = { _: T => () }) {
     val Some(credsFile) = options.credentials
     val credentials = loadCreds(credsFile)
     val handler = init(credentials)
-    val targetBaseURI = new java.net.URI(options.uri)
-    //
-    // We have to upload files in a certain order, in order to comply with
-    // the requirements of Artifactory concerning the upload of -SNAPSHOT artifacts.
-    // In particular, whenever there are a .pom and a .jar with the same name, and
-    // other artifacts in the same group, these artifacts get the same id only if:
-    // - the jar is uploaded first
-    // - the pom is uploaded immediately afterward
-    // - then the remaining artifacts are uploaded
-    // - finally, the checksums are uploaded after the main artifacts
-    //
+    try {
+      val targetBaseURI = new java.net.URI(options.uri)
+      //
+      // We have to upload files in a certain order, in order to comply with
+      // the requirements of Artifactory concerning the upload of -SNAPSHOT artifacts.
+      // In particular, whenever there are a .pom and a .jar with the same name, and
+      // other artifacts in the same group, these artifacts get the same id only if:
+      // - the jar is uploaded first
+      // - the pom is uploaded immediately afterward
+      // - then the remaining artifacts are uploaded
+      // - finally, the checksums are uploaded after the main artifacts
+      //
 
-    val allFiles = (dir.***).get.filter(f => !f.isDirectory)
-    val poms = allFiles.filter(f => f.getName.endsWith("-SNAPSHOT.pom"))
-    //
-    // we fold over the poms, reducing the set of files until we are left with just
-    // the files that are not in any pom-containing directory. Meanwhile, we accumulate
-    // the snapshot files in the right order, for each pom
-    val (remainder, newSeq) = poms.foldLeft((allFiles, Seq[File]())) {
-      case ((fileSeq, newSeq), pom) =>
-        val pomFile = pom.getCanonicalFile()
-        val thisDir = pomFile.getParentFile()
-        if (thisDir == null) sys.error("Unexpected: file has not parent in deploy")
-        // select the files in this directory (but not in subdirectories)
-        val theseFiles = (thisDir.***).get.filter(f => !f.isDirectory && f.getCanonicalFile().getParentFile() == thisDir)
-        // if there is a matching jar, upload the jar first
-        val jarFile = new java.io.File(pomFile.getCanonicalPath().replaceAll("\\.[^\\.]*$", ".jar"))
-        val thisSeq = if (theseFiles contains jarFile) {
-          val rest = theseFiles.diff(Seq(jarFile, pomFile)).partition(f => isNotChecksum(f.getName))
-          Seq(jarFile, pomFile) ++ rest._1 ++ rest._2
-        } else {
-          // no jar?? upload the pom first anyway
-          val rest = theseFiles.diff(Seq(pomFile)).partition(f => isNotChecksum(f.getName))
-          Seq(pomFile) ++ rest._1 ++ rest._2
-        }
-        //
-        (fileSeq.diff(theseFiles), newSeq ++ thisSeq)
-    }
+      val allFiles = (dir.***).get.filter(f => !f.isDirectory)
+      val poms = allFiles.filter(f => f.getName.endsWith("-SNAPSHOT.pom"))
+      //
+      // we fold over the poms, reducing the set of files until we are left with just
+      // the files that are not in any pom-containing directory. Meanwhile, we accumulate
+      // the snapshot files in the right order, for each pom
+      val (remainder, newSeq) = poms.foldLeft((allFiles, Seq[File]())) {
+        case ((fileSeq, newSeq), pom) =>
+          val pomFile = pom.getCanonicalFile()
+          val thisDir = pomFile.getParentFile()
+          if (thisDir == null) sys.error("Unexpected: file has not parent in deploy")
+          // select the files in this directory (but not in subdirectories)
+          val theseFiles = (thisDir.***).get.filter(f => !f.isDirectory && f.getCanonicalFile().getParentFile() == thisDir)
+          // if there is a matching jar, upload the jar first
+          val jarFile = new java.io.File(pomFile.getCanonicalPath().replaceAll("\\.[^\\.]*$", ".jar"))
+          val thisSeq = if (theseFiles contains jarFile) {
+            val rest = theseFiles.diff(Seq(jarFile, pomFile)).partition(f => isNotChecksum(f.getName))
+            Seq(jarFile, pomFile) ++ rest._1 ++ rest._2
+          } else {
+            // no jar?? upload the pom first anyway
+            val rest = theseFiles.diff(Seq(pomFile)).partition(f => isNotChecksum(f.getName))
+            Seq(pomFile) ++ rest._1 ++ rest._2
+          }
+          //
+          (fileSeq.diff(theseFiles), newSeq ++ thisSeq)
+      }
 
-    // We need in any case to upload the main files first,
-    // and only afterwards we can upload md5 and sha1 files
-    // (otherwise we get 404 errors from Artifactory)
-    // Note that a 409 error means the checksum calculated on
-    // the server does not match the checksum we are trying to upload
-    val split = remainder.partition(f => isNotChecksum(f.getName))
-    val ordered = newSeq ++ split._1 ++ split._2
+      // We need in any case to upload the main files first,
+      // and only afterwards we can upload md5 and sha1 files
+      // (otherwise we get 404 errors from Artifactory)
+      // Note that a 409 error means the checksum calculated on
+      // the server does not match the checksum we are trying to upload
+      val split = remainder.partition(f => isNotChecksum(f.getName))
+      val ordered = newSeq ++ split._1 ++ split._2
 
-    ordered foreach { file =>
-      val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error in relative paths creation during deployment. Please report.")
-      message(log, relative)
-      // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
-      val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
-      deploy(handler, credentials, relative, file, targetURI)
-    }
+      ordered foreach { file =>
+        val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error in relative paths creation during deployment. Please report.")
+        message(log, relative)
+        // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
+        val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
+        deploy(handler, credentials, relative, file, targetURI)
+      }
+    } finally { close(handler) }
   }
 
   /**
@@ -243,7 +246,7 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
 
               case "ssh" =>
                 // deploy to a Maven repository
-                deployStuff[Unit](options, dir, log,
+                deployStuff[ChannelSftp](options, dir, log,
                   init = { credentials =>
                     val userInfo = new UserInfo {
                       def promptPassphrase(message: String) = false
@@ -251,24 +254,35 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
                       def getPassphrase() = sys.error("Internal error: getPassphrase() was called.")
                       def showMessage(message: String) = log.info(message)
                       def promptYesNo(message: String) = {
-                        log.info("SSH session asked: "+message)
+                        log.info("SSH session asked: " + message)
                         log.info("we answer \"yes\".")
                         true
                       }
                       def getPassword() = credentials.pass
                     }
-                    val jsch=new JSch()
-                    val session=jsch.getSession(credentials.user, credentials.host, 22)
+                    val jsch = new JSch()
+                    val session = jsch.getSession(credentials.user, credentials.host, 22)
                     session.setUserInfo(userInfo)
                     session.connect()
-                    session
-                    },
+                    val channel = session.openChannel("sftp")
+                    channel match {
+                      case sftp: ChannelSftp => sftp
+                      case _ => sys.error("Could not open an SFTP channel.")
+                    }
+                  },
                   message = { (log, relative) =>
                     log.info("Deploying: " + relative)
                   },
-                  deploy = { (session, credentials, relative, file, uri) =>
-                    // see http://www.jcraft.com/jsch/examples/ScpTo.java.html
-                    
+                  deploy = { (sftp, credentials, relative, file, uri) =>
+                    sftp.put(file.getCanonicalPath, uri.getPath)
+                  },
+                  close = { sftp =>
+                    if (sftp != null) {
+                      sftp.disconnect()
+                      val session = sftp.getSession()
+                      if (session != null)
+                        session.disconnect()
+                    }
                   })
 
               case "s3" =>

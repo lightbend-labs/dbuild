@@ -44,6 +44,15 @@ repository-uri
   ``s3://bucket/path1/path2``
     The artifacts will be uploaded to an Amazon S3 bucket. Credentials must be specified.
 
+  ``ssh://hostname/path1/path2``
+    The artifacts will be uploaded using scp (sftp). The supplied
+    credentials (username and password) corresponding to that hostname will be used for
+    authentication. However, if the public key of this system has been added to the authorized
+    keys of the remote system (passwordless authentication), dbuild will be able to use those
+    keys to authenticate as well; the password specified in the credentials will be ignored.
+    In order to use key-based authentication, the private key of the system on which
+    dbuild runs must be in ``~/.ssh/id_rsa``; the passphrase must be empty.
+
 credentials
   A properties file containing at least the properties "host", "user", and "password". The
   value of the "host" property must match the hostname or the bucket name. In the case of

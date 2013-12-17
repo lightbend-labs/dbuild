@@ -14,7 +14,7 @@ import sbt.Path._
  * We use a type parameter for Extractor and LocalBuildRunner, in order to be able to keep
  * this trait more abstract, in the 'd-core' subproject (without tying it to the actual classes). 
  */
-trait BuildSystem[Extractor, LocalBuildRunner] {
+abstract class BuildSystem[Extractor, LocalBuildRunner] {
   /** The name of the build system used in configuration. */
   def name: String  
   /** Extract build dependencies of a given project that uses this build system.
@@ -75,5 +75,36 @@ trait BuildSystem[Extractor, LocalBuildRunner] {
    * @return The updated configuration with resolved URIs, now in a repeatable form.
    * 
    */
-  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: java.io.File, extractor: Extractor, log: Logger): ProjectBuildConfig
+  def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor: Extractor, log: Logger): ProjectBuildConfig
+  /**
+   * Expand the "extra" record, generating another "extra" in which all optional values have been replaced by
+   * concrete values.
+   * If the initial extra was None, expand to a suitable default record; use the values from the supplied defaults
+   * if appropriate.
+   * If the initial extra contained undefiled fields, use the vaules the supplied defaults instead.
+   */
+  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions): ExtraType
+  type ExtraType <: ExtraConfig
+}
+object BuildSystem {
+  /**
+   * Find the build system for this name (if any)
+   */
+  def forName[A,B](systemName: String, systems: Seq[BuildSystem[A, B]]) = {
+    systems find (_.name == systemName) getOrElse sys.error("Could not find a build system for " + systemName)
+  }
+
+  /**
+   * Expand all the project descriptions in the build configuration. That entails replacing the
+   * defaults into the corresponding values of the project, if not overridden, and expanding the
+   * "extra" component of each with suitable defaults.
+   * After this substitution is complete for all projects, the BuildOptions are no longer used.
+   */
+  def expandDistributedBuildConfig[A, B](build: Seq[DistributedBuildConfig], systems: Seq[BuildSystem[A, B]]) = {
+    def expandProject(config: ProjectBuildConfig, defaults: BuildOptions): ProjectBuildConfig = {
+      val system = BuildSystem.forName(config.system, systems)
+      config.expandDefaults(defaults).copy(extra = Some(system.expandExtra(config.extra, systems, defaults)))
+    }
+    build.flatMap {b => b.projects.map { expandProject(_, b) }}
+  }
 }

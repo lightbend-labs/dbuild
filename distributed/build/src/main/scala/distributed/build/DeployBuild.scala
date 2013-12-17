@@ -19,14 +19,14 @@ import logging.Logger.prepareLogMsg
 import distributed.logging.Logger
 import Creds.loadCreds
 
-class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends OptionTask(log) {
+class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
-  def beforeBuild() = {
-    conf.options.deploy foreach { d =>
+  def beforeBuild(projectNames: Seq[String]) = {
+    options.deploy foreach { d =>
       // just a sanity check on the project list (we don't use the result)
-      val _ = d.flattenAndCheckProjectList(conf.build.projects.map { _.name }.toSet)
+      val _ = d.flattenAndCheckProjectList(projectNames.toSet)
     }
-    checkDeployFullBuild(conf.options.deploy, log)
+    checkDeployFullBuild(options.deploy, log)
   }
   def afterBuild(optRepBuild: Option[RepeatableDistributedBuild], outcome: BuildOutcome) = {
     def dontRun() = log.error("*** Deploy cannot run: build did not complete.")
@@ -34,7 +34,7 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
     if (outcome.isInstanceOf[TimedOut]) dontRun() else
       optRepBuild match {
         case None => dontRun
-        case Some(repBuild) => deployFullBuild(conf, repBuild, outcome, log)
+        case Some(repBuild) => deployFullBuild(options, repBuild, outcome, log)
       }
   }
 
@@ -128,11 +128,11 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
    * - The root build, denoted by ".", has no artifacts of its own.
    * - This rule also applies applies to nested hierarchical build systems, if they are in turn recursive.
    */
-  def deployFullBuild(conf: DBuildConfiguration, build: RepeatableDistributedBuild, outcome: BuildOutcome, log: logging.Logger) = {
+  def deployFullBuild(optons: GeneralOptions, build: RepeatableDistributedBuild, outcome: BuildOutcome, log: logging.Logger) = {
     val projectOutcomes = outcome.outcomes.map(o => (o.project, o)).toMap
     // This does not contain the root ".", but we know that the root has no artifacts to be published of its own,
     // therefore the set for "." is the union of those of the children, regardless if "." failed or not.
-    val optionsSeq = conf.options.deploy
+    val optionsSeq = options.deploy
     if (optionsSeq.nonEmpty) {
       log.info("--== Deploying Artifacts  ==--")
       runRememberingExceptions(true, optionsSeq) { options =>

@@ -15,6 +15,7 @@ import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
+import distributed.project.BuildSystem
 import collection.JavaConverters._
 import org.apache.maven.model.{ Model, Dependency }
 import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
@@ -36,11 +37,14 @@ import org.apache.ivy
  */
 object AssembleBuildSystem extends BuildSystemCore {
   val name: String = "assemble"
+  type ExtraType = AssembleExtraConfig
 
-  private def assembleExpandConfig(config: ProjectBuildConfig) = config.extra match {
-    case None => AssembleExtraConfig(None) // pick default values
-    case Some(ec: AssembleExtraConfig) => ec
-    case _ => throw new Exception("Internal error: Assemble build config options are the wrong type in project \"" + config.name + "\". Please report")
+  def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
+    case None => AssembleExtraConfig() // pick default values
+    case Some(ec: AssembleExtraConfig) =>
+      // perform the defaults substitution in turn on the nested projects
+      ec.copy(parts = Seq(DistributedBuildConfig(BuildSystem.expandDistributedBuildConfig(ec.parts, systems),None)))
+    case _ => throw new Exception("Internal error: Assemble build config options have the wrong type. Please report")
   }
 
   private def projectsDir(base: File, config: ProjectBuildConfig) = {
@@ -52,25 +56,23 @@ object AssembleBuildSystem extends BuildSystemCore {
   }
 
   // overriding resolve, as we need to resolve its nested projects as well
-  override def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: File, extractor: Extractor, log: Logger): ProjectBuildConfig = {
+  override def resolve(config: ProjectBuildConfig, dir: File, extractor: Extractor, log: Logger): ProjectBuildConfig = {
     if (config.uri != "nil" && !config.uri.startsWith("nil:"))
       sys.error("Fatal: the uri in Assemble " + config.name + " must start with the string \"nil:\"")
     // resolve the main URI (which will do nothing since it is "nil", but we may have
     // some debugging diagnostic, so let's call it anyway)
-    val rootResolved = super.resolve(config, opts, dir, extractor, log)
+    val rootResolved = super.resolve(config, dir, extractor, log)
     // and then the nested projects (if any)
     val newExtra = rootResolved.extra match {
       case None => None
       case Some(extra: AssembleExtraConfig) =>
-        val newParts = extra.parts map { buildConfig =>
+        val newParts = extra.parts map { nestedConf =>
+          val buildConfig = nestedConf// use expandDistributedBuildConfig !!!!!!
           val nestedResolvedProjects =
-            buildConfig.projects.foldLeft(Seq[ProjectBuildConfig]()) { (s, p) =>
+            buildConfig.projects.map { p =>
               log.info("----------")
               log.info("Resolving part: " + p.name)
-              val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
-              val moduleConfig = extractor.dependencyExtractor.resolve(nestedExtractionConfig.buildConfig,
-                  nestedExtractionConfig.buildOptions, projectsDir(dir, p), extractor, log)
-              s :+ moduleConfig
+              extractor.dependencyExtractor.resolve(p, projectsDir(dir, p), extractor, log)
             }
           DistributedBuildConfig(nestedResolvedProjects, buildConfig.options)
         }
@@ -81,7 +83,7 @@ object AssembleBuildSystem extends BuildSystemCore {
   }
 
   def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
-    val ec = assembleExpandConfig(config.buildConfig)
+    val ec = config.extra[ExtraType]
 
     // we consider the names of parts in the same way as subprojects, allowing for a
     // partial deploy, etc.
@@ -92,7 +94,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val partOutcomes = ec.parts.toSeq flatMap { buildConfig =>
       buildConfig.projects map { p =>
         log.info("----------")
-        val nestedExtractionConfig = ExtractionConfig(p, buildConfig.options getOrElse BuildOptions())
+        val nestedExtractionConfig = ExtractionConfig(p)
         extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p), log)
       }
     }
@@ -141,7 +143,7 @@ object AssembleBuildSystem extends BuildSystemCore {
   // Therefore, we will call localBuildRunner.checkCacheThenBuild() on each part,
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
-    val ec = assembleExpandConfig(project.config)
+    val ec = project.extra[ExtraType]
     val version = input.version
 
     log.info(ec.parts.toSeq.flatMap(_.projects).map(_.name).mkString("These subprojects will be built: ", ", ", ""))
@@ -201,7 +203,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         // of dependencies is cleared before building, so that they do not rely on one another
         log.info("----------")
         log.info("Building part: " + p.name)
-        val nestedExtractionConfig = ExtractionConfig(p, build.options getOrElse BuildOptions())
+        val nestedExtractionConfig = ExtractionConfig(p)
         val partConfigAndExtracted = localBuildRunner.extractor.cachedExtractOr(nestedExtractionConfig, log) {
           // if it's not cached, something wrong happened.
           sys.error("Internal error: extraction metadata not found for part " + p.name)
@@ -212,7 +214,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         }
         val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted.config, partConfigAndExtracted.extracted.version,
           Seq.empty, // remove all dependencies, and pretend that this project stands alone
-          partConfigAndExtracted.extracted.subproj, build.options getOrElse BuildOptions())
+          partConfigAndExtracted.extracted.subproj)
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild, Seq.empty, Seq.empty, log)
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut
@@ -267,7 +269,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     // ------
     //
     // Before rearranging the poms, we may need to adapt the cross-version strings in the part
-    // names. That depends on the value of cross-version in our main build.options.cross-version.
+    // names. That depends on the value of cross-version in our main project.
     // If it is "disabled" (default), the parts should already have a version without a cross-version
     // string; we might have to remove the cross suffix, if present, from the modules compiled by the
     // scala ant task, as that is not affected by the cross-version selector. In any case, we just need
@@ -279,7 +281,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     // "_2.11.0-M5"; we should replace that with the new full Scala version.
     // For "standard" it may be either "_2.11.0-M5" or "_2.11", depending on what each part
     // decides. For binaryFull, it will be "_2.11" even for milestones.
-    // The cross suffix for the parts depends on their own build.options.
+    // The cross suffix for the parts depends on their own cross-version selection.
     // 
     // We change that in conformance to project.crossVersion, so that:
     // - disabled => no suffix
@@ -297,7 +299,7 @@ object AssembleBuildSystem extends BuildSystemCore {
       case Part(z) => z
       case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
     }
-    val crossSuff = project.buildOptions.crossVersion match {
+    val crossSuff = project.config.getCrossVersion match {
       case "disabled" => ""
       case l @ "full" => "_" + getScalaVersion(l)
       case l @ "binary" => "_" + binary(getScalaVersion(l))

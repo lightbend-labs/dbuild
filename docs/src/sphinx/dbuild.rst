@@ -142,7 +142,7 @@ The build section has the following content:
 
    {
     "projects": [ <dbuild_project1>, <dbuild_project2>,...],
-    "options" : <build-options>
+    ...defaults...
    }
 
 projects
@@ -152,9 +152,11 @@ projects
   ``build.projects: [...]``. The list of projects, enclosed in square brackets, describes
   the various software projects that should be built together by dbuild. 
 
-options
-  This section contains global options that affect the projects in the build; it is distinct
-  from the previous one. It is optional, and is described on the page :doc:`buildOptions`.
+default options
+  Rather than specifying for each project all of its parameters, some common options can be
+  just described once, and they will act as defaults for all the enclosed projects. These options
+  are described in more detail on the page :doc:`buildOptions`, which also contains
+  some examples.
 
 
 Each project descriptions has this structure:
@@ -162,15 +164,18 @@ Each project descriptions has this structure:
 .. code-block:: javascript
 
    {
-    "name"        : <project-name>,
-    "system"      : <build-system>,
-    "uri"         : <source-repository-uri>,
-    "set-version" : <optional-output-version>
-    "deps"        : <optional-dependencies-modifiers>
-    "extra"       : <optional-extra-build-parameters>
+    "name"          : <project-name>,
+    "system"        : <build-system>,
+    "uri"           : <source-repository-uri>,
+    "set-version"   : <optional-output-version>
+    "deps"          : <optional-dependencies-modifiers>
+    "cross-version" : <cross-version-selector>
+    "use-jgit"      : <jgit-selector>
+    "extra"         : <optional-extra-build-parameters>
    }
 
-Within a project description:
+Within a project description, only the name is mandatory; all the rest is optional, although
+you will almost certainly also need to specify uri and system. The options, in detail, are:
 
 name
   A string identifying the software project. This can be arbitrary, and is only used within dbuild,
@@ -238,6 +243,14 @@ deps
   by different projects. The recommended approach is instead either splitting the projects
   into sets of subprojects that do not form a cycle, or modifying the projects themselves,
   in order to remove the cyclic dependencies.
+
+cross-version
+  Controls the cross-versioning of the resulting artifacts. Please refer to the
+  description at :doc:`buildOptions` for further details.
+
+use-jgit
+  It controls whether, for special applications, jgit should be used in place of the
+  standard git utility. This option is not normally needed. 
 
 extra
   The "extra" component is optional, as are all of its sub-components; it describes additional

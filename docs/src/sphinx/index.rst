@@ -27,6 +27,7 @@ Contents
    download
    dbuild
    buildOptions
+   spaces
    deploy
    notifications
    repositories

@@ -6,7 +6,7 @@ import distributed.project.dependencies.Extractor
 import distributed.logging.Logger
 import distributed.project.build.LocalBuildRunner
 
-trait BuildSystemCore extends BuildSystem[Extractor, LocalBuildRunner] {
+abstract class BuildSystemCore extends BuildSystem[Extractor, LocalBuildRunner] {
   /**
    * See the docs in BuildSystem.
    * 
@@ -14,6 +14,6 @@ trait BuildSystemCore extends BuildSystem[Extractor, LocalBuildRunner] {
    * supports nested projects, the implementation should be overridden so that, in addition,
    * all of the nested projects are recursively resolved in turn.
    */
-  def resolve(config: ProjectBuildConfig, opts: BuildOptions, dir: _root_.java.io.File, extractor: Extractor, log: Logger): ProjectBuildConfig =
-    extractor.resolver.resolve(config, opts, dir, log)
+  def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, extractor: Extractor, log: Logger): ProjectBuildConfig =
+    extractor.resolver.resolve(config, dir, log)
 }

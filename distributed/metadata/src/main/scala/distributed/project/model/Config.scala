@@ -20,14 +20,42 @@ case class ProjectBuildConfig(name: String,
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
+  @JsonProperty("cross-version") crossVersion: Option[String] = None,
+  @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
+  space: Option[Space] = None,
   extra: Option[ExtraConfig]
-)
+) {
+  // after the initial expansion
+  // you can use getExtra() to obtain the extra content
+  def getExtra[T](implicit m: Manifest[T]) = extra match {
+    case Some(t: T) => t
+    case None => sys.error("Internal error: \"extra\" has not been expanded in project " + name + ". Please report.")
+    case _ => sys.error("Internal error: \"extra\" has the wrong type in project " + name + ". Please report.")
+  }
+  // after the initial expansion
+  // you can use getCrossVersion() to obtain the cross version selector
+  def getCrossVersion = crossVersion.getOrElse { sys.error("Internal error: after expansion, crossVersion is None in " + name) }
+  
+  def expandDefaults(defaults: ProjectOptions) = {
+    val cv = crossVersion getOrElse defaults.crossVersion
+    val jg = useJGit getOrElse defaults.useJGit
+    val sp = space getOrElse defaults.space
+    copy(crossVersion = Some(cv), useJGit = Some(jg), space = Some(sp))
+  }
 
+  // sanity check on the project name
+  Utils.testProjectName(name)
+}
+
+// Do keep the one above and the one below in sync
 private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   deps: Option[DepsModifiers] = None,
+  @JsonProperty("cross-version") crossVersion: Option[String] = None,
+  @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
+  space: Option[Space] = None,
   extra: JsonNode = null)
 
 case class DepsModifiers(
@@ -37,13 +65,63 @@ case class DepsModifiers(
 )
 
 /**
+ * A specification for Spaces, as used by projects.
+ * It can be deserialized from:
+ *
+ *   space: xyz
+ *   space: {from: xyz, to: xyz}
+ *   space: {from: xyz, to: [ xyz, zyx,... ]}
+ *
+ */
+@JsonDeserialize(using = classOf[SpaceDeserializer])
+@JsonSerialize(using = classOf[SpaceSerializer])
+case class Space(from: String, to: SeqString) {
+  def this(s:String) = this(s, Seq(s))
+  Utils.testSpaceName(from)
+  to foreach Utils.testSpaceName
+}
+case class SpaceAux(from: String = "default", to: SeqString = Seq("default"))
+class SpaceDeserializer extends JsonDeserializer[Space] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): Space = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    if (generic.isTextual()) {
+      val s = valueAs(classOf[String])
+      Space(s, Seq(s))
+    } else {
+      val aux = valueAs(classOf[SpaceAux])
+      Space(aux.from, aux.to)
+    }
+  }
+}
+class SpaceSerializer extends JsonSerializer[Space] {
+  override def serialize(value: Space, g: JsonGenerator, p: SerializerProvider) {
+    if (value.to.length == 1 && value.to(0) == value.from) {
+      val vs = p.findValueSerializer(classOf[String], null)
+      vs.serialize(value.from, g, p)
+    } else {
+      val vs = p.findValueSerializer(classOf[SpaceAux], null)
+      vs.serialize(SpaceAux(value.from, value.to), g, p)
+    }
+  }
+}
+
+
+/**
  * The initial dbuild configuration. The "build" section is a complete
  * specification of the actual build, while the "options" section contains
  * accessory tasks and options that do not affect the actual build, but do
  * affect other parts of the dbuild behavior.
  */
 case class DBuildConfiguration(
-  build: DistributedBuildConfig,
+  build: SeqDBC, // auto-wrapped Seq[DistributedBuildConfig]
   options: GeneralOptions = GeneralOptions(), // pick defaults if empty
   vars: Option[Vars] = Some(Vars()),
   /**
@@ -74,15 +152,12 @@ class VarDeserializer extends JsonDeserializer[Vars] {
 }
 
 /**
- *  Some of the options within the DistributedBuildConfig may affect
- *  the extraction of all the projects (for example, the default sbt version).
- *  We pack a copy of the BuildOptions together with the ProjectBuildConfig,
- *  and pass it to extraction.
+ *  At this time, only the ProjectBuildConfig is required; the BuildOptions
+ *  have already been replaced into the corresponding project records.
  */
-case class ExtractionConfig(
-    buildConfig:ProjectBuildConfig,
-    buildOptions:BuildOptions) {
-    def uuid = hashing sha1 this
+case class ExtractionConfig(buildConfig: ProjectBuildConfig) {
+  def uuid = hashing sha1 this
+  def extra[T](implicit m: Manifest[T]) = buildConfig.getExtra[T]
 }
 
 /**
@@ -90,9 +165,66 @@ case class ExtractionConfig(
  * affects the actual build; the parts that do not affect the actual build,
  * and do not belong into the repeatable build configuration, go into the
  * GeneralOptions class instead.
+ *
+ * Apart for "projects", these are options that affect all of the projects, but must not affect extraction:
+ * extraction fully relies on the fact that the project is fully described by the
+ * ProjectBuildConfig record. However, it may contain defaults that are used to
+ * fill in the ProjectBuildConfig (like, for example, extraction-version).
+ * 
+ * These options, however, can affect the building stage; a copy of the record is
+ * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
+ * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
+ * Therefore *ONLY* place in this section the global options that affect the repeatability of the
+ * builds!! Place other global options elsewhere, in other top-level sections. Similarly, do no place
+ * options that do not impact on the repeatability of the build inside the projects section; instead,
+ * place them in a separate section, specifying the list of projects to which they apply (like deploy
+ * and notifications).
+ *
+ * This section contains the option "cross-version, which controls the
+ * crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
+ *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
+ *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
+ *     However, the library dependencies that refer to Scala projects that are not included in this build
+ *     configuration, and that have "binary" or "full" CrossVersion will have their scala version set to
+ *     the full scala version string: as a result, missing dependent projects will be detected.
+ *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x, for example).
+ *     Further, library dependencies that refer to Scala projects that are not included in this build
+ *     configuration will not be rewritten: they might end up being fetched from Maven if a compatible
+ *     version is found.
+ *     This settings must be used when releasing, typically in conjunction with "set-version", in order
+ *     to make sure cross-versioning works as it would in the original projects.
+ *   - "full": Similar in concept to "disabled", except the all the sbt projects are changed so that
+ *     the full Scala version string is used as a cross-version suffix (even those that would normally
+ *     have cross-version disabled). Missing dependent projects will be detected.
+ *   - "binaryFull": It is a bit of a hybrid between standard and full. This option will cause
+ *     the projects that would normally publish with a binary suffix (like "_2.10") to publish using the
+ *     full scala version string instead. The projects that have cross building disabled, however, will be
+ *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
+ *
+ * In practice, do not include the cross-version option at all in normal use, and just
+ * add "{cross-version:standard}" if you are planning to release using "set-version".
+ * 
+ * This section also contains the sbt version that should be used by default (unless overridden in the individual
+ * projects) to compile all the projects. If not specified, the string "0.12.4" is used.
  */
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
-  options: Option[BuildOptions])
+  /* deprecated, see deserializer */
+  options: Option[DeprecatedBuildOptions],
+  @JsonProperty("cross-version") crossVersion: String = "disabled",
+  // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
+  // also in the future (for repeatability); if the user wants a default of 0.13.0,
+  // they can specify "build.sbt-version = 0.13.0"
+  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
+  // This option applies to all sbt-based projects, unless overridden.
+  // see SbtExtraConfig for details.
+  @JsonProperty("extraction-version") extractionVersion: String = "standard",
+  // Select jgit rather than the command-line git. It is in the BuildOptions,
+  // rather than in the GeneralOptions, as its value may conceivably have
+  // an effect on building (for instance due to a difference in checkout because
+  // of an implementation bug)
+  @JsonProperty("use-jgit") useJGit: Boolean = false,
+  // Default space for regular project
+  space: Space = new Space("default")) extends BuildOptions
 
 /**
  * General options for dbuild, that do not affect the actual build.
@@ -169,6 +301,52 @@ object SeqString {
   implicit def SeqToSeqString(s: Seq[String]): SeqString = SeqString(s)
   implicit def SeqStringToSeq(a: SeqString): Seq[String] = a.s
 }
+
+/**
+ * Similar to the above, but for DistributedBuildConfig elements:
+ * a single one in the config file will automatically be turned into an array.
+ */
+@JsonSerialize(using = classOf[SeqDBCSerializer])
+@JsonDeserialize(using = classOf[SeqDBCDeserializer])
+case class SeqDBC(s: Seq[DistributedBuildConfig])
+class SeqDBCDeserializer extends JsonDeserializer[SeqDBC] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqDBC = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    if (generic.isArray()) {
+      // The valueAs() returns a WrappedArray; we use
+      // its values to build a new Seq, in order to keep
+      // the same sha1 UUID (just in case)
+      SeqDBC(Seq(valueAs(classOf[Array[DistributedBuildConfig]]):_*))
+    } else {
+      SeqDBC(Seq(valueAs(classOf[DistributedBuildConfig])))
+    }
+  }
+}
+class SeqDBCSerializer extends JsonSerializer[SeqDBC] {
+  override def serialize(value: SeqDBC, g: JsonGenerator, p: SerializerProvider) {
+    value.s.length match {
+      case 1 =>
+        val vs = p.findValueSerializer(classOf[DistributedBuildConfig], null)
+        vs.serialize(value.s(0), g, p)
+      case _ =>
+        val vs = p.findValueSerializer(classOf[Array[DistributedBuildConfig]], null)
+        vs.serialize(value.s.toArray, g, p)
+    }
+  }
+}
+object SeqDBC {
+  implicit def SeqToSeqDBC(s: Seq[DistributedBuildConfig]): SeqDBC = SeqDBC(s)
+  implicit def SeqDBCToSeq(a: SeqDBC): Seq[DistributedBuildConfig] = a.s
+}
+
 
 /** a generic options section that relies on a list of projects/subprojects */
 abstract class ProjectBasedOptions {
@@ -279,7 +457,8 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.deps, newData)
+    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion,
+        generic.deps, generic.crossVersion, generic.useJGit, generic.space, newData)
   }
 }
 /**
@@ -334,7 +513,7 @@ case class MavenExtraConfig(
  * sbt-specific build parameters
  */
 case class SbtExtraConfig(
-  // None is interpreted as default: use build.options.sbt-version
+  // None is interpreted as default: use build.sbt-version
   @JsonProperty("sbt-version") sbtVersion: Option[String] = None,
   directory: String = "",
   @JsonProperty("measure-performance") measurePerformance: Boolean = false,
@@ -348,7 +527,7 @@ case class SbtExtraConfig(
    *  Use "standard" to use the project's standard Scala compiler for extraction,
    *  or a version string to force a different Scala compiler.
    */
-  // None is interpreted as default: use build.options.extraction-version
+  // None is interpreted as default: use build.extraction-version
   @JsonProperty("extraction-version") extractionVersion: Option[String] = None
   ) extends ExtraConfig
 
@@ -371,7 +550,7 @@ case class TestExtraConfig() extends ExtraConfig
 
 /** configuration for the Assemble build system */
 case class AssembleExtraConfig(
-  parts: Option[DistributedBuildConfig] = None
+  parts: Seq[DistributedBuildConfig] = Seq()
 ) extends ExtraConfig
 
 // our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner
@@ -503,61 +682,25 @@ object SeqNotification {
   implicit def SeqNotificationToSeq(a: SeqNotification): Seq[Notification] = a.s
 }
 
-/**
- * These are options that affect all of the projects, but must not affect extraction:
- * extraction fully relies on the fact that the project is fully described by the
- * ProjectBuildConfig record.
- * Conversely, these options can affect the building stage; a copy of the record is
- * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
- * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
- * Therefore *ONLY* place in this section the global options that affect the repeatebility of the
- * builds!! Place other global options elsewhere, in other top-level sections. Similarly, do no place
- * options that do not impact on the repeatability of the build inside the projects section; instead,
- * place them in a separate section, specifying the list of projects to which they apply (like deploy
- * and notifications).
- *
- * This section contains the option "cross-version, which controls the
- * crossVersion and scalaBinaryVersion sbt flags. It can have the following values:
- *   - "disabled" (default): All cross-version suffixes will be disabled, and each project
- *     will be published with just a dbuild-specific version suffix (unless "set-version" is used).
- *     However, the library dependencies that refer to Scala projects that are not included in this build
- *     configuration, and that have "binary" or "full" CrossVersion will have their scala version set to
- *     the full scala version string: as a result, missing dependent projects will be detected.
- *   - "standard": Each project will compile with its own suffix (typically _2.10 for 2.10.x, for example).
- *     Further, library dependencies that refer to Scala projects that are not included in this build
- *     configuration will not be rewritten: they might end up being fetched from Maven if a compatible
- *     version is found.
- *     This settings must be used when releasing, typically in conjunction with "set-version", in order
- *     to make sure cross-versioning works as it would in the original projects.
- *   - "full": Similar in concept to "disabled", except the all the sbt projects are changed so that
- *     the full Scala version string is used as a cross-version suffix (even those that would normally
- *     have cross-version disabled). Missing dependent projects will be detected.
- *   - "binaryFull": It is a bit of a hybrid between standard and full. This option will cause
- *     the projects that would normally publish with a binary suffix (like "_2.10") to publish using the
- *     full scala version string instead. The projects that have cross building disabled, however, will be
- *     unaffected. Missing dependent projects will be detected. This configuration is for testing only.
- *
- * In practice, do not include an "options" section at all in normal use, and just add "{cross-version:standard}"
- * if you are planning to release using "set-version".
- * 
- * This section also contains the sbt version that should be used by default (unless overridden in the individual
- * projects) to compile all the projects. If not specified, the string "0.12.4" is used.
- */
-case class BuildOptions(
-  @JsonProperty("cross-version") crossVersion: String = "disabled",
-  // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
-  // also in the future (for repeatability); if the user wants a default of 0.13.0,
-  // they can specify "build.options.sbt-version = 0.13.0"
-  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
-  // This option applies to all sbt-based projects, unless overridden.
-  // see SbtExtraConfig for details.
-  @JsonProperty("extraction-version") extractionVersion: String = "standard",
-  // Select jgit rather than the command-line git. It is in the BuildOptions,
-  // rather than in the GeneralOptions, as its value may conceivably have
-  // an effect on building (for instance due to a difference in checkout because
-  // of an implementation bug)
-  @JsonProperty("use-jgit") useJGit: Boolean = false
-)
+/** see DistributedBuildConfig for details. */
+trait ExtraOptions {
+  def sbtVersion: String
+  def extractionVersion: String
+}
+trait ProjectOptions {
+  def crossVersion: String
+  def useJGit: Boolean
+  def space: Space
+}
+abstract class BuildOptions extends ExtraOptions with ProjectOptions
+
+@JsonDeserialize(using = classOf[DeprecatedBuildOptionsDeserializer])
+abstract class DeprecatedBuildOptions
+class DeprecatedBuildOptionsDeserializer extends JsonDeserializer[BuildOptions] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): BuildOptions = {
+    sys.error("\"build.options\" have moved. Please rename \"build.options.xxx\" to just \"build.xxx\".")
+  }
+}
 
 /**
  * This section is used to notify users, by using some notification system.

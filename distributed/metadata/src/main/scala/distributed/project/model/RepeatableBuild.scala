@@ -1,6 +1,6 @@
 package distributed.project.model
 
-import Utils.writeValue
+import Utils.{ writeValue, canSeeSpace }
 import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
@@ -11,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * Note that the global build options are not included, therefore this is not
  * the entire information that can guarantee a unique build.
  */
-case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: ExtractedBuildMeta)
+case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: ExtractedBuildMeta) {
+  // in theory space should never be None
+  def getSpace = config.space getOrElse sys.error("Internal error: space is None in " + config.name)
+}
 
 /**
  * This class represents *ALL* IMMUTABLE information about a project such
@@ -34,35 +37,28 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
   @JsonProperty("base-version") baseVersion: String,
   dependencies: Seq[RepeatableProjectBuild],
-  subproj: Seq[String],
-  buildOptions: BuildOptions) {
+  subproj: Seq[String]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
 
-  def transitiveDependencyUUIDs: Set[String] = {
-    def loop(current: Seq[RepeatableProjectBuild], seen: Set[String]): Set[String] = current match {
-      case Seq(head, tail @ _*) =>
-        if (seen contains head.uuid) loop(tail, seen)
-        else loop(tail ++ head.dependencies, seen + head.uuid)
-      case _ => seen
-    }
-    loop(dependencies, Set.empty)
-  }
+  def extra[T](implicit m: Manifest[T]) = config.getExtra[T]
+
+  // The "dependencies" list is already transitive (within the boundaries
+  // of the relevant spaces, see below)
+  def dependencyUUIDs = dependencies.map{_.uuid}
 }
 
 object RepeatableDistributedBuild {
-  def fromExtractionOutcome(conf: DBuildConfiguration, outcome: ExtractionOK) =
-    RepeatableDistributedBuild(outcome.pces, conf.build.options)
+  def fromExtractionOutcome(outcome: ExtractionOK) = RepeatableDistributedBuild(outcome.pces)
 }
 /**
  * A distributed build containing projects in *build order*
  *  Also known as the repeatable config. Note that notifications
  *  are not included, as they have no effect on builds.
  */
-case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
-  buildOptions: Option[BuildOptions]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), buildOptions)
-
+case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
+  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), options = None)
+  
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)
   /** All of our repeatable build configuration in build order. */
@@ -79,12 +75,14 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
         val subgraph = graph.subGraphFrom(node) map (_.value)
         val dependencies =
           for {
-            dep <- (subgraph - head)
+            // only list as dependencies those that have produced artifacts that
+            // the project in "head" can actually see. These will be the dependent projects
+            // that are eventually reloaded (rematerialized) right before each project build starts
+            dep <- (subgraph - head) if canSeeSpace(head.getSpace.from, dep.getSpace.to)
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
-          sortedDeps, head.extracted.subproj,
-          buildOptions getOrElse BuildOptions()) // pick defaults if no BuildOptions specified
+          sortedDeps, head.extracted.subproj) // pick defaults if no BuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     val orderedBuilds = (graph.safeTopological map (_.value)).reverse
@@ -97,19 +95,26 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted],
     // cycles may be detected, leading to unhelpful error messages
     // TODO: if model.Project is ever associated with the subproject name, it would be
     // more appropriate to print the actual subproject name, rather than the Project
-    val generatedArtifacts = builds flatMap { _.extracted.projects } map { a => (a.organization, a.name) }
-    val uniq = generatedArtifacts.distinct
-    if (uniq.size != generatedArtifacts.size) {
-      val conflicting = generatedArtifacts.diff(uniq).distinct
-      val conflictSeq = conflicting map {
-        a =>
-          (builds filter {
-            b =>
-              b.extracted.projects.exists(p => p.organization == a._1 && p.name == a._2)
-          } map { _.config.name }).mkString("  " + a._1 + "#" + a._2 + ", from:  ", ", ", "")
+    case class Origin(fromProject: String, spaces: SeqString)
+    case class Info(artOrg: String, artName: String, origin: Origin)
+    val generatedArtifacts = builds flatMap { b => b.extracted.projects.map { a => Info(a.organization, a.name, Origin(b.config.name, b.getSpace.to)) } }
+    val byArt = (generatedArtifacts.groupBy { case Info(org, name, origin) => (org, name) }).toSeq
+    val collisions = byArt flatMap {
+      case ((org, name), seqInfo) =>
+        val origins = seqInfo.map { _.origin }
+        // this could probably be further optimized,
+        // but hopefully the collision sets are of modest size
+        for {
+          List(one,two) <- origins.combinations(2)
+          colliding <- Utils.collidingSeqSpaces(one.spaces, two.spaces)
+        } yield (org, name, one.fromProject, two.fromProject, colliding)
+    }
+    if (collisions.nonEmpty) {
+      val msgs = collisions.map {
+        case (org, name, fromOne, fromTwo, space) =>
+          "  " + org + "#" + name + "  from " + fromOne + " and " + fromTwo + ", both visible in space \"" + space + "\""
       }
-      sys.error(conflictSeq.
-        mkString("\n\nFatal: multiple projects produce the same artifacts. Please exclude them from some of the conflicting projects.\n\n", "\n", "\n"))
+      sys.error(msgs.mkString("\n\nFatal: multiple projects have the same artifacts visible in the same space.\n\n", "\n", "\n"))
     }
     graph.checkCycles()
   }

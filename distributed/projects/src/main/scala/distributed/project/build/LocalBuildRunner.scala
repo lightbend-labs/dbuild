@@ -45,13 +45,13 @@ class LocalBuildRunner(builder: BuildRunner,
       // of the build system, which in turn will call checkCacheThenBuild(), above, on all subprojects,
       // which will again call this method, thereby resolve()ing each project right before building it.
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
-      extractor.resolver.resolve(build.config, build.buildOptions, dir, log)
+      extractor.resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
       val dbuildDir = builder.projectDbuildDir(dir, build)
       val readRepo = dbuildDir / "local-repo"
       val writeRepo = dbuildDir / "local-publish-repo"
       if (!writeRepo.exists()) writeRepo.mkdirs()
-      val uuids = build.transitiveDependencyUUIDs.toSeq
+      val uuids = build.dependencyUUIDs.toSeq
       val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
       // TODO - Load this while resolving!
       val dependencies: BuildArtifactsIn = BuildArtifactsIn(artifactLocations, readRepo)

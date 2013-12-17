@@ -150,7 +150,7 @@ object DistributedRunner {
           case "binaryFull" | "disabled" | "full" =>
             log.error(msg)
             log.error("In order to control which version is used, please add the corresponding project to the build file")
-            log.error("(or use \"build.options:{cross-version:standard}\" to ignore (not recommended)).")
+            log.error("(or use \"cross-version:standard\" to ignore (not recommended)).")
             sys.error("Required dependency not found")
           case "standard" =>
             log.warn(msg)
@@ -465,7 +465,7 @@ object DistributedRunner {
       def newSettings(oldSettings: Seq[Setting[_]]) =
         preparePublishSettings(config, log, oldSettings) ++
           prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
-            oldSettings, config.buildOptions.crossVersion)
+            oldSettings, config.crossVersion)
 
       newState(state, extracted, newSettings)
 
@@ -588,7 +588,7 @@ object DistributedRunner {
     val cache = Repository.default
     val project = findRepeatableProjectBuild(builduuid, thisProject, log)
     log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
-    val uuids = project.transitiveDependencyUUIDs.toSeq
+    val uuids = project.dependencyUUIDs.toSeq
     (project, LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids))
   }
 
@@ -665,7 +665,7 @@ object DistributedRunner {
       } else {
         val modules = getModuleRevisionIds(state, proj.subproj, log)
         newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _,
-          proj.buildOptions.crossVersion))
+          proj.config.getCrossVersion))
       }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")

@@ -6,6 +6,7 @@ import Path._
 import project.model._
 import repo.core._
 import java.io.File
+import java.net.URI
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.auth.BasicAWSCredentials
@@ -212,123 +213,13 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
                 SecretKey(secretKey).sign(f, new File(f.getAbsolutePath() + ".asc"), passPhrase.toArray)
               }
             }
-
             // dir is staged; time to deploy
             val uri = new _root_.java.net.URI(options.uri)
             uri.getScheme match {
-              case "file" =>
-                // copy to a local path
-                val target = uri.getPath
-                log.info("Copying artifacts to " + target + "...")
-                // Overwrite, and preserve timestamps
-                IO.copyDirectory(dir, new File(target), true, true)
-
-              case "http" | "https" =>
-                // deploy to a Maven repository
-                deployStuff[Unit](options, dir, log, { _ => () },
-                  { (log, relative) =>
-                    if (isNotChecksum(relative))
-                      log.info("Deploying: " + relative)
-                    else
-                      log.info("Verifying checksum: " + relative)
-                  }, { (_, credentials, relative, file, uri) =>
-                    import dispatch._
-                    val sender =
-                      url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
-                    val response = (new Http with NoLogging)(sender >- { str =>
-                      Utils.readSomePath[ArtifactoryResponse](str)
-                    })
-                    if (response != None && response.get.path != None) {
-                      val out = response.get.path.get.replaceFirst("^/", "")
-                      if (out != relative) log.info("Deployed:  " + out)
-                    }
-                  })
-
-              case "ssh" =>
-                // deploy to a Maven repository
-                deployStuff[ChannelSftp](options, dir, log,
-                  init = { credentials =>
-                    val jsch = new JSch()
-                    JSch.setConfig("StrictHostKeyChecking", "no")
-                    import log.{ debug => ld, info => li, warn => lw, error => le }
-                    JSch.setLogger(new com.jcraft.jsch.Logger {
-                      def isEnabled(level: Int) = true
-                      import com.jcraft.jsch.Logger._
-                      def log(level: Int, message: String) = level match {
-                        // levels are arranged so that ssh info is debug for dbuild
-                        case DEBUG => ld(message)
-                        case INFO => ld(message)
-                        case WARN => li(message)
-                        case ERROR => lw(message)
-                        case FATAL => le(message)
-                      }
-                    })
-                    // try to locate a private key; if it exists, add
-                    // the identity (for passwordless authentication)
-                    // Only the default location is supported, and no passphrase
-                    val privateKeyLocation = new File(System.getProperty("user.home")) / ".ssh" / "id_rsa"
-                    try {
-                      val is = new java.io.FileInputStream(privateKeyLocation)
-                      val privateKey = org.apache.commons.io.IOUtils.toByteArray(is)
-                      val passPrivateKey = "".getBytes()
-                      jsch.addIdentity(credentials.user, privateKey, null, passPrivateKey)
-                    } catch {
-                      case e: java.io.FileNotFoundException => // ignore
-                    }
-                    val session = jsch.getSession(credentials.user, credentials.host, 22)
-                    session.setPassword(credentials.pass)
-                    session.connect(900)
-                    val channel = session.openChannel("sftp")
-                    channel.connect(900)
-                    channel match {
-                      case sftp: ChannelSftp => sftp
-                      case _ => sys.error("Could not open an SFTP channel.")
-                    }
-                  },
-                  message = { (log, relative) =>
-                    log.info("Deploying: " + relative)
-                  },
-                  deploy = { (sftp, credentials, relative, file, uri) =>
-                    val path = uri.getPath
-                    def mkParents(s: String): Unit = {
-                      val l = s.lastIndexOf('/')
-                      val dir = s.substring(0, l)
-                      try {
-                        sftp.cd(dir)
-                      } catch {
-                        case e: Exception =>
-                          mkParents(dir)
-                          sftp.mkdir(dir)
-                      }
-                    }
-                    if (!path.startsWith("/")) sys.error("Internal error: ssh upload uri path is not absolute")
-                    mkParents(path)
-                    sftp.put(file.getCanonicalPath, path)
-                  },
-                  close = { sftp =>
-                    if (sftp != null) {
-                      sftp.disconnect()
-                      val session = sftp.getSession()
-                      if (session != null)
-                        session.disconnect()
-                    }
-                  })
-
-              case "s3" =>
-                // deploy to S3
-                deployStuff[AmazonS3Client](options, dir, log, { credentials =>
-                  new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
-                    new ClientConfiguration().withProtocol(Protocol.HTTPS))
-                }, { (log, relative) =>
-                  if (isNotChecksum(relative))
-                    log.info("Uploading: " + relative)
-                }, { (client, credentials, _, file, uri) =>
-                  // putObject() will automatically calculate an MD5, upload, and compare with the response
-                  // from the server. Any upload failure results in an exception; so no need to process
-                  // the sha1/md5 here.
-                  if (isNotChecksum(uri.getPath))
-                    client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
-                })
+              case "file" => deployFiles(log, dir, uri)
+              case "http" | "https" => deployHTTP(log, options, dir)
+              case "ssh" => deploySSH(log, options, dir)
+              case "s3" => deployS3(log, options, dir)
             }
           } catch {
             case e: NumberFormatException =>
@@ -346,6 +237,119 @@ class DeployBuild(conf: DBuildConfiguration, log: logging.Logger) extends Option
       log.info("--== End Deploying Artifacts ==--")
     }
   }
+
+  def deploySSH(log: Logger, options: DeployOptions, dir: File) =
+    deployStuff[ChannelSftp](options, dir, log,
+      init = { credentials =>
+        val jsch = new JSch()
+        JSch.setConfig("StrictHostKeyChecking", "no")
+        import log.{ debug => ld, info => li, warn => lw, error => le }
+        JSch.setLogger(new com.jcraft.jsch.Logger {
+          def isEnabled(level: Int) = true
+          import com.jcraft.jsch.Logger._
+          def log(level: Int, message: String) = level match {
+            // levels are arranged so that ssh info is debug for dbuild
+            case DEBUG => ld(message)
+            case INFO => ld(message)
+            case WARN => li(message)
+            case ERROR => lw(message)
+            case FATAL => le(message)
+          }
+        })
+        // try to locate a private key; if it exists, add
+        // the identity (for passwordless authentication)
+        // Only the default location is supported, and no passphrase
+        val privateKeyLocation = new File(System.getProperty("user.home")) / ".ssh" / "id_rsa"
+        try {
+          val is = new java.io.FileInputStream(privateKeyLocation)
+          val privateKey = org.apache.commons.io.IOUtils.toByteArray(is)
+          val passPrivateKey = "".getBytes()
+          jsch.addIdentity(credentials.user, privateKey, null, passPrivateKey)
+        } catch {
+          case e: java.io.FileNotFoundException => // ignore
+        }
+        val session = jsch.getSession(credentials.user, credentials.host, 22)
+        session.setPassword(credentials.pass)
+        session.connect(900)
+        val channel = session.openChannel("sftp")
+        channel.connect(900)
+        channel match {
+          case sftp: ChannelSftp => sftp
+          case _ => sys.error("Could not open an SFTP channel.")
+        }
+      },
+      message = { (log, relative) =>
+        log.info("Deploying: " + relative)
+      },
+      deploy = { (sftp, credentials, relative, file, uri) =>
+        val path = uri.getPath
+        def mkParents(s: String): Unit = {
+          val l = s.lastIndexOf('/')
+          val dir = s.substring(0, l)
+          try {
+            sftp.cd(dir)
+          } catch {
+            case e: Exception =>
+              mkParents(dir)
+              sftp.mkdir(dir)
+          }
+        }
+        if (!path.startsWith("/")) sys.error("Internal error: ssh upload uri path is not absolute")
+        mkParents(path)
+        sftp.put(file.getCanonicalPath, path)
+      },
+      close = { sftp =>
+        if (sftp != null) {
+          sftp.disconnect()
+          val session = sftp.getSession()
+          if (session != null)
+            session.disconnect()
+        }
+      })
+
+  def deployS3(log: Logger, options: DeployOptions, dir: File) =
+    deployStuff[AmazonS3Client](options, dir, log, { credentials =>
+      new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
+        new ClientConfiguration().withProtocol(Protocol.HTTPS))
+    }, { (log, relative) =>
+      if (isNotChecksum(relative))
+        log.info("Uploading: " + relative)
+    }, { (client, credentials, _, file, uri) =>
+      // putObject() will automatically calculate an MD5, upload, and compare with the response
+      // from the server. Any upload failure results in an exception; so no need to process
+      // the sha1/md5 here.
+      if (isNotChecksum(uri.getPath))
+        client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
+    })
+
+  def deployHTTP(log: Logger, options: DeployOptions, dir: File) =
+    deployStuff[Unit](options, dir, log, { _ => () },
+      { (log, relative) =>
+        if (isNotChecksum(relative))
+          log.info("Deploying: " + relative)
+        else
+          log.info("Verifying checksum: " + relative)
+      }, { (_, credentials, relative, file, uri) =>
+        import dispatch._
+        val sender =
+          url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
+        val response = (new Http with NoLogging)(sender >- { str =>
+          Utils.readSomePath[ArtifactoryResponse](str)
+        })
+        if (response != None && response.get.path != None) {
+          val out = response.get.path.get.replaceFirst("^/", "")
+          if (out != relative) log.info("Deployed:  " + out)
+        }
+      })
+
+  def deployFiles(log: Logger, dir: File, uri: URI) = {
+    // copy to a local path
+    val target = uri.getPath
+    log.info("Copying artifacts to " + target + "...")
+    // Overwrite, and preserve timestamps
+    IO.copyDirectory(dir, new File(target), true, true)
+  }
+
 }
 // Response from Artifactory
 case class ArtifactoryResponse(path: Option[String])

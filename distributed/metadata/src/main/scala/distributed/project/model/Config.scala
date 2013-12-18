@@ -512,7 +512,7 @@ case class TestExtraConfig() extends ExtraConfig
 
 /** configuration for the Assemble build system */
 case class AssembleExtraConfig(
-  parts: Seq[DistributedBuildConfig] = Seq()
+  parts: SeqDBC = Seq()
 ) extends ExtraConfig
 
 // our simplified version of Either: we use it to group String and SelectorSubProjects in a transparent manner

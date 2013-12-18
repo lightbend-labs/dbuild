@@ -34,6 +34,7 @@ object Dependencies {
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
   val commonsLang    = "commons-lang" % "commons-lang" % "2.6"
   val commonsIO      = "commons-io" % "commons-io" % "2.4"
+  val jsch           = "com.jcraft" % "jsch" % "0.1.50"
 
   val jgit           = "org.eclipse.jgit" % "org.eclipse.jgit" % "3.1.0.201310021548-r"
 

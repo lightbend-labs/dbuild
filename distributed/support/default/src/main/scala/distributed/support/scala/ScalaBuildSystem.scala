@@ -220,6 +220,13 @@ object ScalaBuildSystem extends BuildSystemCore {
       val notFound = exclude.diff(allSubProjects)
       if (notFound.nonEmpty) sys.error(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
       val subProjects = allSubProjects.diff(exclude)
+      // Note: Here subProjects contains a list of subprojects in the order
+      // in which the names appear in the list of meta "projects". This does not
+      // strictly complies with the ExtractedBuildMeta spec, which says that
+      // subprojects should be listed in build order. However, the point is moot
+      // considering that ant always build everything; the "subproj" list is only
+      // used here to decide what to publish to the dbuild repo at the end of
+      // the compilation.
       readMeta.copy(subproj = subProjects).copy(projects = readMeta.projects.filter {
         p => subProjects.contains(p.name)
       })

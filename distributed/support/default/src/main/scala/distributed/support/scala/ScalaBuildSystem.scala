@@ -93,20 +93,29 @@ object ScalaBuildSystem extends BuildSystemCore {
 
     val meta = readMeta(dir, ec.exclude, log)
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
-    Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
-      "-Dmaven.version.number=" + version) ++ ec.buildOptions, Some(dir)) ! log match {
-      case 0 => ()
-      case n => sys.error("Could not run scala ant build, error code: " + n)
-    }
-
     val localRepo = input.outRepo
 
-    Process(Seq("ant", ec.deployTarget getOrElse "deploy.local",
-      "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
-      "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
-      "-Dmaven.version.number=" + version) ++ ec.buildOptions, Some(dir / "dists" / "maven" / "latest")) ! log match {
-      case 0 => ()
-      case n => sys.error("Could not run scala ant build, error code: " + n)
+    // If the ant build file contains the target "publish.local", then only run that
+    // target (there is no separate deploy); if the target is not present, then run
+    // "distpack-maven-opt", followed by a separate "deploy.local".
+    // That can be overridden by specifying a list "targets" in the extra config.
+    if (ec.buildTarget.nonEmpty || ec.deployTarget.nonEmpty)
+      sys.error("The extra options \"build-target\" and \"deploy-target\" have been replaced by the new option \"targets\" (see docs).")
+    val targets = if (ec.targets.nonEmpty)
+      ec.targets
+    else if (antHasTarget("publish.local", dir))
+      Seq(("publish.local","."))
+    else
+      Seq(("distpack-maven-opt", "dists/maven/latest"), ("deploy.local","."))
+    targets foreach { case (target,path) =>
+        val targetDir = path.split("/").foldLeft(dir)(_ / _)
+        Process(Seq("ant", target,
+        "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
+        "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
+        "-Dmaven.version.number=" + version) ++ ec.buildOptions, Some(targetDir)) ! log match {
+        case 0 => ()
+        case n => sys.error("Could not run scala ant build, error code: " + n)
+      }
     }
 
     // initial part of the artifacts dir, including only the organization

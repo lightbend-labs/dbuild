@@ -254,6 +254,9 @@ object ScalaBuildSystem extends BuildSystemCore {
     } yield major.toString + "." + minor.toString + "." + patch.toString
   }
 
+  def antHasTarget(target: String, dir: File) =
+    Process("ant -p", dir).lines.exists(_.startsWith(" " + target + "  "))
+
   /** Read version from build.number but fake the rest of the ExtractedBuildMeta.*/
   private def fallbackMeta(baseDir: File): ExtractedBuildMeta = {
 

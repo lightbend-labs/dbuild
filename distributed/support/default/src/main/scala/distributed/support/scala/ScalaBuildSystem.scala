@@ -100,6 +100,32 @@ object ScalaBuildSystem extends BuildSystemCore {
     // "distpack-maven-opt", followed by a separate "deploy.local".
     // That can be overridden by specifying a list "targets" in the extra config.
     val hasPublishLocal = antHasTarget("publish.local", dir)
+
+    // Let's see if we can fix up the compiler used to compile this compiler.
+    // Were we able to rematerialize a previous scala compiler in our input repo?
+    // (TODO: consolidate the method below with the identical method in DistributedRunner)
+    def customScalaVersion(arts: Seq[distributed.project.model.ArtifactLocation]): Option[String] =
+    (for {
+      artifact <- arts.view
+      dep = artifact.info
+      if dep.organization == "org.scala-lang"
+      if dep.name == "scala-library"
+    } yield artifact.version).headOption
+
+    val rewireOptions: Seq[String] = (if (!hasPublishLocal)
+      None
+    else
+      customScalaVersion(input.artifacts.artifacts) map { sv =>
+        log.info("*** Will compile using the Scala compiler version \"" + sv + "\"" + {
+          project.config.space map (" (from space \"" + _.from + "\")") getOrElse ""
+        })
+        //    ... set the repo ptr...
+        Seq("-Dextra.repo.url=\"file://" + input.artifacts.localRepo.getCanonicalPath + "\"",
+          //    ... and the version, change starr.version, as in:
+          //      https://github.com/scala/scala/blob/master/versions.properties
+          "-Dstarr.version=\"" + sv + "\"")
+      }) getOrElse Seq.empty
+
     if (ec.buildTarget.nonEmpty || ec.deployTarget.nonEmpty)
       sys.error("The extra options \"build-target\" and \"deploy-target\" have been replaced by the new option \"targets\" (see docs).")
     val targets = if (ec.targets.nonEmpty)
@@ -113,7 +139,7 @@ object ScalaBuildSystem extends BuildSystemCore {
         Process(Seq("ant", target,
         "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
         "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
-        "-Dmaven.version.number=" + version) ++ ec.buildOptions, Some(targetDir)) ! log match {
+        "-Dmaven.version.number=" + version) ++ rewireOptions ++ ec.buildOptions, Some(targetDir)) ! log match {
         case 0 => ()
         case n => sys.error("Could not run scala ant build, error code: " + n)
       }

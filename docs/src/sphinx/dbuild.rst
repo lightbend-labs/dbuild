@@ -385,8 +385,8 @@ In the case of Scala, the "extra" record is:
    {
     "build-number"   : <build-number>,
     "exclude"        : [ subproj1, subproj2,... ]
-    "build-options"  : [ opt1, opt2,... ]
     "targets"        : [ ["target1","path1"],["target2,"path2"],... ]
+    "build-options"  : [ opt1, opt2,... ]
    }
 
 Each of the fields is optional. The are:
@@ -414,16 +414,11 @@ exclude
   published or advertised as available to the rest of the dbuild projects.
   They will still be built, however.
 
-build-options
-  A sequence of strings; they will be appended to the ant options when
-  compiling. This option can be used to define additional properties,
-  or to set other flags.
-
 targets
   The Scala build system will normally generate the files by invoking
   the target "publish.local", if available. If the target
   "publish.local" is not available, it will run instead
-  "distpack-maven-opt" in "dists/maven/latest", followed by
+  "distpack-maven" in "dists/maven/latest", followed by
   "deploy.local".
 
   If required, this options can be used to specify an alternate sequence
@@ -433,6 +428,15 @@ targets
   as a separator) leading to the build.xml where the target is
   defined. For the latter, a path of "." or "" can be used to refer
   to the project root.
+
+build-options
+  A sequence of strings; they will be appended to the ant options when
+  compiling. This option can be used to define additional properties,
+  or to set other flags. If unspecified, by default it will take the value
+  ``"-Dscalac.args.optimise=-optimise"``, meaning that an optimized
+  build will take place. If you would like an unoptimized build instead,
+  please just redefine "build-options" to an empty array.
+
 
 Scala version numbers
 ---------------------

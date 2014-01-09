@@ -99,14 +99,15 @@ object ScalaBuildSystem extends BuildSystemCore {
     // target (there is no separate deploy); if the target is not present, then run
     // "distpack-maven-opt", followed by a separate "deploy.local".
     // That can be overridden by specifying a list "targets" in the extra config.
+    val hasPublishLocal = antHasTarget("publish.local", dir)
     if (ec.buildTarget.nonEmpty || ec.deployTarget.nonEmpty)
       sys.error("The extra options \"build-target\" and \"deploy-target\" have been replaced by the new option \"targets\" (see docs).")
     val targets = if (ec.targets.nonEmpty)
       ec.targets
-    else if (antHasTarget("publish.local", dir))
+    else if (hasPublishLocal)
       Seq(("publish.local","."))
     else
-      Seq(("distpack-maven-opt", "dists/maven/latest"), ("deploy.local","."))
+      Seq(("distpack-maven", "dists/maven/latest"), ("deploy.local","."))
     targets foreach { case (target,path) =>
         val targetDir = path.split("/").foldLeft(dir)(_ / _)
         Process(Seq("ant", target,

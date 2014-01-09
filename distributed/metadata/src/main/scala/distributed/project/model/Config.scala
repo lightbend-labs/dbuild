@@ -452,7 +452,7 @@ case class ScalaExtraConfig(
   // "targets" is a list of pairs, where the first component is the target
   // and the second is the path relative to the root where the target should be run
   targets: Seq[(String, String)] = Seq.empty,
-  @JsonProperty("build-options") buildOptions: SeqString = Seq.empty,
+  @JsonProperty("build-options") buildOptions: SeqString = Seq("-Dscalac.args.optimise=-optimise"),
   exclude: SeqString = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 

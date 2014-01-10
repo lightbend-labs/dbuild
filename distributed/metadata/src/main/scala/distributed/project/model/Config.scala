@@ -223,6 +223,8 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   // an effect on building (for instance due to a difference in checkout because
   // of an implementation bug)
   @JsonProperty("use-jgit") useJGit: Boolean = false,
+  // commands for sbt-based builds
+  @JsonProperty("sbt-commands") sbtCommands: SeqString = Seq.empty,
   // Default space for regular project
   space: Space = new Space("default")) extends BuildOptions
 
@@ -686,6 +688,7 @@ object SeqNotification {
 trait ExtraOptions {
   def sbtVersion: String
   def extractionVersion: String
+  def sbtCommands: SeqString
 }
 trait ProjectOptions {
   def crossVersion: String

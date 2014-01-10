@@ -35,7 +35,8 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
         case None => defaults.extractionVersion
         case Some(c) => c
       }
-      ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer))
+      val allCommands = defaults.sbtCommands ++ ec.commands
+      ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer), commands = allCommands)
     }
     case _ => throw new Exception("Internal error: sbt build config options have the wrong type. Please report.")
   }

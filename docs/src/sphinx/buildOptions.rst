@@ -14,6 +14,7 @@ default for all of the projects enclosed in the same section. The available opti
    build: {
     cross-version       : <cross-version-level>
     sbt-version         : <sbt-version>
+    sbt-commands        : [<command1>,<command2>,...]
     extraction-version  : <compiler-version-string>
     use-jgit            : <true-or-false>
 
@@ -81,6 +82,13 @@ cross-version
 sbt-version
   You can optionally specify here the sbt version that should be used to compile
   all the sbt-based projects. If not specified, sbt 0.12.4 will be used.
+
+sbt-commands
+  It can be either a single string, or an array of strings, each of which will be used
+  as a pre-extraction and pre-build sbt command in sbt-based builds. These commands will
+  be applied to all the contained projects. Notice that, if the "extra.commands" field
+  of a project contains additional commands, they will not replace this default list,
+  but they will be appended to it.
 
 extraction-version
   Specifies the version of the compiler that should be used during dependency
@@ -173,6 +181,11 @@ rather than a single one. For example:
 In this case, we used an array for the "build" section. Each of the two lists
 of projects can use a different set of defaults, which can again be overridden
 inside each project.
+
+Note that for some selected options the general default and the project-specific
+value may combine in a slightly different manner. That is currently the case only
+for the list of sbt commands: the supplied default and the project-specific value
+will be concatenated together, and all of the resulting commands will be used.
 
 |
 

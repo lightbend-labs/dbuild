@@ -327,6 +327,8 @@ commands
   A sequence of sbt commands; they will be executed by sbt before dbuild rearranges
   the project dependencies. These commands can be used, for example, to change settings
   using forms like "set setting := ...".
+  Note that a default list of commands (as detailed in :doc:`buildOptions`) will not
+  be replaced by this option: the general commands will be executed before this list.
 
 extraction-version
   This value can be used to override the Scala compiler version used during dependency

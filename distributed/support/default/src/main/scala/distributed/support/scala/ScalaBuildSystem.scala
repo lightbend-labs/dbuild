@@ -103,14 +103,18 @@ object ScalaBuildSystem extends BuildSystemCore {
 
     // Let's see if we can fix up the compiler used to compile this compiler.
     // Were we able to rematerialize a previous scala compiler in our input repo?
-    // (TODO: consolidate the method below with the identical method in DistributedRunner)
+    // (TODO: consolidate the method below with the similar method in DistributedRunner)
+    def findVersion(arts: Seq[distributed.project.model.ArtifactLocation],
+      name: String, org: String): Option[String] =
+      (for {
+        artifact <- arts.view
+        dep = artifact.info
+        if dep.organization == name
+        if dep.name == org
+      } yield artifact.version).headOption
+
     def customScalaVersion(arts: Seq[distributed.project.model.ArtifactLocation]): Option[String] =
-    (for {
-      artifact <- arts.view
-      dep = artifact.info
-      if dep.organization == "org.scala-lang"
-      if dep.name == "scala-library"
-    } yield artifact.version).headOption
+      findVersion(arts, "org.scala-lang", "scala-library")
 
     val rewireOptions: Seq[String] = (if (!hasPublishLocal)
       None

@@ -113,13 +113,12 @@ object ScalaBuildSystem extends BuildSystemCore {
         if dep.name == org
       } yield artifact.version).headOption
 
-    def customScalaVersion(arts: Seq[distributed.project.model.ArtifactLocation]): Option[String] =
-      findVersion(arts, "org.scala-lang", "scala-library")
+    val rewireOptions = if (hasPublishLocal) {
 
-    val rewireOptions: Seq[String] = (if (!hasPublishLocal)
-      None
-    else
-      customScalaVersion(input.artifacts.artifacts) map { sv =>
+      val customScalaVersion = findVersion(input.artifacts.artifacts, "org.scala-lang", "scala-library")
+      // "starr.version" currently also applies to scala-compiler and scala-reflect
+
+      val scalaRewireOptions: Seq[String] = customScalaVersion.toSeq flatMap { sv =>
         log.info("*** Will compile using the Scala compiler version \"" + sv + "\"" + {
           project.config.space map (" (from space \"" + _.from + "\")") getOrElse ""
         })
@@ -128,25 +127,50 @@ object ScalaBuildSystem extends BuildSystemCore {
           //    ... and the version, change starr.version, as in:
           //      https://github.com/scala/scala/blob/master/versions.properties
           "-Dstarr.version=\"" + sv + "\"")
-      }) getOrElse Seq.empty
+      }
+
+      val extraRewiringOptions = Seq(
+        // org, name, -Dxxx.version.number
+        ("org.scala-lang.modules", "scala-xml", "scala-xml"),
+        ("org.scala-lang.modules", "scala-parser-combinators", "scala-parser-combinators"),
+        ("org.scala-lang.modules", "scala-partest", "partest"),
+        ("org.scalacheck", "scalacheck", "scalacheck"),
+        ("org.scala-lang.plugins", "scala-continuations-plugin", "scala-continuations-plugin"),
+        ("org.scala-lang.plugins", "scala-continuations-library", "scala-continuations-library"),
+        ("org.scala-lang.modules", "scala-swing", "scala-swing"),
+        ("com.typesafe.akka", "akka-actor", "akka-actor"),
+        ("org.scala-lang", "scala-actors-migration", "actors-migration")) map {
+          case (org, name, prop) =>
+            findVersion(input.artifacts.artifacts, org, name) map {
+              ver =>
+                log.info("Setting version of " + name + " to " + ver)
+                "-D" + prop + ".version.number=" + ver
+            }
+        } flatten
+
+      scalaRewireOptions ++ extraRewiringOptions
+      
+    } else Seq.empty
 
     if (ec.buildTarget.nonEmpty || ec.deployTarget.nonEmpty)
       sys.error("The extra options \"build-target\" and \"deploy-target\" have been replaced by the new option \"targets\" (see docs).")
     val targets = if (ec.targets.nonEmpty)
       ec.targets
     else if (hasPublishLocal)
-      Seq(("publish.local","."))
+      Seq(("publish.local", "."))
     else
-      Seq(("distpack-maven", "dists/maven/latest"), ("deploy.local","."))
-    targets foreach { case (target,path) =>
+      Seq(("distpack-maven", "dists/maven/latest"), ("deploy.local", "."))
+    targets foreach {
+      case (target, path) =>
         val targetDir = path.split("/").foldLeft(dir)(_ / _)
         Process(Seq("ant", target,
-        "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
-        "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
-        "-Dmaven.version.number=" + version) ++ rewireOptions ++ ec.buildOptions, Some(targetDir)) ! log match {
-        case 0 => ()
-        case n => sys.error("Could not run scala ant build, error code: " + n)
-      }
+          "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
+          "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
+          "-Dmaven.version.number=" + version) ++ rewireOptions ++
+          ec.buildOptions, Some(targetDir)) ! log match {
+          case 0 => ()
+          case n => sys.error("Could not run scala ant build, error code: " + n)
+        }
     }
 
     // initial part of the artifacts dir, including only the organization

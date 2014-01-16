@@ -168,7 +168,7 @@ object IvyMachinery {
         case Some("sources") => Seq("sources")
         case Some("javadoc") => Seq("javadoc")
         // if someone asks for the default or compile configs, give them the jar
-        case None if a.getType == "jar" && a.getExt == "jar" => Seq("compile", "default")
+        case None if a.getType == "jar" && a.getExt == "jar" => Seq("master", "compile", "default")
         case _ => Seq("default") // TODO: fetch configs better?
       })).distinct
     }

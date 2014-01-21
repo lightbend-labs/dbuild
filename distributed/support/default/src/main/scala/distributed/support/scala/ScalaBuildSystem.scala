@@ -104,14 +104,20 @@ object ScalaBuildSystem extends BuildSystemCore {
     // Let's see if we can fix up the compiler used to compile this compiler.
     // Were we able to rematerialize a previous scala compiler in our input repo?
     // (TODO: consolidate the method below with the similar method in DistributedRunner)
-    def findVersion(arts: Seq[distributed.project.model.ArtifactLocation],
-      name: String, org: String): Option[String] =
+    def findArtifact(arts: Seq[ArtifactLocation],
+      name: String, org: String): Option[ArtifactLocation] =
       (for {
         artifact <- arts.view
         dep = artifact.info
         if dep.organization == name
         if dep.name == org
-      } yield artifact.version).headOption
+      } yield artifact).headOption
+
+    def getVersion(art:Option[ArtifactLocation]) = art map {_.version}
+    
+    def findVersion(arts: Seq[ArtifactLocation],
+      name: String, org: String): Option[String] =
+        getVersion(findArtifact(arts, name, org))
 
     val rewireOptions = if (hasPublishLocal) {
 
@@ -126,11 +132,13 @@ object ScalaBuildSystem extends BuildSystemCore {
         Seq("-Dextra.repo.url=\"file://" + input.artifacts.localRepo.getCanonicalPath + "\"",
           //    ... and the version, change starr.version, as in:
           //      https://github.com/scala/scala/blob/master/versions.properties
-          "-Dstarr.version=\"" + sv + "\"")
+          "-Dstarr.version=\"" + sv + "\""
+            ,"-Dscala.binary.version=\"" + sv + "\""
+          )
       }
 
-      val extraRewiringOptions = Seq(
-        // org, name, -Dxxx.version.number
+      val extraRewireOptions = Seq(
+        // org, name, -Dxxx.version.number and -Dxxx.cross.suffix
         ("org.scala-lang.modules", "scala-xml", "scala-xml"),
         ("org.scala-lang.modules", "scala-parser-combinators", "scala-parser-combinators"),
         ("org.scala-lang.modules", "scala-partest", "partest"),
@@ -141,14 +149,16 @@ object ScalaBuildSystem extends BuildSystemCore {
         ("com.typesafe.akka", "akka-actor", "akka-actor"),
         ("org.scala-lang", "scala-actors-migration", "actors-migration")) map {
           case (org, name, prop) =>
-            findVersion(input.artifacts.artifacts, org, name) map {
-              ver =>
+            findArtifact(input.artifacts.artifacts, org, name) map {
+              art =>
+                val ver = art.version
                 log.info("Setting version of " + name + " to " + ver)
-                "-D" + prop + ".version.number=" + ver
+                log.debug("  (I would like the cross suffix: "+ art.crossSuffix+" )")
+                "-D" + prop + ".version.number=\"" + ver +"\""
             }
         } flatten
 
-      scalaRewireOptions ++ extraRewiringOptions
+      scalaRewireOptions ++ extraRewireOptions
       
     } else Seq.empty
 

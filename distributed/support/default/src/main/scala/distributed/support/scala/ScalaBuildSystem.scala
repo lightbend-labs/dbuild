@@ -137,7 +137,7 @@ object ScalaBuildSystem extends BuildSystemCore {
           )
       }
 
-      val extraRewireOptions = Seq(
+      val extraRewireOptions = (Seq(
         // org, name, -Dxxx.version.number and -Dxxx.cross.suffix
         ("org.scala-lang.modules", "scala-xml", "scala-xml"),
         ("org.scala-lang.modules", "scala-parser-combinators", "scala-parser-combinators"),
@@ -152,11 +152,11 @@ object ScalaBuildSystem extends BuildSystemCore {
             findArtifact(input.artifacts.artifacts, org, name) map {
               art =>
                 val ver = art.version
-                log.info("Setting version of " + name + " to " + ver)
-                log.debug("  (I would like the cross suffix: "+ art.crossSuffix+" )")
-                "-D" + prop + ".version.number=\"" + ver +"\""
+                log.info("Setting " + name + " to ver = \"" + ver+"\", suffix = \"" + art.crossSuffix+"\"")
+                Seq("-D" + prop + ".version.number=\"" + ver +"\"",
+                    "-D" + prop + ".cross.suffix=\"" + art.crossSuffix +"\"")
             }
-        } flatten
+        }).flatten.flatten
 
       scalaRewireOptions ++ extraRewireOptions
       

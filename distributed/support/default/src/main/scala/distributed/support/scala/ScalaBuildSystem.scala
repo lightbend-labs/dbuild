@@ -169,7 +169,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     else if (hasPublishLocal)
       Seq(("publish.local", "."))
     else
-      Seq(("distpack-maven", "dists/maven/latest"), ("deploy.local", "."))
+      Seq(("distpack-maven", "."), ("deploy.local", "dists/maven/latest"))
     targets foreach {
       case (target, path) =>
         val targetDir = path.split("/").foldLeft(dir)(_ / _)

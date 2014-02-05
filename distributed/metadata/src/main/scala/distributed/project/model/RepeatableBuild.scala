@@ -61,6 +61,8 @@ object RepeatableDistributedBuild {
  */
 case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
   def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), options = None)
+  /** The unique SHA for this build. */
+  def uuid: String = hashing sha1 (repeatableBuilds map (_.uuid))
   
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)

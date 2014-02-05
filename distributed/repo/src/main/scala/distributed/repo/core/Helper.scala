@@ -81,7 +81,7 @@ object LocalRepoHelper {
     }
 
   /** Publishes the given repeatable build configuration to the repository. */
-  def publishBuildMeta(build: DBuildConfiguration, remote: Repository, log: Logger): Unit =
+  def publishBuildMeta(build: RepeatableDistributedBuild, remote: Repository, log: Logger): Unit =
     publishMeta(build, remote, makeBuildMetaKey, log)
 
   def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {

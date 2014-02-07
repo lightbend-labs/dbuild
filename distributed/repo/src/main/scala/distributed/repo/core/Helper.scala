@@ -95,6 +95,20 @@ object LocalRepoHelper {
     ArtifactSha(sha, name)
   }
 
+  // In case we already have an existing build in the cache, we might be interested in getting diagnostic
+  // information on what is in there. That is done here.
+  def debugArtifactsInfo(extracted: Seq[BuildSubArtifactsOut], log: Logger) = {
+    log.info("Published files:")
+    extracted foreach {
+      case BuildSubArtifactsOut(subproj, _, shas) =>
+        if (subproj != "") log.info("in subproject: " + subproj)
+        shas foreach {
+          case ArtifactSha(sha, location) =>
+            log.info(location)
+        }
+    }
+  }
+  
   /**
    * Publishes all files in the localRepo directory, according to the SHAs calculated
    * by the build system.

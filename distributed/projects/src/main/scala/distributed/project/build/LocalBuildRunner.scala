@@ -23,7 +23,9 @@ class LocalBuildRunner(builder: BuildRunner,
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger): BuildOutcome = {
     try {
       try {
-        BuildUnchanged(build.config.name, children, BuildArtifactsOut(LocalRepoHelper.getPublishedDeps(build.uuid, repository, log)))
+        val subArtifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
+        LocalRepoHelper.debugArtifactsInfo(subArtifactsOut, log)
+        BuildUnchanged(build.config.name, children, BuildArtifactsOut(subArtifactsOut))
       } catch {
         case t: RepositoryException =>
           log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)

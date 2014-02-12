@@ -130,7 +130,7 @@ properties
   those 'vars' may contain expansions that refer to properties loaded using this
   properties list.
 
-  Properties files that come earlier in the list have priority. Variables that are
+  Properties files that come later in the list have priority. Variables that are
   defined locally, in the 'vars' section, take precedence in any case over all of
   the properties defined in the properties files of this list.
 

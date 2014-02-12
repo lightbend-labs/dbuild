@@ -89,7 +89,7 @@ class SbtBuildMain extends xsbti.AppMain {
       val (config, resolvers) =
         try {
           val properties = readProperties(configFile): Seq[String]
-          val propConfigs = properties map { s =>
+          val propConfigs = properties.reverse map { s =>
             println("Including properties file: " + s)
             val syntax = ConfigSyntax.PROPERTIES
             val parseOptions = ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)

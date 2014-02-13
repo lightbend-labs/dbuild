@@ -54,7 +54,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     // ok, now we just have to merge everything together.
-    val newMeta = ExtractedBuildMeta(meta.version, configAndExtracted.extracted.projects, meta.subproj)
+    val newMeta = new ExtractedBuildMeta(meta.version, configAndExtracted.extracted.projects, meta.subproj)
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta
   }
@@ -298,8 +298,22 @@ object ScalaBuildSystem extends BuildSystemCore {
         log.error("Failed to read scala metadata file: " + dbuildMetaFile.getAbsolutePath)
         logging.Logger.prepareLogMsg(log, e)
         log.error("Falling back to default.")
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
+        sys.exit(9991)
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
         fallbackMeta(baseDir)
     }
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
+   sys.exit(9992)
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
+        // DEBUGGING ONLY *******************************************************************************************************
     // There are no real subprojects in the Scala build;
     // simulate them by creating one subproject per artifact.
     // That will enable us to publish individual artifacts
@@ -307,7 +321,8 @@ object ScalaBuildSystem extends BuildSystemCore {
     // Also filter according to the "exclude" list; however,
     // any dependencies on excluded subprojects will be preserved.
     val allSubProjects = readMeta.projects map { _.name }
-    val meta = if (exclude.nonEmpty) {
+    val readMetaInfo = readMeta.projInfo.headOption getOrElse sys.error("Internal error: readMeta had no projInfo")
+    val metaInfo = if (exclude.nonEmpty) {
       val notFound = exclude.diff(allSubProjects)
       if (notFound.nonEmpty) sys.error(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
       val subProjects = allSubProjects.diff(exclude)
@@ -318,10 +333,11 @@ object ScalaBuildSystem extends BuildSystemCore {
       // considering that ant always build everything; the "subproj" list is only
       // used here to decide what to publish to the dbuild repo at the end of
       // the compilation.
-      readMeta.copy(subproj = subProjects).copy(projects = readMeta.projects.filter {
+      readMetaInfo.copy(subproj = subProjects).copy(projects = readMeta.projects.filter {
         p => subProjects.contains(p.name)
       })
-    } else readMeta.copy(subproj = allSubProjects)
+    } else readMetaInfo.copy(subproj = allSubProjects)
+    val meta = readMeta.copy(projInfo = Seq(metaInfo))
 
     // override the "dbuild.json" version with the one from "build.number" (if it exists)
     readBuildNumberFile(baseDir) map { v => meta.copy(version = v) } getOrElse meta
@@ -359,7 +375,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     // hard-coded
-    ExtractedBuildMeta(version, Seq(
+    ExtractedBuildMeta(version, Seq(ProjMeta(Seq(
       Project("continuations", "org.scala-lang.plugins",
         Seq(ProjectRef("continuations", "org.scala-lang.plugins")),
         Seq.empty),
@@ -390,6 +406,6 @@ object ScalaBuildSystem extends BuildSystemCore {
         Seq(Project("scala-actors-migration", "org.scala-lang",
         Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),
         Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))))
-      else Seq.empty))
+      else Seq.empty))))
   }
 }

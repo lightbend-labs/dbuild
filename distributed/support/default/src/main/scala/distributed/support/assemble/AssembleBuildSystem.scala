@@ -126,7 +126,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.info("----------")
     log.info("Assembling dependencies...")
     val artifacts = allConfigAndExtracted.flatMap(_.extracted.projects.flatMap(_.artifacts))
-    val newMeta = ExtractedBuildMeta("0.0.0",
+    val newMeta = new ExtractedBuildMeta("0.0.0",
       allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>
         // remove all dependencies that are not already provided by this
         // assembled project (we pretend the resulting assembled set has
@@ -147,6 +147,20 @@ object AssembleBuildSystem extends BuildSystemCore {
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
       buildData: BuildData): BuildArtifactsOut = {
+
+    
+    
+    
+    
+    sys.error("not implemented")
+    
+    /* /* /* /*
+    
+    
+    
+    
+    
+    
     val ec = project.extra[ExtraType]
     val version = input.version // IGNORED!!
 
@@ -562,6 +576,24 @@ object AssembleBuildSystem extends BuildSystemCore {
     })
     log.debug("out: " + writeValue(out))
     out
-  }
 
+  
+  
+  
+  
+  
+  
+  */
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  }
+  
 }

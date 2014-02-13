@@ -58,10 +58,10 @@ class LocalBuildRunner(builder: BuildRunner,
       val readRepo = dbuildDir / "local-repo"
       val writeRepo = dbuildDir / "local-publish-repo"
       if (!writeRepo.exists()) writeRepo.mkdirs()
-      val uuids = build.dependencyUUIDs.toSeq
-      val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
+      val uuidGroups = build.depInfo map (_.dependencyUUIDs)
+      val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuidGroups)
       // TODO - Load this while resolving!
-      val dependencies: BuildArtifactsIn = BuildArtifactsIn(artifactLocations, readRepo)
+      val dependencies: BuildArtifactsInMulti = BuildArtifactsInMulti(artifactLocations)
       // Special case: scala-compiler etc must have the same version number
       // as scala-library: projects that rely on scala-compiler as a dependency
       // (notably sbt) may need that.
@@ -75,7 +75,9 @@ class LocalBuildRunner(builder: BuildRunner,
       // this project will also get a new uuid.
       // TODO: can we work around this quirk in a cleaner manner?
       log.debug(build.toString)
-      val scalaLib = artifactLocations find { a =>
+      // inspect only the artifacts reloaded at the base level
+      val baseArtifacts = (artifactLocations.headOption getOrElse sys.error("Internal error: zero artifacts levels.")).artifacts
+      val scalaLib = baseArtifacts find { a =>
         a.info.organization == "org.scala-lang" && a.info.name == "scala-library"
       }
       val libVersion = scalaLib flatMap { lib =>
@@ -111,8 +113,10 @@ class LocalBuildRunner(builder: BuildRunner,
       }
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
+      val baseLevelDepInfo = build.depInfo.headOption getOrElse sys.error("Internal error: depInfo is empty!")
       val results = builder.runBuild(build, dir,
-        BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, buildData)
+        // TODO: fix buildInput to make it Multi
+        BuildInput(dependencies.materialized.head, build.uuid, version, baseLevelDepInfo.subproj, writeRepo, build.config.name), this, buildData)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
       markSuccess(dir)
       results

@@ -36,15 +36,9 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
   @JsonProperty("base-version") baseVersion: String,
-  // The list of dependencies is transitive (within the boundaries
-  // of the relevant spaces, see below)
-  dependencyNames: Seq[String],// names corresponding to a RepeatableProjectBuild
-  dependencyUUIDs: Seq[String],// uuids corresponding to a RepeatableProjectBuild
-  // dependencyUUIDs and dependencyNames refer to the same elements. They are
-  // in two separate sequences for convenience, as in the code there is no
-  // assumption anywhere that they should be kept in sync. If that need should arise,
-  // the two Seqs should probably be converted into a Seq[(String,String)].
-  subproj: Seq[String]) {
+  // see below the description of RepeatableDepInfo for details
+  depInfo: Seq[RepeatableDepInfo]
+) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
 
@@ -53,6 +47,23 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
       case e: java.net.URISyntaxException => None
     }
 }
+
+/**
+ * This structure contains information related to each level of a multi-level
+ * build. The first level is the normal project info, the second could be
+ * the sbt plugins level, and so on, depending on the build system. These
+ * levels reflect the fromStream sequence in the project space descriptor.
+ */
+case class RepeatableDepInfo(
+  // The list of dependencies is transitive (within the boundaries
+  // of the relevant spaces, see below)
+  dependencyNames: Seq[String],// names corresponding to a RepeatableProjectBuild
+  dependencyUUIDs: Seq[String],// uuids corresponding to a RepeatableProjectBuild
+  // dependencyUUIDs and dependencyNames refer to the same elements. They are
+  // in two separate sequences for convenience, as in the code there is no
+  // assumption anywhere that they should be kept in sync. If that need should arise,
+  // the two Seqs should probably be converted into a Seq[(String,String)].
+  subproj: Seq[String])
 
 object RepeatableDistributedBuild {
   def fromExtractionOutcome(outcome: ExtractionOK) = RepeatableDistributedBuild(outcome.pces)
@@ -81,16 +92,22 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
         val head = remaining.head
         val node = graph.nodeFor(head) getOrElse sys.error("Internal error: graph.nodeFor() was None. Please report.")
         val subgraph = graph.subGraphFrom(node) map (_.value)
-        val dependencies =
-          for {
-            // only list as dependencies those that have produced artifacts that
-            // the project in "head" can actually see. These will be the dependent projects
-            // that are eventually reloaded (rematerialized) right before each project build starts
-            dep <- (subgraph - head) if canSeeSpace(head.getSpace.from, dep.getSpace.to)
-          } yield current get dep.config.name getOrElse sys.error("Internal error: unexpected circular dependency. Please report.")
-        val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
+        // we need this number of levels: head.extracted.projInfo.length
+        // now, for each level, we find the relevant space and calculate
+        // the list of dependent projects
+        val allDependencies = (head.extracted.projInfo zip head.getSpace.fromStream) map {
+          case (info, fromSpace) =>
+            val dependencies = for {
+              // only list as dependencies those that have produced artifacts that
+              // the project in "head" can actually see. These will be the dependent projects
+              // that are eventually reloaded (rematerialized) right before each project build starts
+              dep <- (subgraph - head) if canSeeSpace(fromSpace, dep.getSpace.to)
+            } yield current get dep.config.name getOrElse sys.error("Internal error: unexpected circular dependency. Please report.")
+            val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
+            RepeatableDepInfo(sortedDeps.map(_.config.name), sortedDeps.map(_.uuid), info.subproj)
+        }
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
-          sortedDeps.map(_.config.name), sortedDeps.map(_.uuid), head.extracted.subproj) // pick defaults if no BuildOptions specified
+          allDependencies) // pick defaults if no BuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     val orderedBuilds = (graph.safeTopological map (_.value)).reverse

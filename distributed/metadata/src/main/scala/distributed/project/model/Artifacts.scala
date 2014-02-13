@@ -47,6 +47,8 @@ case class ProjectArtifactInfo(
  * just one element, where the subproject name is the empty string.
  */
 case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
+// variant for multi-level build systems
+case class BuildArtifactsInMulti(materialized: Seq[BuildArtifactsIn])
 case class BuildArtifactsOut(results: Seq[BuildSubArtifactsOut])
 case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation], shas: Seq[ArtifactSha])
 

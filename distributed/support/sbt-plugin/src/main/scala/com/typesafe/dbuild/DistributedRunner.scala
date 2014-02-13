@@ -608,7 +608,7 @@ object DistributedRunner {
     val cache = Repository.default
     val project = findRepeatableProjectBuild(builduuid, thisProject, log)
     log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
-    val uuids = project.dependencyUUIDs.toSeq
+    val uuids = project.depInfo map {_.dependencyUUIDs}
     (project, LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids))
   }
 
@@ -683,8 +683,9 @@ object DistributedRunner {
         log.warn("No artifacts are dependencies of project " + project + " in build " + builduuid)
         state
       } else {
-        val modules = getModuleRevisionIds(state, proj.subproj, log)
-        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts, _,
+        // TODO: support for rewiring plugins as well??... Probably.
+        val modules = getModuleRevisionIds(state, proj.depInfo.head.subproj, log)
+        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts.head.artifacts, _,
           proj.config.getCrossVersion))
       }
     } getOrElse {

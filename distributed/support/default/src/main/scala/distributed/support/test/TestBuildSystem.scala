@@ -48,6 +48,6 @@ object TestBuildSystem extends BuildSystemCore {
    * Fabricate some ExtractedBuildMeta as suitable.
    */
   private def readMeta(config: ProjectBuildConfig): ExtractedBuildMeta = {
-    ExtractedBuildMeta(config.setVersion getOrElse "xxx", Seq.empty, Seq.empty)
+    new ExtractedBuildMeta(config.setVersion getOrElse "xxx", Seq.empty, Seq.empty)
   }
 }

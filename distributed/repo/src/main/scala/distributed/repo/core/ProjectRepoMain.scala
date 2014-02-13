@@ -116,7 +116,7 @@ object ProjectRepoMain {
   def printProjectDependencies(uuid:String): Unit = {
     val (meta, _, _) = projectRepo.getProjectInfo(uuid)
     println(" -- Dependencies --")
-    for(uuid <- meta.project.dependencyUUIDs)
+    for(uuid <- meta.project.depInfo flatMap (_.dependencyUUIDs))
       println("    * " + uuid)
   }
   

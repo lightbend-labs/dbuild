@@ -61,7 +61,12 @@ private case class ProjectBuildConfigShadow(name: String,
 case class DepsModifiers(
     // One or more dependencies, in the form "org#name".
     // They will not be rewired by dbuild
-    ignore: SeqString = Seq.empty
+    ignore: SeqString = Seq.empty,
+    // One or more dependencies, in the form "org#name".
+    // They are simply appended to all of the subprojects.
+    // These are dependencies as seen by dbuild (as extracted); they are not
+    // the actual project's dependencies.
+    inject: SeqString = Seq.empty
 )
 
 /**

@@ -98,13 +98,13 @@ object LocalRepoHelper {
   // In case we already have an existing build in the cache, we might be interested in getting diagnostic
   // information on what is in there. That is done here.
   def debugArtifactsInfo(extracted: Seq[BuildSubArtifactsOut], log: Logger) = {
-    log.info("Published files:")
+    log.debug("Published files:")
     extracted foreach {
       case BuildSubArtifactsOut(subproj, _, shas) =>
-        if (subproj != "") log.info("in subproject: " + subproj)
+        if (subproj != "") log.debug("in subproject: " + subproj)
         shas foreach {
           case ArtifactSha(sha, location) =>
-            log.info(location)
+            log.debug(location)
         }
     }
   }
@@ -257,7 +257,7 @@ object LocalRepoHelper {
   def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): Seq[BuildSubArtifactsOut] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
-    log.debug("Found cached project build, uuid "+uuid)
+    log.info("Found cached project build, uuid "+uuid)
     meta.versions
   }
 

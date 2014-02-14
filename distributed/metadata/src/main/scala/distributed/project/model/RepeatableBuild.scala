@@ -36,16 +36,18 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
   @JsonProperty("base-version") baseVersion: String,
-  dependencies: Seq[RepeatableProjectBuild],
+  // The list of dependencies is transitive (within the boundaries
+  // of the relevant spaces, see below)
+  dependencyNames: Seq[String],// names corresponding to a RepeatableProjectBuild
+  dependencyUUIDs: Seq[String],// uuids corresponding to a RepeatableProjectBuild
+  // dependencyUUIDs and dependencyNames should be kept in a 1:1 sync,
+  // where corresponding elements refer to the same RepeatableProjectBuild.
+  // (this is not actually necessary at this time, but it might be in the future)
   subproj: Seq[String]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
 
   def extra[T](implicit m: Manifest[T]) = config.getExtra[T]
-
-  // The "dependencies" list is already transitive (within the boundaries
-  // of the relevant spaces, see below)
-  def dependencyUUIDs = dependencies.map{_.uuid}
 }
 
 object RepeatableDistributedBuild {
@@ -82,7 +84,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
           } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
         val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
-          sortedDeps, head.extracted.subproj) // pick defaults if no BuildOptions specified
+          sortedDeps.map(_.config.name), sortedDeps.map(_.uuid), head.extracted.subproj) // pick defaults if no BuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }
     val orderedBuilds = (graph.safeTopological map (_.value)).reverse

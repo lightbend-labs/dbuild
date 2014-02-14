@@ -620,12 +620,20 @@ in Maven or Ivy format.
 Since the nested projects are built independently, each
 in isolation, in case any of them relies on further
 dependencies dbuild will be unable to find them, and
-will stop with an error message to that effect. In that
-case, you can set "extra.parts.options.cross-version"
+will stop with an error message to that effect. You
+usally need to set "extra.parts.options.cross-version"
 to "standard", as shown above, in order to disable
 the dependency checking for the nested projects only
 (the corresponding option for the top-level file
 will remain unaffected).
+
+Note that a "set-version" placed
+as the same level as "system: assemble" will be
+ignored, as the versions of the parts are used instead.
+Conversely, a "cross-version" placed at the same level
+will be used to determine the cross suffix to be
+used for the output of the rewritten artifacts,
+at the end of the "assemble" rewriting.
 
 .. warning::
 

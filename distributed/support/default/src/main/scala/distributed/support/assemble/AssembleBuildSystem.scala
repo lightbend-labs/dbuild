@@ -145,7 +145,7 @@ object AssembleBuildSystem extends BuildSystemCore {
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
       log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
-    val version = input.version
+    val version = input.version // IGNORED!!
 
     log.info(ec.parts.toSeq.flatMap(_.projects).map(_.name).mkString("These subprojects will be built: ", ", ", ""))
 

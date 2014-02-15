@@ -231,7 +231,14 @@ object LocalRepoHelper {
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
-    val fragment = try " (commit: " + (Option((new java.net.URI(meta.project.config.uri)).getFragment) getOrElse "none") + ")" catch {
+    val space = meta.project.config.space getOrElse
+      sys.error("Internal error: space is None in " + meta.project.config.name + " while rematerializing artifacts.")
+    val spaceInfo = space.to.length match {
+      case 0 => sys.error("Internal error: rematerializing artifacts from project published in no spaces: " + meta.project.config.name)
+      case 1 => ", space: " + space.to.head
+      case 2 => space.to.mkString(", spaces: ", ",", "")
+    }
+    val fragment = try " (commit: " + (Option((new java.net.URI(meta.project.config.uri)).getFragment) getOrElse "none") + spaceInfo + ")" catch {
       case e: java.net.URISyntaxException => ""
     }
     val info1 = "Retrieved from project " +

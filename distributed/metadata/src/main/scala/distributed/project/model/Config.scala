@@ -378,7 +378,9 @@ case class DeploySignOptions(
 /** Stability information. */
 case class StabilityOptions(
   a: SeqSelectorElement = Seq(),
-  b: SeqSelectorElement = Seq())
+  b: SeqSelectorElement = Seq(),
+  skip: SeqString = Seq()) // skip is a sequence of regex patterns,
+  // files inside the jars whose name match them will not be compared.
 
 /**
  * Configuration used for SBT and other builds.

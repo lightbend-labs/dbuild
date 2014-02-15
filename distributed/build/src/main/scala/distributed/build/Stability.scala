@@ -18,9 +18,10 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
 
   def beforeBuild(projectNames: Seq[String]) = {
     options.stability.foreach { check =>
-      // initial sanity check
+      // initial sanity checks; discard the results
       check.a.flattenAndCheckProjectList(projectNames.toSet)
       check.b.flattenAndCheckProjectList(projectNames.toSet)
+      check.skip.map(new org.apache.oro.text.GlobCompiler().compile(_))
     }
   }
 
@@ -86,11 +87,17 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
                 if (!(sameAB && sameBA)) {
                   sys.error("Comparison failed: file lists differ")
                 }
+                // The standard Java regex alternative would be:
+                // val skipMatchers = check.skip.map(java.util.regex.Pattern.compile(_).matcher(""))
+                // ... || skipMatchers.exists(_.reset(name).matches)
+                // But globs are a bit easier to use in this context.
+                val skipGlobPatterns = check.skip.map(new org.apache.oro.text.GlobCompiler().compile(_))
+                val matcher = new org.apache.oro.text.regex.Perl5Matcher()
                 pathsA.foreach { p: String =>
                   def getEntries(jf: JarFile) = {
                     jf.entries.map { je =>
                       val name = je.getName()
-                      if (je.isDirectory() || name == JarFile.MANIFEST_NAME)
+                      if (je.isDirectory() || skipGlobPatterns.exists(matcher.matches(name, _)))
                         None
                       else
                         Some(je.getName, je)
@@ -102,6 +109,7 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
                   val jfb = new JarFile(fb)
                   val aMap = getEntries(jfa)
                   val bMap = getEntries(jfb)
+                  log.debug("Comparing: " + p + ", will inspect " + aMap.size + " entries")
                   def compareJar(xMap: Map[String, JarEntry], yMap: Map[String, JarEntry], xName: String, yName: String, jar: String) = {
                     val xNotY = xMap.keySet.diff(yMap.keySet)
                     val ok = xNotY.isEmpty
@@ -136,7 +144,7 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
                         log.error("file in the jar: " + f)
                         def toHex(l: Long) = {
                           val h = java.lang.Long.toHexString(l).toUpperCase()
-                          "0000000000000000".substring(Math.min(16, h.length)) + h;
+                          "0000000000000000".substring(Math.min(16, h.length)) + h
                         }
                         log.error("a: " + toHex(aCRC) + ", b: " + toHex(bCRC))
                         sys.error("Comparison failed: two files in corresponding jar files have different CRCs.")

@@ -213,7 +213,7 @@ object AssembleBuildSystem extends BuildSystemCore {
           case _ => sys.error("Internal error: cachedExtractOr() returned incorrect outcome; please report.")
         }
         val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted.config, partConfigAndExtracted.extracted.version,
-          Seq.empty, // remove all dependencies, and pretend that this project stands alone
+          Seq.empty, Seq.empty, // remove all dependencies, and pretend that this project stands alone
           partConfigAndExtracted.extracted.subproj)
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild, Seq.empty, Seq.empty, log)
         val artifactsOut = outcome match {

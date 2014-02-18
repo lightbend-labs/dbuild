@@ -40,9 +40,10 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
   // of the relevant spaces, see below)
   dependencyNames: Seq[String],// names corresponding to a RepeatableProjectBuild
   dependencyUUIDs: Seq[String],// uuids corresponding to a RepeatableProjectBuild
-  // dependencyUUIDs and dependencyNames should be kept in a 1:1 sync,
-  // where corresponding elements refer to the same RepeatableProjectBuild.
-  // (this is not actually necessary at this time, but it might be in the future)
+  // dependencyUUIDs and dependencyNames refer to the same elements. They are
+  // in two separate sequences for convenience, as in the code there is no
+  // assumption anywhere that they should be kept in sync. If that need should arise,
+  // the two Seqs should probably be converted into a Seq[(String,String)].
   subproj: Seq[String]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this

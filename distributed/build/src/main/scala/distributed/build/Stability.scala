@@ -12,6 +12,7 @@ import java.util.jar.JarInputStream
 import java.util.jar.JarFile
 import java.util.jar.JarEntry
 import java.io.FileInputStream
+import org.apache.oro.text.regex
 
 class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Stability"
@@ -92,75 +93,11 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
                 // ... || skipMatchers.exists(_.reset(name).matches)
                 // But globs are a bit easier to use in this context.
                 val skipGlobPatterns = check.skip.map(new org.apache.oro.text.GlobCompiler().compile(_))
-                val matcher = new org.apache.oro.text.regex.Perl5Matcher()
+                val matcher = new regex.Perl5Matcher()
                 pathsA.foreach { p: String =>
-                  def getEntries(jf: JarFile) = {
-                    jf.entries.map { je =>
-                      val name = je.getName()
-                      if (je.isDirectory() || skipGlobPatterns.exists(matcher.matches(name, _)))
-                        None
-                      else
-                        Some(je.getName, je)
-                    }.flatten.toMap
-                  }
                   val fa = new File(dirA, p)
-                  val jfa = new JarFile(fa)
                   val fb = new File(dirB, p)
-                  val jfb = new JarFile(fb)
-                  val aMap = getEntries(jfa)
-                  val bMap = getEntries(jfb)
-                  log.debug("Comparing: " + p + ", will inspect " + aMap.size + " entries")
-                  def compareJar(xMap: Map[String, JarEntry], yMap: Map[String, JarEntry], xName: String, yName: String, jar: String) = {
-                    val xNotY = xMap.keySet.diff(yMap.keySet)
-                    val ok = xNotY.isEmpty
-                    if (!ok) {
-                      log.error("Within two corresponding jar files, some files are in " + xName + " but not in " + yName + ":")
-                      log.error("jar file: " + jar)
-                      xNotY.take(logLimit).foreach { s =>
-                        log.error("  " + s)
-                      }
-                      if (xNotY.size > logLimit) log.error("  ... and others")
-                    }
-                    ok
-                  }
-                  val sameJarAB = compareJar(aMap, bMap, "a", "b", p)
-                  val sameJarBA = compareJar(bMap, aMap, "b", "a", p)
-                  if (!(sameJarAB && sameJarBA)) {
-                    sys.error("Comparison failed: two corresponding jar files do not contain the same file names")
-                  }
-
-                  // same jar files, and the jar files contain the same file names. Are the files inside the jars
-                  // actually identical?
-                  //
-                  // To begin with, compare CRCs. If no CRCs, resort to comparing the files.
-                  val files = aMap.keySet
-                  files.foreach { f =>
-                    val aCRC = aMap(f).getCrc()
-                    val bCRC = bMap(f).getCrc()
-                    if (aCRC != -1 && bCRC != -1) {
-                      if (aCRC != bCRC) {
-                        log.error("Within two corresponding jar files, two files have different CRCs.")
-                        log.error("jar file: " + p)
-                        log.error("file in the jar: " + f)
-                        def toHex(l: Long) = {
-                          val h = java.lang.Long.toHexString(l).toUpperCase()
-                          "0000000000000000".substring(Math.min(16, h.length)) + h
-                        }
-                        log.error("a: " + toHex(aCRC) + ", b: " + toHex(bCRC))
-                        sys.error("Comparison failed: two files in corresponding jar files have different CRCs.")
-                      }
-                    } else {
-                      val ia = jfa.getInputStream(aMap(f))
-                      val ib = jfb.getInputStream(bMap(f))
-                      if (!IOUtils.contentEquals(ia, ib)) {
-                        log.error("Within two corresponding jar files, two files have different contents.")
-                        log.error("jar file: " + p)
-                        log.error("file in the jar: " + f)
-                        log.error("The two files in a and in b are not the same.")
-                        sys.error("Comparison failed: two files in corresponding jar files have different contents.")
-                      }
-                    }
-                  }
+                  JarFiles.compareJars(fa, fb, p, { name: String => skipGlobPatterns.exists(matcher.matches(name, _)) }, log, logLimit)
                 }
                 log.info("Comparison OK.")
               }
@@ -170,5 +107,88 @@ class Stability(options: GeneralOptions, log: logging.Logger) extends OptionTask
       }
       log.info("--== End Checking Stability  ==--")
     }
+  }
+}
+
+/**
+ * Utility object to compare jar files
+ */
+object JarFiles {
+  // fa and fa are the two jar files that should be compared
+  // jarName is some name jar info that will be printed as diagnostic in case of error
+  // log is a Logger
+  def compareJars(fa: File, fb: File, jarName: String, log: Logger): Unit =
+    compareJars(fa, fb, jarName, { _: String => true }, log, 10)
+
+  // additional parameters:
+  // within a jar archive, only files whose name satisfy accept will be compared
+  // logLimit is a limits on the number of differing elements that will be printed in case of errors
+  def compareJars(fa: File, fb: File, jarName: String, accept: String => Boolean, log: Logger, logLimit: Int): Unit = {
+    def getEntries(jf: JarFile) = {
+      jf.entries.map { je =>
+        val name = je.getName()
+        if (je.isDirectory() || !accept(name))
+          None
+        else
+          Some(je.getName, je)
+      }.flatten.toMap
+    }
+    val jfa = new JarFile(fa)
+    val jfb = new JarFile(fb)
+    val aMap = getEntries(jfa)
+    val bMap = getEntries(jfb)
+    log.debug("Comparing: " + jarName + ", will inspect " + aMap.size + " entries")
+    def compareJar(xMap: Map[String, JarEntry], yMap: Map[String, JarEntry], xName: String, yName: String, jar: String) = {
+      val xNotY = xMap.keySet.diff(yMap.keySet)
+      val ok = xNotY.isEmpty
+      if (!ok) {
+        log.error("Within two corresponding jar files, some files are in " + xName + " but not in " + yName + ":")
+        log.error("jar file: " + jar)
+        xNotY.take(logLimit).foreach { s =>
+          log.error("  " + s)
+        }
+        if (xNotY.size > logLimit) log.error("  ... and others")
+      }
+      ok
+    }
+    val sameJarAB = compareJar(aMap, bMap, "a", "b", jarName)
+    val sameJarBA = compareJar(bMap, aMap, "b", "a", jarName)
+    if (!(sameJarAB && sameJarBA)) {
+      sys.error("Comparison failed: two corresponding jar files do not contain the same file names")
+    }
+
+    // same jar files, and the jar files contain the same file names. Are the files inside the jars
+    // actually identical?
+    //
+    // To begin with, compare CRCs. If no CRCs, resort to comparing the files.
+    val files = aMap.keySet
+    files.foreach { f =>
+      val aCRC = aMap(f).getCrc()
+      val bCRC = bMap(f).getCrc()
+      if (aCRC != -1 && bCRC != -1) {
+        if (aCRC != bCRC) {
+          log.error("Within two corresponding jar files, two files have different CRCs.")
+          log.error("jar file: " + jarName)
+          log.error("file in the jar: " + f)
+          def toHex(l: Long) = {
+            val h = java.lang.Long.toHexString(l).toUpperCase()
+            "0000000000000000".substring(Math.min(16, h.length)) + h
+          }
+          log.error("a: " + toHex(aCRC) + ", b: " + toHex(bCRC))
+          sys.error("Comparison failed: two files in corresponding jar files have different CRCs.")
+        }
+      } else {
+        val ia = jfa.getInputStream(aMap(f))
+        val ib = jfb.getInputStream(bMap(f))
+        if (!IOUtils.contentEquals(ia, ib)) {
+          log.error("Within two corresponding jar files, two files have different contents.")
+          log.error("jar file: " + jarName)
+          log.error("file in the jar: " + f)
+          log.error("The two files in a and in b are not the same.")
+          sys.error("Comparison failed: two files in corresponding jar files have different contents.")
+        }
+      }
+    }
+
   }
 }

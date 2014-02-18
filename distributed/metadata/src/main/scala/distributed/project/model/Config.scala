@@ -233,7 +233,7 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
  */
 case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
   notifications: NotificationOptions = NotificationOptions(),
-  stability: Seq[StabilityOptions] = Seq(),
+  comparison: Seq[ComparisonOptions] = Seq(),
   resolvers: Map[String, String] = Map[String, String](),
   cleanup: CleanupOptions = CleanupOptions())
 
@@ -375,8 +375,8 @@ case class DeploySignOptions(
   id: Option[String],
   passphrase: String)
 
-/** Stability information. */
-case class StabilityOptions(
+/** Comparison information. */
+case class ComparisonOptions(
   a: SeqSelectorElement = Seq(),
   b: SeqSelectorElement = Seq(),
   skip: SeqString = Seq()) // skip is a sequence of regex patterns,

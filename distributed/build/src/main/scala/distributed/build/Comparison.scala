@@ -18,7 +18,7 @@ class Comparison(options: GeneralOptions, log: logging.Logger) extends OptionTas
   def id = "Comparison"
 
   def beforeBuild(projectNames: Seq[String]) = {
-    options.comparison.foreach { check =>
+    options.compare.foreach { check =>
       // initial sanity checks; discard the results
       check.a.flattenAndCheckProjectList(projectNames.toSet)
       check.b.flattenAndCheckProjectList(projectNames.toSet)
@@ -44,7 +44,7 @@ class Comparison(options: GeneralOptions, log: logging.Logger) extends OptionTas
    * - This rule also applies applies to nested hierarchical build systems, if they are in turn recursive.
    */
   def checkComparison(options: GeneralOptions, build: RepeatableDistributedBuild, outcome: BuildOutcome, log: logging.Logger) = {
-    val comparisonChecks = options.comparison
+    val comparisonChecks = options.compare
     if (comparisonChecks.nonEmpty) {
       log.info("--== Performing Comparison  ==--")
       runRememberingExceptions(true, comparisonChecks) { check =>

@@ -1,13 +1,13 @@
-Stability
-=========
+Comparing artifacts
+===================
 
-.. _section-stability:
+.. _section-compare:
 
-The ``stability`` section
+The ``compare`` section
 -------------------------
 
 If you used spaces to build multiple versions of the same artifacts, you can also
-automatically compare them, to make sure their content is identical. The "stability"
+automatically compare them, to make sure their content is identical. The "compare"
 section implements an automatic artifact comparison. The content of the corresponding
 section is the following:
 
@@ -19,7 +19,7 @@ section is the following:
     options: {
      deploy: ...
 
-     stability: [{
+     compare: [{
        a : [<project1>,<project2>,...]
        b : [<project1>,<project2>,...]
        skip : [ <glob1>,<glob2>,... ]

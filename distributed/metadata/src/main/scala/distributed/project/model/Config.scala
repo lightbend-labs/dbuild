@@ -233,7 +233,7 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
  */
 case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
   notifications: NotificationOptions = NotificationOptions(),
-  comparison: Seq[ComparisonOptions] = Seq(),
+  compare: Seq[ComparisonOptions] = Seq(),
   resolvers: Map[String, String] = Map[String, String](),
   cleanup: CleanupOptions = CleanupOptions())
 

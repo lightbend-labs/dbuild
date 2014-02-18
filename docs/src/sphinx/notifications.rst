@@ -499,5 +499,5 @@ For example, the long format of the standard "email" template is:
 
 |
 
-*Next:* :doc:`stability`.
+*Next:* :doc:`comparison`.
 

@@ -76,7 +76,7 @@ options
      {
       "deploy"        : [ <deploy_1>, <deploy_2>, ... ]
       "notifications" : <notifications>
-      "stability"     : [ <stability_1>, <stability_2>, ... ]
+      "compare"       : [ <compare_1>, <compare_2>, ... ]
       "resolvers"     : { label1: resolv1, label2: resolv2, ...}
       "cleanup"       : <cleanup_options>
      }

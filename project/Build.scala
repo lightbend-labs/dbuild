@@ -104,7 +104,7 @@ object Defaults {
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta)
-      dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch)
+      dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro)
       dependsOnSbt(sbtLaunchInt, sbtLauncher)
       settings(skip210:_*)
     )

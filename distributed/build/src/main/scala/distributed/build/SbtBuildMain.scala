@@ -76,7 +76,7 @@ class SbtBuildMain extends xsbti.AppMain {
       val properties = props[String]('D', descr = "One or more Java-style properties")
       val configFile = trailArg[String](required = true, descr = "The name of the dbuild configuration file")
       val target = trailArg[String](required = false, descr = "If a target project name is specified, dbuild will build only that project and its dependencies")
-      val debug = opt[Boolean](noshort = true, descr = "Print more debugging information")
+      val debug = opt[Boolean](descr = "Print more debugging information")
     }
     try {
       val configFile = new File(conf.configFile())

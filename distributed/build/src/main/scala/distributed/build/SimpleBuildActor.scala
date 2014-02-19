@@ -21,12 +21,12 @@ import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
 case class RunDistributedBuild(conf: DBuildConfiguration, confName: String,
-  buildTarget: Option[String], logger: Logger)
+  buildTarget: Option[String], logger: Logger, debug: Boolean)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository, systems: Seq[BuildSystemCore]) extends Actor {
   def receive = {
-    case RunDistributedBuild(inputConf, confName, buildTarget, log) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(inputConf, confName, buildTarget, log, debug) => forwardingErrorsToFutures(sender) {
       val listener = sender
       implicit val ctx = context.system
       val extractionPhaseDuration = Timeouts.extractionPhaseTimeout.duration

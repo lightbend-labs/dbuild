@@ -36,6 +36,7 @@ object Dependencies {
   val commonsIO      = "commons-io" % "commons-io" % "2.4"
   val jsch           = "com.jcraft" % "jsch" % "0.1.50"
   val oro            = "org.apache.servicemix.bundles" % "org.apache.servicemix.bundles.oro" % "2.0.8_6"
+  val scallop        = "org.rogach" %% "scallop" % "0.9.5"
 
   val jgit           = "org.eclipse.jgit" % "org.eclipse.jgit" % "3.1.0.201310021548-r"
 

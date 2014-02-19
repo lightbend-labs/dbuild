@@ -13,13 +13,13 @@ import distributed.project.build.LocalBuildRunner
 import distributed.project.BuildSystem
 
 /** Implementation of the SBT build system. */
-class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends BuildSystemCore {
+class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boolean) extends BuildSystemCore {
   val name: String = "sbt"
   type ExtraType = SbtExtraConfig
   // TODO - Different runner for extracting vs. building?
   final val buildBase = workingDir / "sbt-base-dir"
-  final val runner = new SbtRunner(repos, buildBase / "runner")
-  final val extractor = new SbtRunner(repos, buildBase / "extractor")
+  final val runner = new SbtRunner(repos, buildBase / "runner", debug)
+  final val extractor = new SbtRunner(repos, buildBase / "extractor", debug)
   
   def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     // no 'extra' section in an sbt project? pick default values from ExtraOptions
@@ -60,13 +60,14 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File) extends Buil
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log, debug)
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner,
+      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
     val config = SbtBuildConfig(ec, project.config.getCrossVersion, info)
-    SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log)
+    SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log, debug)
   }
 
 }

@@ -20,7 +20,8 @@ class LocalBuildRunner(builder: BuildRunner,
   val extractor: Extractor,
   val repository: Repository) {
 
-  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger): BuildOutcome = {
+  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome],
+      log: Logger, debug: Boolean): BuildOutcome = {
     try {
       try {
         val subArtifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
@@ -30,7 +31,7 @@ class LocalBuildRunner(builder: BuildRunner,
         case t: RepositoryException =>
           log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
           //log.trace(t)
-          BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects, log))
+          BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects, log, debug))
       }
     } catch {
       case t =>
@@ -38,7 +39,8 @@ class LocalBuildRunner(builder: BuildRunner,
     }
   }
 
-  def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], log: Logger): BuildArtifactsOut =
+  def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project],
+      log: Logger, debug: Boolean): BuildArtifactsOut =
     distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       updateTimeStamp(dir)
       // extractor.resolver.resolve() only resolves the main URI,
@@ -102,7 +104,7 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       val results = builder.runBuild(build, dir,
-        BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, log)
+        BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, log, debug)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
       markSuccess(dir)
       results

@@ -62,7 +62,8 @@ object ScalaBuildSystem extends BuildSystemCore {
   // runBuild() is called with the Scala source code already in place (resolve() called on the root project),
   // but not for the submodules. After building the core, we will call localBuildRunner.checkCacheThenBuild() on each module,
   // which will in turn resolve it and then build it (if not already in cache).
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
+      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
 
     // if requested, overwrite build.number. This is unrelated to

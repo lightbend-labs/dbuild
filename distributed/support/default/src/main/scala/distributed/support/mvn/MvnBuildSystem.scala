@@ -29,7 +29,8 @@ object MvnBuildSystem extends BuildSystemCore {
     DependencyExtractor extract pom
   }
   
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
+      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     log.info("Running maven...")
     val mc = project.extra[ExtraType]
     val pom = 

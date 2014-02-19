@@ -26,7 +26,7 @@ class LocalBuildMain(repos: List[xsbti.Repository], cleanup: CleanupOptions, deb
     new support.test.TestProjectResolver,
     new support.nil.NilProjectResolver)
   val buildSystems: Seq[BuildSystemCore] =
-    Seq(new support.sbt.SbtBuildSystem(repos, targetDir),
+    Seq(new support.sbt.SbtBuildSystem(repos, targetDir, debug),
       support.scala.ScalaBuildSystem,
       new support.ivy.IvyBuildSystem(repos, targetDir),
       support.mvn.MvnBuildSystem,

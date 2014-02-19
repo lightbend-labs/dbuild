@@ -36,7 +36,7 @@ object SbtExtractor {
           log.info("Using Scala " + v + " during extraction.")
           Seq("set every scalaVersion := \"" + v + "\"")
       }
-      SbtRunner.silenceIvy(project, log)
+      SbtRunner.silenceIvy(project, log, debug)
       runner.run(
         projectDir = project,
         sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),

@@ -12,8 +12,8 @@ import org.apache.commons.io.FileUtils.readFileToString
 /** A runner for SBT. 
  * TODO - Make it platform synch safe?
  */
-class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
-  private val launcherJar = SbtRunner.initSbtGlobalBase(repos,globalBase)
+class SbtRunner(repos:List[xsbti.Repository], globalBase: File, debug: Boolean) {
+  private val launcherJar = SbtRunner.initSbtGlobalBase(repos,globalBase, debug)
   
   private val defaultProps = 
     Map("sbt.global.base" -> globalBase.getAbsolutePath,
@@ -86,20 +86,28 @@ object SbtRunner {
    "-XX:ReservedCodeCacheSize=192m"    
   )
 
-  def writeQuietIvyLogging(dir: File) = new _root_.java.io.PrintWriter(new File(dir, ".dbuild.ivy.quiet.sbt"))
-  def silenceIvy(projectDir: File, log: Logger): Unit = {
+  def writeQuietIvyLogging(dir: File, debug: Boolean) = {
+    val file = new File(dir, ".dbuild.ivy.quiet.sbt")
+    if (debug) {
+      val p = new _root_.java.io.PrintWriter(file)
+      p.write("ivyLoggingLevel in Global := UpdateLogging.Quiet\n")
+      p.close
+    } else {
+      file.delete()
+    }
+  }
+  def silenceIvy(projectDir: File, log: Logger, debug: Boolean): Unit = {
     log.debug("Silencing Ivy logging...")
     new File(projectDir, "project").mkdir()
-    Seq(projectDir, new File(projectDir, "project")).map(writeQuietIvyLogging).
-      foreach { p => p.write("ivyLoggingLevel in Global := UpdateLogging.Quiet\n"); p.close }
+    Seq(projectDir, new File(projectDir, "project")).foreach(writeQuietIvyLogging(_,debug))
   }
 
   /** inits global base and returns location of launcher jar file. */
-  private def initSbtGlobalBase(repos:List[xsbti.Repository], dir: File): File = {
+  private def initSbtGlobalBase(repos:List[xsbti.Repository], dir: File, debug: Boolean): File = {
     if(!(dir / "plugins" / "deps.sbt").exists) {
       val pluginDir = dir / "plugins"
       pluginDir.mkdirs
-      writeQuietIvyLogging(pluginDir)
+      writeQuietIvyLogging(pluginDir, debug)
       writeDeps(pluginDir / "deps.sbt")
       //transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
     }

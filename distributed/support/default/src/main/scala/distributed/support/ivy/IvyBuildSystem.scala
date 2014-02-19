@@ -91,7 +91,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   // Adding support involves renaming the resolved artifacts, which is more or less what the Assemble
   // build system is doing at this time
 
-  def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
+      log: Logger, debug: Boolean): BuildArtifactsOut = {
     log.debug("BuildInput is: " + input)
     // first, get the dependencies
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)

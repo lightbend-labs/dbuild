@@ -89,25 +89,24 @@ object SbtRunner {
   def writeQuietIvyLogging(dir: File, debug: Boolean) = {
     val file = new File(dir, ".dbuild.ivy.quiet.sbt")
     if (debug) {
+      file.delete()
+    } else {
       val p = new _root_.java.io.PrintWriter(file)
       p.write("ivyLoggingLevel in Global := UpdateLogging.Quiet\n")
       p.close
-    } else {
-      file.delete()
     }
   }
   def silenceIvy(projectDir: File, log: Logger, debug: Boolean): Unit = {
-    log.debug("Silencing Ivy logging...")
     new File(projectDir, "project").mkdir()
     Seq(projectDir, new File(projectDir, "project")).foreach(writeQuietIvyLogging(_,debug))
   }
 
   /** inits global base and returns location of launcher jar file. */
   private def initSbtGlobalBase(repos:List[xsbti.Repository], dir: File, debug: Boolean): File = {
-    if(!(dir / "plugins" / "deps.sbt").exists) {
-      val pluginDir = dir / "plugins"
-      pluginDir.mkdirs
-      writeQuietIvyLogging(pluginDir, debug)
+    val pluginDir = dir / "plugins"
+    pluginDir.mkdirs
+    writeQuietIvyLogging(pluginDir, debug)
+    if (!(pluginDir / "deps.sbt").exists) {
       writeDeps(pluginDir / "deps.sbt")
       //transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
     }

@@ -73,7 +73,7 @@ object ProjectRepoMain {
       val date = new java.util.Date(file.lastModified())
       println("  * " + uuid + " @ " + date)
       val projects = for {
-          build <- LocalRepoHelper.readBuildMeta(uuid, cache).toSeq
+          SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(uuid, cache).toSeq
           project <- build.repeatableBuilds
       } yield (project.config.name, project.uuid)
       val names = padStrings(projects map (_._1))
@@ -174,24 +174,24 @@ object ProjectRepoMain {
   }
   
   def printBuildInfo(uuid: String): Unit = {
-        println("--- RepeatableBuild: " + uuid)
+        println("--- Repeatable Build: " + uuid)
         println(" = Projects = ")
         for {
-          build <- LocalRepoHelper.readBuildMeta(uuid, cache)
+          SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(uuid, cache)
           project <- build.repeatableBuilds
           name = project.config.name
-        } println("  - " + project.uuid + " " + name)
-        println(" = Repeatable Config =")
-        LocalRepoHelper.readBuildMeta(uuid, cache) foreach { build =>
-           println(writeValue(build.repeatableBuildConfig))
-        }    
+        } {
+          println("  - " + project.uuid + " " + name)
+          println(" = Repeatable dbuild configuration =")
+          println(writeValue(expandedDBuildConfig))
+        }
   }
   
   
   def printAllProjectInfo(buildUUID: String): Unit = {
-    println("--- RepeatableBuild: " + buildUUID)
+    println("--- Repeatable Build: " + buildUUID)
     for {
-      build <- LocalRepoHelper.readBuildMeta(buildUUID, cache)
+      SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(buildUUID, cache)
       project <- build.repeatableBuilds
     } try printProjectInfo(project.uuid)
       catch { case _ => println("     " + project.config.name + " is not built.")}

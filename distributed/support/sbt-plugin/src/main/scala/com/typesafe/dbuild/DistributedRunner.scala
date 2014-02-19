@@ -15,6 +15,7 @@ import distributed.repo.core.LocalArtifactMissingException
 import org.apache.ivy.core.module.id.ModuleRevisionId
 import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.BuildSubArtifactsOut
+import distributed.project.model.SavedConfiguration
 
 object DistributedRunner {
 
@@ -597,7 +598,7 @@ object DistributedRunner {
     log.info("Finding information for project " + thisProject + " in build " + builduuid)
     val cache = Repository.default
     val projects = (for {
-      build <- LocalRepoHelper.readBuildMeta(builduuid, cache).toSeq
+      SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(builduuid, cache).toSeq
       allProjects = build.repeatableBuilds
       project <- allProjects.filter(_.config.name == thisProject)
     } yield project) // we know project names are unique

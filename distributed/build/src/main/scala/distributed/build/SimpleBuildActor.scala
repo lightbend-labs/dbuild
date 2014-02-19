@@ -165,7 +165,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 val expandedDBuildConfig = DBuildConfiguration(Seq(fullBuild.repeatableBuildConfig), generalOptions)
                 val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
                 writeDependencies(fullBuild, fullLogger)
-                nest(publishFullBuild(expandedDBuildConfig, fullLogger)) { unit =>
+                nest(publishFullBuild(SavedConfiguration(expandedDBuildConfig, fullBuild), fullLogger)) { unit =>
                   // are we building a specific target? If so, filter the graph
                   // are we building a specific target? If so, filter the graph
                   val targetGraph = filterGraph(buildTarget, fullBuild)
@@ -204,15 +204,15 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
    * Publishing the full build to the repository and logs the output for
    * re-use.
    */
-  def publishFullBuild(expandedDBuildConfig: DBuildConfiguration, log: Logger): Unit = {
+  def publishFullBuild(saved: SavedConfiguration, log: Logger): Unit = {
     log.info("---==  Repeatable Build Info ==---")
-    log.info(" uuid = " + expandedDBuildConfig.uuid)
+    log.info(" uuid = " + saved.uuid)
     log.info("---== Repeatable dbuild Configuration ===---")
     log.info("You can repeat this build (except for -SNAPSHOT references) using this configuration:\n" +
-      Utils.writeValueFormatted(expandedDBuildConfig))
+      Utils.writeValueFormatted(saved.expandedDBuildConfig))
     log.info("---== End Repeatable dbuild Configuration ===---")
     log.info("---== Writing dbuild Metadata ===---")
-    LocalRepoHelper.publishBuildMeta(expandedDBuildConfig, repository, log)
+    LocalRepoHelper.publishBuildMeta(saved, repository, log)
     log.info("---== End Writing dbuild Metadata ===---")
     log.info("---==  End Repeatable Build Info ==---")
   }

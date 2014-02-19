@@ -81,12 +81,12 @@ object LocalRepoHelper {
     }
 
   /** Publishes the given repeatable build configuration to the repository. */
-  def publishBuildMeta(build: DBuildConfiguration, remote: Repository, log: Logger): Unit =
-    publishMeta(build, remote, makeBuildMetaKey, log)
+  def publishBuildMeta(saved: SavedConfiguration, remote: Repository, log: Logger): Unit =
+    publishMeta(saved, remote, makeBuildMetaKey, log)
 
-  def readBuildMeta(uuid: String, remote: ReadableRepository): Option[RepeatableDistributedBuild] = {
+  def readBuildMeta(uuid: String, remote: ReadableRepository): Option[SavedConfiguration] = {
     val file = remote get makeBuildMetaKey(uuid)
-    Some(readValue[RepeatableDistributedBuild](file))
+    Some(readValue[SavedConfiguration](file))
   }
 
   def makeArtifactSha(file: File, localRepo: File) = {

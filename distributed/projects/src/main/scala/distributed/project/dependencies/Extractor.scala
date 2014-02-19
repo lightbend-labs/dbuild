@@ -57,7 +57,7 @@ class Extractor(
   }
 
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */
-  def extract(tdir: File, extractionConfig: ExtractionConfig, logger: logging.Logger): ExtractionOutcome = try {
+  def extract(tdir: File, extractionConfig: ExtractionConfig, logger: logging.Logger, debug: Boolean): ExtractionOutcome = try {
     val build = extractionConfig.buildConfig
     distributed.repo.core.ProjectDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
       updateTimeStamp(dir)
@@ -67,7 +67,7 @@ class Extractor(
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
       val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, dir, this, logger))
       logger.debug("Repeatable Config: " + writeValue(config))
-      val outcome = extractedResolvedWithCache(config, dir, logger)
+      val outcome = extractedResolvedWithCache(config, dir, logger, debug)
       outcome match {
         case _: ExtractionOK => markSuccess(dir)
         case _ =>
@@ -79,14 +79,14 @@ class Extractor(
       ExtractionFailed(extractionConfig.buildConfig.name, Seq.empty, prepareLogMsg(logger, e))
   }
 
-  def extractedResolvedWithCache(config: ExtractionConfig, dir: File, logger: Logger): ExtractionOutcome = {
+  def extractedResolvedWithCache(config: ExtractionConfig, dir: File, logger: Logger, debug: Boolean): ExtractionOutcome = {
     // Here, we attempt to cache our extracted dependencies rather than do
     // resolution again.
     // TODO - This should be configurable!
     val build = config.buildConfig
     cachedExtractOr(config, logger) {
       logger.info("Extracting dependencies for: " + build.name)
-      val extractedDeps = dependencyExtractor.extract(config, dir, this, logger)
+      val extractedDeps = dependencyExtractor.extract(config, dir, this, logger, debug)
       // process deps.ignore clauses
       val deps = modifiedDeps(config.buildConfig.deps, extractedDeps, logger)
       logger.debug("Dependencies = " + writeValue(deps))

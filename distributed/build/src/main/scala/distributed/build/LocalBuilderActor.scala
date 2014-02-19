@@ -26,7 +26,7 @@ class LocalBuilderActor(
     repository: Repository,
     targetDir: File,
     cleanup: CleanupOptions,
-    log: Logger) extends Actor {
+    log: Logger, debug: Boolean) extends Actor {
 
   val concurrencyLevel = 1
   
@@ -46,6 +46,6 @@ class LocalBuilderActor(
 
   def receive = {
     case RunLocalBuild(config, configName, buildTarget) =>
-      fullBuilderActor forward RunDistributedBuild(config, configName, buildTarget, log)
+      fullBuilderActor forward RunDistributedBuild(config, configName, buildTarget, log, debug)
   }
 }

@@ -17,7 +17,8 @@ object SbtBuilder {
   def writeRepoFile(repos:List[xsbti.Repository], config: File, repo: File): Unit =
     Repositories.writeRepoFile(repos, config, "build-local" -> repo.toURI.toASCIIString)
 
-  def buildSbtProject(repos:List[xsbti.Repository], runner: SbtRunner)(project: File, config: SbtBuildConfig, log: logging.Logger): BuildArtifactsOut = {    
+  def buildSbtProject(repos:List[xsbti.Repository], runner: SbtRunner)(project: File, config: SbtBuildConfig,
+      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {    
     IO.withTemporaryDirectory { tmpDir => 
       val resultFile = tmpDir / "results.dbuild"
       // TODO - Where should depsfile + repo file be?  
@@ -30,6 +31,7 @@ object SbtBuilder {
       IO.write(depsFile, writeValue(config))
       writeRepoFile(repos, repoFile, config.info.artifacts.localRepo)
       log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
+      SbtRunner.silenceIvy(project, log, debug)
       runner.run(
         projectDir = project,
         sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),

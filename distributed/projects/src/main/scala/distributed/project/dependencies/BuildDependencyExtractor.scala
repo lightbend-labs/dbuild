@@ -12,7 +12,7 @@ trait BuildDependencyExtractor {
    * project. Project MUST have already been
    * resolved, via a call to resolve()
    */
-  def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ExtractedBuildMeta
+  def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger, debug: Boolean): ExtractedBuildMeta
 
   /** Returns true or false, depending on whether or not this extractor can handle
    * a given build system.
@@ -34,8 +34,8 @@ class MultiBuildDependencyExtractor(buildSystems: Seq[BuildSystem[Extractor, Loc
       case _       => sys.error("No extractor found for: " + config.name)
     }
   }
-  def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ExtractedBuildMeta =
-    findSystem(config.buildConfig).extractDependencies(config, dir, extractor, log)
+  def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger, debug: Boolean): ExtractedBuildMeta =
+    findSystem(config.buildConfig).extractDependencies(config, dir, extractor, log, debug)
   def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ProjectBuildConfig =
     findSystem(config).resolve(config, dir, extractor, log)
 }

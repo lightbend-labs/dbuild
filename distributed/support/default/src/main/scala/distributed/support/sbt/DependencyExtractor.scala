@@ -15,15 +15,15 @@ import distributed.logging.Logger.logFullStackTrace
 // script...
 object SbtExtractor {
   
-  def extractMetaData(runner: SbtRunner)(projectDir: File, extra: SbtExtraConfig, log: logging.Logger): ExtractedBuildMeta =
-    try readValue[ExtractedBuildMeta](runSbtExtractionProject(runner)(projectDir, extra, log)) 
+  def extractMetaData(runner: SbtRunner)(projectDir: File, extra: SbtExtraConfig, log: logging.Logger, debug: Boolean): ExtractedBuildMeta =
+    try readValue[ExtractedBuildMeta](runSbtExtractionProject(runner)(projectDir, extra, log, debug)) 
     catch { case e:Exception =>
       logFullStackTrace(log, e)
       sys.error("Failure to parse build metadata in sbt extractor!")
     }
 
   // TODO - Better synchronize?
-  private def runSbtExtractionProject(runner: SbtRunner)(project: File, extra: SbtExtraConfig, log: logging.Logger): String = {
+  private def runSbtExtractionProject(runner: SbtRunner)(project: File, extra: SbtExtraConfig, log: logging.Logger, debug: Boolean): String = {
     IO.withTemporaryFile("result", "sbtmeta") { result =>
       log.debug("Extracting SBT build (" + project + ") dependencies into " + result)
       val scalaCompiler = extra.extractionVersion getOrElse
@@ -36,6 +36,7 @@ object SbtExtractor {
           log.info("Using Scala " + v + " during extraction.")
           Seq("set every scalaVersion := \"" + v + "\"")
       }
+      SbtRunner.silenceIvy(project, log, debug)
       runner.run(
         projectDir = project,
         sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
@@ -44,6 +45,7 @@ object SbtExtractor {
           "dbuild.project.dependency.metadata.file" -> result.getAbsolutePath,
           "dbuild.project.dependency.metadata.subprojects" -> extra.projects.mkString(","),
           "dbuild.project.dependency.metadata.excluded" -> extra.exclude.mkString(","),
+          "dbuild.project.dependency.metadata.debug" -> debug.toString,
           "dbuild.remote.project.uri" -> project.getAbsolutePath), // ++ runner.localIvyProps
         extraArgs = extra.options)((extra.commands ++ setScalaCommand).:+("print-deps"): _*)
       IO read result

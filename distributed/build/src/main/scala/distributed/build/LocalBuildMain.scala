@@ -16,7 +16,7 @@ import akka.pattern.ask
 import akka.util.duration._
 import distributed.repo.core.ProjectDirs.checkForObsoleteDirs
 
-class LocalBuildMain(repos: List[xsbti.Repository], cleanup: CleanupOptions) {
+class LocalBuildMain(repos: List[xsbti.Repository], cleanup: CleanupOptions, debug: Boolean) {
 
   val targetDir = ProjectDirs.targetDir
   val resolvers = Seq(
@@ -26,7 +26,7 @@ class LocalBuildMain(repos: List[xsbti.Repository], cleanup: CleanupOptions) {
     new support.test.TestProjectResolver,
     new support.nil.NilProjectResolver)
   val buildSystems: Seq[BuildSystemCore] =
-    Seq(new support.sbt.SbtBuildSystem(repos, targetDir),
+    Seq(new support.sbt.SbtBuildSystem(repos, targetDir, debug),
       support.scala.ScalaBuildSystem,
       new support.ivy.IvyBuildSystem(repos, targetDir),
       support.mvn.MvnBuildSystem,
@@ -40,14 +40,14 @@ class LocalBuildMain(repos: List[xsbti.Repository], cleanup: CleanupOptions) {
   val logMgr = {
     val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor))
     mgr ! Props(new logging.LogDirManagerActor(new File(targetDir, "logs")))
-    mgr ! Props(new logging.SystemOutLoggerActor)
+    mgr ! Props(new logging.SystemOutLoggerActor(debug))
     mgr
   }
   val repository = Repository.default
   val logger = new logging.ActorLogger(logMgr)
   checkForObsoleteDirs(logger.warn _)
 
-  val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, targetDir, cleanup, logger)))
+  val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, targetDir, cleanup, logger, debug)))
   // TODO - Look up target elsewhere...
 
   def build(conf: DBuildConfiguration, confName: String, buildTarget: Option[String]): BuildOutcome = {

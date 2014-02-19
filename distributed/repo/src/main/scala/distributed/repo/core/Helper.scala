@@ -95,16 +95,30 @@ object LocalRepoHelper {
     ArtifactSha(sha, name)
   }
 
+  // In case we already have an existing build in the cache, we might be interested in getting diagnostic
+  // information on what is in there. That is done here.
+  def debugArtifactsInfo(extracted: Seq[BuildSubArtifactsOut], log: Logger) = {
+    log.debug("Published files:")
+    extracted foreach {
+      case BuildSubArtifactsOut(subproj, _, shas) =>
+        if (subproj != "") log.debug("in subproject: " + subproj)
+        shas foreach {
+          case ArtifactSha(sha, location) =>
+            log.debug(location)
+        }
+    }
+  }
+  
   /**
    * Publishes all files in the localRepo directory, according to the SHAs calculated
    * by the build system.
    */
   protected def publishRawArtifacts(localRepo: File, subproj: String, files: Seq[ArtifactSha], remote: Repository, log: Logger) = {
-    if (subproj != "") log.info("Checking files for subproject: " + subproj)
+    if (subproj != "") log.debug("Checking files for subproject: " + subproj)
     files foreach {
       case ArtifactSha(sha, location) =>
         val key = makeRawFileKey(sha)
-        log.info("Checking file: " + location)
+        log.debug("Checking file: " + location)
         remote put (key, localRepo / location)
     }
   }
@@ -217,7 +231,14 @@ object LocalRepoHelper {
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
-    val fragment = try " (commit: " + (Option((new java.net.URI(meta.project.config.uri)).getFragment) getOrElse "none") + ")" catch {
+    val space = meta.project.config.space getOrElse
+      sys.error("Internal error: space is None in " + meta.project.config.name + " while rematerializing artifacts.")
+    val spaceInfo = space.to.length match {
+      case 0 => sys.error("Internal error: rematerializing artifacts from project published in no spaces: " + meta.project.config.name)
+      case 1 => ", space: " + space.to.head
+      case 2 => space.to.mkString(", spaces: ", ",", "")
+    }
+    val fragment = try " (commit: " + (Option((new java.net.URI(meta.project.config.uri)).getFragment) getOrElse "none") + spaceInfo + ")" catch {
       case e: java.net.URISyntaxException => ""
     }
     val info1 = "Retrieved from project " +
@@ -243,7 +264,7 @@ object LocalRepoHelper {
   def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): Seq[BuildSubArtifactsOut] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
-    log.debug("Found cached project build, uuid "+uuid)
+    log.info("Found cached project build, uuid "+uuid)
     meta.versions
   }
 

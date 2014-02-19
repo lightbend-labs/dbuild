@@ -21,7 +21,7 @@ object TestBuildSystem extends BuildSystemCore {
     case _ => throw new Exception("Internal error: Test build config options have the wrong type. Please report.")
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
     val meta=readMeta(config.buildConfig)
     val projects=meta.projects map {_.name}
@@ -29,7 +29,8 @@ object TestBuildSystem extends BuildSystemCore {
     meta
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
+      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
 
     val version = input.version

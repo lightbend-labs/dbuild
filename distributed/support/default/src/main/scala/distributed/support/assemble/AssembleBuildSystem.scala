@@ -82,7 +82,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     rootResolved.copy(extra = newExtra)
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
 
     // we consider the names of parts in the same way as subprojects, allowing for a
@@ -95,7 +95,7 @@ object AssembleBuildSystem extends BuildSystemCore {
       buildConfig.projects map { p =>
         log.info("----------")
         val nestedExtractionConfig = ExtractionConfig(p)
-        extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p), log)
+        extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p), log, debug)
       }
     }
     if (partOutcomes.exists(_.isInstanceOf[ExtractionFailed])) {
@@ -142,7 +142,8 @@ object AssembleBuildSystem extends BuildSystemCore {
   // runBuild() is called with the (empty) root source resolved, but the parts have not been checked out yet.
   // Therefore, we will call localBuildRunner.checkCacheThenBuild() on each part,
   // which will in turn resolve it and then build it (if not already in cache).
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
+      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
     val version = input.version
 
@@ -215,7 +216,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted.config, partConfigAndExtracted.extracted.version,
           Seq.empty, Seq.empty, // remove all dependencies, and pretend that this project stands alone
           partConfigAndExtracted.extracted.subproj)
-        val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild, Seq.empty, Seq.empty, log)
+        val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild, Seq.empty, Seq.empty, log, debug)
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)

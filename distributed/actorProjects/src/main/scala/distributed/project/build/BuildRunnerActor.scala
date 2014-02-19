@@ -15,7 +15,8 @@ import distributed.project.cleanup.Recycling._
 import sbt.Path._
 import distributed.repo.core.ProjectDirs.buildDir
 
-case class RunBuild(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], log: Logger)
+case class RunBuild(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome],
+    log: Logger, debug: Boolean)
 
 class CleaningBuildActor extends Actor {
   def receive = {
@@ -35,10 +36,10 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
   }
 
   def receive = {
-    case Controlled(RunBuild(build, outProjects, children, log), from) =>
+    case Controlled(RunBuild(build, outProjects, children, log, debug), from) =>
       Controller.forwardingErrorsToFuturesControlled(sender, from) {
         log info ("--== Building %s ==--" format (build.config.name))
-        sender ! Done(builder.checkCacheThenBuild(target, build, outProjects, children, log), from)
+        sender ! Done(builder.checkCacheThenBuild(target, build, outProjects, children, log, debug), from)
         log info ("--== End Building %s ==--" format (build.config.name))
       }
   }

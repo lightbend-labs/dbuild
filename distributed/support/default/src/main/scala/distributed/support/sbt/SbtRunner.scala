@@ -12,8 +12,8 @@ import org.apache.commons.io.FileUtils.readFileToString
 /** A runner for SBT. 
  * TODO - Make it platform synch safe?
  */
-class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
-  private val launcherJar = SbtRunner.initSbtGlobalBase(repos,globalBase)
+class SbtRunner(repos:List[xsbti.Repository], globalBase: File, debug: Boolean) {
+  private val launcherJar = SbtRunner.initSbtGlobalBase(repos,globalBase, debug)
   
   private val defaultProps = 
     Map("sbt.global.base" -> globalBase.getAbsolutePath,
@@ -71,8 +71,7 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
       IO.delete(buildProps)
     }
   }
-    
-  
+
   override def toString = "Sbt(@%s)" format (globalBase.getAbsolutePath)
 }
 
@@ -86,12 +85,28 @@ object SbtRunner {
    "-XX:MaxPermSize=512m",
    "-XX:ReservedCodeCacheSize=192m"    
   )
-  
+
+  def writeQuietIvyLogging(dir: File, debug: Boolean) = {
+    val file = new File(dir, ".dbuild.ivy.quiet.sbt")
+    if (debug) {
+      file.delete()
+    } else {
+      val p = new _root_.java.io.PrintWriter(file)
+      p.write("ivyLoggingLevel in Global := UpdateLogging.Quiet\n")
+      p.close
+    }
+  }
+  def silenceIvy(projectDir: File, log: Logger, debug: Boolean): Unit = {
+    new File(projectDir, "project").mkdir()
+    Seq(projectDir, new File(projectDir, "project")).foreach(writeQuietIvyLogging(_,debug))
+  }
+
   /** inits global base and returns location of launcher jar file. */
-  private def initSbtGlobalBase(repos:List[xsbti.Repository], dir: File): File = {
-    if(!(dir / "plugins" / "deps.sbt").exists) {
-      val pluginDir = dir / "plugins"
-      pluginDir.mkdirs
+  private def initSbtGlobalBase(repos:List[xsbti.Repository], dir: File, debug: Boolean): File = {
+    val pluginDir = dir / "plugins"
+    pluginDir.mkdirs
+    writeQuietIvyLogging(pluginDir, debug)
+    if (!(pluginDir / "deps.sbt").exists) {
       writeDeps(pluginDir / "deps.sbt")
       //transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
     }

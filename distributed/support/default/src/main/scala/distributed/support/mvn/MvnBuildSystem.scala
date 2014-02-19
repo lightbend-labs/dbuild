@@ -21,7 +21,7 @@ object MvnBuildSystem extends BuildSystemCore {
       case _ => throw new Exception("Internal error: Maven build config options have the wrong type. Please report")
     }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val mc = config.extra[ExtraType]
     val pom = 
       if(mc.directory.isEmpty) dir / "pom.xml"
@@ -29,7 +29,8 @@ object MvnBuildSystem extends BuildSystemCore {
     DependencyExtractor extract pom
   }
   
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner, log: logging.Logger): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
+      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     log.info("Running maven...")
     val mc = project.extra[ExtraType]
     val pom = 

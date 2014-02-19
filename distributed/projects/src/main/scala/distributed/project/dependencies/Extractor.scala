@@ -16,6 +16,8 @@ import org.apache.ivy.core.module.id.ModuleId
 import distributed.project.model.ProjectRef
 import distributed.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
 import distributed.project.model.ExtractionOK
+import org.apache.ivy.core.module.id.ModuleRevisionId
+import distributed.project.model.ProjectRef
 
 /** This is used to extract dependencies from projects. */
 class Extractor(
@@ -42,9 +44,15 @@ class Extractor(
           allRealDeps.exists(dep => sameId(dep, mod)))
         if (notFound.nonEmpty)
           log.warn(notFound.mkString("*** WARNING: These dependencies (marked as \"ignore\") were not found: ", ", ", ""))
-        extractedDeps.copy(projects = extractedDeps.projects.map(proj =>
+        val modDeps = extractedDeps.copy(projects = extractedDeps.projects.map(proj =>
           proj.copy(dependencies = proj.dependencies.filterNot(dep =>
             ignored.exists(mod => sameId(dep, mod))))))
+        val added = all.inject.map(ModuleId.parse)
+        val result = modDeps.copy(projects = modDeps.projects.map(proj =>
+          proj.copy(dependencies = (proj.dependencies.++(added.map { d =>
+            ProjectRef(d.getName, d.getOrganisation)
+          }).distinct))))
+        result
     }
   }
 

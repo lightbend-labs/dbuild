@@ -93,20 +93,95 @@ object ScalaBuildSystem extends BuildSystemCore {
 
     val meta = readMeta(dir, ec.exclude, log)
     log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
-    Process(Seq("ant", ec.buildTarget getOrElse "distpack-maven-opt",
-      "-Dmaven.version.number=" + version) ++ ec.buildOptions, Some(dir)) ! log match {
-      case 0 => ()
-      case n => sys.error("Could not run scala ant build, error code: " + n)
-    }
-
     val localRepo = input.outRepo
 
-    Process(Seq("ant", ec.deployTarget getOrElse "deploy.local",
-      "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
-      "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
-      "-Dmaven.version.number=" + version) ++ ec.buildOptions, Some(dir / "dists" / "maven" / "latest")) ! log match {
-      case 0 => ()
-      case n => sys.error("Could not run scala ant build, error code: " + n)
+    // If the ant build file contains the target "publish.local", then only run that
+    // target (there is no separate deploy); if the target is not present, then run
+    // "distpack-maven-opt", followed by a separate "deploy.local".
+    // That can be overridden by specifying a list "targets" in the extra config.
+    val hasPublishLocal = antHasTarget("publish.local", dir)
+
+    // Let's see if we can fix up the compiler used to compile this compiler.
+    // Were we able to rematerialize a previous scala compiler in our input repo?
+    // (TODO: consolidate the method below with the similar method in DistributedRunner)
+    def findArtifact(arts: Seq[ArtifactLocation],
+      name: String, org: String): Option[ArtifactLocation] =
+      (for {
+        artifact <- arts.view
+        dep = artifact.info
+        if dep.organization == name
+        if dep.name == org
+      } yield artifact).headOption
+
+    def getVersion(art:Option[ArtifactLocation]) = art map {_.version}
+    
+    def findVersion(arts: Seq[ArtifactLocation],
+      name: String, org: String): Option[String] =
+        getVersion(findArtifact(arts, name, org))
+
+    val rewireOptions = if (hasPublishLocal) {
+
+      val customScalaVersion = findVersion(input.artifacts.artifacts, "org.scala-lang", "scala-library")
+      // "starr.version" currently also applies to scala-compiler and scala-reflect
+
+      val scalaRewireOptions: Seq[String] = customScalaVersion.toSeq flatMap { sv =>
+        log.info("*** Will compile using the Scala compiler version \"" + sv + "\"" + {
+          project.config.space map (" (from space \"" + _.from + "\")") getOrElse ""
+        })
+        //    ... set the repo ptr...
+        Seq("-Dextra.repo.url=\"file://" + input.artifacts.localRepo.getCanonicalPath + "\"",
+          //    ... and the version, change starr.version, as in:
+          //      https://github.com/scala/scala/blob/master/versions.properties
+          "-Dstarr.version=\"" + sv + "\""
+            ,"-Dscala.binary.version=\"" + sv + "\""
+          )
+      }
+
+      val moduleData = Seq(
+        // org, name, -Dxxx.version.number and -Dxxx.cross.suffix
+        ("org.scala-lang.modules", "scala-xml", "scala-xml"),
+        ("org.scala-lang.modules", "scala-parser-combinators", "scala-parser-combinators"),
+        ("org.scala-lang.modules", "scala-partest", "partest"),
+        ("org.scalacheck", "scalacheck", "scalacheck"),
+        ("org.scala-lang.plugins", "scala-continuations-plugin", "scala-continuations-plugin"),
+        ("org.scala-lang.plugins", "scala-continuations-library", "scala-continuations-library"),
+        ("org.scala-lang.modules", "scala-swing", "scala-swing"),
+        ("com.typesafe.akka", "akka-actor", "akka-actor"),
+        ("org.scala-lang", "scala-actors-migration", "actors-migration"))
+        
+      val extraRewireOptions = (for {
+        (org, name, prop) <- moduleData
+        art <- findArtifact(input.artifacts.artifacts, org, name)
+      } yield {
+        val ver = art.version
+        log.info("Setting " + name + " to ver = \"" + ver + "\", suffix = \"" + art.crossSuffix + "\"")
+        Seq("-D" + prop + ".version.number=\"" + ver + "\"",
+          "-D" + prop + ".cross.suffix=\"" + art.crossSuffix + "\"")
+      }).flatten
+
+      scalaRewireOptions ++ extraRewireOptions
+
+    } else Seq.empty
+
+    if (ec.buildTarget.nonEmpty || ec.deployTarget.nonEmpty)
+      sys.error("The extra options \"build-target\" and \"deploy-target\" have been replaced by the new option \"targets\" (see docs).")
+    val targets = if (ec.targets.nonEmpty)
+      ec.targets
+    else if (hasPublishLocal)
+      Seq(("publish.local", "."))
+    else
+      Seq(("distpack-maven", "."), ("deploy.local", "dists/maven/latest"))
+    targets foreach {
+      case (target, path) =>
+        val targetDir = path.split("/").foldLeft(dir)(_ / _)
+        Process(Seq("ant", target,
+          "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
+          "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
+          "-Dmaven.version.number=" + version) ++ rewireOptions ++
+          ec.buildOptions, Some(targetDir)) ! log match {
+          case 0 => ()
+          case n => sys.error("Could not run scala ant build, error code: " + n)
+        }
     }
 
     // initial part of the artifacts dir, including only the organization
@@ -220,6 +295,13 @@ object ScalaBuildSystem extends BuildSystemCore {
       val notFound = exclude.diff(allSubProjects)
       if (notFound.nonEmpty) sys.error(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
       val subProjects = allSubProjects.diff(exclude)
+      // Note: Here subProjects contains a list of subprojects in the order
+      // in which the names appear in the list of meta "projects". This does not
+      // strictly complies with the ExtractedBuildMeta spec, which says that
+      // subprojects should be listed in build order. However, the point is moot
+      // considering that ant always build everything; the "subproj" list is only
+      // used here to decide what to publish to the dbuild repo at the end of
+      // the compilation.
       readMeta.copy(subproj = subProjects).copy(projects = readMeta.projects.filter {
         p => subProjects.contains(p.name)
       })
@@ -246,6 +328,9 @@ object ScalaBuildSystem extends BuildSystemCore {
       patch <- Option(props get "version.patch")
     } yield major.toString + "." + minor.toString + "." + patch.toString
   }
+
+  def antHasTarget(target: String, dir: File) =
+    Process("ant -p", dir).lines.exists(_.startsWith(" " + target + "  "))
 
   /** Read version from build.number but fake the rest of the ExtractedBuildMeta.*/
   private def fallbackMeta(baseDir: File): ExtractedBuildMeta = {

@@ -383,29 +383,13 @@ In the case of Scala, the "extra" record is:
 .. code-block:: javascript
 
    {
-    "build-target"   : <build-target>,
-    "deploy-target"  : <deploy-target>,
-    "build-options"  : [ opt1, opt2,... ]
     "build-number"   : <build-number>,
     "exclude"        : [ subproj1, subproj2,... ]
+    "targets"        : [ ["target1","path1"],["target2,"path2"],... ]
+    "build-options"  : [ opt1, opt2,... ]
    }
 
 Each of the fields is optional. The are:
-
-build-target
-  The Scala build system will normally generate the files by invoking
-  the target "distpack-maven-opt". If required, a different target can
-  be specified using this option.
-
-deploy-target
-  This is the ant target that is used to copy the generated files as
-  Maven artifacts, to a local repository. The default is "deploy.local",
-  but it can be overridden by using this option.
-
-build-options
-  A sequence of strings; they will be appended to the ant options when
-  compiling. This option can be used to define additional properties,
-  or to set other flags.
 
 build-number
   The contents of the file `build.properties` can be overridden by
@@ -420,12 +404,39 @@ build-number
       "bnum"   : <bnum>,
      }
 
+  See below for further details on how to change the different
+  variations on the Scala version number.
+
 exclude
   The ant-based Scala build does not support real subprojects. However,
   dbuild will simulate multiple subprojects based on the artifact names.
   This "exclude" clause can be used to prevent some artifacts from being
   published or advertised as available to the rest of the dbuild projects.
   They will still be built, however.
+
+targets
+  The Scala build system will normally generate the files by invoking
+  the target "publish.local", if available. If the target
+  "publish.local" is not available, it will run instead
+  "distpack-maven" in "dists/maven/latest", followed by
+  "deploy.local".
+
+  If required, this options can be used to specify an alternate sequence
+  of targets that should be used instead to generate the Scala compiler
+  files; each element is a pair where the first element is the
+  ant target name, and the second is a relative path (using "/"
+  as a separator) leading to the build.xml where the target is
+  defined. For the latter, a path of "." or "" can be used to refer
+  to the project root.
+
+build-options
+  A sequence of strings; they will be appended to the ant options when
+  compiling. This option can be used to define additional properties,
+  or to set other flags. If unspecified, by default it will take the value
+  ``"-Dscalac.args.optimise=-optimise"``, meaning that an optimized
+  build will take place. If you would like an unoptimized build instead,
+  please just redefine "build-options" to an empty array.
+
 
 Scala version numbers
 ---------------------

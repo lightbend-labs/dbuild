@@ -445,9 +445,14 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
  */
 case class ScalaExtraConfig(
   @JsonProperty("build-number") buildNumber: Option[BuildNumber],
+  // deploy-target and build-target have been replaced by "targets"
   @JsonProperty("build-target") buildTarget: Option[String],
   @JsonProperty("deploy-target") deployTarget: Option[String],
-  @JsonProperty("build-options") buildOptions: SeqString = Seq.empty,
+  // TODO: eventually remove the two old options above
+  // "targets" is a list of pairs, where the first component is the target
+  // and the second is the path relative to the root where the target should be run
+  targets: Seq[(String, String)] = Seq.empty,
+  @JsonProperty("build-options") buildOptions: SeqString = Seq("-Dscalac.args.optimise=-optimise"),
   exclude: SeqString = Seq.empty // if empty -> exclude no projects (default)
   ) extends ExtraConfig
 

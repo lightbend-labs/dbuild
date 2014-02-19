@@ -214,18 +214,28 @@ set-version
 
 deps
   The optional "deps" section can be used to modify the way in which dbuild rewires certain
-  dependencies of this project. At this time, it can be used to prevent dbuild from modifying
-  some of the dependencies, by using the syntax:
+  dependencies of this project. For instance, it can be used to force dbuild to "forget" about
+  some dependencies that it detected during dependency extraction, or it can be used to
+  "inject" some dependencies that dbuild was unable to detect (or both). The content of this
+  section is:
 
   .. code-block:: javascript
 
    {
     "ignore" : [ mod1, mod2, ...]
+    "inject" : [ mod1, mod2, ...]
    }
 
-  The dependencies that match the specified modules (in the format "organization#name") will
-  be resolved as they would normally be for the project, rather than being adapted by dbuild
-  in order to match one of the other projects in the file. For example:
+
+  Both "ignore" and "inject" are optional. The dependencies are specified in the form
+  "organization#name".
+
+  *deps.ignore:* The dependencies in the ignore list will not be rewritten by dbuild.
+  They are still part of the normal library dependencies of the project, however; they
+  will just be resolved as they normally would be, within the project, rather than
+  being rewritten to point to some other project compiled by dbuild.
+
+  For example:
 
   .. code-block:: text
 
@@ -241,9 +251,23 @@ deps
   that cannot be solved otherwise; however, its use is inherently difficult to control, and
   it should be avoided if at all possible. In particular, excluding libraries from dbuild's
   control may cause library conflicts due to different transitive dependencies, pulled in
-  by different projects. The recommended approach is instead either splitting the projects
-  into sets of subprojects that do not form a cycle, or modifying the projects themselves,
-  in order to remove the cyclic dependencies.
+  by different projects.
+
+  *deps.inject:* The opposite of the previous option, "inject" adds to the list of
+  dependencies, as seen by dbuild, the specified modules. This option can be useful if, for
+  whatever reason, dbuild could not detect a dependency. One case would be a transitive
+  dependency that crosses a "space" boundary (see the page :doc:`spaces`, later in this
+  guide, for further details on using multiple spaces).
+
+  Please note that the options "deps.ignore" and "deps.inject"
+  only affects dbuild's view of dependencies; it does not alter the list of
+  library dependencies used within the project. If you wish to completely remove
+  or add a dependency in an sbt project, you should use instead the "extra.commands"
+  option, with a line like "set libraryDependencies ..." (see the sbt build
+  section in this manual for further details on "extra.commands").
+
+  The options "deps.ignore" and "deps.inject" are an advanced feature, and should
+  be used sparingly, if at all.
 
 cross-version
   Controls the cross-versioning of the resulting artifacts. Please refer to the

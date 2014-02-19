@@ -110,7 +110,8 @@ object GitJGit extends GitImplementation {
    * See: https://bugs.eclipse.org/bugs/show_bug.cgi?id=362376
    */
   def clone(base: String, tempDir: File, log: Logger) = {
-    log.info("Cloning " + base + " to " + tempDir.getCanonicalPath)
+    log.info("Cloning " + base)
+    log.info("to " + tempDir.getCanonicalPath)
     JGit.cloneRepository().
       setURI(base).
       setDirectory(tempDir).
@@ -180,7 +181,8 @@ object GitGit extends GitImplementation {
    *  an explicit checkout must follow.
    */
   def clone(base: String, tempDir: File, log: Logger) = {
-    log.info("Cloning " + base + " to " + tempDir.getCanonicalPath)
+    log.info("Cloning " + base)
+    log.info("to " + tempDir.getCanonicalPath)
     val (ret, time) = timed(
       apply(
         Seq("clone", "-n", "-q",

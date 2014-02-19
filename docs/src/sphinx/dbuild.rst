@@ -109,7 +109,8 @@ vars
 
     $ bin/dbuild -Dx.y=test config.dbuild
 
-  you can refer to the value of the property by using ``${vars.sys.x.y}``.  
+  you can refer to the value of the property by using ``${vars.sys.x.y}``, also when
+  defining further variables.
 
 .. _properties:
 
@@ -724,6 +725,9 @@ an additional argument on the command line, for example:
 .. code-block:: bash
 
    $ bin/dbuild config.dbuild project
+
+You can get further information about other available
+options by using the command ``dbuild --help``.
 
 Automatic cleanup
 -----------------

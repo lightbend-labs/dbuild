@@ -69,11 +69,11 @@ object DependencyAnalysis {
 
 
   /** Actually prints the dependencies to the given file. */
-  def printDependencies(state: State, uri: String, file: String, projects: Seq[String], excludedProjects: Seq[String]): Unit = {
+  def printDependencies(state: State, uri: String, file: String, projects: Seq[String],
+      excludedProjects: Seq[String], debug: Boolean): Unit = {
     // TODO: fix logging
     val log = sbt.ConsoleLogger()
-
-log.setLevel(Level.Debug)
+    if (debug) log.setLevel(Level.Debug)
 
     val extracted = Project.extract(state)
     import extracted._
@@ -251,8 +251,9 @@ log.setLevel(Level.Debug)
     }
     val projects = reloadProjects("dbuild.project.dependency.metadata.subprojects")
     val excluded = reloadProjects("dbuild.project.dependency.metadata.excluded")
+    val debug = reloadProjects("dbuild.project.dependency.metadata.debug") == "true"
     (Option(System.getProperty("dbuild.project.dependency.metadata.file"))
-        foreach (f => printDependencies(state, uri, f, projects, excluded)))
+        foreach (f => printDependencies(state, uri, f, projects, excluded, debug)))
     state
   }
 

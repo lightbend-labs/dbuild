@@ -21,7 +21,7 @@ object NilBuildSystem extends BuildSystemCore {
     case _ => throw new Exception("Internal error: Nil build config options have the wrong type. Please report.")
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
     val meta=readMeta(config.buildConfig)
     val projects=meta.projects map {_.name}

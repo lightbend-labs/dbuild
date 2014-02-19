@@ -25,10 +25,11 @@ abstract class BuildSystem[Extractor, LocalBuildRunner] {
    * @param dir       A local checkout of the project.
    * @param extractor The extractor currently in use (for nested calls)
    * @param log       The logger to send output to for this build.
+   * @param debug     If true, print more debugging information
    * 
    * @return The dependencies the local project requires.
    */
-  def extractDependencies(config: ExtractionConfig, dir: java.io.File, extractor: Extractor, log: Logger): ExtractedBuildMeta
+  def extractDependencies(config: ExtractionConfig, dir: java.io.File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta
   /**
    * Runs this build system on a project.
    * 

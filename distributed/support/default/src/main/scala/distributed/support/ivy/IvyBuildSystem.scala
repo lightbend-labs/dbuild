@@ -43,7 +43,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     case _ => throw new Exception("Internal error: ivy build config options have the wrong type. Please report")
   }
 
-  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val config = extractionConfig.buildConfig
     val response = IvyMachinery.resolveIvy(config, baseDir, repos, log)
     val report = response.report

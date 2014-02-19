@@ -35,7 +35,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     case _ => throw new Exception("Internal error: scala build config options have the wrong type. Please report")
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
     // for the root (main Scala project):
     val meta = readMeta(dir, ec.exclude, log)

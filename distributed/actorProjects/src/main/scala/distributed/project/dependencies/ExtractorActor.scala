@@ -13,7 +13,7 @@ import distributed.project.model.CleanupExpirations
 import distributed.project.cleanup.Recycling._
 import sbt.{ IO, DirectoryFilter }
 
-case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, log: logging.Logger)
+case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, log: logging.Logger, debug: Boolean)
 
 class CleaningExtractionActor extends Actor {
   def receive = {
@@ -70,10 +70,10 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
     // at the same time, so some form of auxiliary locking is needed anyway.
   }
   def receive: Receive = {
-    case Controlled(ExtractBuildDependencies(build, uuidDir, log), from) =>
+    case Controlled(ExtractBuildDependencies(build, uuidDir, log, debug), from) =>
       Controller.forwardingErrorsToFuturesControlled(sender, from) {
         log info ("--== Extracting dependencies for %s ==--" format (build.buildConfig.name))
-        sender ! Done(e.extract(extractionDir(target) / uuidDir, build, log), from)
+        sender ! Done(e.extract(extractionDir(target) / uuidDir, build, log, debug), from)
         log info ("--== End Extracting dependencies for %s ==--" format (build.buildConfig.name))
       }
   }

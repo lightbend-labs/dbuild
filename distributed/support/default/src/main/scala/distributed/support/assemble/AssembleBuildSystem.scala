@@ -82,7 +82,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     rootResolved.copy(extra = newExtra)
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
 
     // we consider the names of parts in the same way as subprojects, allowing for a
@@ -95,7 +95,7 @@ object AssembleBuildSystem extends BuildSystemCore {
       buildConfig.projects map { p =>
         log.info("----------")
         val nestedExtractionConfig = ExtractionConfig(p)
-        extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p), log)
+        extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p), log, debug)
       }
     }
     if (partOutcomes.exists(_.isInstanceOf[ExtractionFailed])) {

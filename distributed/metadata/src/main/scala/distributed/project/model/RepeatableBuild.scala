@@ -124,3 +124,8 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
     graph.checkCycles()
   }
 }
+
+// This is the structure that is saved in meta/build
+case class SavedConfiguration(expandedDBuildConfig: DBuildConfiguration, fullBuild: RepeatableDistributedBuild) {
+  def uuid = hashing sha1 this
+}

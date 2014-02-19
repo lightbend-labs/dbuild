@@ -71,8 +71,7 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File) {
       IO.delete(buildProps)
     }
   }
-    
-  
+
   override def toString = "Sbt(@%s)" format (globalBase.getAbsolutePath)
 }
 
@@ -86,12 +85,21 @@ object SbtRunner {
    "-XX:MaxPermSize=512m",
    "-XX:ReservedCodeCacheSize=192m"    
   )
-  
+
+  def writeQuietIvyLogging(dir: File) = new _root_.java.io.PrintWriter(new File(dir, ".dbuild.ivy.quiet.sbt"))
+  def silenceIvy(projectDir: File, log: Logger): Unit = {
+    log.debug("Silencing Ivy logging...")
+    new File(projectDir, "project").mkdir()
+    Seq(projectDir, new File(projectDir, "project")).map(writeQuietIvyLogging).
+      foreach { p => p.write("ivyLoggingLevel in Global := UpdateLogging.Quiet\n"); p.close }
+  }
+
   /** inits global base and returns location of launcher jar file. */
   private def initSbtGlobalBase(repos:List[xsbti.Repository], dir: File): File = {
     if(!(dir / "plugins" / "deps.sbt").exists) {
       val pluginDir = dir / "plugins"
       pluginDir.mkdirs
+      writeQuietIvyLogging(pluginDir)
       writeDeps(pluginDir / "deps.sbt")
       //transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
     }

@@ -114,11 +114,11 @@ object LocalRepoHelper {
    * by the build system.
    */
   protected def publishRawArtifacts(localRepo: File, subproj: String, files: Seq[ArtifactSha], remote: Repository, log: Logger) = {
-    if (subproj != "") log.info("Checking files for subproject: " + subproj)
+    if (subproj != "") log.debug("Checking files for subproject: " + subproj)
     files foreach {
       case ArtifactSha(sha, location) =>
         val key = makeRawFileKey(sha)
-        log.info("Checking file: " + location)
+        log.debug("Checking file: " + location)
         remote put (key, localRepo / location)
     }
   }

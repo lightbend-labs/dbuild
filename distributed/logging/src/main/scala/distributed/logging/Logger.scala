@@ -32,12 +32,16 @@ object Logger {
   def logFullStackTrace(log: Logger, t: Throwable): Unit = processLogMsg(log, t, false)
 }
 
+//
+//  Below this line, unused code
+//
+
 abstract class BasicLogger extends sbt.BasicLogger with Logger
 
 /** Logs to an output stream. */
-class StreamLogger(out: java.io.PrintStream) extends BasicLogger {
+class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger {
 
-  setLevel(Debug)
+  if (debug) setLevel(Debug)
 
   def newNestedLogger(name: String): Logger = this
   def trace(t: => Throwable): Unit =
@@ -72,5 +76,5 @@ class StreamLogger(out: java.io.PrintStream) extends BasicLogger {
 }
 
 object ConsoleLogger {
-  def apply(): Logger = new StreamLogger(System.out)
+  def apply(debug: Boolean): Logger = new StreamLogger(System.out, debug)
 }

@@ -145,10 +145,10 @@ class LoggerFileWriteActor(logDir: java.io.File, path: String) extends Actor wit
 
 
 /** An actor that takes LogCmd messages and writes them to a file. */
-class SystemOutLoggerActor extends Actor with LogToOutput {
+class SystemOutLoggerActor(debug: Boolean) extends Actor with LogToOutput {
   import sbt.Path._
   val output = System.out  
-  val level = Level.Debug
+  val level = if (debug) Level.Debug else Level.Info
   
   def receive = {
     case l : LogCmd => log(l)

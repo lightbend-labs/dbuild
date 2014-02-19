@@ -137,7 +137,7 @@ object ScalaBuildSystem extends BuildSystemCore {
           )
       }
 
-      val extraRewireOptions = (Seq(
+      val moduleData = Seq(
         // org, name, -Dxxx.version.number and -Dxxx.cross.suffix
         ("org.scala-lang.modules", "scala-xml", "scala-xml"),
         ("org.scala-lang.modules", "scala-parser-combinators", "scala-parser-combinators"),
@@ -147,19 +147,20 @@ object ScalaBuildSystem extends BuildSystemCore {
         ("org.scala-lang.plugins", "scala-continuations-library", "scala-continuations-library"),
         ("org.scala-lang.modules", "scala-swing", "scala-swing"),
         ("com.typesafe.akka", "akka-actor", "akka-actor"),
-        ("org.scala-lang", "scala-actors-migration", "actors-migration")) map {
-          case (org, name, prop) =>
-            findArtifact(input.artifacts.artifacts, org, name) map {
-              art =>
-                val ver = art.version
-                log.info("Setting " + name + " to ver = \"" + ver+"\", suffix = \"" + art.crossSuffix+"\"")
-                Seq("-D" + prop + ".version.number=\"" + ver +"\"",
-                    "-D" + prop + ".cross.suffix=\"" + art.crossSuffix +"\"")
-            }
-        }).flatten.flatten
+        ("org.scala-lang", "scala-actors-migration", "actors-migration"))
+        
+      val extraRewireOptions = (for {
+        (org, name, prop) <- moduleData
+        art <- findArtifact(input.artifacts.artifacts, org, name)
+      } yield {
+        val ver = art.version
+        log.info("Setting " + name + " to ver = \"" + ver + "\", suffix = \"" + art.crossSuffix + "\"")
+        Seq("-D" + prop + ".version.number=\"" + ver + "\"",
+          "-D" + prop + ".cross.suffix=\"" + art.crossSuffix + "\"")
+      }).flatten
 
       scalaRewireOptions ++ extraRewireOptions
-      
+
     } else Seq.empty
 
     if (ec.buildTarget.nonEmpty || ec.deployTarget.nonEmpty)

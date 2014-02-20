@@ -457,10 +457,11 @@ targets
 build-options
   A sequence of strings; they will be appended to the ant options when
   compiling. This option can be used to define additional properties,
-  or to set other flags. If unspecified, by default it will take the value
-  ``"-Dscalac.args.optimise=-optimise"``, meaning that an optimized
-  build will take place. If you would like an unoptimized build instead,
-  please just redefine "build-options" to an empty array.
+  or to set other flags. If left unspecified, no additional options
+  will be passed to ant, and the default targets will
+  produce a build that is **non-optimized**. In order to
+  compile an optimized build, just append to build-options the
+  string ``"-Dscalac.args.optimise=-optimise"``.
 
 
 Scala version numbers

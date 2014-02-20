@@ -15,7 +15,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.7.1-SNAPSHOT"
+  def MyVersion: String = "0.8.0"
   
   lazy val root = (
     Project("root", file(".")) 

@@ -236,7 +236,7 @@ object LocalRepoHelper {
     val spaceInfo = space.to.length match {
       case 0 => sys.error("Internal error: rematerializing artifacts from project published in no spaces: " + meta.project.config.name)
       case 1 => ", space: " + space.to.head
-      case 2 => space.to.mkString(", spaces: ", ",", "")
+      case _ => space.to.mkString(", spaces: ", ",", "")
     }
     val fragment = try " (commit: " + (Option((new java.net.URI(meta.project.config.uri)).getFragment) getOrElse "none") + spaceInfo + ")" catch {
       case e: java.net.URISyntaxException => ""

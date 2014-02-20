@@ -130,7 +130,7 @@ properties
   those 'vars' may contain expansions that refer to properties loaded using this
   properties list.
 
-  Properties files that come earlier in the list have priority. Variables that are
+  Properties files that come later in the list have priority. Variables that are
   defined locally, in the 'vars' section, take precedence in any case over all of
   the properties defined in the properties files of this list.
 
@@ -457,10 +457,11 @@ targets
 build-options
   A sequence of strings; they will be appended to the ant options when
   compiling. This option can be used to define additional properties,
-  or to set other flags. If unspecified, by default it will take the value
-  ``"-Dscalac.args.optimise=-optimise"``, meaning that an optimized
-  build will take place. If you would like an unoptimized build instead,
-  please just redefine "build-options" to an empty array.
+  or to set other flags. If left unspecified, no additional options
+  will be passed to ant, and the default targets will
+  produce a build that is **non-optimized**. In order to
+  compile an optimized build, just append to build-options the
+  string ``"-Dscalac.args.optimise=-optimise"``.
 
 
 Scala version numbers
@@ -620,12 +621,20 @@ in Maven or Ivy format.
 Since the nested projects are built independently, each
 in isolation, in case any of them relies on further
 dependencies dbuild will be unable to find them, and
-will stop with an error message to that effect. In that
-case, you can set "extra.parts.options.cross-version"
+will stop with an error message to that effect. You
+usally need to set "extra.parts.options.cross-version"
 to "standard", as shown above, in order to disable
 the dependency checking for the nested projects only
 (the corresponding option for the top-level file
 will remain unaffected).
+
+Note that a "set-version" placed
+as the same level as "system: assemble" will be
+ignored, as the versions of the parts are used instead.
+Conversely, a "cross-version" placed at the same level
+will be used to determine the cross suffix to be
+used for the output of the rewritten artifacts,
+at the end of the "assemble" rewriting.
 
 .. warning::
 

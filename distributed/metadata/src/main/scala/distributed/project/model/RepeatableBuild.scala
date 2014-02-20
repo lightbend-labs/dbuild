@@ -76,7 +76,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
       else {
         // Pull out current repeatable config for a project.
         val head = remaining.head
-        val node = graph.nodeFor(head) getOrElse sys.error("O NOES -- TODO better graph related puke message")
+        val node = graph.nodeFor(head) getOrElse sys.error("Internal error: graph.nodeFor() was None. Please report.")
         val subgraph = graph.subGraphFrom(node) map (_.value)
         val dependencies =
           for {
@@ -84,7 +84,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
             // the project in "head" can actually see. These will be the dependent projects
             // that are eventually reloaded (rematerialized) right before each project build starts
             dep <- (subgraph - head) if canSeeSpace(head.getSpace.from, dep.getSpace.to)
-          } yield current get dep.config.name getOrElse sys.error("ISSUE! Build has circular dependencies.")
+          } yield current get dep.config.name getOrElse sys.error("Internal error: unexpected circular dependency. Please report.")
         val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
         val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
           sortedDeps.map(_.config.name), sortedDeps.map(_.uuid), head.extracted.subproj) // pick defaults if no BuildOptions specified

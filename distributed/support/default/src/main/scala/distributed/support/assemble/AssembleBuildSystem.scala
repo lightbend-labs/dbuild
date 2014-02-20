@@ -108,10 +108,10 @@ object AssembleBuildSystem extends BuildSystemCore {
     // - do we have a duplication in provided artifacts?
     // let's start building a sequence of all modules, with the name of the subproject they come from
     val artiSeq = allConfigAndExtracted.flatMap { pce => pce.extracted.projects.map(art => ((art.organization + "#" + art.name), pce.config.name)) }
-    log.info(artiSeq.toString)
+    log.debug("artifacts: " + artiSeq.toString)
     // group by module ID, and check for duplications
     val artiMap = artiSeq.groupBy(_._1)
-    log.info(artiMap.toString)
+    log.debug("artifacts, grouped by ModuleID: " + artiMap.toString)
     val duplicates = artiMap.filter(_._2.size > 1)
     if (duplicates.nonEmpty) {
       duplicates.foreach { z =>
@@ -122,6 +122,8 @@ object AssembleBuildSystem extends BuildSystemCore {
 
     // ok, now we just have to merge everything together. There is no version number in the assemble
     // per se, since the versions are decided by the components.
+    log.info("----------")
+    log.info("Assembling dependencies...")
     val artifacts = allConfigAndExtracted.flatMap(_.extracted.projects.flatMap(_.artifacts))
     val newMeta = ExtractedBuildMeta("0.0.0",
       allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>

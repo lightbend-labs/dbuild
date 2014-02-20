@@ -172,19 +172,19 @@ object ProjectRepoMain {
     case x if x > 1024 => "%3.1fk" format (x.toDouble / 1024.0)
     case x => "%4d" format (x)
   }
-  
+
   def printBuildInfo(uuid: String): Unit = {
-        println("--- Repeatable Build: " + uuid)
+    println("--- Repeatable Build: " + uuid)
+    LocalRepoHelper.readBuildMeta(uuid, cache) match {
+      case Some(SavedConfiguration(expandedDBuildConfig, build)) =>
         println(" = Projects = ")
-        for {
-          SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(uuid, cache)
-          project <- build.repeatableBuilds
-          name = project.config.name
-        } {
-          println("  - " + project.uuid + " " + name)
-          println(" = Repeatable dbuild configuration =")
-          println(writeValue(expandedDBuildConfig))
+        build.repeatableBuilds foreach { project =>
+          println("  - " + project.uuid + " " + project.config.name)
         }
+        println(" = Repeatable dbuild configuration =")
+        println(writeValue(expandedDBuildConfig))
+      case _ => println("This build UUID was not found in the cache.")
+    }
   }
   
   

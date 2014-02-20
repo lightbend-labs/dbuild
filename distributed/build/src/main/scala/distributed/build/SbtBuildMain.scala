@@ -82,15 +82,17 @@ class SbtBuildMain extends xsbti.AppMain {
       val configFile = new File(conf.configFile())
       if (!configFile.isFile())
         sys.error("Configuration file \"" + conf.configFile() + "\" not found")
-      println("Using configuration: " + configFile.getName)
-      val buildTarget = conf.target.get
       val debug = conf.debug()
-      buildTarget foreach { t => println("Build target: " + t) }
+      val buildTarget = conf.target.get
+      if (debug) {
+        println("Using configuration: " + configFile.getName)
+        buildTarget foreach { t => println("Build target: " + t) }
+      }
       val (config, resolvers) =
         try {
           val properties = readProperties(configFile): Seq[String]
           val propConfigs = properties.reverse map { s =>
-            println("Including properties file: " + s)
+            if (debug) println("Including properties file: " + s)
             val syntax = ConfigSyntax.PROPERTIES
             val parseOptions = ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)
             val config = ConfigFactory.parseURL(new java.net.URI(s).toURL, parseOptions)

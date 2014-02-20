@@ -96,9 +96,14 @@ object SbtRunner {
       p.close
     }
   }
-  def silenceIvy(projectDir: File, log: Logger, debug: Boolean): Unit = {
-    new File(projectDir, "project").mkdir()
-    Seq(projectDir, new File(projectDir, "project")).foreach(writeQuietIvyLogging(_,debug))
+  def silenceIvy(dir: File, log: Logger, debug: Boolean): Unit = {
+    val dirP = dir / "project"
+    val dirPP = dirP / "project"
+    dirP.mkdir()
+    Seq(dir, dirP).foreach(writeQuietIvyLogging(_, debug))
+    // only change dirPP it need be, otherwise we incur
+    // an extra Ivy update for all projects
+    if (dirPP.exists()) writeQuietIvyLogging(dirPP, debug)
   }
 
   /** inits global base and returns location of launcher jar file. */

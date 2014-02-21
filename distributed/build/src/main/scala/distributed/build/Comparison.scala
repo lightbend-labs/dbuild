@@ -121,13 +121,13 @@ object JarFiles {
     compareJars(fa, fb, jarName, { _: String => true }, log, 10)
 
   // additional parameters:
-  // within a jar archive, only files whose name satisfy accept will be compared
+  // within a jar archive, only compare files when their names are not skipped (according to "skip" below)
   // logLimit is a limits on the number of differing elements that will be printed in case of errors
-  def compareJars(fa: File, fb: File, jarName: String, accept: String => Boolean, log: Logger, logLimit: Int): Unit = {
+  def compareJars(fa: File, fb: File, jarName: String, skip: String => Boolean, log: Logger, logLimit: Int): Unit = {
     def getEntries(jf: JarFile) = {
       jf.entries.map { je =>
         val name = je.getName()
-        if (je.isDirectory() || !accept(name))
+        if (je.isDirectory() || skip(name))
           None
         else
           Some(je.getName, je)

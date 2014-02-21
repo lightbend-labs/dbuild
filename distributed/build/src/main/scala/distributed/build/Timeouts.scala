@@ -14,19 +14,19 @@ object Timeouts {
   // should never be reached, unless something truly
   // unexpected occurs. One of the subsequent other
   // timeouts would rather be encountered beforehand.
-  val dbuildTimeout: Timeout = 5.hours + 30.minutes
+  val dbuildTimeout: Timeout = 20.hours + 30.minutes
 
   // timeout that we allow for the entire extraction phase to complete
-  val extractionPhaseTimeout: Timeout = 3.hours + 30.minutes
+  val extractionPhaseTimeout: Timeout = 18.hours + 30.minutes
   // timeout that we allow for each extraction to complete
   // (may include git/svn checkout, and Ivy resolution)
-  val extractionTimeout: Timeout = 1.hours + 30.minutes
+  val extractionTimeout: Timeout = 16.hours + 30.minutes
   // timeout that we allow for each build to complete (only during the build phase);
   // a large value is allowed if extractionPlusBuildTimeout is our limit, instead
   val buildTimeout: Timeout = 99.hours
   // timeout that we allow for the entire extraction plus building phases
   // (leave some time for notifications: it should be a bit less than dbuildTimeout)
-  val extractionPlusBuildTimeout: Timeout = 5.hours
+  val extractionPlusBuildTimeout: Timeout = 20.hours
 
   // after() was introduced in Akka 2.1.0, but we have to be compatible also with
   // sbt 0.12 -> Scala 2.9 -> Akka 2.0.5. So we copy here an old implementation of the same,

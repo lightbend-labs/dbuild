@@ -21,12 +21,12 @@ import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
 case class RunDistributedBuild(conf: DBuildConfiguration, confName: String,
-  buildTarget: Option[String], logger: Logger, debug: Boolean)
+  buildTarget: Option[String], logger: Logger, options: BuildOptions)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository, systems: Seq[BuildSystemCore]) extends Actor {
   def receive = {
-    case RunDistributedBuild(inputConf, confName, buildTarget, log, debug) => forwardingErrorsToFutures(sender) {
+    case RunDistributedBuild(inputConf, confName, buildTarget, log, options) => forwardingErrorsToFutures(sender) {
       val listener = sender
       implicit val ctx = context.system
       val extractionPhaseDuration = Timeouts.extractionPhaseTimeout.duration
@@ -40,7 +40,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       //  After this point, inputConf and its BuildOptions are never used again.
       //
       val result = try {
-        val notifTask = new Notifications(generalOptions, confName, log)
+        val notifTask = new Notifications(options.defaultNotifications, generalOptions, confName, log)
         // add further new tasks at the beginning of this list, leave notifications at the end
         val tasks: Seq[OptionTask] = Seq(new DeployBuild(generalOptions, log), new Comparison(generalOptions, log), notifTask)
         val projectNames = projects.map { _.name }
@@ -126,7 +126,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             Future(new BuildFailed(".", outcomes, msg) with TimedOut)
           }
 
-        val extractionOutcome = analyze(projects, log.newNestedLogger(hashing sha1 projects), debug)
+        val extractionOutcome = analyze(projects, log.newNestedLogger(hashing sha1 projects), options.debug)
         Future.firstCompletedOf(Seq(extractionWatchdog, extractionOutcome)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>
@@ -170,7 +170,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   // are we building a specific target? If so, filter the graph
                   val targetGraph = filterGraph(buildTarget, fullBuild)
                   val findBuild = fullBuild.buildMap
-                  val futureBuildResult = runBuild(targetGraph, findBuild, expandedDBuildConfig.uuid, fullLogger, debug)
+                  val futureBuildResult = runBuild(targetGraph, findBuild, expandedDBuildConfig.uuid, fullLogger, options.debug)
                   afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                 }
               }

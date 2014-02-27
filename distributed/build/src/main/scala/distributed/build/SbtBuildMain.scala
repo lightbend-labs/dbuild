@@ -7,6 +7,7 @@ import distributed.project.model.Utils.{ writeValue, readValue, readProperties }
 import distributed.project.model.ClassLoaderMadness
 import distributed.project.model.{ BuildOutcome, BuildBad }
 import distributed.project.model.TemplateFormatter
+import distributed.project.model.CleanupOptions
 import java.util.Properties
 import com.typesafe.config.ConfigFactory
 import distributed.project.model.Utils.readValueT
@@ -17,6 +18,8 @@ import distributed.repo.core.Defaults
 import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException
+
+case class BuildOptions(cleanup: CleanupOptions, debug: Boolean, defaultNotifications: Boolean)
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -73,16 +76,21 @@ class SbtBuildMain extends xsbti.AppMain {
                |Options:
                |""".stripMargin)
       footer("\nFor more information: http://typesafehub.github.io/distributed-build")
-      val properties = props[String]('D', descr = "One or more Java-style properties")
+      val properties = props[String](descr = "One or more Java-style properties")
       val configFile = trailArg[String](required = true, descr = "The name of the dbuild configuration file")
       val target = trailArg[String](required = false, descr = "If a target project name is specified, dbuild will build only that project and its dependencies")
       val debug = opt[Boolean](descr = "Print more debugging information")
+      val noResolvers = opt[Boolean](short = 'r', descr = "Disable the parsing of the \"options.resolvers\" section from the dbuild configuration file: only use the resolvers defined in dbuild.properties")
+      val noNotify = opt[Boolean](short = 'n', descr = "Disable the notifications defined in the configuration file, and only print a report on the console")
+      val local = opt[Boolean](short = 'l', descr = "Equivalent to: --no-resolvers --no-notify")
     }
     try {
       val configFile = new File(conf.configFile())
       if (!configFile.isFile())
         sys.error("Configuration file \"" + conf.configFile() + "\" not found")
       val debug = conf.debug()
+      val useLocalResolvers = conf.noResolvers() || conf.local()
+      val defaultNotifications = conf.noNotify() || conf.local()
       val buildTarget = conf.target.get
       if (debug) {
         println("Using configuration: " + configFile.getName)
@@ -105,7 +113,8 @@ class SbtBuildMain extends xsbti.AppMain {
           // which should happen to be in the same vars.sys space
           val endConfig = systemVars.withFallback(foldConfig)
           val resolvedConfig = endConfig.resolve
-          // Let's extract the (possible) list of resolvers defined in the configuration file
+          // Let's extract the (possible) list of resolvers defined in the configuration file.
+          // Parse them even if useLocalResolvers==true, in order to catch definition errors
           val explicitResolvers = SortedMap[String, (String, Option[String])]() ++
             (if (resolvedConfig.hasPath("options.resolvers")) {
               import collection.JavaConverters._
@@ -147,7 +156,7 @@ class SbtBuildMain extends xsbti.AppMain {
         println("Classloader:")
         printClassLoaders(getClass.getClassLoader)
       }
-      val repos = if (resolvers.isEmpty)
+      val repos = if (useLocalResolvers || resolvers.isEmpty)
         configuration.provider.scalaProvider.launcher.ivyRepositories.toList
       else {
         val listMap = xsbt.boot.ListMap(resolvers.toSeq.reverse: _*)
@@ -155,7 +164,7 @@ class SbtBuildMain extends xsbti.AppMain {
         // of toList is "backing.reverse". So we have to reverse again.
         (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
       }
-      val main = new LocalBuildMain(repos, config.options.cleanup, debug)
+      val main = new LocalBuildMain(repos, BuildOptions(config.options.cleanup, debug, defaultNotifications))
       val (outcome, time) = try {
         timed { main.build(config, configFile.getName, buildTarget) }
       } finally main.dispose()

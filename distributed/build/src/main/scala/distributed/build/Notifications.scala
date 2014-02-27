@@ -192,19 +192,22 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
   }
 }
 
-class Notifications(options: GeneralOptions, confName: String, log: Logger) extends OptionTask(log) {
+// if doNotNotify is true, then ignore the selected notification options, and only print on the console (default)
+class Notifications(defaultNotifications: Boolean, options: GeneralOptions, confName: String, log: Logger) extends OptionTask(log) {
   def id = "Notifications"
+  val notificationOptions = if (defaultNotifications) NotificationOptions() else options.notifications
+
   val consoleCtx = new ConsoleNotificationContext(log)
   val flowdockCtx = new FlowdockNotificationContext(log)
   val emailCtx = new EmailNotificationContext(log)
   val allContexts = Map("console" -> consoleCtx, "flowdock" -> flowdockCtx, "email" -> emailCtx)
-  def definedNotifications = options.notifications.send
+  def definedNotifications = notificationOptions.send
   val usedNotificationKindIDs = definedNotifications.map { _.kind }.distinct
-  val defaultsMap = options.notifications.default.map { d => (d.kind, d) }.toMap
+  val defaultsMap = notificationOptions.default.map { d => (d.kind, d) }.toMap
   val defDef = Notification(send = None) // defaults of defaults
 
   def beforeBuild(projectNames: Seq[String]) = {
-    val definedDefaults = options.notifications.default
+    val definedDefaults = notificationOptions.default
     val defaultsKindIDs = definedDefaults.map { _.kind }.distinct
     val unknown = (usedNotificationKindIDs ++ defaultsKindIDs).toSet -- allContexts.keySet
     if (unknown.nonEmpty) {
@@ -215,7 +218,7 @@ class Notifications(options: GeneralOptions, confName: String, log: Logger) exte
         sys.error("There can only be one default record for the kind: " + kd._1)
       }
     }
-    (options.notifications.send ++ options.notifications.default) foreach { n =>
+    (notificationOptions.send ++ notificationOptions.default) foreach { n =>
       // just a sanity check on the project list (we don't use the result)
       // flattenAndCheckProjectList() will check that the listed project names actually exist
       val _ = n.projects.flattenAndCheckProjectList(projectNames.toSet)
@@ -232,7 +235,7 @@ class Notifications(options: GeneralOptions, confName: String, log: Logger) exte
 
   def sendNotifications(kind: String, rootOutcome: BuildOutcome) = {
     val outcomes = rootOutcome.outcomes // children of the dbuild root
-    val userDefinedTemplates = options.notifications.templates
+    val userDefinedTemplates = notificationOptions.templates
     val defnOpt = defaultsMap.get(kind) // defaults from the default records
 
     // scan the kinds for which at least one notification exists

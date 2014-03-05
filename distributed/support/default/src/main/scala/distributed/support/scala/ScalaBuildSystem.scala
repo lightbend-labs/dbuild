@@ -120,6 +120,8 @@ object ScalaBuildSystem extends BuildSystemCore {
       name: String, org: String): Option[String] =
         getVersion(findArtifact(arts, name, org))
 
+    val debugOptions = if (debug) Seq("-debug") else Seq.empty
+
     val rewireOptions = if (hasPublishLocal) {
 
       val customScalaVersion = findVersion(input.artifacts.artifacts, "org.scala-lang", "scala-library")
@@ -179,7 +181,7 @@ object ScalaBuildSystem extends BuildSystemCore {
           "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
           "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
           "-Dmaven.version.number=" + version) ++ rewireOptions ++
-          ec.buildOptions, Some(targetDir)) ! log match {
+          debugOptions ++ ec.buildOptions, Some(targetDir)) ! log match {
           case 0 => ()
           case n => sys.error("Could not run scala ant build, error code: " + n)
         }

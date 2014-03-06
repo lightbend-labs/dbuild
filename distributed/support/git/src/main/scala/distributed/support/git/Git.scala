@@ -30,6 +30,8 @@ sealed abstract class GitImplementation {
   type Repo
   /** clone does not check out any branch */
   def clone(base: String, tempDir: File, log: Logger): Repo
+  /** Initialize an empty repository, setting "base" as origin */
+  def init(base: String, tempDir: File, log: Logger): Repo
   /**
    * Using some specially crafted refSpecs, we replicate all
    * remote refs to local ones in one go, during fetch.
@@ -119,6 +121,16 @@ object GitJGit extends GitImplementation {
       setCloneAllBranches(true).
       run(log)
   }
+  /** Initialize an empty repository, setting "base" as origin */
+  def init(base: String, tempDir: File, log: Logger) = {
+    log.debug("Preparing empty git repo in " + tempDir.getCanonicalPath)
+    val repo = JGit.init().setDirectory(tempDir).call()
+    log.debug("Setting origin to " + base)
+    val config = repo.getRepository().getConfig()
+    config.setString("remote", "origin", "url", base)
+    config.save()
+    repo
+  }
 
   // From github to our cache clone we allow failures, which may happen if we are offline
   // but we want to use our current local cache. The flag "ignoreFailures" reflects that.
@@ -190,6 +202,15 @@ object GitGit extends GitImplementation {
           tempDir.getAbsolutePath),
         tempDir, log))
     log.info("Took: " + time)
+    GitRepo(base, tempDir)
+  }
+
+  /** Initialize an empty repository, setting "base" as origin */
+  def init(base: String, tempDir: File, log: Logger) = {
+    log.debug("Preparing empty git repo in " + tempDir.getCanonicalPath)
+    apply(Seq("init", "-q"), tempDir, log)
+    log.debug("Setting origin to " + base)
+    apply(Seq("remote", "add", "origin", base), tempDir, log)
     GitRepo(base, tempDir)
   }
 

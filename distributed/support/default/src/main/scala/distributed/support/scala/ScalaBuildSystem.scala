@@ -63,7 +63,7 @@ object ScalaBuildSystem extends BuildSystemCore {
   // but not for the submodules. After building the core, we will call localBuildRunner.checkCacheThenBuild() on each module,
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+    log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
 
     // if requested, overwrite build.number. This is unrelated to
@@ -114,11 +114,13 @@ object ScalaBuildSystem extends BuildSystemCore {
         if dep.name == org
       } yield artifact).headOption
 
-    def getVersion(art:Option[ArtifactLocation]) = art map {_.version}
-    
+    def getVersion(art: Option[ArtifactLocation]) = art map { _.version }
+
     def findVersion(arts: Seq[ArtifactLocation],
       name: String, org: String): Option[String] =
-        getVersion(findArtifact(arts, name, org))
+      getVersion(findArtifact(arts, name, org))
+
+    val debugOptions = if (debug) Seq("-debug") else Seq.empty
 
     val rewireOptions = if (hasPublishLocal) {
 
@@ -133,9 +135,7 @@ object ScalaBuildSystem extends BuildSystemCore {
         Seq("-Dextra.repo.url=\"file://" + input.artifacts.localRepo.getCanonicalPath + "\"",
           //    ... and the version, change starr.version, as in:
           //      https://github.com/scala/scala/blob/master/versions.properties
-          "-Dstarr.version=\"" + sv + "\""
-            ,"-Dscala.binary.version=\"" + sv + "\""
-          )
+          "-Dstarr.version=\"" + sv + "\"", "-Dscala.binary.version=\"" + sv + "\"")
       }
 
       val moduleData = Seq(
@@ -149,7 +149,7 @@ object ScalaBuildSystem extends BuildSystemCore {
         ("org.scala-lang.modules", "scala-swing", "scala-swing"),
         ("com.typesafe.akka", "akka-actor", "akka-actor"),
         ("org.scala-lang", "scala-actors-migration", "actors-migration"))
-        
+
       val extraRewireOptions = (for {
         (org, name, prop) <- moduleData
         art <- findArtifact(input.artifacts.artifacts, org, name)
@@ -164,6 +164,14 @@ object ScalaBuildSystem extends BuildSystemCore {
 
     } else Seq.empty
 
+    // The ant build script calls maven, meaning that if we use strange version numbers
+    // for the artifacts they 1) pollute ~/.m2 and 2) once one is in the cache, all hope to get it evicted is lost
+    // Therefore: we use a local .m2 cache for each build, to avoid pollution & collisions
+    val dbuildDir = dir / ".dbuild"
+    // See the special use of _JAVA_OPTIONS, below
+    val localM2repo = dbuildDir / ".m2" / "repository"
+    localM2repo.mkdirs()
+
     if (ec.buildTarget.nonEmpty || ec.deployTarget.nonEmpty)
       sys.error("The extra options \"build-target\" and \"deploy-target\" have been replaced by the new option \"targets\" (see docs).")
     val targets = if (ec.targets.nonEmpty)
@@ -174,15 +182,21 @@ object ScalaBuildSystem extends BuildSystemCore {
       Seq(("distpack-maven", "."), ("deploy.local", "dists/maven/latest"))
     targets foreach {
       case (target, path) =>
+        // erase the content of the private cache before each stage of a build, just in case.
+        IO.delete(localM2repo.*("*").get)
         val targetDir = path.split("/").foldLeft(dir)(_ / _)
         Process(Seq("ant", target,
           "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
           "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
           "-Dmaven.version.number=" + version) ++ rewireOptions ++
-          ec.buildOptions, Some(targetDir)) ! log match {
-          case 0 => ()
-          case n => sys.error("Could not run scala ant build, error code: " + n)
-        }
+          debugOptions ++ ec.buildOptions, Some(targetDir),
+          // The special and rather unsupported env variable "_JAVA_OPTIONS" is the *only* thing
+          // capable to forcibly change user.home in all the jvm invocations therein. Changing only
+          // HOME or defining -Duser.home when calling ant, will *still* cause ~/.m2 to be used by ant & maven
+          "_JAVA_OPTIONS" -> ("-Duser.home=\"" + dbuildDir.getCanonicalPath() + "\"")) ! log match {
+            case 0 => ()
+            case n => sys.error("Could not run scala ant build, error code: " + n)
+          }
     }
 
     // initial part of the artifacts dir, including only the organization

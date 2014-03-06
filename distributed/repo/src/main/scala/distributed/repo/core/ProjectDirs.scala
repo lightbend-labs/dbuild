@@ -61,7 +61,7 @@ object ProjectDirs {
     def issueWarnings(root: File, baseDirName: String, dirName: String) = {
       import sbt.{ FileFilter => FF, DirectoryFilter => DF }
       root.*(DF && ((baseDirName: FF) || baseDirName + "-*") && -(dirName: FF)).get.foreach { z =>
-        f("WARNING: This directory is no longer used, and can be removed: " + z.getCanonicalPath)
+        f("WARNING: This directory is not in use: " + z.getCanonicalPath)
       }
     }
     issueWarnings(baseDir, targetBaseDirName, targetDirName)

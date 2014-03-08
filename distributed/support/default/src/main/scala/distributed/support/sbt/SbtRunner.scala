@@ -67,7 +67,7 @@ class SbtRunner(repos:List[xsbti.Repository], globalBase: File, debug: Boolean) 
     // TODO - Just overwrite sbt.version if necessary....
     val buildProps = projectDir / "project" / "build.properties"
     if(buildProps.exists) {
-      log.info("Removing " + buildProps.getAbsolutePath)
+      log.debug("Removing " + buildProps.getAbsolutePath)
       IO.delete(buildProps)
     }
   }

@@ -221,7 +221,7 @@ object GitGit extends GitImplementation {
     }
 
   def clean(repo: GitRepo, log: Logger): Unit =
-    apply(Seq("clean", "-fdx"), repo.dir, log)
+    apply(Seq("clean", "-fdxq"), repo.dir, log)
 
   private def reset(tempDir: File, branch: String, log: Logger): Unit =
     apply(Seq("reset", "-q", "--hard", branch), tempDir, log)

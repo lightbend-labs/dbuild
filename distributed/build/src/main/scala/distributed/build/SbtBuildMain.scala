@@ -164,6 +164,10 @@ class SbtBuildMain extends xsbti.AppMain {
         // of toList is "backing.reverse". So we have to reverse again.
         (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
       }
+      if (debug) {
+        println("Resolvers:")
+        repos foreach println
+      }
       val main = new LocalBuildMain(repos, BuildOptions(config.options.cleanup, debug, defaultNotifications))
       val (outcome, time) = try {
         timed { main.build(config, configFile.getName, buildTarget) }

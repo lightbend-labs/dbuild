@@ -82,7 +82,7 @@ object SbtRunner {
    "-Xms1536m",
    "-Xmx1536m",
    "-Xss2m",
-   "-XX:MaxPermSize=512m",
+   "-XX:MaxPermSize=640m",
    "-XX:ReservedCodeCacheSize=192m"    
   )
 

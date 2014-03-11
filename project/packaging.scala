@@ -11,6 +11,7 @@ object Packaging {
   def mapArt(art: Artifact, kind: String) = art.copy(`type` = kind, extension = kind)
 
   def settings: Seq[Setting[_]] = packagerSettings ++ S3Plugin.s3Settings ++ Seq(
+     organization := "com.typesafe.dbuild",
      name := "dbuild",
      wixConfig := <wix/>,
      maintainer := "Antonio Cunei <antonio.cunei@typesafe.com>",

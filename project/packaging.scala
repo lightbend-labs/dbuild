@@ -8,6 +8,7 @@ import com.typesafe.sbt.packager.universal.Keys.packageZipTarball
 
 object Packaging {
 
+  def mapArt(art: Artifact, kind: String) = art.copy(`type` = kind, extension = kind)
 
   def settings: Seq[Setting[_]] = packagerSettings ++ S3Plugin.s3Settings ++ Seq(
      name := "dbuild",
@@ -15,7 +16,7 @@ object Packaging {
      maintainer := "Antonio Cunei <antonio.cunei@typesafe.com>",
      packageSummary := "Multi-project builder.",
      packageDescription := """A multi-project builder capable of gluing together a set of related projects.""",
-     mappings in Universal <+= SbtSupport.sbtLaunchJar map { jar =>
+     mappings in Universal <+= (SbtSupport.sbtLaunchJar) map { jar =>
        jar -> "bin/sbt-launch.jar"
      },
      name in Universal <<= (name,version).apply((n,v) => (n+"-"+v)),
@@ -23,17 +24,34 @@ object Packaging {
      rpmVendor := "typesafe",
      rpmUrl := Some("http://github.com/typesafehub/distributed-build"),
      rpmLicense := Some("BSD"),
+
      host in upload := "downloads.typesafe.com",
      mappings in upload <<= (packageZipTarball in Universal, packageBin in Universal, name, version) map
        {(tgz,zip,n,v) => Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
      progress in upload := true,
-     credentials += Credentials(Path.userHome / ".s3credentials")
-  )
+     credentials += Credentials(Path.userHome / ".s3credentials"),
 
-  
+     publishArtifact in Compile := false,
+
+     publish <<= (publish) dependsOn (packageZipTarball in Universal, packageBin in Universal),
+     publishLocal <<= (publishLocal) dependsOn (packageZipTarball in Universal, packageBin in Universal),
+
+     // NB: A clean needs to be executed before both packageZipTarball and packageZipTarball.
+     // Enforcing this requirement using only task dependencies, however, seems impossible.
+     // A clean will (still) have to be called manually beforehand for now, therefore.
+
+     publishMavenStyle := true,
+     pomIncludeRepository := { _ => false },
+
+     artifact in (Universal, packageZipTarball) ~= { mapArt(_, "tgz")  },
+     artifact in (Universal, packageBin) ~= { mapArt(_, "zip")  },
+     crossPaths := false
+  ) ++
+    addArtifact(artifact in (Universal, packageZipTarball), packageZipTarball in Universal) ++
+    addArtifact(artifact in (Universal, packageBin), packageBin in Universal)
+
   def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"repo","distributed.repo.core.SbtRepoMain")
   def makeDbuildProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"build","distributed.build.SbtBuildMain")
-
 
   private def makeProps(t: File, src: File, sv: String, v: String, name:String, clazz:String): (File, String) = {
     val tdir = t / "generated-sources"

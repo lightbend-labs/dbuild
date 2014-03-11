@@ -43,6 +43,7 @@ object Packaging {
 
      publishMavenStyle := true,
      pomIncludeRepository := { _ => false },
+     autoScalaLibrary := false,
 
      artifact in (Universal, packageZipTarball) ~= { mapArt(_, "tgz")  },
      artifact in (Universal, packageBin) ~= { mapArt(_, "zip")  },

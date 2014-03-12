@@ -25,7 +25,7 @@ class LocalBuilderActor(
     buildSystems: Seq[BuildSystemCore],
     repository: Repository,
     targetDir: File,
-    log: Logger, options: BuildOptions) extends Actor {
+    log: Logger, options: BuildRunOptions) extends Actor {
 
   val concurrencyLevel = 1
   

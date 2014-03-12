@@ -19,7 +19,11 @@ import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException
 
-case class BuildOptions(cleanup: CleanupOptions, debug: Boolean, defaultNotifications: Boolean)
+/** These options are created by SbtBuildMain, and are propagated to most stages of building, as
+ *  they alter secondary details of the build process in various ways (for example, the logging
+ *  level, or how frequently old data is deleted).
+ */
+case class BuildRunOptions(cleanup: CleanupOptions, debug: Boolean, defaultNotifications: Boolean)
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -168,7 +172,7 @@ class SbtBuildMain extends xsbti.AppMain {
         println("Resolvers:")
         repos foreach println
       }
-      val main = new LocalBuildMain(repos, BuildOptions(config.options.cleanup, debug, defaultNotifications))
+      val main = new LocalBuildMain(repos, BuildRunOptions(config.options.cleanup, debug, defaultNotifications))
       val (outcome, time) = try {
         timed { main.build(config, configFile.getName, buildTarget) }
       } finally main.dispose()

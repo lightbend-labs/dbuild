@@ -16,7 +16,7 @@ import akka.pattern.ask
 import akka.util.duration._
 import distributed.repo.core.ProjectDirs.checkForObsoleteDirs
 
-class LocalBuildMain(repos: List[xsbti.Repository], options: BuildOptions) {
+class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
 
   val targetDir = ProjectDirs.targetDir
   val resolvers = Seq(

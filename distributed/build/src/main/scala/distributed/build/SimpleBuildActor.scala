@@ -21,7 +21,7 @@ import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
 case class RunDistributedBuild(conf: DBuildConfiguration, confName: String,
-  buildTarget: Option[String], logger: Logger, options: BuildOptions)
+  buildTarget: Option[String], logger: Logger, options: BuildRunOptions)
 
 // Very simple build actor that isn't smart about building and only works locally.
 class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repository, systems: Seq[BuildSystemCore]) extends Actor {

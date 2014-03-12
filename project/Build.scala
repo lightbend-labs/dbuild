@@ -19,7 +19,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   
   lazy val root = (
     Project("root", file(".")) 
-    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, gitSupport, drepo, dmeta, ddocs)
+    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, gitSupport, drepo, dmeta, ddocs, dist)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
     settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
@@ -33,6 +33,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in drepo, version in drepo) map Packaging.makeDRepoProps,
       version := MyVersion
     )
+    settings(skip210:_*)
   )
 
   // The component projects...

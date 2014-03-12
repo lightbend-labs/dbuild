@@ -39,12 +39,11 @@ object Packaging {
 
      publishArtifact in Compile := false,
 
+     // NB: A must be executed before both packageZipTarball and packageZipTarball,
+     // otherwise Universal may end up using outdated files.
+
      publishLocal <<= (publishLocal) dependsOn (clean),
      publish <<= (publish) dependsOn (clean),
-
-     // NB: A clean needs to be executed before both packageZipTarball and packageZipTarball.
-     // Enforcing this requirement using only task dependencies, however, seems impossible.
-     // A clean will (still) have to be called manually beforehand for now, therefore.
 
      publishMavenStyle := false,
      autoScalaLibrary := false,

@@ -8,7 +8,12 @@ import com.typesafe.sbt.packager.universal.Keys.packageZipTarball
 
 object Packaging {
 
-  def mapArt(art: Artifact, kind: String) = art.copy(`type` = kind, extension = kind)
+  def mapArt[A](key:sbt.TaskKey[_], kind: String) =
+     // cheat a little: by setting the classifier to the version number, we can
+     // publish to Ivy the tgz/zip with the full name, like "dbuild-0.8.1.tgz".
+     artifact in (Universal, key) <<= (artifact in (Universal, key), version) {
+       (a,v) => a.copy(`type` = kind, extension = kind, `classifier` = Some(v))
+     }
 
   def settings: Seq[Setting[_]] = packagerSettings ++ S3Plugin.s3Settings ++ Seq(
      organization := "com.typesafe.dbuild",
@@ -34,19 +39,18 @@ object Packaging {
 
      publishArtifact in Compile := false,
 
-     publish <<= (publish) dependsOn (packageZipTarball in Universal, packageBin in Universal),
      publishLocal <<= (publishLocal) dependsOn (packageZipTarball in Universal, packageBin in Universal),
+     publish <<= (publish) dependsOn (packageZipTarball in Universal, packageBin in Universal),
 
      // NB: A clean needs to be executed before both packageZipTarball and packageZipTarball.
      // Enforcing this requirement using only task dependencies, however, seems impossible.
      // A clean will (still) have to be called manually beforehand for now, therefore.
 
-     publishMavenStyle := true,
-     pomIncludeRepository := { _ => false },
-     autoScalaLibrary := false,
+     publishMavenStyle := false,
 
-     artifact in (Universal, packageZipTarball) ~= { mapArt(_, "tgz")  },
-     artifact in (Universal, packageBin) ~= { mapArt(_, "zip")  },
+     mapArt(packageZipTarball, "tgz"),
+     mapArt(packageBin, "zip"),
+
      crossPaths := false
   ) ++
     addArtifact(artifact in (Universal, packageZipTarball), packageZipTarball in Universal) ++

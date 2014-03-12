@@ -238,9 +238,7 @@ object LocalRepoHelper {
       case 1 => ", space: " + space.to.head
       case _ => space.to.mkString(", spaces: ", ",", "")
     }
-    val fragment = try " (commit: " + (Option((new java.net.URI(meta.project.config.uri)).getFragment) getOrElse "none") + spaceInfo + ")" catch {
-      case e: java.net.URISyntaxException => ""
-    }
+    val fragment = " (commit: " + (meta.project.getCommit getOrElse "none") + spaceInfo + ")"
     val info1 = "Retrieved from project " +
       meta.project.config.name + fragment
     val info2 = ": " + arts.length + " artifacts"

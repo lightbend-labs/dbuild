@@ -39,14 +39,15 @@ object Packaging {
 
      publishArtifact in Compile := false,
 
-     publishLocal <<= (publishLocal) dependsOn (packageZipTarball in Universal, packageBin in Universal),
-     publish <<= (publish) dependsOn (packageZipTarball in Universal, packageBin in Universal),
+     publishLocal <<= (publishLocal) dependsOn (clean),
+     publish <<= (publish) dependsOn (clean),
 
      // NB: A clean needs to be executed before both packageZipTarball and packageZipTarball.
      // Enforcing this requirement using only task dependencies, however, seems impossible.
      // A clean will (still) have to be called manually beforehand for now, therefore.
 
      publishMavenStyle := false,
+     autoScalaLibrary := false,
 
      mapArt(packageZipTarball, "tgz"),
      mapArt(packageBin, "zip"),

@@ -22,6 +22,7 @@ object DistributedBuildConfigSpec extends Specification {
           uri = "uri",
           system = "sbt",
           setVersion = None,
+          setVersionSuffix = None,
           extra = None
       )), None
     ))
@@ -44,6 +45,7 @@ object DistributedBuildConfigSpec extends Specification {
           uri = "uri",
           system = "sbt",
           setVersion = Some("3.9.43"),
+          setVersionSuffix = None,
           extra = readValue[Option[SbtExtraConfig]]("{directory = ZOMG}")
     		  )), None
     ))

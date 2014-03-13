@@ -91,8 +91,12 @@ class LocalBuildRunner(builder: BuildRunner,
           val value = build.baseVersion
           val defaultVersion = (if (value endsWith "-SNAPSHOT") {
             value replace ("-SNAPSHOT", "")
-          } else value) + "-" +
-            ("dbuildx" + build.uuid)
+          } else value) +
+            (build.config.setVersionSuffix match {
+              case None => "-" + ("dbuildx" + build.uuid)
+              case Some("") => ""
+              case Some(suffix) => "-" + suffix
+            })
           libVersion getOrElse defaultVersion
         }
       }

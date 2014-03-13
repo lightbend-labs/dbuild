@@ -114,8 +114,9 @@ vars
 
   The path ``vars.auto`` contains some special utility variables, computed by dbuild
   before the build is started. At this time, ``${vars.auto.timestamp}`` contains a
-  timestamp corresponding to the start of the build, which can be appended for instance
-  to other file names or artifact names.
+  timestamp corresponding to the start of the build, which can be used to construct
+  file names or artifact names, for example using the "set-version-suffix" option
+  (see below).
 
 .. _properties:
 
@@ -171,14 +172,15 @@ Each project descriptions has this structure:
 .. code-block:: javascript
 
    {
-    "name"          : <project-name>,
-    "system"        : <build-system>,
-    "uri"           : <source-repository-uri>,
-    "set-version"   : <optional-output-version>
-    "deps"          : <optional-dependencies-modifiers>
-    "cross-version" : <cross-version-selector>
-    "use-jgit"      : <jgit-selector>
-    "extra"         : <optional-extra-build-parameters>
+    "name"               : <project-name>,
+    "system"             : <build-system>,
+    "uri"                : <source-repository-uri>,
+    "set-version"        : <optional-output-version>
+    "set-version-suffix" : <optional-output-version-suffix>
+    "deps"               : <optional-dependencies-modifiers>
+    "cross-version"      : <cross-version-selector>
+    "use-jgit"           : <jgit-selector>
+    "extra"              : <optional-extra-build-parameters>
    }
 
 Within a project description, only the name is mandatory; all the rest is optional, although
@@ -217,6 +219,14 @@ set-version
   override the default value by specifying a specific version string here. If you are planning to
   use this feature in order to release artifact, then you also need to set the option "cross-version"
   to "standard", as explained in the section :ref:`section-build-options`.
+
+set-version-suffix
+  As an alternative to "set-version", this options will change only the version suffix, while
+  retaining the main version number that is defined by the project itself. For example, if the
+  project defines as version "0.8.1-SNAPSHOT", and set-version-suffix is "test", the resulting
+  version will be "0.8.1-test". If the suffix is set to the empty string, the version
+  will become just "0.8.1". If both "set-version-suffix" and "set-version" are defined, the
+  latter will take over, replacing the version string entirely.
 
 deps
   The optional "deps" section can be used to modify the way in which dbuild rewires certain

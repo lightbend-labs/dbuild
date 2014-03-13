@@ -22,7 +22,7 @@ object Packaging {
      maintainer := "Antonio Cunei <antonio.cunei@typesafe.com>",
      packageSummary := "Multi-project builder.",
      packageDescription := """A multi-project builder capable of gluing together a set of related projects.""",
-     mappings in Universal <+= (SbtSupport.sbtLaunchJar) map { jar =>
+     mappings in Universal <+= SbtSupport.sbtLaunchJar map { jar =>
        jar -> "bin/sbt-launch.jar"
      },
      name in Universal <<= (name,version).apply((n,v) => (n+"-"+v)),
@@ -36,14 +36,15 @@ object Packaging {
        {(tgz,zip,n,v) => Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
      progress in upload := true,
      credentials += Credentials(Path.userHome / ".s3credentials"),
+     upload <<= upload dependsOn (clean),
 
      publishArtifact in Compile := false,
 
      // NB: A must be executed before both packageZipTarball and packageZipTarball,
      // otherwise Universal may end up using outdated files.
 
-     publishLocal <<= (publishLocal) dependsOn (clean),
-     publish <<= (publish) dependsOn (clean),
+     publishLocal <<= publishLocal dependsOn (clean),
+     publish <<= publish dependsOn (clean),
 
      publishMavenStyle := false,
      autoScalaLibrary := false,

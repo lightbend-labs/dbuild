@@ -25,7 +25,6 @@ class LocalBuildRunner(builder: BuildRunner,
     buildData: BuildData): BuildOutcome = {
     val log = buildData.log
     try {
-//(log: Logger, debug: Boolean, timestamp: String
       try {
         val subArtifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
         LocalRepoHelper.debugArtifactsInfo(subArtifactsOut, log)
@@ -39,7 +38,7 @@ class LocalBuildRunner(builder: BuildRunner,
       }
     } catch {
       case t =>
-        BuildFailed(build.config.name, children, prepareLogMsg(buildData.log, t))
+        BuildFailed(build.config.name, children, prepareLogMsg(log, t))
     }
   }
 

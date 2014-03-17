@@ -224,7 +224,7 @@ object GitGit extends GitImplementation {
     apply(Seq("clean", "-fdx"), repo.dir, log)
 
   private def checkout(tempDir: File, branch: String, log: Logger): Unit =
-    apply(Seq("checkout", "-q", branch), tempDir, log)
+    apply(Seq("reset", "-q", "--hard", branch), tempDir, log)
 
   private def isRemoteBranch(ref: String, cwd: File, log: Logger) =
     run(Seq("show-ref", "--verify", "--quiet", "refs/remotes/origin/" + ref), cwd, log) == 0

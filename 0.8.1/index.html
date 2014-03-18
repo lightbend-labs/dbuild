@@ -1,0 +1,205 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>dbuild &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.8.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="#" />
+    <link rel="next" title="dbuild: Introduction" href="introduction.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="#">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/distributed-build">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">dbuild</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="introduction.html">dbuild: Introduction</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="#">Contents</a>
+              </li>
+              <li>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.8.1">Version 0.8.1</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="dbuild">
+<h1>dbuild<a class="headerlink" href="#dbuild" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="what-is-it">
+<h2>What is it?<a class="headerlink" href="#what-is-it" title="Permalink to this headline">¶</a></h2>
+<p>Typesafe's <strong>dbuild</strong>, or distributed-build, is a build and debugging tool based on sbt.</p>
+<p>It is used to coordinate the development of multiple, independent projects that evolve in parallel: dbuild
+uses a multi-project definition file to build all the requested projects, and makes sure that they all work
+together, even though each of them may evolve independently.</p>
+<p>In case a failure is detected, typically because one change in one project affects one or more of the others,
+dbuild can be used as a debugging tool: an affected project can be automatically configured with the exact set
+of dependencies that caused the failure, preparing the necessary environment for further debugging.</p>
+<p>Please the rest of this guide to discover how dbuild works, and how you can use it with your project.</p>
+<p>This guide starts with <a class="reference internal" href="introduction.html"><em>dbuild: Introduction</em></a>.</p>
+</div>
+<div class="section" id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">dbuild: Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#terminology">Terminology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#a-quick-example">A quick example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#what-if-the-build-fails">What if the build fails?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download and Setup</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="download.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="download.html#installing-the-build-tool">Installing the build tool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="download.html#installing-the-sbt-plugin">Installing the sbt plugin</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dbuild.html">Using dbuild</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#id1">Using dbuild</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#properties-file">Properties file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#the-build-configuration-file">The build configuration file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#the-build-section">The build section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#sbt-specific-options">sbt-specific options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#scala-specific-options">Scala-specific options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#scala-version-numbers">Scala version numbers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#ivy-specific-options">Ivy-specific options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#assemble-specific-options">Assemble-specific options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#customizing-the-list-of-repositories">Customizing the list of repositories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#building-a-single-target-project">Building a single target project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dbuild.html#automatic-cleanup">Automatic cleanup</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="buildOptions.html">Build options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="buildOptions.html#the-build-options-defaults">The build options defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="buildOptions.html#organizing-defaults">Organizing defaults</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="spaces.html">Spaces</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#from-and-to">From and to</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#building-in-stages">Building in stages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#disabling-dependencies-rewriting">Disabling dependencies rewriting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#copying-across-spaces">Copying across spaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#multiple-to-s">Multiple &quot;to&quot;s</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#organizing-spaces">Organizing spaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#a-simpler-syntax">A simpler syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#hierarchical-spaces">Hierarchical spaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html#variables-expansion">Variables expansion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="deploy.html">Deploying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="deploy.html#the-deploy-section">The <tt class="docutils literal"><span class="pre">deploy</span></tt> section</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notifications.html">Notifications</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notifications.html#the-notifications-section">The <tt class="docutils literal"><span class="pre">notifications</span></tt> section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notifications.html#id1">Notifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notifications.html#outcomes-and-when">Outcomes and &quot;when&quot;</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notifications.html#the-send-clause">The &quot;send&quot; clause</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notifications.html#flowdock">Flowdock</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notifications.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notifications.html#templates">Templates</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="comparison.html">Comparing artifacts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="comparison.html#the-compare-section">The <tt class="docutils literal"><span class="pre">compare</span></tt> section</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="repositories.html">Repositories</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="repositories.html#local-and-remote">Local and remote</a></li>
+<li class="toctree-l2"><a class="reference internal" href="repositories.html#remote-repository-configuration">Remote repository configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="repositories.html#drepo">drepo</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="plugin.html">The sbt plugin</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="plugin.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugin.html#reloading-a-dbuild-configuration">Reloading a dbuild configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugin.html#reloading-artifacts">Reloading artifacts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="caveats.html">Known issues and caveats</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="caveats.html#limitations">Limitations</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">dbuild</a><ul>
+<li><a class="reference internal" href="#what-is-it">What is it?</a></li>
+<li><a class="reference internal" href="#contents">Contents</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

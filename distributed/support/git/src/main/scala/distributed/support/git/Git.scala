@@ -212,7 +212,7 @@ object GitGit extends GitImplementation {
 
   def checkoutRef(repo: Repo, ref: String, log: Logger): String =
     try {
-      checkout(repo.dir, ref, log)
+      reset(repo.dir, ref, log)
       revparse(repo.dir, "HEAD")
     } catch {
       case t: Exception =>
@@ -223,8 +223,8 @@ object GitGit extends GitImplementation {
   def clean(repo: GitRepo, log: Logger): Unit =
     apply(Seq("clean", "-fdx"), repo.dir, log)
 
-  private def checkout(tempDir: File, branch: String, log: Logger): Unit =
-    apply(Seq("checkout", "-q", branch), tempDir, log)
+  private def reset(tempDir: File, branch: String, log: Logger): Unit =
+    apply(Seq("reset", "-q", "--hard", branch), tempDir, log)
 
   private def isRemoteBranch(ref: String, cwd: File, log: Logger) =
     run(Seq("show-ref", "--verify", "--quiet", "refs/remotes/origin/" + ref), cwd, log) == 0

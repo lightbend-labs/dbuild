@@ -222,7 +222,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     log.info("---== Dependency Information ===---")
     build.repeatableBuilds foreach { b =>
       log.info("Project " + b.config.name)
-      log.info(b.depInfo flatMap (_.dependencyNames) mkString ("  depends on: ", ", ", ""))
+      b.depInfo foreach { d =>
+        log.info((d.dependencyNames) mkString ("  depends on: ", ", ", ""))
+      }
     }
     log.info("---== End Dependency Information ===---")
   }

@@ -13,7 +13,7 @@ object ExtractedBuildMetaSpec extends Specification {
       
       readValue[ExtractedBuildMeta](
 """{
-  version = "1.0"
+  version = "1.0", "proj-info" = [{
   projects = [{
           name = "p1"
           organization = "o1"
@@ -24,7 +24,7 @@ object ExtractedBuildMetaSpec extends Specification {
           }]
           dependencies = []
     }]
-  subproj = ["hey"]
+  subproj = ["hey"] }]
 }""") must equalTo(ExtractedBuildMeta("1.0",
     Seq(ProjMeta(Seq(Project("p1", "o1", Seq(ProjectRef("p1", "o1", "jar")), Seq.empty)), Seq("hey")))))
     }

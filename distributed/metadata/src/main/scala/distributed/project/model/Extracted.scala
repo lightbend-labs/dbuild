@@ -1,4 +1,5 @@
 package distributed.project.model
+import com.fasterxml.jackson.annotation.{JsonCreator,JsonProperty}
 
 /** A project dep is an extracted *external* build dependency.  I.e. this is a
  * maven/ivy artifact that exists and is built external to a local build.
@@ -44,8 +45,8 @@ case class ProjMeta(projects: Seq[Project], subproj:Seq[String] = Seq.empty)
  * of the main build, the second element for the plugins, the third for the
  * plugins of the plugins (if any), and so on.
  */
-case class ExtractedBuildMeta(version: String, projInfo: Seq/*Levels*/[ProjMeta]) {
-    // compatibility
+case class ExtractedBuildMeta(version: String, @JsonProperty("proj-info") projInfo: Seq/*Levels*/[ProjMeta]) {
+    // compatibility, but see the @JsonCreator, below
     def this(version: String, projects: Seq[Project], subproj:Seq[String] = Seq.empty) =
       this(version, Seq/*Levels*/(ProjMeta(projects, subproj)))
     // compatibility, only base level
@@ -64,4 +65,9 @@ case class ExtractedBuildMeta(version: String, projInfo: Seq/*Levels*/[ProjMeta]
      * "project" here only refers to artifacts that we are going to publish.
      */
     def projects = (projInfo.headOption getOrElse sys.error("Internal error: projInfo contains nothing!")).projects
+}
+object ExtractedBuildMeta {
+  @JsonCreator // mysteriously, jacks picks the wrong constructor, so I need to feed an explicit one to it
+  def constructor(@JsonProperty("version") version: String, @JsonProperty("proj-info") projInfo: Seq/*Levels*/[ProjMeta]) =
+    new ExtractedBuildMeta(version, projInfo)
 }

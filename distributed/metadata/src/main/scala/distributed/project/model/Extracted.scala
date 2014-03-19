@@ -44,10 +44,10 @@ case class ProjMeta(projects: Seq[Project], subproj:Seq[String] = Seq.empty)
  * of the main build, the second element for the plugins, the third for the
  * plugins of the plugins (if any), and so on.
  */
-case class ExtractedBuildMeta(version: String, projInfo: Seq[ProjMeta]) {
+case class ExtractedBuildMeta(version: String, projInfo: Seq/*Levels*/[ProjMeta]) {
     // compatibility
     def this(version: String, projects: Seq[Project], subproj:Seq[String] = Seq.empty) =
-      this(version, Seq(ProjMeta(projects, subproj)))
+      this(version, Seq/*Levels*/(ProjMeta(projects, subproj)))
     // compatibility, only base level
     def subproj = (projInfo.headOption getOrElse sys.error("Internal Error: Empty ProjInfo in ExtractedBuildMeta")).subproj
 

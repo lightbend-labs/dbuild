@@ -292,7 +292,7 @@ case class CleanupOptions(
  */
 @JsonSerialize(using = classOf[SeqStringSerializer])
 @JsonDeserialize(using = classOf[SeqStringDeserializer])
-case class SeqString(s: Seq[String]) {
+case class SeqString(override val s:Seq[String]) extends Flex[String](s) {
   // whenever I use a SeqString to apply map or foreach, the implicit
   // will kick in. However, when I try to print or use it as a string,
   // its method toString() will be called. This is not normally a problem
@@ -300,39 +300,8 @@ case class SeqString(s: Seq[String]) {
   // but, just in case:
   override def toString() = s.toString
 }
-class SeqStringSerializer extends JsonSerializer[SeqString] {
-  override def serialize(value: SeqString, g: JsonGenerator, p: SerializerProvider) {
-    value.s.length match {
-      case 1 =>
-        val vs = p.findValueSerializer(classOf[String], null)
-        vs.serialize(value.s(0), g, p)
-      case _ =>
-        val vs = p.findValueSerializer(classOf[Array[String]], null)
-        vs.serialize(value.s.toArray, g, p)
-    }
-  }
-}
-class SeqStringDeserializer extends JsonDeserializer[SeqString] {
-  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqString = {
-    val tf = ctx.getConfig.getTypeFactory()
-    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
-    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
-    val jp = generic.traverse()
-    jp.nextToken()
-    def valueAs[T](cls: Class[T]) = {
-      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
-      cls.cast(vd.deserialize(jp, ctx))
-    }
-    if (generic.isTextual()) {
-      SeqString(Seq(valueAs(classOf[String])))
-    } else {
-      // The valueAs() returns a WrappedArray; we use
-      // its values to build a new Seq, in order to keep
-      // the same sha1 UUID (a WrappedArray returns a different one)
-      SeqString(Seq(valueAs(classOf[Array[String]]):_*))
-    }
-  }
-}
+class SeqStringDeserializer extends SeqFlexDeserializer[String,SeqString]
+class SeqStringSerializer extends SeqFlexSerializer[String]
 object SeqString {
   implicit def SeqToSeqString(s: Seq[String]): SeqString = SeqString(s)
   implicit def SeqStringToSeq(a: SeqString): Seq[String] = a.s
@@ -344,45 +313,52 @@ object SeqString {
  */
 @JsonSerialize(using = classOf[SeqDBCSerializer])
 @JsonDeserialize(using = classOf[SeqDBCDeserializer])
-case class SeqDBC(s: Seq[DistributedBuildConfig])
-class SeqDBCDeserializer extends JsonDeserializer[SeqDBC] {
-  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqDBC = {
-    val tf = ctx.getConfig.getTypeFactory()
-    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
-    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
-    val jp = generic.traverse()
-    jp.nextToken()
-    def valueAs[T](cls: Class[T]) = {
-      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
-      cls.cast(vd.deserialize(jp, ctx))
-    }
-    if (generic.isArray()) {
-      // The valueAs() returns a WrappedArray; we use
-      // its values to build a new Seq, in order to keep
-      // the same sha1 UUID (just in case)
-      SeqDBC(Seq(valueAs(classOf[Array[DistributedBuildConfig]]):_*))
-    } else {
-      SeqDBC(Seq(valueAs(classOf[DistributedBuildConfig])))
-    }
-  }
-}
-class SeqDBCSerializer extends JsonSerializer[SeqDBC] {
-  override def serialize(value: SeqDBC, g: JsonGenerator, p: SerializerProvider) {
-    value.s.length match {
-      case 1 =>
-        val vs = p.findValueSerializer(classOf[DistributedBuildConfig], null)
-        vs.serialize(value.s(0), g, p)
-      case _ =>
-        val vs = p.findValueSerializer(classOf[Array[DistributedBuildConfig]], null)
-        vs.serialize(value.s.toArray, g, p)
-    }
-  }
-}
+case class SeqDBC(override val s:Seq[DistributedBuildConfig]) extends Flex[DistributedBuildConfig](s)
+class SeqDBCDeserializer extends SeqFlexDeserializer[DistributedBuildConfig,SeqDBC]
+class SeqDBCSerializer extends SeqFlexSerializer[DistributedBuildConfig]
 object SeqDBC {
   implicit def SeqToSeqDBC(s: Seq[DistributedBuildConfig]): SeqDBC = SeqDBC(s)
   implicit def SeqDBCToSeq(a: SeqDBC): Seq[DistributedBuildConfig] = a.s
 }
 
+/**
+ * The generic auto-wrapping magic
+ */
+class Flex[T <: AnyRef](val s: Seq[T])
+class SeqFlexDeserializer[T <: AnyRef,ST <: Flex[T]](implicit m: Manifest[T], ms: Manifest[ST]) extends JsonDeserializer[ST] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): ST = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T <: AnyRef](cls: Class[T])(implicit m: Manifest[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    val constructor=ms.erasure.asInstanceOf[Class[ST]].getConstructor(classOf[Seq[T]])
+    if (generic.isArray()) {
+      // The valueAs() returns a WrappedArray; we use
+      // its values to build a new Seq, in order to keep
+      // the same sha1 UUID (just in case)
+      constructor.newInstance(Seq(valueAs(m.arrayManifest.erasure.asInstanceOf[Class[Array[T]]]): _*))
+    } else {
+      constructor.newInstance(Seq(valueAs[T](m.erasure.asInstanceOf[Class[T]])))
+    }
+  }
+}
+class SeqFlexSerializer[T <: AnyRef](implicit m: Manifest[T]) extends JsonSerializer[Flex[T]] {
+  override def serialize(value: Flex[T], g: JsonGenerator, p: SerializerProvider) {
+    value.s.length match {
+      case 1 =>
+        val vs = p.findValueSerializer(m.erasure.asInstanceOf[Class[T]], null)
+        vs.serialize(value.s(0), g, p)
+      case _ =>
+        val vs = p.findValueSerializer(m.arrayManifest.erasure.asInstanceOf[Class[Array[T]]], null)
+        vs.serialize(value.s.toArray, g, p)
+    }
+  }
+}
 
 /** Deploy information. */
 case class DeployOptions(
@@ -606,7 +582,7 @@ class SelectorElementDeserializer extends JsonDeserializer[SelectorElement] {
  */
 @JsonSerialize(using = classOf[SeqElementSerializer])
 @JsonDeserialize(using = classOf[SeqElementDeserializer])
-case class SeqSelectorElement(s: Seq[SelectorElement]) {
+case class SeqSelectorElement(override val s: Seq[SelectorElement])  extends Flex[SelectorElement](s) {
     /**
    * From its list of selected projects, which may include '.' for the root, and
    *  the BuildOutcome of the root, flattens the definition in order to select a
@@ -648,36 +624,8 @@ case class SeqSelectorElement(s: Seq[SelectorElement]) {
     reqs
   }
 }
-class SeqElementSerializer extends JsonSerializer[SeqSelectorElement] {
-  override def serialize(value: SeqSelectorElement, g: JsonGenerator, p: SerializerProvider) {
-    value.s.length match {
-      case 1 =>
-        val vs = p.findValueSerializer(classOf[SelectorElement], null)
-        vs.serialize(value.s(0), g, p)
-      case _ =>
-        val vs = p.findValueSerializer(classOf[Array[SelectorElement]], null)
-        vs.serialize(value.s.toArray, g, p)
-    }
-  }
-}
-class SeqElementDeserializer extends JsonDeserializer[SeqSelectorElement] {
-  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqSelectorElement = {
-    val tf = ctx.getConfig.getTypeFactory()
-    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
-    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
-    val jp = generic.traverse()
-    jp.nextToken()
-    def valueAs[T](cls: Class[T]) = {
-      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
-      cls.cast(vd.deserialize(jp, ctx))
-    }
-    if (generic.isTextual() || generic.isObject()) {
-      SeqSelectorElement(Seq(valueAs(classOf[SelectorElement])))
-    } else { // Array, or something unexpected that will be caught later
-      SeqSelectorElement(valueAs(classOf[Array[SelectorElement]]))
-    }
-  }
-}
+class SeqElementDeserializer extends SeqFlexDeserializer[SelectorElement,SeqSelectorElement]
+class SeqElementSerializer extends SeqFlexSerializer[SelectorElement]
 object SeqSelectorElement {
   implicit def SeqToSeqSelectorElement(s: Seq[SelectorElement]): SeqSelectorElement = SeqSelectorElement(s)
   implicit def SeqSelectorElementToSeq(a: SeqSelectorElement): Seq[SelectorElement] = a.s
@@ -689,37 +637,9 @@ object SeqSelectorElement {
  */
 @JsonSerialize(using = classOf[SeqNotificationSerializer])
 @JsonDeserialize(using = classOf[SeqNotificationDeserializer])
-case class SeqNotification(s: Seq[Notification])
-class SeqNotificationSerializer extends JsonSerializer[SeqNotification] {
-  override def serialize(value: SeqNotification, g: JsonGenerator, p: SerializerProvider) {
-    value.s.length match {
-      case 1 =>
-        val vs = p.findValueSerializer(classOf[Notification], null)
-        vs.serialize(value.s(0), g, p)
-      case _ =>
-        val vs = p.findValueSerializer(classOf[Array[Notification]], null)
-        vs.serialize(value.s.toArray, g, p)
-    }
-  }
-}
-class SeqNotificationDeserializer extends JsonDeserializer[SeqNotification] {
-  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqNotification = {
-    val tf = ctx.getConfig.getTypeFactory()
-    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
-    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
-    val jp = generic.traverse()
-    jp.nextToken()
-    def valueAs[T](cls: Class[T]) = {
-      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
-      cls.cast(vd.deserialize(jp, ctx))
-    }
-    if (generic.isTextual() || generic.isObject()) {
-      SeqNotification(Seq(valueAs(classOf[Notification])))
-    } else { // Array, or something unexpected that will be caught later
-      SeqNotification(valueAs(classOf[Array[Notification]]))
-    }
-  }
-}
+case class SeqNotification(override val s:Seq[Notification]) extends Flex[Notification](s)
+class SeqNotificationDeserializer extends SeqFlexDeserializer[Notification,SeqNotification]
+class SeqNotificationSerializer extends SeqFlexSerializer[Notification]
 object SeqNotification {
   implicit def SeqToSeqNotification(s: Seq[Notification]): SeqNotification = SeqNotification(s)
   implicit def SeqNotificationToSeq(a: SeqNotification): Seq[Notification] = a.s

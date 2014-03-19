@@ -37,7 +37,7 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
   @JsonProperty("base-version") baseVersion: String,
   // see below the description of RepeatableDepInfo for details
-  depInfo: Seq[RepeatableDepInfo]
+  depInfo: Seq/*Levels*/[RepeatableDepInfo]
 ) {
   /** UUID for this project. */
   def uuid = hashing sha1 this

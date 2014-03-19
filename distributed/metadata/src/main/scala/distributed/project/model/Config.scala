@@ -102,7 +102,7 @@ case class DepsModifiers(
  */
 @JsonDeserialize(using = classOf[SpaceDeserializer])
 @JsonSerialize(using = classOf[SpaceSerializer])
-case class Space(from: Seq[String], to: Seq[String]) {
+case class Space(from: Seq/*Levels*/[String], to: Seq[String]) {
   // We can't place "defaults" in the companion object, otherwise
   // the case class loses its standard facilities. So we place it here instead.
   private object SpaceDefaults {

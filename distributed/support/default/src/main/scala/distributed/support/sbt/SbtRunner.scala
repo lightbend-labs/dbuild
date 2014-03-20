@@ -159,4 +159,18 @@ object SbtRunner {
   
   def writeRepoFile(repos:List[xsbti.Repository], config: File): Unit =
     Repositories.writeRepoFile(repos, config)
+
+  /**
+   * Given a freshly cleaned up checkout of an sbt project (all unrelated files and dirs must be deleted),
+   * find the number of levels of the sbt project that will be 'update'd.
+   * For a project without plugins or other .sbt files in project/ (or .scala in project/project), that
+   * will be one. For a project with plugins, two. And so on.
+   */
+   def buildLevels(dir: File): Int = {
+    val sub = dir / "project"
+    val subSub = sub / "project"
+    if (sub.isDirectory && (sub.*("*.sbt").get.nonEmpty || (subSub.isDirectory() && sub.*("*.scala").get.nonEmpty)))
+      buildLevels(sub) + 1
+    else 1
+  }
 }

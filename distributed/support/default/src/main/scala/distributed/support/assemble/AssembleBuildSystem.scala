@@ -71,9 +71,11 @@ object AssembleBuildSystem extends BuildSystemCore {
           val buildConfig = nestedConf// use expandDistributedBuildConfig !!!!!!
           val nestedResolvedProjects =
             buildConfig.projects.map { p =>
+              val projDir=projectsDir(dir, p)
+              projDir.mkdirs()
               log.info("----------")
               log.info("Resolving part: " + p.name)
-              extractor.dependencyExtractor.resolve(p, projectsDir(dir, p), extractor, log)
+              extractor.dependencyExtractor.resolve(p, projDir, extractor, log)
             }
           DistributedBuildConfig(nestedResolvedProjects, buildConfig.options)
         }

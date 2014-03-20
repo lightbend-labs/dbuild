@@ -22,6 +22,16 @@ trait ProjectResolver {
    * Returns a modified ProjectBuildConfig, in which for example the
    * branch name has been replaced by a hash, or other transformations
    * have occurred in virtue of Resolver's knowledge.
+   * 
+   * IMPORTANT: For all the resolvers that may be used together with sbt,
+   * at the end of resolve() no extraneous files are allowed
+   * in the directory: only the project files must be there (the version
+   * control metadata like .svn/.git/etc are allowed, but there should
+   * be no extra source files, build directories, plugins, etc).
+   * 
+   * The directory "dir" must exist before resolve() is
+   * called, and resolve() may rely on that. See
+   * ProjectDirs.useProjectExtractionDirectory().
    */
   // TODO: it would be nice it resolve() could also return a Boolean
   // informing the caller of whether the checkout changed (this is a

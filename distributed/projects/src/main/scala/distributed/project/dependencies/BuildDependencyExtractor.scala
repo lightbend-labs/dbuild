@@ -36,6 +36,8 @@ class MultiBuildDependencyExtractor(buildSystems: Seq[BuildSystem[Extractor, Loc
   }
   def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger, debug: Boolean): ExtractedBuildMeta =
     findSystem(config.buildConfig).extractDependencies(config, dir, extractor, log, debug)
-  def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ProjectBuildConfig =
+  def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor:Extractor, log: logging.Logger): ProjectBuildConfig = {
+    if (!dir.isDirectory()) sys.error("Internal error, please report; resolve() dir does not exist: "+dir.getCanonicalPath())
     findSystem(config).resolve(config, dir, extractor, log)
+  }
 }

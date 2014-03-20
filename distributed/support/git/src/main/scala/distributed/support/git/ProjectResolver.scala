@@ -55,6 +55,7 @@ class GitProjectResolver extends ProjectResolver {
     val localRepo = if (!(dir / ".git").exists) git.clone(cloneDir.getCanonicalPath, dir, log) else git.getRepo(dir)
 
     git.fetch(localRepo, false /* stop on failures */ , log)
+    // scrub the dir from all extraneous stuff before returning
     git.clean(localRepo, log)
 
     val sha = git.checkoutRef(localRepo, ref, log)

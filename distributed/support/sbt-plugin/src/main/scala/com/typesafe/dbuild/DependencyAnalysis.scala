@@ -258,6 +258,13 @@ object DependencyAnalysis {
     state
   }
 
+  def callMe(state:State, args:String*): State = {
+    state.globalLogging.full.info("SONO DENTRO!!!!")
+    println("SONO DENTRO!!!!2")
+    sbt.ConsoleLogger().info("SONO DENTRO!!!!3")
+    args foreach println
+    state
+  }
   private def print = Command.command("print-deps")(saveLastMsg(printCmd))
 
   /** Settings you can add your build to print dependencies. */

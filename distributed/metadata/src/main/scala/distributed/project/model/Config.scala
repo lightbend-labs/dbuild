@@ -96,9 +96,9 @@ case class DepsModifiers(
  * 
  * In order to be used, the list in "from" is converted
  * into an infinite stream. The elements that are missing
- * in "from" are replaced with the corresponding elements
- * taken from this default stream:
- * [ "default", "plugins", "plugins2", "plugins3", ... ]
+ * in "from" are replaced with the empty string, which is
+ * a special space (to which one cannot publish), and which
+ * means "do not rewire".
  */
 @JsonDeserialize(using = classOf[SpaceDeserializer])
 @JsonSerialize(using = classOf[SpaceSerializer])
@@ -106,7 +106,7 @@ case class Space(from: Seq/*Levels*/[String], to: Seq[String]) {
   // We can't place "defaults" in the companion object, otherwise
   // the case class loses its standard facilities. So we place it here instead.
   private object SpaceDefaults {
-    val defaults = Stream("default", "plugins") ++ (Stream.from(2) map ("plugins" + _))
+    val defaults = "default" +: Stream.continually("")
   }
   def this(s: String) = this(Seq(s), Seq(s))
   from foreach Utils.testSpaceName

@@ -59,11 +59,7 @@ object SbtExtractor {
     def generateSbtFiles(allButLast: String, allButFirst: String, all: String): (String, String, String) =
       (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
 
-    val allButLast = SbtRunner.onLoad("""
-          println("I am happy to report that I can transform the state in the dir "+
-            ((sbt.Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data) getOrElse "<unknown>"))
-          com.typesafe.dbuild.DependencyAnalysis.printCmd(state)
-          """)
+    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DependencyAnalysis.printCmd(state)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
 

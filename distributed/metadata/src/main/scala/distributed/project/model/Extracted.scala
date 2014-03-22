@@ -50,8 +50,8 @@ case class ProjMeta(version: String, projects: Seq[Project], subproj: Seq[String
 case class ExtractedBuildMeta(@JsonProperty("proj-info") projInfo: Seq /*Levels*/ [ProjMeta]) {
   // do NOT define secondary constructors, otherwise the Jacks/Jackson library may get quite confused
 
+  def getHead = (projInfo.headOption getOrElse sys.error("Internal Error: Empty ProjInfo in ExtractedBuildMeta"))
   // compatibility, only base level
-  private def getHead = (projInfo.headOption getOrElse sys.error("Internal Error: Empty ProjInfo in ExtractedBuildMeta"))
   def subproj = getHead.subproj
   def version = getHead.version
   /**

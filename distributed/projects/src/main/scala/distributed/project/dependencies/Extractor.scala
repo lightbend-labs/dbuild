@@ -30,6 +30,9 @@ class Extractor(
    * contained in DepsModifiers. It is presently used to ignore (and not rewire) certain
    * dependencies; that could be further extended in the future in order to
    * modify the project dependencies in other manners.
+   * 
+   * For multi-level builds, at this time only the first level is changed. TODO: change
+   * DepsModifier into an autowrapping object, and adapt multiple levels, if applicable.
    */
   def modifiedDeps(depsMods: Option[DepsModifiers], extractedDeps: ExtractedBuildMeta, log: logging.Logger): ExtractedBuildMeta = {
     depsMods match {
@@ -45,7 +48,7 @@ class Extractor(
         if (notFound.nonEmpty)
           log.warn(notFound.mkString("*** WARNING: These dependencies (marked as \"ignore\") were not found: ", ", ", ""))
         // TODO: add "deps" for EACH level
-        val modDeps = extractedDeps.projInfo.head.copy(projects = extractedDeps.projInfo.head.projects.map(proj =>
+        val modDeps = extractedDeps.getHead.copy(projects = extractedDeps.getHead.projects.map(proj =>
           proj.copy(dependencies = proj.dependencies.filterNot(dep =>
             ignored.exists(mod => sameId(dep, mod))))))
         val added = all.inject.map(ModuleId.parse)
@@ -53,7 +56,7 @@ class Extractor(
           proj.copy(dependencies = (proj.dependencies.++(added.map { d =>
             ProjectRef(d.getName, d.getOrganisation)
           }).distinct))))
-        val newProjInfo = result +: extractedDeps.projInfo.drop(1)
+        val newProjInfo = result +: extractedDeps.projInfo.tail
         extractedDeps.copy(projInfo = newProjInfo)
     }
   }
@@ -114,7 +117,7 @@ class Extractor(
       logger.debug("Dependencies are cached!")
       val deps = readValue[ExtractedBuildMeta](file)
       logger.debug("Dependencies = " + writeValue(deps))
-      val baseLevelProjInfo = deps.projInfo.headOption getOrElse sys.error("Internal error: projInfo is empty!")
+      val baseLevelProjInfo = deps.getHead
       if (baseLevelProjInfo.subproj.nonEmpty)
         logger.info(baseLevelProjInfo.subproj.mkString("The following subprojects will be built in project " + config.buildConfig.name + ": ", ", ", ""))
       ExtractionOK(config.buildConfig.name, Seq.empty, Seq(ProjectConfigAndExtracted(config.buildConfig, deps)))

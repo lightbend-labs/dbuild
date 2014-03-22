@@ -224,8 +224,19 @@ sys.exit(0)
     log.info("---== Dependency Information ===---")
     build.repeatableBuilds foreach { b =>
       log.info("Project " + b.config.name)
-      b.depInfo foreach { d =>
-        log.info((d.dependencyNames) mkString ("  depends on: ", ", ", ""))
+      // to print dependencies:
+      // - check if any level beyond the first had a non-empty list of deps
+      // - if not, print a simple one-liner list
+      // - if yes, print the range from the first to the last level that is non-empty,
+      //   prefixing with an id or number to indicate the plugin level
+      val last = b.depInfo.lastIndexWhere(_.dependencyNames.nonEmpty)
+      if (last < 1)
+        // also print this line if no dependencies
+        log.info((b.depInfo.head.dependencyNames) mkString ("  depends on: ", ", ", ""))
+      else {
+        (0 to last) zip b.depInfo foreach { case (i,d) =>
+          log.info(d.dependencyNames mkString ("  level "+i+" depends on: ", ", ", ""))
+        }
       }
     }
     log.info("---== End Dependency Information ===---")

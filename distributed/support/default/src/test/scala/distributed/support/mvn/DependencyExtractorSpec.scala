@@ -43,7 +43,7 @@ object DependencyExtractorSpec extends Specification {
         """
       
       val meta = DependencyExtractor extract pom
-      meta must equalTo(new ExtractedBuildMeta("1.0", Seq(
+      meta must equalTo(ExtractedBuildMeta("1.0", Seq(
         Project(
           name = "stuff",
           organization = "com.jsuereth",

@@ -35,7 +35,6 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  * via LocalBuildRunner, when the project is eventually built.
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
-  @JsonProperty("base-version") baseVersion: String,
   // see below the description of RepeatableDepInfo for details
   depInfo: Seq/*Levels*/[RepeatableDepInfo]
 ) {
@@ -55,6 +54,7 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
  * levels reflect the fromStream sequence in the project space descriptor.
  */
 case class RepeatableDepInfo(
+  @JsonProperty("base-version") baseVersion: String,
   // The list of dependencies is transitive (within the boundaries
   // of the relevant spaces, see below)
   dependencyNames: Seq[String],// names corresponding to a RepeatableProjectBuild
@@ -104,9 +104,9 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
               dep <- (subgraph - head) if canSeeSpace(fromSpace, dep.getSpace.to)
             } yield current get dep.config.name getOrElse sys.error("Internal error: unexpected circular dependency. Please report.")
             val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
-            RepeatableDepInfo(sortedDeps.map(_.config.name), sortedDeps.map(_.uuid), info.subproj)
+            RepeatableDepInfo(info.version, sortedDeps.map(_.config.name), sortedDeps.map(_.uuid), info.subproj)
         }
-        val headMeta = RepeatableProjectBuild(head.config, head.extracted.version,
+        val headMeta = RepeatableProjectBuild(head.config,
           allDependencies) // pick defaults if no BuildOptions specified
         makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
       }

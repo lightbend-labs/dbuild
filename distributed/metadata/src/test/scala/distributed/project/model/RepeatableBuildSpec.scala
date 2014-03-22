@@ -17,7 +17,7 @@ object RepeatableDistributedBuildSpec extends Specification {
     val sample = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
               ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("0.1", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "a",
                     organization = "a",
@@ -26,7 +26,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                   ))))),
           ProjectConfigAndExtracted(
               ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("0.1-test1", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("0.1-test1", 
                   Seq(Project(
                     name = "b",
                     organization = "b",
@@ -35,7 +35,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                   )))))),
          ProjectConfigAndExtracted(
               ProjectBuildConfig("c", "scala", "uri3", None, None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("0.1", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "c",
                     organization = "c",
@@ -44,7 +44,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                   )))))),
          ProjectConfigAndExtracted(
               ProjectBuildConfig("d", "scala", "uri4", None, None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("0.1-beta1", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("0.1-beta1", 
                   Seq(Project(
                     name = "d",
                     organization = "d",
@@ -53,7 +53,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                   )))))),
         ProjectConfigAndExtracted(
               ProjectBuildConfig("e", "scala", "uri5", None, None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("3.0", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("3.0", 
                   Seq(Project(
                     name = "e",
                     organization = "e",
@@ -65,7 +65,7 @@ object RepeatableDistributedBuildSpec extends Specification {
     val sample2 = RepeatableDistributedBuild(Seq(
           ProjectConfigAndExtracted(
               ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("0.1", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "a",
                     organization = "a",
@@ -74,7 +74,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                   ))))),
           ProjectConfigAndExtracted(
               ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("0.1-test1", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("0.1-test1", 
                   Seq(Project(
                     name = "b",
                     organization = "b",
@@ -83,7 +83,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                   )))))),
          ProjectConfigAndExtracted(
               ProjectBuildConfig("c", "scala", "uri3", None, None, None, None, None, defSpace, None),
-              ExtractedBuildMeta("0.1", Seq(ProjMeta(
+              ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "c",
                     organization = "c",

@@ -694,15 +694,15 @@ object DistributedRunner {
     }
   }
 
-  private def buildIt = Command.command("dbuild-build")(saveLastMsg(buildCmd))
-  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(saveLastMsg(setupCmd))
+//  private def buildIt = Command.command("dbuild-build")(saveLastMsg(buildCmd))
+//  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(saveLastMsg(setupCmd))
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
   private def comment = Command.args("//", "// [comments]") { (state, _) => state }
 
   /** Settings you can add your build to print dependencies. */
   def buildSettings: Seq[Setting[_]] = Seq(
-    Keys.commands += buildIt,
-    Keys.commands += setItUp,
+//    Keys.commands += buildIt,
+//    Keys.commands += setItUp,
     Keys.commands += comment)
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],

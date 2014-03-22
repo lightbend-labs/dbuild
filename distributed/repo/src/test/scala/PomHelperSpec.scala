@@ -13,8 +13,7 @@ object PomHelperSpec extends Specification {
             Seq(ProjectConfigAndExtracted(
                 config = ProjectBuildConfig("", "", "", None, None, None, None, None, Some(new Space("default")), None),
                 extracted = ExtractedBuildMeta(
-                  version = "",
-                  projInfo = Seq(ProjMeta(Seq(
+                  projInfo = Seq(ProjMeta("", Seq(
                     Project(
                       name = "scala-arm",
                       organization = "com.jsuereth",

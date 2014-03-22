@@ -31,12 +31,14 @@ object Packaging {
      rpmUrl := Some("http://github.com/typesafehub/distributed-build"),
      rpmLicense := Some("BSD"),
 
+     // S3 stuff
      host in upload := "downloads.typesafe.com",
      mappings in upload <<= (packageZipTarball in Universal, packageBin in Universal, name, version, scalaVersion) map
        {(tgz,zip,n,v,sv) => if(sv.startsWith("2.10")) Seq.empty else Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
      progress in upload := true,
      credentials += Credentials(Path.userHome / ".s3credentials"),
      upload <<= upload dependsOn (clean),
+     // until here
 
      publishArtifact in Compile := false,
 
@@ -53,6 +55,7 @@ object Packaging {
      mapArt(packageBin, "zip"),
 
      crossPaths := false
+
   ) ++
     addArtifact(artifact in (Universal, packageZipTarball), packageZipTarball in Universal) ++
     addArtifact(artifact in (Universal, packageBin), packageBin in Universal)

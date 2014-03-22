@@ -89,7 +89,7 @@ class LocalBuildRunner(builder: BuildRunner,
         // calculate some (hopefully unique) default version
         case Some(v) => v
         case _ => {
-          val value = build.baseVersion
+          val value = build.depInfo.head.baseVersion // TODO, this is just the ground level
           val defaultVersion = (if (value endsWith "-SNAPSHOT") {
             value replace ("-SNAPSHOT", "")
           } else value) +

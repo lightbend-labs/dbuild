@@ -54,7 +54,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     // ok, now we just have to merge everything together.
-    val newMeta = new ExtractedBuildMeta(meta.version, configAndExtracted.extracted.projects, meta.subproj)
+    val newMeta = ExtractedBuildMeta(meta.version, configAndExtracted.extracted.projects, meta.subproj)
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta
   }
@@ -307,13 +307,6 @@ object ScalaBuildSystem extends BuildSystemCore {
         // DEBUGGING ONLY *******************************************************************************************************
         fallbackMeta(baseDir)
     }
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-   sys.exit(9992)
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
     // There are no real subprojects in the Scala build;
     // simulate them by creating one subproject per artifact.
     // That will enable us to publish individual artifacts
@@ -337,10 +330,11 @@ object ScalaBuildSystem extends BuildSystemCore {
         p => subProjects.contains(p.name)
       })
     } else readMetaInfo.copy(subproj = allSubProjects)
-    val meta = readMeta.copy(projInfo = Seq(metaInfo))
-
     // override the "dbuild.json" version with the one from "build.number" (if it exists)
-    readBuildNumberFile(baseDir) map { v => meta.copy(version = v) } getOrElse meta
+    val metaInfo2 = readBuildNumberFile(baseDir) map { v => metaInfo.copy(version = v) } getOrElse metaInfo
+    // re-package the projInfo inside an ExtractedBuildMeta
+    val meta = readMeta.copy(projInfo = Seq(metaInfo2))
+    meta
   }
 
   def readBuildNumberFile(baseDir: File) = {
@@ -375,7 +369,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     // hard-coded
-    ExtractedBuildMeta(version, Seq(ProjMeta(Seq(
+    ExtractedBuildMeta(Seq(ProjMeta(version, Seq(
       Project("continuations", "org.scala-lang.plugins",
         Seq(ProjectRef("continuations", "org.scala-lang.plugins")),
         Seq.empty),

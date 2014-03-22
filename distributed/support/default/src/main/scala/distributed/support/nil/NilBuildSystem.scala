@@ -45,6 +45,6 @@ object NilBuildSystem extends BuildSystemCore {
    * Fabricate some ExtractedBuildMeta as suitable.
    */
   private def readMeta(config: ProjectBuildConfig): ExtractedBuildMeta = {
-    new ExtractedBuildMeta(config.setVersion getOrElse "xxx", Seq.empty, Seq.empty)
+    ExtractedBuildMeta(config.setVersion getOrElse "xxx", Seq.empty, Seq.empty)
   }
 }

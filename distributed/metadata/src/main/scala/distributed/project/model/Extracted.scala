@@ -1,27 +1,28 @@
 package distributed.project.model
-import com.fasterxml.jackson.annotation.{JsonCreator,JsonProperty}
+import com.fasterxml.jackson.annotation.{ JsonCreator, JsonProperty }
 
-/** A project dep is an extracted *external* build dependency.  I.e. this is a
+/**
+ * A project dep is an extracted *external* build dependency.  I.e. this is a
  * maven/ivy artifact that exists and is built external to a local build.
  */
 case class ProjectRef(
-    name: String, 
-    organization: String, 
-    extension: String = "jar", 
-    classifier: Option[String]=None) {
+  name: String,
+  organization: String,
+  extension: String = "jar",
+  classifier: Option[String] = None) {
   override def toString = organization + ":" + name + ":" + (classifier map (_ + ":") getOrElse "") + extension
 }
 
-/** Represents extracted Project information in a build.  A project is akin to a
+/**
+ * Represents extracted Project information in a build.  A project is akin to a
  * deployed artifact for a given build, and may have dependencies.
  */
 case class Project(
-    name: String,
-    organization: String,
-    artifacts: Seq[ProjectRef],
-    dependencies: Seq[ProjectRef])
+  name: String,
+  organization: String,
+  artifacts: Seq[ProjectRef],
+  dependencies: Seq[ProjectRef])
 
-    
 /**
  * Describes the project and dependency information of a project.
  * subproj is the list of (sbt or other) subprojects that will have to be compiled,
@@ -29,7 +30,7 @@ case class Project(
  * in this particular order in order to satisfy inter-subproject dependencies).
  * The subproj list can be empty for build systems that do not support subprojects.
  */
-case class ProjMeta(projects: Seq[Project], subproj:Seq[String] = Seq.empty)
+case class ProjMeta(version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty)
 
 /**
  * Represents the *Extracted* metadata of a build.
@@ -44,30 +45,32 @@ case class ProjMeta(projects: Seq[Project], subproj:Seq[String] = Seq.empty)
  * In the case of sbt, the first element is used for the artifacts and dependencies
  * of the main build, the second element for the plugins, the third for the
  * plugins of the plugins (if any), and so on.
+ * "version" and "projects" of the levels above the first are of no particular use.
  */
-case class ExtractedBuildMeta(version: String, @JsonProperty("proj-info") projInfo: Seq/*Levels*/[ProjMeta]) {
-    // compatibility, but see the @JsonCreator, below
-    def this(version: String, projects: Seq[Project], subproj:Seq[String] = Seq.empty) =
-      this(version, Seq/*Levels*/(ProjMeta(projects, subproj)))
-    // compatibility, only base level
-    def subproj = (projInfo.headOption getOrElse sys.error("Internal Error: Empty ProjInfo in ExtractedBuildMeta")).subproj
+case class ExtractedBuildMeta(@JsonProperty("proj-info") projInfo: Seq /*Levels*/ [ProjMeta]) {
+  // do NOT define secondary constructors, otherwise the Jacks/Jackson library may get quite confused
 
-    override def toString = "ExtractedBuildMeta(%s, %s)" format (version,
+  // compatibility, only base level
+  private def getHead = (projInfo.headOption getOrElse sys.error("Internal Error: Empty ProjInfo in ExtractedBuildMeta"))
+  def subproj = getHead.subproj
+  def version = getHead.version
+  /**
+   * This is a convenience method to obtain the list of projects defined at the first (ground) level.
+   * Note that we ignore the exact list of "projects", and the generated artifacts, for everything except the first level,
+   * as we don't "produce" or publish anything from the above levels. Nonetheless, we still get a list of
+   * generated artifacts from sbt's extraction of the plugin levels). For the upper levels, we are really only
+   * interested in the dependencies.
+   * "project" here only refers to artifacts that we are going to publish.
+   */
+  def projects = getHead.projects
+
+  override def toString = "ExtractedBuildMeta(%s)" format (
     projInfo.zipWithIndex.map {
-      case (ProjMeta(projects, subproj), index) =>
-        "%s -> (%s, %s)" format (index, projects.mkString("\n\t", "\n\t", "\n"), subproj.mkString("\n  ", ", ", "\n"))
+      case (ProjMeta(version, projects, subproj), index) =>
+        "%s -> (%s, %s, %s)" format (index, version, projects.mkString("\n\t", "\n\t", "\n"), subproj.mkString("\n  ", ", ", "\n"))
     })
-    /**
-     * This is a convenience method to obtain the list of projects defined at the first (ground) level.
-     * Note that we ignore the exact list of "projects", and the generated artifacts, for everything except the first level,
-     * but we still get one from sbt's extraction of the plugin levels). For the upper levels, we get the information
-     * during sbt's extraction, but we are really only interested in the dependencies.
-     * "project" here only refers to artifacts that we are going to publish.
-     */
-    def projects = (projInfo.headOption getOrElse sys.error("Internal error: projInfo contains nothing!")).projects
 }
 object ExtractedBuildMeta {
-  @JsonCreator // mysteriously, jacks picks the wrong constructor, so I need to feed an explicit one to it
-  def constructor(@JsonProperty("version") version: String, @JsonProperty("proj-info") projInfo: Seq/*Levels*/[ProjMeta]) =
-    new ExtractedBuildMeta(version, projInfo)
+  def apply(version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty): ExtractedBuildMeta =
+    ExtractedBuildMeta(Seq /*Levels*/ (ProjMeta(version, projects, subproj)))
 }

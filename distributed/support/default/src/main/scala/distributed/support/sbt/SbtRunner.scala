@@ -8,6 +8,9 @@ import sys.process._
 import distributed.project.model.ExtraConfig
 import distributed.repo.core.Defaults
 import org.apache.commons.io.FileUtils.readFileToString
+import distributed.project.model.Utils.{ readValue, writeValue }
+import org.apache.commons.io.FileUtils.writeStringToFile
+import distributed.logging.Logger.logFullStackTrace
 
 /**
  * A runner for SBT.
@@ -175,6 +178,7 @@ object SbtRunner {
    * find the number of levels of the sbt project that will be 'update'd.
    * For a project without plugins or other .sbt files in project/ (or .scala in project/project), that
    * will be one. For a project with plugins, two. And so on.
+   * Minimum value is 1.
    */
   def buildLevels(dir: File): Int = {
     val sub = dir / "project"
@@ -184,16 +188,45 @@ object SbtRunner {
     else 1
   }
 
-  // a filename that should come last, when sorting.
-  val dbuildSbtDefinitions = "ÿÿÿÿÿÿÿÿÿÿ~~~~dbuild~defs.sbt"
-  // we can change this to "~~~~~~~~~~~~~dbuild~defs" if "ÿ" turns out to be problematic (but it shouldn't be)
+  /**
+   * Assorted dbuild/sbt-related filenames
+   */
+  object FileNames {
+    /**
+     *  Name of the ".sbt" file that is added to each level in the sbt build
+     *  Alphabetically, this filename should come last, when sorting.
+     */
+    // we can change this to "~~~~~~~~~~~~~dbuild~defs" if "ÿ" turns out to be problematic (but it shouldn't be)
+    val dbuildSbtFileName = "ÿÿÿÿÿÿÿÿÿÿ~~~~dbuild~defs.sbt"
+
+    // Below, the names of the files that are contained in each .dbuild directory, for
+    // communication with the dbuild sbt plugin
+
+    /** The file where the extraction result is left */
+    val extractionOutputFileName = "extraction-output"
+
+    /** The name of the internal dir that, in each level, will contain the dbuild sbt plugin files */
+    val dbuildDirName = ".dbuild"
+
+    /** Extraction input data */
+    val extractionInputFileName = "extraction-input"
+
+    /** if the dbuild sbt plugin stops prematurely, save the exception information here */
+    val lastErrorMessageFileName = "last-error-message"
+  }
+
+  import FileNames._
+  /////////////////////////////////////////////////////
+  //
+  // Below, utilities used by SbtExtractor and SbtBuilder
+  // 
 
   /**
    *  creates the .dbuild directories, one per level
    */
   def prepDBuildDirs(dir: File, left: Int): Unit = {
     if (left > 0) {
-      (dir / ".dbuild").mkdir()
+      (dir / dbuildDirName).mkdir()
       prepDBuildDirs(dir / "project", left - 1)
     }
   }
@@ -203,24 +236,52 @@ object SbtRunner {
    * dir, dir/project, dir/project/project, and so on.
    */
   def writeSbtFiles(mainDir: File, contents: Seq[String], log: Logger, debug: Boolean) = {
-    // this is how to write one file:
-    def writeOneSbtFile(dir: File, content: String) = {
-      if (debug) {
-        log.debug("Adding dbuild .sbt file to: " + dir.getCanonicalPath())
-      }
-      dir.mkdir()
-      val p = new _root_.java.io.PrintWriter(dir / SbtRunner.dbuildSbtDefinitions)
-      p.write(content)
-      p.close
-
-    }
     contents.foldLeft(mainDir) { (dir, content) =>
-      // Let's write each file in the proper place
-      writeOneSbtFile(dir, content)
+      if (debug) log.debug("Adding dbuild .sbt file to " + dir.getCanonicalPath())
+      placeOneFile(dbuildSbtFileName, dir, content)
       dir / "project"
     }
   }
 
+  /**
+   * Prepare the input data for extraction or build. The first element gets written
+   * in dir/.dbuild, the second in dir/project/.dbuild, the dir/project/project/.dbuild,
+   * and so on.
+   */
+  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: Logger, debug: Boolean)(implicit m: Manifest[T]) = {
+    data.foldLeft(mainDir) { (dir, content) =>
+      val dbuildDir = dir / dbuildDirName
+      if (debug) log.debug("Placing one input file in " + (dbuildDir / fileName).getCanonicalPath())
+      placeOneFile(fileName, dbuildDir, writeValue(content))
+      dir / "project"
+    }
+  }
+
+  // write a string to a file named "fileName" in directory "dir"
+  private def placeOneFile(fileName: String, dir: File, content: String) =
+    // will mkdirs if necessary
+    writeStringToFile(dir / fileName, content, /* default charset */ null: String)
+
+  /**
+   * Collect the output files from the various dirs, and return them as a sequence.
+   */
+  def collectOutputFiles[T](mainDir: File, fileName: String, levels: Int, log: Logger, debug: Boolean)(implicit m: Manifest[T]): Seq[T] = {
+    def scan(left: Int, dir: File): Seq[T] = {
+      if (left > 0) {
+        val file = dir / dbuildDirName / fileName
+        val seq =
+          try readValue[T](file) +: scan(left - 1, dir / "project")
+          catch {
+            case e: Exception =>
+              logFullStackTrace(log, e)
+              sys.error("Failure to parse collected output file " + file.getCanonicalFile())
+          }
+        if (debug) log.debug("Collected output from " + file.getCanonicalPath())
+        seq
+      } else Seq.empty
+    }
+    scan(levels, mainDir)
+  }
   // Now, the bits of content that may end up in said .sbt files.
   // Each one should finish with "/n/n", in order to preserve blank lines in between.
 

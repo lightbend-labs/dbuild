@@ -128,7 +128,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.info("----------")
     log.info("Assembling dependencies...")
     val artifacts = allConfigAndExtracted.flatMap(_.extracted.projects.flatMap(_.artifacts))
-    val newMeta = new ExtractedBuildMeta("0.0.0",
+    val newMeta = ExtractedBuildMeta("0.0.0",
       allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>
         // remove all dependencies that are not already provided by this
         // assembled project (we pretend the resulting assembled set has

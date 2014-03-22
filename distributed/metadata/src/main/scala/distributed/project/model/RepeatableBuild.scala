@@ -36,15 +36,14 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  */
 case class RepeatableProjectBuild(config: ProjectBuildConfig,
   // see below the description of RepeatableDepInfo for details
-  depInfo: Seq/*Levels*/[RepeatableDepInfo]
-) {
+  depInfo: Seq /*Levels*/ [RepeatableDepInfo]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
 
   def extra[T](implicit m: Manifest[T]) = config.getExtra[T]
   def getCommit = try Option((new java.net.URI(config.uri)).getFragment) catch {
-      case e: java.net.URISyntaxException => None
-    }
+    case e: java.net.URISyntaxException => None
+  }
 }
 
 /**
@@ -57,8 +56,8 @@ case class RepeatableDepInfo(
   @JsonProperty("base-version") baseVersion: String,
   // The list of dependencies is transitive (within the boundaries
   // of the relevant spaces, see below)
-  dependencyNames: Seq[String],// names corresponding to a RepeatableProjectBuild
-  dependencyUUIDs: Seq[String],// uuids corresponding to a RepeatableProjectBuild
+  dependencyNames: Seq[String], // names corresponding to a RepeatableProjectBuild
+  dependencyUUIDs: Seq[String], // uuids corresponding to a RepeatableProjectBuild
   // dependencyUUIDs and dependencyNames refer to the same elements. They are
   // in two separate sequences for convenience, as in the code there is no
   // assumption anywhere that they should be kept in sync. If that need should arise,
@@ -77,7 +76,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
   def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), options = None)
   /** The unique SHA for this build. */
   def uuid: String = hashing sha1 (repeatableBuilds map (_.uuid))
-  
+
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)
   /** All of our repeatable build configuration in build order. */
@@ -113,7 +112,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
     val orderedBuilds = (graph.safeTopological map (_.value)).reverse
     makeMeta(orderedBuilds, Map.empty, Seq.empty)
   }
-  
+
   // some initialization code (we don't need to keep around the inner vals)
   {
     // we need to check for duplicates /before/ checking for cycles, otherwise spurious
@@ -130,7 +129,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
         // this could probably be further optimized,
         // but hopefully the collision sets are of modest size
         for {
-          List(one,two) <- origins.combinations(2)
+          List(one, two) <- origins.combinations(2)
           colliding <- Utils.collidingSeqSpaces(one.spaces, two.spaces)
         } yield (org, name, one.fromProject, two.fromProject, colliding)
     }

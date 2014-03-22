@@ -86,10 +86,7 @@ object SbtExtractor {
       log = log,
       extraArgs = extra.options)((extra.commands ++ setScalaCommand).:+(""): _*)
 
-    val result = ExtractedBuildMeta(SbtRunner.collectOutputFiles[ProjMeta](projectDir, extractionOutputFileName, levels, log, debug))
-    log.debug("Result:")
-    log.debug(writeValue(result))
-    result
+    ExtractedBuildMeta(SbtRunner.collectOutputFiles[ProjMeta](projectDir, extractionOutputFileName, levels, log, debug))
   }
 
 }

@@ -100,6 +100,14 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
               // only list as dependencies those that have produced artifacts that
               // the project in "head" can actually see. These will be the dependent projects
               // that are eventually reloaded (rematerialized) right before each project build starts
+              //
+              // Note that (at this time) the set of rematerialized projects may be larger than
+              // necessary. For example: if both the first and second level of a project have "from"
+              // set to the same space, and the second level depends on a certain project, the first
+              // level will get a fictitious (but harmless) dependency on it as well. That is due to
+              // the fact that our dependency graph is not between individual levels, but only between
+              // projects as a whole. (we would need to change the dependency graph to avoid that)
+              //
               dep <- (subgraph - head) if canSeeSpace(fromSpace, dep.getSpace.to)
             } yield current get dep.config.name getOrElse sys.error("Internal error: unexpected circular dependency. Please report.")
             val sortedDeps = dependencies.toSeq.sortBy(_.config.name)

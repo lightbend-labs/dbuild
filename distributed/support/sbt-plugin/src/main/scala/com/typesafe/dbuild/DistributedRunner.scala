@@ -36,6 +36,19 @@ object DistributedRunner {
     result map (_ / n.toDouble)
   }
 
+  // Pending weak references may lock in place classloaders,
+  // leading to tens of thousands of unfinalized file descriptors,
+  // and >1GB of PermGen in use.
+  // purge() will force finalization to run for FileInputStreams and
+  // the like that are no longer used, allowing them to be really
+  // reclaimed by GC, which in turn frees the classloaders, and
+  // consequently also the corresponding space in PermGen. Phew!
+  private def purge() {
+    System.gc() // finalizable objects that are unreachable are passed to the finalizer thread
+    java.lang.System.runFinalization() // finalization is forced for all those objects
+    System.gc() // those finalized objects are deallocated for good
+  }
+
   /** Runs a series of commands across projects, aggregating results. */
   private def runAggregate[Q, T](state: State, projects: Seq[String], init: Q)(merge: (Q, T) => Q)(f: (ProjectRef, State, Q) => (State, T)): (State, Q) = {
     val extracted = Project.extract(state)
@@ -48,7 +61,8 @@ object DistributedRunner {
       case ((state, current), ref) =>
         val (state2, next) =
           f(ref, state, current)
-        state2 -> merge(current, next)
+        val merged = merge(current, next)
+        state2 -> merged
     }
   }
 
@@ -549,13 +563,18 @@ object DistributedRunner {
       //      println("   "+pRes)
 
       val (state7, artifacts) = buildTask(ref, state6)
+      purge()
+      
       val state8 = if (config.config.runTests) {
         println("Testing: " + normalizedProjectName(ref, baseDirectory))
         Project.extract(state7).runTask(Keys.test in (ref, Test), state7)._1
       } else state7
+      purge()
+
       println("Publishing: " + normalizedProjectName(ref, baseDirectory))
       val (state9, _) =
         Project.extract(state8).runTask(Keys.publish in ref, state8)
+      purge()
 
       // We extract the set of files published during this step by checking the
       // current set of files in the repository against the files we had previously

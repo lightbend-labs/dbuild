@@ -83,7 +83,7 @@ object SbtRunner {
   // TODO - Configure these somewhere?
   val defaultJavaArgs = Seq(
     "-XX:+CMSClassUnloadingEnabled",
-    "-XX:+UseConcMarkSweepGC",
+    "-XX:+DoEscapeAnalysis",
     "-Xms1536m",
     "-Xmx1536m",
     "-Xss2m",

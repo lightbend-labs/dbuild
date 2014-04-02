@@ -60,7 +60,7 @@ class LocalBuildRunner(builder: BuildRunner,
       val writeRepo = dbuildDir / "local-publish-repo"
       if (!writeRepo.exists()) writeRepo.mkdirs()
       val uuidGroups = build.depInfo map (_.dependencyUUIDs)
-      val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuidGroups)
+      val BuildArtifactsInMulti(artifactLocations) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuidGroups)
       // TODO - Load this while resolving!
       val dependencies: BuildArtifactsInMulti = BuildArtifactsInMulti(artifactLocations)
       // Special case: scala-compiler etc must have the same version number

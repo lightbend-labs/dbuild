@@ -249,9 +249,9 @@ object LocalRepoHelper {
 
   // rematerialize artifacts. "uuid" is a sequence: each element represents group of artifacts that
   // needs to be rematerialized into a separate directory, each for a separate level of the build
-  // Returns for each group the place where the artifacts were rematerialized, and their list
+  // Returns for each group the list of rematerialized artifacts
   def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, readRepo: java.io.File,
-      uuidGroups: Seq/*Levels*/[Seq[String]]): Seq[BuildArtifactsIn] =
+    uuidGroups: Seq /*Levels*/ [Seq[String]]): BuildArtifactsInMulti = BuildArtifactsInMulti(
     (uuidGroups zipWithIndex) map {
       case (uuids, level) =>
         val localRepo = readRepo / (level.toString)
@@ -262,7 +262,7 @@ object LocalRepoHelper {
           art <- arts
         } yield art
         BuildArtifactsIn(artifacts, localRepo)
-    }
+    })
 
   def getProjectInfo(uuid: String, remote: ReadableRepository) =
     resolveArtifacts(uuid, remote)((x, y) => x -> y)

@@ -33,7 +33,7 @@ trait ProjectResolver {
    * called, and resolve() may rely on that. See
    * ProjectDirs.useProjectExtractionDirectory().
    */
-  // TODO: it would be nice it resolve() could also return a Boolean
+  // TODO: it would be nice if resolve() could also return a Boolean
   // informing the caller of whether the checkout changed (this is a
   // bit tricky to detect with the current git resolver, however)
   def resolve(config: ProjectBuildConfig, dir: java.io.File, log: logging.Logger): ProjectBuildConfig

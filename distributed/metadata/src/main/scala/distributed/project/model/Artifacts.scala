@@ -48,7 +48,7 @@ case class ProjectArtifactInfo(
  */
 case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
 // variant for multi-level build systems
-case class BuildArtifactsInMulti(materialized: Seq[BuildArtifactsIn])
+case class BuildArtifactsInMulti(materialized: Seq/*Levels*/[BuildArtifactsIn])
 case class BuildArtifactsOut(results: Seq[BuildSubArtifactsOut])
 case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation], shas: Seq[ArtifactSha])
 

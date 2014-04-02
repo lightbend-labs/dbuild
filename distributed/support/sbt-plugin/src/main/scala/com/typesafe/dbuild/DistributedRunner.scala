@@ -16,6 +16,7 @@ import org.apache.ivy.core.module.id.ModuleRevisionId
 import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.BuildSubArtifactsOut
 import distributed.project.model.SavedConfiguration
+import distributed.project.model.BuildArtifactsInMulti
 
 object DistributedRunner {
 
@@ -609,7 +610,8 @@ object DistributedRunner {
     val project = findRepeatableProjectBuild(builduuid, thisProject, log)
     log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
     val uuids = project.depInfo map {_.dependencyUUIDs}
-    (project, LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids))
+    val BuildArtifactsInMulti(artifacts) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids) 
+    (project, artifacts)
   }
 
   def findRepeatableProjectBuild(builduuid: String, thisProject: String, log: Logger) = {

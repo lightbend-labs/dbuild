@@ -32,7 +32,7 @@ class GitProjectResolver extends ProjectResolver {
 
     val uri = new _root_.java.net.URI(config.uri)
     val uriString = UriUtil.dropFragment(uri).toASCIIString
-    val cloneDir = distributed.repo.core.ProjectDirs.clonesDir / (hashing sha1 uriString)
+    val cloneDir = distributed.repo.core.GlobalDirs.clonesDir / (hashing sha1 uriString)
     val ref = Option(uri.getFragment()) getOrElse "master"
 
     // We cache a single git clone for this repository URI (sans fragment),

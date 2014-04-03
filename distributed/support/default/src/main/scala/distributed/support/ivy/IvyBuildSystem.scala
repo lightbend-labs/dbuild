@@ -27,6 +27,7 @@ import org.apache.ivy.core.module.descriptor.DefaultArtifact
 import distributed.support.ivy.IvyMachinery.PublishIvyInfo
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
+import distributed.repo.core.GlobalDirs.dbuildHomeDir
 
 /** Implementation of the Scala  build system. workingDir is the "target" general dbuild dir */
 class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystemCore {
@@ -35,7 +36,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   type ExtraType = IvyExtraConfig
 
   // this is the general dbuild one (we don't use it here)
-  val dbuildIvyHome = (distributed.repo.core.ProjectDirs.dbuildDir / ".ivy2").getAbsolutePath
+  val dbuildIvyHome = (dbuildHomeDir / ".ivy2").getAbsolutePath
 
   def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     case None => IvyExtraConfig(false, false, true, Seq.empty, None) // pick default values

@@ -16,7 +16,7 @@ import akka.util.Timeout
 import actorpatterns.forwardingErrorsToFutures
 import sbt.Path._
 import java.io.File
-import distributed.repo.core.ProjectDirs
+import distributed.repo.core.GlobalDirs
 import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
@@ -278,7 +278,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   def runBuild(targetGraph: ProjectGraph, findBuild: BuildFinder, uuid: String,
     log: Logger, debug: Boolean): Future[BuildOutcome] = {
     implicit val ctx = context.system
-    val tdir = ProjectDirs.targetDir
+    val tdir = GlobalDirs.targetDir
     type State = Future[BuildOutcome]
     def runBuild(): Seq[State] = {
       targetGraph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
@@ -307,21 +307,18 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         }
       }(Some((a, b) => a.config.name < b.config.name))
     }
-    // TODO - REpository management here!!!!
-    ProjectDirs.userRepoDirFor(uuid) { localRepo =>
-      // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
-      Future.sequence(runBuild()).map { outcomes =>
-        if (outcomes exists { case _: BuildBad => true; case _ => false })
-          // "." is the name of the root project
-          BuildFailed(".", outcomes,
-            // pick the ones that failed, but not because any of their dependencies failed.
-            outcomes.filter { o =>
-              o.isInstanceOf[BuildBad] &&
-                !o.outcomes.exists { _.isInstanceOf[BuildBad] }
-            }.map { _.project }.mkString("failed: ", ", ", ""))
-        else {
-          BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
-        }
+    // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
+    Future.sequence(runBuild()).map { outcomes =>
+      if (outcomes exists { case _: BuildBad => true; case _ => false })
+        // "." is the name of the root project
+        BuildFailed(".", outcomes,
+          // pick the ones that failed, but not because any of their dependencies failed.
+          outcomes.filter { o =>
+            o.isInstanceOf[BuildBad] &&
+              !o.outcomes.exists { _.isInstanceOf[BuildBad] }
+          }.map { _.project }.mkString("failed: ", ", ", ""))
+      else {
+        BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
       }
     }
   }

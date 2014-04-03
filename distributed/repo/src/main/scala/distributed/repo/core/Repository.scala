@@ -22,7 +22,7 @@ object Repository {
   def default: Repository = {
     // Look for repository/credentials file
     def cacheDir = sysPropsCacheDir getOrElse defaultUserHomeCacheDir
-    def repoCredFile = ProjectDirs.repoCredFile
+    def repoCredFile = GlobalDirs.repoCredFile
 
     def readCredFile(f: File): Option[(String, Credentials)] =
       if (f.exists) {
@@ -63,6 +63,6 @@ object Repository {
   def sysPropsCacheDir =
     sys.props get "dbuild.cache.dir" map (new File(_))
   
-  def defaultUserHomeCacheDir = ProjectDirs.userCache
+  def defaultUserHomeCacheDir = GlobalDirs.userCache
        
 }

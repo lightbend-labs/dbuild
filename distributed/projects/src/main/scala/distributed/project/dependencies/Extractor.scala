@@ -64,7 +64,7 @@ class Extractor(
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */
   def extract(tdir: File, extractionConfig: ExtractionConfig, logger: logging.Logger, debug: Boolean): ExtractionOutcome = try {
     val build = extractionConfig.buildConfig
-    distributed.repo.core.ProjectDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
+    distributed.project.dependencies.ExtractionDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
       updateTimeStamp(dir)
       // NB: while resolving projects:
       // extractor.resolver.resolve() only resolves the main URI,

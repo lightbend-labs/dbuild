@@ -14,11 +14,11 @@ import distributed.project.dependencies.Extractor
 import distributed.support.BuildSystemCore
 import akka.pattern.ask
 import akka.util.duration._
-import distributed.repo.core.ProjectDirs.checkForObsoleteDirs
+import distributed.repo.core.GlobalDirs.checkForObsoleteDirs
 
 class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
 
-  val targetDir = ProjectDirs.targetDir
+  val targetDir = GlobalDirs.targetDir
   val resolvers = Seq(
     new support.git.GitProjectResolver,
     new support.svn.SvnProjectResolver,

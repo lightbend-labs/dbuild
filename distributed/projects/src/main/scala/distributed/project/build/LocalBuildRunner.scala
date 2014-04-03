@@ -11,7 +11,7 @@ import distributed.repo.core._
 import sbt.Path._
 import dependencies.Extractor
 import distributed.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
-import distributed.project.build.FileNames.reloadedArtifactsDirName
+import BuildDirs._
 
 /**
  * This class encodes the logic to resolve a project and run its build given
@@ -22,7 +22,7 @@ class LocalBuildRunner(builder: BuildRunner,
   val repository: Repository) {
 
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome],
-      buildData:BuildData): BuildOutcome = {
+    buildData: BuildData): BuildOutcome = {
     val log = buildData.log
     try {
 //(log: Logger, debug: Boolean, timestamp: String
@@ -35,7 +35,7 @@ class LocalBuildRunner(builder: BuildRunner,
           log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
           //log.trace(t)
           BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects,
-              buildData))
+            buildData))
       }
     } catch {
       case t =>
@@ -44,8 +44,8 @@ class LocalBuildRunner(builder: BuildRunner,
   }
 
   def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project],
-      buildData:BuildData): BuildArtifactsOut =
-    distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
+    buildData: BuildData): BuildArtifactsOut =
+    useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       updateTimeStamp(dir)
       // extractor.resolver.resolve() only resolves the main URI,
       // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
@@ -56,9 +56,9 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
-      val dbuildDir = dir / reloadedArtifactsDirName
-      val readRepo = dbuildDir / "local-repo"
-      val writeRepo = dbuildDir / "local-publish-repo"
+      val dbuildDir = dir / dbuildDirName
+      val readRepo = dbuildDir / inArtsDirName
+      val writeRepo = dbuildDir / outArtsDirName
       if (!writeRepo.exists()) writeRepo.mkdirs()
       val uuidGroups = build.depInfo map (_.dependencyUUIDs)
       val BuildArtifactsInMulti(artifactLocations) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuidGroups)

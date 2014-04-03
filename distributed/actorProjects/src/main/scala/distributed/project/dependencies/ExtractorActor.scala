@@ -8,7 +8,8 @@ import actorpatterns.forwardingErrorsToFutures
 import _root_.java.io.File
 import sbt.Path._
 import distributed.project.controller.{ Controller, Controlled, Done }
-import distributed.repo.core.ProjectDirs.{ extractionDir, projectExtractionDir }
+import dependencies.ExtractionDirs.projectExtractionDir
+import distributed.repo.core.GlobalDirs.extractionDir
 import distributed.project.model.CleanupExpirations
 import distributed.project.cleanup.Recycling._
 import sbt.{ IO, DirectoryFilter }
@@ -28,10 +29,7 @@ class CleaningExtractionActor extends Actor {
   }
 }
 /**
- * An actor that given a BuildConfig can return the completed build artifacts.
- *  "target" is the target dir, e.g. "../target-0.7.1". Inside it, we nest "extraction",
- *  plus an uuid that represents the entire dbuild configuration. In that, extract()
- *  will nest "project/uuid", with uuid referring to the single project being extracted.
+ * An actor that will extract the project dependencies.
  */
 class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extends Actor {
   override def preStart() = {

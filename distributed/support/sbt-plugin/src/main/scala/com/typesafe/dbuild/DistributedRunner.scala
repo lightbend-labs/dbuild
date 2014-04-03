@@ -17,7 +17,7 @@ import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.BuildSubArtifactsOut
 import distributed.project.model.SavedConfiguration
 import distributed.project.model.BuildArtifactsInMulti
-import distributed.project.build.BuildDirs.{ inArtsDirName, dbuildDirName }
+import distributed.project.build.BuildDirs.{ inArtsDirName, dbuildDirName, localRepos }
 
 object DistributedRunner {
 
@@ -605,13 +605,13 @@ object DistributedRunner {
     results getOrElse state
   }
 
-  def loadBuildArtifacts(readRepo: File, builduuid: String, thisProject: String, log: Logger) = {
+  def loadBuildArtifacts(localRepos: Seq/*Levels*/[File], builduuid: String, thisProject: String, log: Logger) = {
     import distributed.repo.core._
     val cache = Repository.default
     val project = findRepeatableProjectBuild(builduuid, thisProject, log)
     log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
     val uuids = project.depInfo map {_.dependencyUUIDs}
-    val BuildArtifactsInMulti(artifacts) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, readRepo, uuids) 
+    val BuildArtifactsInMulti(artifacts) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, localRepos, uuids) 
     (project, artifacts)
   }
 
@@ -675,20 +675,19 @@ object DistributedRunner {
     // artifacts of all the projects listed under builduuid.
     val extracted = Project.extract(state)
     import extracted._
-    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
+    val baseDirectory = Keys.baseDirectory in ThisBuild get structure.data
 
     // note: we don't include config.config.directory here; the user needs to be in the
     // right subdir before entering sbt, in any case, so we should be ok
-    dbuildDirectory map { dbuildDir =>
-      val repoDir = dbuildDir / inArtsDirName
-      val (proj, arts) = loadBuildArtifacts(repoDir, builduuid, project, log)
+    baseDirectory map { dir =>
+      val (proj, arts) = loadBuildArtifacts(localRepos(dir), builduuid, project, log)
       if (arts.isEmpty) {
         log.warn("No artifacts are dependencies of project " + project + " in build " + builduuid)
         state
       } else {
         // TODO: support for rewiring plugins as well??... Probably.
         val modules = getModuleRevisionIds(state, proj.depInfo.head.subproj, log)
-        newState(state, extracted, prepareCompileSettings(log, modules, dbuildDir, repoDir, arts.head.artifacts, _,
+        newState(state, extracted, prepareCompileSettings(log, modules, dir / dbuildDirName, repoDir, arts.head.artifacts, _,
           proj.config.getCrossVersion))
       }
     } getOrElse {

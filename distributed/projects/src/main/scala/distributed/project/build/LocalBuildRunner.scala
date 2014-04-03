@@ -56,14 +56,10 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
-      val dbuildDir = dir / dbuildDirName
-      val readRepo = dbuildDir / inArtsDirName
-      val writeRepo = dbuildDir / outArtsDirName
-      if (!writeRepo.exists()) writeRepo.mkdirs()
+      val readRepos = localRepos(dir)
       val uuidGroups = build.depInfo map (_.dependencyUUIDs)
-      val BuildArtifactsInMulti(artifactLocations) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuidGroups)
-      // TODO - Load this while resolving!
-      val dependencies: BuildArtifactsInMulti = BuildArtifactsInMulti(artifactLocations)
+      val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups)
+      val BuildArtifactsInMulti(artifactLocations) = dependencies
       // Special case: scala-compiler etc must have the same version number
       // as scala-library: projects that rely on scala-compiler as a dependency
       // (notably sbt) may need that.
@@ -116,6 +112,8 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       val baseLevelDepInfo = build.depInfo.headOption getOrElse sys.error("Internal error: depInfo is empty!")
+      val writeRepo = dir / dbuildDirName / outArtsDirName
+      if (!writeRepo.exists()) writeRepo.mkdirs()
       val results = builder.runBuild(build, dir,
         // TODO: fix buildInput to make it Multi
         BuildInput(dependencies.materialized.head, build.uuid, version, baseLevelDepInfo.subproj, writeRepo, build.config.name), this, buildData)

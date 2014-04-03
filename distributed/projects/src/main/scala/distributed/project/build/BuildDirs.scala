@@ -1,6 +1,7 @@
 package distributed.project.build
 import java.io.File
 import distributed.repo.core.GlobalDirs.buildDir
+import sbt.Path._
 
 /**
  * dbuild-specific file names used during building.
@@ -33,5 +34,13 @@ object BuildDirs {
     val projdir = new File(dir, id)
     projdir.mkdirs()
     f(projdir)
+  }
+
+  /**
+   * Creates a stream of local repositories into which to rematerialize artifacts
+   */
+  def localRepos(projectDir: File) = {
+    val base = projectDir / dbuildDirName / inArtsDirName
+    Stream.from(0).map { level: Int => base / (level.toString) }
   }
 }

@@ -9,6 +9,7 @@ import _root_.java.io.File
 import sys.process.Process
 import distributed.project.model.Utils.{writeValue,readValue}
 import distributed.logging.Logger.logFullStackTrace
+import distributed.project.build.BuildDirs.dbuildDirName
 
 // Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
 // script...
@@ -23,7 +24,7 @@ object SbtBuilder {
       val resultFile = tmpDir / "results.dbuild"
       // TODO - Where should depsfile + repo file be?  
       // For debugging/reproducing issues, we're putting them in a local directory for now.
-      val dbuildDir = project / ".dbuild"
+      val dbuildDir = project / dbuildDirName
       val depsFile = dbuildDir / "deps.dbuild"
       val repoFile = dbuildDir / "repositories"
       // We need a new ivy cache to ensure no corruption of minors (or projects)

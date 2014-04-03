@@ -43,8 +43,8 @@ object SbtExtractor {
     // - in levels 0..n, silence Ivy (if requested)
     // - in levels 0..n-1, add an onLoad() that performs the actual dependency extraction for that level
     // - in levels 1..n, add a suitable addSbtPlugin()
-    // - create in levels 0..n-1 a directory ".dbuild" in order to house the extraction output
-    // where each level is the main dir, followed by "/project" n times.
+    // - create in levels 0..n-1 a work directory (".dbuild", SbtRunner.dbuildSbtDirName to be precise)
+    // in order to house the extraction output where each level is the main dir, followed by "/project" n times.
     //
     // We know that projectDir exists, and that it contains no extranoues files (as per the resolve() contract)
     // So:

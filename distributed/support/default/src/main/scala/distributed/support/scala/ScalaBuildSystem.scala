@@ -23,6 +23,7 @@ import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import distributed.support.NameFixer.fixName
 import _root_.sbt.NameFilter
+import distributed.project.build.BuildDirs.dbuildDirName
 
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystemCore {
@@ -168,7 +169,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     // The ant build script calls maven, meaning that if we use strange version numbers
     // for the artifacts they 1) pollute ~/.m2 and 2) once one is in the cache, all hope to get it evicted is lost
     // Therefore: we use a local .m2 cache for each build, to avoid pollution & collisions
-    val dbuildDir = dir / ".dbuild"
+    val dbuildDir = dir / dbuildDirName
     // See the special use of _JAVA_OPTIONS, below
     val localM2repo = dbuildDir / ".m2" / "repository"
     localM2repo.mkdirs()

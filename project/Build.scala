@@ -71,7 +71,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val dprojects = (
       DmodProject("projects")
-      dependsOn(dcore, logging)
+      dependsOn(dcore, drepo, logging)
       dependsOnRemote(javaMail, commonsIO)
       dependsOnSbt(sbtIo, sbtIvy)
     )
@@ -83,7 +83,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val drepo = (
     DmodProject("repo")
-    dependsOn(dmeta,logging)
+    dependsOn(dmeta, logging)
     dependsOnRemote(mvnAether, aetherWagon, dispatch)
     dependsOnSbt(sbtIo, sbtLaunchInt)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion, streams) map { (dir, version, org, sv, s) =>

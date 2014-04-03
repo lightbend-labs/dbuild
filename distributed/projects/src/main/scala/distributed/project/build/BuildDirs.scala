@@ -41,6 +41,16 @@ object BuildDirs {
    */
   def localRepos(projectDir: File) = {
     val base = projectDir / dbuildDirName / inArtsDirName
-    Stream.from(0).map { level: Int => base / (level.toString) }
+    Stream.from(0).map { level: Int =>
+      val repo = base / (level.toString)
+      repo.mkdirs()
+      repo
+    }
+  }
+
+  def publishRepo(projectDir: File) = {
+    val repo = projectDir / dbuildDirName / outArtsDirName
+    repo.mkdirs()
+    repo
   }
 }

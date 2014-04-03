@@ -7,7 +7,7 @@ import _root_.sbt.Path._
 import logging.Logger
 import distributed.project.model.SbtExtraConfig
 import _root_.java.io.File
-import distributed.repo.core.{Defaults,ProjectDirs}
+import distributed.repo.core.{Defaults,GlobalDirs}
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
 import distributed.project.{ BuildSystem, BuildData }

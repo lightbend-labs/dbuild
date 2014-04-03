@@ -69,7 +69,7 @@ object SbtExtractor {
     // Let's place them in the required dirs
     SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
 
-    import SbtRunner.FileNames._
+    import SbtRunner.SbtFileNames._
     val inputFile = projectDir / dbuildSbtFileName / extractionInputFileName
     // This is for the first level only
     val inputDataFirst = ExtractionInput(extra.projects, extra.exclude, debug)

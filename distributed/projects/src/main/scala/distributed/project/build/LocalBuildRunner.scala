@@ -11,6 +11,7 @@ import distributed.repo.core._
 import sbt.Path._
 import dependencies.Extractor
 import distributed.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
+import distributed.project.build.FileNames.reloadedArtifactsDirName
 
 /**
  * This class encodes the logic to resolve a project and run its build given
@@ -54,7 +55,7 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
-      val dbuildDir = builder.projectDbuildDir(dir, build)
+      val dbuildDir = dir / reloadedArtifactsDirName
       val readRepo = dbuildDir / "local-repo"
       val writeRepo = dbuildDir / "local-publish-repo"
       if (!writeRepo.exists()) writeRepo.mkdirs()

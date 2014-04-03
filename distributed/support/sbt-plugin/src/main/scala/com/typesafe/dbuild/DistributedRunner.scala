@@ -17,6 +17,7 @@ import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.BuildSubArtifactsOut
 import distributed.project.model.SavedConfiguration
 import distributed.project.model.BuildArtifactsInMulti
+import distributed.project.build.BuildDirs.{ inArtsDirName, dbuildDirName }
 
 object DistributedRunner {
 
@@ -466,10 +467,10 @@ object DistributedRunner {
     log.info("Updating dependencies...")
     val extracted = Project.extract(state)
     import extracted._
-    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
+    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
 
     dbuildDirectory map { dbuildDir =>
-      val repoDir = dbuildDir / "local-repo"
+      val repoDir = dbuildDir / inArtsDirName
 
       val refs = getProjectRefs(extracted)
 
@@ -674,12 +675,12 @@ object DistributedRunner {
     // artifacts of all the projects listed under builduuid.
     val extracted = Project.extract(state)
     import extracted._
-    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / ".dbuild")
+    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
 
     // note: we don't include config.config.directory here; the user needs to be in the
     // right subdir before entering sbt, in any case, so we should be ok
     dbuildDirectory map { dbuildDir =>
-      val repoDir = dbuildDir / "local-repo"
+      val repoDir = dbuildDir / inArtsDirName
       val (proj, arts) = loadBuildArtifacts(repoDir, builduuid, project, log)
       if (arts.isEmpty) {
         log.warn("No artifacts are dependencies of project " + project + " in build " + builduuid)

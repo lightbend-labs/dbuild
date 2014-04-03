@@ -687,7 +687,7 @@ object DistributedRunner {
       } else {
         // TODO: support for rewiring plugins as well??... Probably.
         val modules = getModuleRevisionIds(state, proj.depInfo.head.subproj, log)
-        newState(state, extracted, prepareCompileSettings(log, modules, dir / dbuildDirName, repoDir, arts.head.artifacts, _,
+        newState(state, extracted, prepareCompileSettings(log, modules, dir / dbuildDirName, /* TODO FIX THIS: repoDir */ null, arts.head.artifacts, _,
           proj.config.getCrossVersion))
       }
     } getOrElse {

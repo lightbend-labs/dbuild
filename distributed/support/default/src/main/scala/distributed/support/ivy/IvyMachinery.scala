@@ -26,7 +26,7 @@ import distributed.support.sbt.Repositories.ivyPattern
 import org.apache.ivy.core.resolve.IvyNode
 import org.apache.ivy.core.module.descriptor.Configuration
 import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
-import distributed.project.build.BuildDirs.{ inArtsDirName, dbuildDirName }
+import distributed.project.build.BuildDirs._
 
 object IvyMachinery {
   // there are two stages to the madness below. The first: we create a dummy caller, and add the module we need as a dependency.
@@ -53,7 +53,7 @@ object IvyMachinery {
     val ivyHome = (baseDir / ".ivy2")
     val settings = new IvySettings()
     settings.setDefaultIvyUserDir(ivyHome)
-    val dbuildRepoDir = baseDir / dbuildDirName / inArtsDirName
+    val dbuildRepoDir = localRepos(baseDir).head
     addResolvers(settings, ivyHome, repos, dbuildRepoDir)
     settings.setDefaultCacheArtifactPattern(ivyPattern)
     val cache = settings.getDefaultCache()

@@ -246,11 +246,11 @@ object DependencyAnalysis {
 
   /** called by onLoad() during extraction */
   def printCmd(state: State): State = {
-    import distributed.support.sbt.SbtRunner.FileNames._
+    import distributed.support.sbt.SbtRunner.SbtFileNames._
 
     val extracted = Project.extract(state)
     val Some(baseDirectory) = sbt.Keys.baseDirectory in ThisBuild get extracted.structure.data
-    val dbuildDir = baseDirectory / dbuildDirName
+    val dbuildDir = baseDirectory / dbuildSbtDirName
     val resultFile = dbuildDir / extractionOutputFileName
     val inputFile = dbuildDir / extractionInputFileName
     val lastMsgFile = dbuildDir / lastErrorMessageFileName

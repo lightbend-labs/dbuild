@@ -192,7 +192,7 @@ object SbtRunner {
   /**
    * Assorted dbuild/sbt-related filenames
    */
-  object FileNames {
+  object SbtFileNames {
     /**
      *  Name of the ".sbt" file that is added to each level in the sbt build
      *  Alphabetically, this filename should come last, when sorting.
@@ -206,8 +206,12 @@ object SbtRunner {
     /** The file where the extraction result is left */
     val extractionOutputFileName = "extraction-output"
 
-    /** The name of the internal dir that, in each level, will contain the dbuild sbt plugin files */
-    val dbuildDirName = ".dbuild"
+    /** The name of the internal dir that, in each level, will contain the dbuild sbt plugin files.
+     *  This need not be the same ".dbuild" dir name that is used during build to rematerialize
+     *  artifacts and to collect the resulting artifacts, but it is convenient to reuse the same directory
+     *  (see distributed.project.build.FileNames.reloadedArtifactsDirName).
+     */
+    val dbuildSbtDirName = ".dbuild"
 
     /** Extraction input data */
     val extractionInputFileName = "extraction-input"
@@ -216,7 +220,7 @@ object SbtRunner {
     val lastErrorMessageFileName = "last-error-message"
   }
 
-  import FileNames._
+  import SbtFileNames._
   /////////////////////////////////////////////////////
   //
   // Below, utilities used by SbtExtractor and SbtBuilder
@@ -227,7 +231,7 @@ object SbtRunner {
    */
   def prepDBuildDirs(dir: File, left: Int): Unit = {
     if (left > 0) {
-      (dir / dbuildDirName).mkdir()
+      (dir / dbuildSbtDirName).mkdir()
       prepDBuildDirs(dir / "project", left - 1)
     }
   }
@@ -251,7 +255,7 @@ object SbtRunner {
    */
   def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: Logger, debug: Boolean)(implicit m: Manifest[T]) = {
     data.foldLeft(mainDir) { (dir, content) =>
-      val dbuildDir = dir / dbuildDirName
+      val dbuildDir = dir / dbuildSbtDirName
       if (debug) log.debug("Placing one input file in " + (dbuildDir / fileName).getCanonicalPath())
       placeOneFile(fileName, dbuildDir, writeValue(content))
       dir / "project"
@@ -269,7 +273,7 @@ object SbtRunner {
   def collectOutputFiles[T](mainDir: File, fileName: String, levels: Int, log: Logger, debug: Boolean)(implicit m: Manifest[T]): Seq[T] = {
     def scan(left: Int, dir: File): Seq[T] = {
       if (left > 0) {
-        val file = dir / dbuildDirName / fileName
+        val file = dir / dbuildSbtDirName / fileName
         val seq =
           try readValue[T](file) +: scan(left - 1, dir / "project")
           catch {

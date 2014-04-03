@@ -41,11 +41,6 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
     case _ => throw new Exception("Internal error: sbt build config options have the wrong type. Please report.")
   }
 
-  override def projectDbuildDir(baseDir: File, config: RepeatableProjectBuild): File = {
-    val ec = config.extra[ExtraType]
-    projectDir(baseDir, ec) / ".dbuild"
-  }
-
   private def projectDir(baseDir: _root_.java.io.File, ec: SbtExtraConfig): _root_.java.io.File = {
     val projectDir=if(ec.directory.isEmpty) baseDir else baseDir / ec.directory
     // sanity check, in case "directory" is something like "../xyz" or "/xyz/..."

@@ -170,8 +170,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   // are we building a specific target? If so, filter the graph
                   val targetGraph = filterGraph(buildTarget, fullBuild)
                   val findBuild = fullBuild.buildMap
-                  Thread.sleep(4000)
-                  sys.exit(0)
                   val futureBuildResult = runBuild(targetGraph, findBuild, expandedDBuildConfig.uuid,
                     fullLogger, options.debug)
                   afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))

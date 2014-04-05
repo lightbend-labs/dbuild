@@ -25,7 +25,9 @@ object BuildDirs {
    */
   val outArtsDirName = "local-publish-repo"
 
-  /**
+
+
+ /**
    * prepare a unique subdirectory of the general build directory, into
    * which a specific project can be built.
    */
@@ -48,6 +50,9 @@ object BuildDirs {
     }
   }
 
+  /**
+   * The directory where the resulting built artifacts will be stored.
+   */
   def publishRepo(projectDir: File) = {
     val repo = projectDir / dbuildDirName / outArtsDirName
     repo.mkdirs()

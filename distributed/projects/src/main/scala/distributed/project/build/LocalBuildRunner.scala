@@ -59,8 +59,6 @@ class LocalBuildRunner(builder: BuildRunner,
       val uuidGroups = build.depInfo map (_.dependencyUUIDs)
       val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups)
       buildData.log.info("Artifacts left in: "+dir.getCanonicalPath())
-      Thread.sleep(4000)
-      sys.exit(0)
       val BuildArtifactsInMulti(artifactLocations) = dependencies
       // Special case: scala-compiler etc must have the same version number
       // as scala-library: projects that rely on scala-compiler as a dependency
@@ -113,12 +111,11 @@ class LocalBuildRunner(builder: BuildRunner,
       }
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
-      val baseLevelDepInfo = build.depInfo.headOption getOrElse sys.error("Internal error: depInfo is empty!")
       val writeRepo = publishRepo(dir)
       if (!writeRepo.exists()) writeRepo.mkdirs()
+      if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
       val results = builder.runBuild(build, dir,
-        // TODO: fix buildInput to make it Multi
-        BuildInput(dependencies.materialized.head, build.uuid, version, baseLevelDepInfo.subproj, writeRepo, build.config.name), this, buildData)
+        BuildInput(dependencies, version, build.depInfo.map{_.subproj}, writeRepo, build.config.name), this, buildData)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
       markSuccess(dir)
       results

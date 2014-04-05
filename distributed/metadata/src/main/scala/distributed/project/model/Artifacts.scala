@@ -48,7 +48,12 @@ case class ProjectArtifactInfo(
  */
 case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
 // variant for multi-level build systems
-case class BuildArtifactsInMulti(materialized: Seq/*Levels*/[BuildArtifactsIn])
+case class BuildArtifactsInMulti(materialized: Seq/*Levels*/[BuildArtifactsIn]) {
+  // to simplify single-level build systems, the following convenience methods
+  // are supplied, which only refer to the first level
+  def artifacts = materialized.head.artifacts
+  def localRepo = materialized.head.localRepo
+}
 case class BuildArtifactsOut(results: Seq[BuildSubArtifactsOut])
 case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation], shas: Seq[ArtifactSha])
 
@@ -57,8 +62,6 @@ case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation
  * What artifacts are coming in (from metadata) and where to
  * write new artifacts (so we can save them for later).
  * "version" is the version string that will result from the build
- * 
- * Also includes the UUID of this build, in case of direct d-build integration.
  * For subproj, see RepeatableProjectBuild.
  */
-case class BuildInput(artifacts: BuildArtifactsIn, uuid: String, version: String, subproj: Seq[String], outRepo: File, projectName:String)
+case class BuildInput(artifacts: BuildArtifactsInMulti, version: String, subproj: Seq/*Levels*/[Seq[String]], outRepo: File, projectName:String)

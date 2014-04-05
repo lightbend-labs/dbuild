@@ -70,17 +70,21 @@ object SbtExtractor {
     SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
 
     import SbtRunner.SbtFileNames._
-    val inputFile = projectDir / dbuildSbtFileName / extractionInputFileName
     // This is for the first level only
     val inputDataFirst = ExtractionInput(extra.projects, extra.exclude, debug)
     val inputDataAll = inputDataFirst +: Stream.fill(levels - 1)(ExtractionInput(Seq.empty, Seq.empty, debug))
     SbtRunner.placeInputFiles(projectDir, extractionInputFileName, inputDataAll, log, debug)
 
+    // NOTE: all of the extractions use the same global ivy cache, in ~/.dbuild/ivy2. This should be safe,
+    // as rewiring is only done during building, and sbt locks the ivy cache. If snapshot resolution should
+    // lead to problems, it is possible to redefine ivyPaths as an extra setting in the additional sbt file
+    // that contains onLoad, following the model used during rewiring, so that each extraction (and possibly
+    // each extraction level) uses a separate ivy cache. That seems overkill, however: the global one should be ok.
     runner.run(
       projectDir = projectDir,
       sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,
-      extraArgs = extra.options)((extra.commands ++ setScalaCommand).:+(""): _*)
+      extraArgs = extra.options)((extra.commands ++ setScalaCommand /* TODO: commands are ignored right now */).:+(""): _*)
 
     ExtractedBuildMeta(SbtRunner.collectOutputFiles[ProjMeta](projectDir, extractionOutputFileName, levels, log, debug))
   }

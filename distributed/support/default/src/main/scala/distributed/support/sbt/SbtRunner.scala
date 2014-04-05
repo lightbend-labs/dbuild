@@ -91,6 +91,7 @@ object SbtRunner {
     "-XX:ReservedCodeCacheSize=192m"
   )
 
+  /* TODO: remove the two dead methods below, now replaced by sbt files */
   def writeQuietIvyLogging(dir: File, debug: Boolean) = {
     val file = new File(dir, ".dbuild.ivy.quiet.sbt")
     if (debug) {
@@ -206,7 +207,8 @@ object SbtRunner {
     /** The file where the extraction result is left */
     val extractionOutputFileName = "extraction-output"
 
-    /** The name of the internal dir that, in each level, will contain the dbuild sbt plugin files.
+    /**
+     * The name of the internal dir that, in each level, will contain the dbuild sbt plugin files.
      *  This need not be the same ".dbuild" dir name that is used during build to rematerialize
      *  artifacts and to collect the resulting artifacts, but it is convenient to reuse the same directory
      *  (see distributed.project.build.FileNames.reloadedArtifactsDirName).
@@ -218,6 +220,16 @@ object SbtRunner {
 
     /** if the dbuild sbt plugin stops prematurely, save the exception information here */
     val lastErrorMessageFileName = "last-error-message"
+
+    /**
+     * the name of the files used to pass rewire information
+     * to the (onLoad-driven) rewiring code for each level
+     */
+    val rewireInputFileName = "rewire-input-data"
+    /**
+     * the suffix to the ivy cache for each level
+     */
+    val ivyCacheName = "ivy2"
   }
 
   import SbtFileNames._
@@ -236,36 +248,53 @@ object SbtRunner {
     }
   }
 
+  /** write a string to a file named "fileName" in directory "dir" */
+  private def placeOneFile(fileName: String, dir: File, content: String) =
+    // will mkdirs if necessary
+    writeStringToFile(dir / fileName, content, /* default charset */ null: String)
+
+  /**
+   * Place each element of "contents" in the subsequent directories
+   * mainDir/subDir, mainDir/project/subDir, mainDir/project/project/subDir, and so on, using the specified fileName
+   * If dir is None, place the files in mainDir, mainDir/project, mainDir/project/project, etc.
+   * Emit diagnostic messages using emit(), which will receive each directory path as a string
+   */
+  def placeFiles(mainDir: File, contents: Seq[String], fileName: String, subDir: Option[String], emit: String => Unit) = {
+    contents.foldLeft(mainDir) { (dir, content) =>
+      val thisDir = subDir.map { dir / _ } getOrElse dir
+      emit(thisDir.getCanonicalPath())
+      placeOneFile(fileName, thisDir, content)
+      dir / "project"
+    }
+  }
+
   /**
    * Place each element of "contents" in the subsequent directories
    * dir, dir/project, dir/project/project, and so on.
    */
-  def writeSbtFiles(mainDir: File, contents: Seq[String], log: Logger, debug: Boolean) = {
-    contents.foldLeft(mainDir) { (dir, content) =>
-      if (debug) log.debug("Adding dbuild .sbt file to " + dir.getCanonicalPath())
-      placeOneFile(dbuildSbtFileName, dir, content)
-      dir / "project"
-    }
-  }
+  def writeSbtFiles(mainDir: File, contents: Seq[String], log: Logger, debug: Boolean) =
+    placeFiles(mainDir, contents, dbuildSbtFileName, None, s => if (debug) log.debug("Adding dbuild .sbt file to " + s))
 
   /**
    * Prepare the input data for extraction or build. The first element gets written
    * in dir/.dbuild, the second in dir/project/.dbuild, the dir/project/project/.dbuild,
    * and so on.
    */
-  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: Logger, debug: Boolean)(implicit m: Manifest[T]) = {
-    data.foldLeft(mainDir) { (dir, content) =>
-      val dbuildDir = dir / dbuildSbtDirName
-      if (debug) log.debug("Placing one input file in " + (dbuildDir / fileName).getCanonicalPath())
-      placeOneFile(fileName, dbuildDir, writeValue(content))
-      dir / "project"
-    }
-  }
+  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: Logger, debug: Boolean)(implicit m: Manifest[T]) =
+    placeFiles(mainDir, data.map { writeValue(_) }, fileName, Some(dbuildSbtDirName), s => if (debug) log.debug("Placing one input file in " + s))
 
-  // write a string to a file named "fileName" in directory "dir"
-  private def placeOneFile(fileName: String, dir: File, content: String) =
-    // will mkdirs if necessary
-    writeStringToFile(dir / fileName, content, /* default charset */ null: String)
+
+  def rewireInputFile(dir: File) = dir / dbuildSbtDirName / rewireInputFileName
+
+    
+  /**
+   * The location of the (per-level) dir used for the ivy cache
+   */
+  def sbtIvyCache(dir: File) = {
+    val cache = dir / dbuildSbtDirName / ivyCacheName
+    cache.mkdirs()
+    cache
+  }
 
   /**
    * Collect the output files from the various dirs, and return them as a sequence.
@@ -306,6 +335,6 @@ object SbtRunner {
    *  Perform a state transformation using onLoad()
    */
   def onLoad(activity: String) = {
-    "onLoad in Global <<= (onLoad in Global) { _ andThen { state => { " + activity + " } }}\n\n"
+    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
   }
 }

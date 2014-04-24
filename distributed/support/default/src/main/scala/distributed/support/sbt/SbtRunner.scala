@@ -230,6 +230,18 @@ object SbtRunner {
      * the suffix to the ivy cache for each level
      */
     val ivyCacheName = "ivy2"
+
+    /**
+     * name of the file where the complete SbtConfig will be
+     * dumped, as input to the final building stage at the main level
+     */
+    val getArtsInputFileName = "build-input-data"
+    /**
+     * name of the file where the resulting BuildArtifactsOut
+     * will be stored, at the end of building
+     */
+    val outBuildArtsName = "build-out-arts"
+
   }
 
   import SbtFileNames._
@@ -283,10 +295,8 @@ object SbtRunner {
   def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: Logger, debug: Boolean)(implicit m: Manifest[T]) =
     placeFiles(mainDir, data.map { writeValue(_) }, fileName, Some(dbuildSbtDirName), s => if (debug) log.debug("Placing one input file in " + s))
 
-
   def rewireInputFile(dir: File) = dir / dbuildSbtDirName / rewireInputFileName
 
-    
   /**
    * The location of the (per-level) dir used for the ivy cache
    */
@@ -335,6 +345,19 @@ object SbtRunner {
    *  Perform a state transformation using onLoad()
    */
   def onLoad(activity: String) = {
-    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
+    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); Thread.dumpStack(); u }\n\n"
+    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); import scala.collection.JavaConversions._; val t=Thread.getAllStackTraces; val z=t.iterator; z foreach { case (a,b) => s.log.warn(\"Thread \"+a.getName); b foreach {k=> s.log.warn(\" at: \"+k)}}; u }\n\nivyPaths in Global <<= (baseDirectory in Global) { d => new IvyPaths(d, d / \""+"..."+"\" }\n\n"
+
+    // "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
+        "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths,fullResolvers) map { case (u,s,p,r) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); s.log.warn(\"Full resolvers:\"); r foreach {x: sbt.Resolver => s.log.warn(x.toString) }; s.log.warn(\"End resolvers.\"); u }\n\n"
   }
+
+  // stuff related to generateArtifacts()
+  /** Place input data file needed by generateArtifacts() */
+  def placeGenArtsInputFile(projectDir: File, content: GenerateArtifactsInput) =
+    placeOneFile(getArtsInputFileName, projectDir / dbuildSbtDirName, writeValue(content))
+  /** The file where placeGenArtsInputFile() (which which must be consistent) placed its data. */
+  def genArtsInputFile(projectDir: File) = projectDir / dbuildSbtDirName / getArtsInputFileName
+  /** The file where the resulting BuildArtifactsOut will be stored, at the end of building */
+  def buildArtsFile(projectDir: File) = projectDir / dbuildSbtDirName / outBuildArtsName
 }

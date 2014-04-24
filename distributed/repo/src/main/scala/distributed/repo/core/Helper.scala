@@ -252,8 +252,9 @@ object LocalRepoHelper {
   // Returns for each group the list of rematerialized artifacts
   def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, localRepos: Seq/*Levels*/[File],
     uuidGroups: Seq /*Levels*/ [Seq[String]]): BuildArtifactsInMulti = BuildArtifactsInMulti(
-    (uuidGroups zip localRepos) map {
-      case (uuids, localRepo) =>
+    ((uuidGroups zip localRepos) zipWithIndex) map {
+      case ((uuids, localRepo), index) =>
+        if (uuidGroups.length > 1 && uuids.length > 0) diagnostic("Resolving artifacts, level " + index)
         val artifacts = for {
           uuid <- uuids
           (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo)

@@ -18,8 +18,9 @@ import distributed.project.model.BuildSubArtifactsOut
 import distributed.project.model.SavedConfiguration
 import distributed.project.model.BuildArtifactsInMulti
 import distributed.project.build.BuildDirs._
-import distributed.support.sbt.SbtRunner.{ sbtIvyCache, rewireInputFile }
-import distributed.support.sbt.RewireInput
+import distributed.project.model.BuildInput
+import distributed.support.sbt.SbtRunner.{ sbtIvyCache, rewireInputFile, buildArtsFile, genArtsInputFile }
+import distributed.support.sbt.{ RewireInput, GenerateArtifactsInput }
 
 object DistributedRunner {
 
@@ -92,14 +93,8 @@ object DistributedRunner {
   def makeBuildResults(artifacts: Seq[BuildSubArtifactsOut], localRepo: File): model.BuildArtifactsOut =
     model.BuildArtifactsOut(artifacts)
 
-  def printResults(fileName: String, artifacts: Seq[BuildSubArtifactsOut], localRepo: File): Unit =
-    IO.write(new File(fileName), writeValue(makeBuildResults(artifacts, localRepo)))
-
-  def loadBuildConfig: Option[SbtBuildConfig] =
-    for {
-      f <- Option(System getProperty "dbuild.project.build.deps.file") map (new File(_))
-      deps = readValue[SbtBuildConfig](f)
-    } yield deps
+  def printResults(outFile: File, artifacts: Seq[BuildSubArtifactsOut], localRepo: File): Unit =
+    IO.write(outFile, writeValue(makeBuildResults(artifacts, localRepo)))
 
   // TODO - Here we rely on a sequence of artifact locations, and we try to do
   // the matching manually. Ideally, we should take our ModuleID, point Ivy to
@@ -332,12 +327,13 @@ object DistributedRunner {
       }
     }("Updating dependencies") _
 
-  def fixVersions2(config: SbtBuildConfig) =
-    fixGeneric2(Keys.version, "Updating version strings") { _ => config.info.version }
+  def fixVersions2(in: BuildInput) =
+    fixGeneric2(Keys.version, "Updating version strings") { _ => in.version }
 
-  def fixResolvers2(dbuildRepoDir: File) =
-    fixGeneric2(Keys.resolvers, "Adding resolvers to retrieve build artifacts") { old =>
+  def fixResolvers2(dbuildRepoDir: File, log: Logger) =
+    fixGeneric2(Keys.fullResolvers, "Adding resolvers to retrieve build artifacts") { _ map { old =>
       // make sure to add our resolvers at the beginning!
+      log.debug("Appending local-repo resolvers: "+dbuildRepoDir.getAbsolutePath())
       Seq(
         "dbuild-local-repo-maven" at ("file:" + dbuildRepoDir.getAbsolutePath()),
         Resolver.file("dbuild-local-repo-ivy", dbuildRepoDir)(Resolver.ivyStylePatterns)) ++
@@ -345,6 +341,7 @@ object DistributedRunner {
           val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy"
         })
     }
+  }
 
   // sbt will try to check the scala binary version we use in this project (the full version,
   // including suffixes) against what Ivy reports as the version of the scala library (which is
@@ -380,9 +377,12 @@ object DistributedRunner {
   // from different spaces, and different spaces may contain artifacts that have
   // same org, name, version, but that are actually different. Artifacts that
   // belong to different spaces must never come into contact with each other.
-  def fixIvyPaths2() =
+  def fixIvyPaths2(log: Logger) =
     fixGenericTransform2(Keys.baseDirectory) { r: Setting[IvyPaths] =>
       val sc = r.key.scope
+      Thread.sleep(250)
+      log.debug("ivy-paths found in scope "+sc)
+      Thread.sleep(250)
       Keys.ivyPaths in sc <<= (Keys.baseDirectory in sc) {
         d =>
           new IvyPaths(d, Some(sbtIvyCache(d)))
@@ -481,35 +481,35 @@ object DistributedRunner {
       }
     }, log)
 
-  def fixBuildSettings(config: SbtBuildConfig, state: State): State = {
-    // TODO: replace with the correct logger
-    val log = sbt.ConsoleLogger()
-    log.info("Updating dependencies...")
-    val extracted = Project.extract(state)
-    import extracted._
-    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
-
-    dbuildDirectory map { dbuildDir =>
-      val repoDir = dbuildDir / inArtsDirName
-
-      val refs = getProjectRefs(extracted)
-
-      // config.info.subproj is the list of projects calculated in DependencyAnalysis;
-      // conversely, config.config.projects is the list specified in the
-      // configuration file (in the "extra" section)
-      val modules = getModuleRevisionIds(state, config.info.subproj.head /* TODO FIX */ , log)
-
-      def newSettings(oldSettings: Seq[Setting[_]]) =
-        preparePublishSettings(config, log, oldSettings) ++
-          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
-            oldSettings, config.crossVersion)
-
-      newState(state, extracted, newSettings)
-
-    } getOrElse {
-      sys.error("Key baseDirectory is undefined in ThisBuild: aborting.")
-    }
-  }
+//  def fixBuildSettings(config: SbtBuildConfig, state: State): State = {
+//    // TODO: replace with the correct logger
+//    val log = sbt.ConsoleLogger()
+//    log.info("Updating dependencies...")
+//    val extracted = Project.extract(state)
+//    import extracted._
+//    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
+//
+//    dbuildDirectory map { dbuildDir =>
+//      val repoDir = dbuildDir / inArtsDirName
+//
+//      val refs = getProjectRefs(extracted)
+//
+//      // config.info.subproj is the list of projects calculated in DependencyAnalysis;
+//      // conversely, config.config.projects is the list specified in the
+//      // configuration file (in the "extra" section)
+//      val modules = getModuleRevisionIds(state, config.info.subproj.head /* TODO FIX */ , log)
+//
+//      def newSettings(oldSettings: Seq[Setting[_]]) =
+//        preparePublishSettings(config, log, oldSettings) ++
+//          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
+//            oldSettings, config.crossVersion)
+//
+//      newState(state, extracted, newSettings)
+//
+//    } getOrElse {
+//      sys.error("Key baseDirectory is undefined in ThisBuild: aborting.")
+//    }
+//  }
 
   def printPR(state: State): Unit = {
     val extracted = Project.extract(state)
@@ -539,14 +539,17 @@ object DistributedRunner {
   // where the first Seq[File] is the set of files present in the publishing repository,
   // and the second Seq associates the subproject name with the list of artifacts, as well as
   // the list of shas of the files published to the repository during this step.
-  def buildStuff(state: State, resultFile: String, config: SbtBuildConfig): State = {
-    val state2 = fixBuildSettings(config, state)
+  def buildStuff(state2: State, resultFile: File, config: GenerateArtifactsInput): State = {
+
+    // we shall no longer rewire from within buildStuff().
+    // That implies that "dbuild-build" must rewire explicitly before calling buildStuff
+    // val state2 = fixBuildSettings(config, state)
     //    printResolvers(state2)
     //    printPR(state)
     //    printPR(state2)
 
     val refs = getProjectRefs(Project.extract(state2))
-    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state).structure.data
+    val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state2).structure.data
 
     def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
       println("Running timed build: " + normalizedProjectName(ref, baseDirectory))
@@ -566,18 +569,18 @@ object DistributedRunner {
       (y.state, y.value)
     }
 
-    println(config.info.subproj.mkString("These subprojects will be built: ", ", ", ""))
+    println(config.info.subproj.head.mkString("These subprojects will be built: ", ", ", ""))
     val buildAggregate = runAggregate[(Seq[File], Seq[BuildSubArtifactsOut]), (Seq[File], BuildSubArtifactsOut)](state2, config.info.subproj.head, (Seq.empty, Seq.empty)) {
       case ((oldFiles, oldArts), (newFiles, arts)) => (newFiles, oldArts :+ arts)
     } _
 
     // If we're measuring, run the build several times.
-    val buildTask = if (config.config.measurePerformance) timedBuildProject _ else untimedBuildProject _
+    val buildTask = if (config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
     def buildTestPublish(ref: ProjectRef, state6: State, previous: (Seq[File], Seq[BuildSubArtifactsOut])): (State, (Seq[File], BuildSubArtifactsOut)) = {
       println("----------------------")
       println("Processing subproject: " + normalizedProjectName(ref, baseDirectory))
-      val (_, libDeps) = Project.extract(state6).runTask(Keys.allDependencies in ref, state)
+      val (_, libDeps) = Project.extract(state6).runTask(Keys.allDependencies in ref, state6)
       println("All Dependencies for subproject " + normalizedProjectName(ref, baseDirectory) + ":")
       libDeps foreach { m => println("   " + m) }
       //      val (_,pRes) = Project.extract(state6).runTask(Keys.projectResolver in ref, state)
@@ -587,7 +590,7 @@ object DistributedRunner {
       val (state7, artifacts) = buildTask(ref, state6)
       purge()
 
-      val state8 = if (config.config.runTests) {
+      val state8 = if (config.runTests) {
         println("Testing: " + normalizedProjectName(ref, baseDirectory))
         Project.extract(state7).runTask(Keys.test in (ref, Test), state7)._1
       } else state7
@@ -616,14 +619,16 @@ object DistributedRunner {
   }
 
   /** The implementation of the dbuild-build command. */
-  def buildCmd(state: State): State = {
-    val resultFile = Option(System.getProperty("dbuild.project.build.results.file"))
-    val results = for {
-      f <- resultFile
-      config <- loadBuildConfig
-    } yield buildStuff(state, f, config)
-    results getOrElse state
-  }
+  def buildCmd(state: State): State = state /* TODO: FIX ME */
+//  {
+//    val resultFile = Option(System.getProperty("dbuild.project.build.results.file"))
+//    val results = for {
+//      f <- resultFile
+//      config <- loadBuildConfig
+//      // TODO: convert "fixBuildSettings" so that it does the proper rewire() at each level
+//    } yield buildStuff(fixBuildSettings(config, state), new File(f), config)
+//    results getOrElse state
+//  }
 
   def loadBuildArtifacts(localRepos: Seq /*Levels*/ [File], builduuid: String, thisProject: String, log: Logger) = {
     import distributed.repo.core._
@@ -652,20 +657,20 @@ object DistributedRunner {
   private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
     repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion: String) = {
     Seq[Fixer](
-      fixResolvers2(repoDir),
+      fixResolvers2(repoDir, log),
       fixDependencies2(arts, modules, crossVersion, log),
       fixScalaVersion2(dbuildDir, repoDir, arts),
       fixInterProjectResolver2bis(modules),
       fixCrossVersions2(crossVersion),
-      fixIvyPaths2(),
+      fixIvyPaths2(log),
       fixScalaBinaryCheck2) flatMap { _(oldSettings, log) }
   }
 
-  private def preparePublishSettings(config: SbtBuildConfig, log: ConsoleLogger, oldSettings: Seq[Setting[_]]) =
+  private def preparePublishSettings(in: BuildInput, log: ConsoleLogger, oldSettings: Seq[Setting[_]]) =
     Seq[Fixer](
-      fixPublishTos2(config.info.outRepo.getAbsoluteFile),
+      fixPublishTos2(in.outRepo.getAbsoluteFile),
       fixPGPs2,
-      fixVersions2(config)) flatMap { _(oldSettings, log) }
+      fixVersions2(in)) flatMap { _(oldSettings, log) }
 
   private def newState(state: State, extracted: Extracted, update: Seq[Setting[_]] => Seq[Setting[_]]) = {
     import extracted._
@@ -676,7 +681,15 @@ object DistributedRunner {
     // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
     val newSession = session.appendSettings(newSessionSettings)
     val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
+    // NB: setProject calls onLoad, which is why we restore it beforehand
+    // (see calls in this file to restorePreviousOnLoad() )
     val newState = Project.setProject(newSession, newStructure, state)
+
+// herebelow, three lines of test. TODO: remove these lines
+//    val newAttrs = state.attributes.put(Keys.stateBuildStructure, newStructure).put(Keys.sessionSettings, newSession)
+//    val newState = Project.updateCurrent(state.copy(attributes=newAttrs))
+//// senza updateCurrent, non dovrebbe cambiar niente ma chiamiamolo come fa setProject() //    val newState = state.copy(attributes=newAttrs)
+
     newState
   }
 
@@ -717,6 +730,15 @@ object DistributedRunner {
     }
   }
 
+  
+  
+  
+  
+// new-style calls, herebelow
+  
+
+  
+  
   // TODO: Note to self: is it wise to re-apply onLoad? Probably so, since it is reapplied at the end of the
   // now-modified state
   def restorePreviousOnLoad(previousOnLoad: State => State) =
@@ -745,17 +767,50 @@ object DistributedRunner {
        prepareCompileSettings(log, modules, dbuildDir, rewireInfo.in.localRepo, rewireInfo.in.artifacts,
         oldSettings, rewireInfo.crossVersion) ++ restore(oldSettings)
 
-    saveLastMsg(lastMsgFile, newState(_, extracted, newSettings))(state)
+    saveLastMsg(lastMsgFile, { s: State =>
+      newState(s, extracted, newSettings)
+    }
+    )(state)
   }
 
-  //  private def buildIt = Command.command("dbuild-build")(saveLastMsg(buildCmd))
+  /**
+   *  After all the calls to rewire() for all levels, generateArtifacts() is called at the main level only.
+   */
+  def generateArtifacts(state: State): State = {
+    import distributed.support.sbt.SbtRunner.SbtFileNames._
+
+    val extracted = Project.extract(state)
+    val Some(baseDirectory) = sbt.Keys.baseDirectory in ThisBuild get extracted.structure.data
+    val buildArts = buildArtsFile(baseDirectory)
+    val inputFile = genArtsInputFile(baseDirectory)
+    val generateArtifactsInfo = readValue[GenerateArtifactsInput](inputFile)
+
+    val log = sbt.ConsoleLogger()
+    if (generateArtifactsInfo.debug) log.setLevel(Level.Debug)
+
+    val dbuildDir = baseDirectory / dbuildSbtDirName
+    val lastMsgFile = dbuildDir / lastErrorMessageFileName
+
+    def publishSettings(oldSettings: Seq[Setting[_]]) =
+      preparePublishSettings(generateArtifactsInfo.info, log, oldSettings)
+
+    saveLastMsg(lastMsgFile, { s: State =>
+      val ns = newState(s, extracted, publishSettings)
+      buildStuff(ns, buildArts, generateArtifactsInfo)
+    }
+    )(state)
+  }
+  
+  // this command can be called ONLY AFTER the rewiring is complete.
+  private def buildIt = Command.command("dbuild-build")(generateArtifacts)
+
   //  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(saveLastMsg(setupCmd))
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
   private def comment = Command.args("//", "// [comments]") { (state, _) => state }
 
   /** Settings you can add your build to print dependencies. */
   def buildSettings: Seq[Setting[_]] = Seq(
-    //    Keys.commands += buildIt,
+    Keys.commands += buildIt,
     //    Keys.commands += setItUp,
     Keys.commands += comment)
 

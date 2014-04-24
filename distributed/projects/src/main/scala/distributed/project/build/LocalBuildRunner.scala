@@ -55,7 +55,6 @@ class LocalBuildRunner(builder: BuildRunner,
       val log = buildData.log
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
-      log.info("Resolving artifacts")
       val readRepos = localRepos(dir)
       val uuidGroups = build.depInfo map (_.dependencyUUIDs)
       val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups)

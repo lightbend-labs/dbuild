@@ -7,7 +7,8 @@ import sbt.Path._
  * dbuild-specific file names used during building.
  * These directory names are all relative to a build directory,
  * while the global directory names are in distributed.repo.core.GlobalDirs.
- * The sbt build system has a few additional names, in SbtRunner.
+ * DO NOT place sbt-specific filenames in here: the sbt build system has
+ * a few sbt-specific names and dir handling methods, which you can find in SbtRunner.
  */
 object BuildDirs {
   /**
@@ -16,6 +17,7 @@ object BuildDirs {
    * This is not the same as dbuildHomeDirName.
    */
   val dbuildDirName = ".dbuild"
+    
   /**
    * repository for incoming (rematerialized) artifacts
    */
@@ -24,7 +26,6 @@ object BuildDirs {
    * repository for outgoing (compiled/generated) artifacts
    */
   val outArtsDirName = "local-publish-repo"
-
 
 
  /**

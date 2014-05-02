@@ -23,7 +23,10 @@ case class ProjectBuildConfig(name: String,
   // then set-version will take precedence
   @JsonProperty("set-version-suffix") setVersionSuffix: Option[String],
   deps: Option[DepsModifiers] = None,
-  @JsonProperty("cross-version") crossVersion: Option[String] = None,
+  // the default crossVersion for ProjectBuildConfig is an empty
+  // sequence: that means the values will be taken from the enclosing
+  // ProjectOptions record
+  @JsonProperty("cross-version") crossVersion: SeqString/*Levels*/ = Seq.empty,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = None,
   extra: Option[ExtraConfig]
@@ -35,19 +38,22 @@ case class ProjectBuildConfig(name: String,
     case None => sys.error("Internal error: \"extra\" has not been expanded in project " + name + ". Please report.")
     case _ => sys.error("Internal error: \"extra\" has the wrong type in project " + name + ". Please report.")
   }
-  // after the initial expansion
-  // you can use getCrossVersion() to obtain the cross version selector
-  def getCrossVersion = crossVersion.getOrElse { sys.error("Internal error: after expansion, crossVersion is None in " + name) }
+
+  // The defaults are: "disabled","standard","standard"....
+  def getCrossVersionHead = if (crossVersion.nonEmpty) crossVersion.head else CrossVersionsDefaults.defaults.head
   
   def expandDefaults(defaults: ProjectOptions) = {
-    val cv = crossVersion getOrElse defaults.crossVersion
+    val cv = if (crossVersion.nonEmpty) crossVersion else defaults.crossVersion
     val jg = useJGit getOrElse defaults.useJGit
     val sp = space getOrElse defaults.space
-    copy(crossVersion = Some(cv), useJGit = Some(jg), space = Some(sp))
+    copy(crossVersion = cv, useJGit = Some(jg), space = Some(sp))
   }
 
   // sanity check on the project name
   Utils.testProjectName(name)
+}
+object CrossVersionsDefaults {
+  def defaults = Stream("disabled") ++ Stream.continually("standard")
 }
 
 // Do keep the one above and the one below in sync
@@ -57,7 +63,7 @@ private case class ProjectBuildConfigShadow(name: String,
   @JsonProperty("set-version") setVersion: Option[String],
   @JsonProperty("set-version-suffix") setVersionSuffix: Option[String],
   deps: Option[DepsModifiers] = None,
-  @JsonProperty("cross-version") crossVersion: Option[String] = None,
+  @JsonProperty("cross-version") crossVersion: SeqString/*Levels*/ = Seq.empty,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = None,
   extra: JsonNode = null)
@@ -243,7 +249,7 @@ case class ExtractionConfig(buildConfig: ProjectBuildConfig) {
 case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   /* deprecated, see deserializer */
   options: Option[DeprecatedBuildOptions],
-  @JsonProperty("cross-version") crossVersion: String = "disabled",
+  @JsonProperty("cross-version") crossVersion: SeqString/*Levels*/ = Seq.empty, //all missing values will be "disabled"
   // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
   // also in the future (for repeatability); if the user wants a default of 0.13.0,
   // they can specify "build.sbt-version = 0.13.0"
@@ -652,7 +658,7 @@ trait ExtraOptions {
   def sbtCommands: SeqString
 }
 trait ProjectOptions {
-  def crossVersion: String
+  def crossVersion: SeqString/*Levels*/
   def useJGit: Boolean
   def space: Space
 }

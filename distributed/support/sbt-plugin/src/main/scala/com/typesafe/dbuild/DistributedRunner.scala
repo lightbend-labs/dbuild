@@ -722,7 +722,7 @@ object DistributedRunner {
         // TODO: support for rewiring plugins as well??... Probably.
         val modules = getModuleRevisionIds(state, proj.depInfo.head.subproj, log)
         newState(state, extracted, prepareCompileSettings(log, modules, dir / dbuildDirName, /* TODO FIX THIS: repoDir */ null, arts.head.artifacts, _,
-          proj.config.getCrossVersion))
+          proj.config.getCrossVersionHead/*FIXME*/))
       }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")
@@ -815,16 +815,16 @@ object DistributedRunner {
     Keys.commands += comment)
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
-    cross: CrossVersion, sv: String, sbv: String): Seq[model.ArtifactLocation] = {
+    cross: CrossVersion, sv: String, sbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
     val crossSuffix = CrossVersion.applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
     } yield model.ArtifactLocation(
       model.ProjectRef(artifact.name, org, artifact.extension, artifact.classifier),
-      version, crossSuffix)
+      version, if (isSbtPlugin) "" else crossSuffix)
   }
 
   def projectSettings: Seq[Setting[_]] = Seq(
     extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
-      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion) map extractArtifactLocations)
+      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations)
 }

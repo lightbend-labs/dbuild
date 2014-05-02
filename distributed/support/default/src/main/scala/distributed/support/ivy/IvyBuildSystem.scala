@@ -161,7 +161,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
     // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
     import scala.collection.JavaConversions._
-    val crossVersion = project.config.getCrossVersion
+    val crossVersion = project.config.getCrossVersionHead
     val arts = input.artifacts.artifacts
     // I need to get my dependencies again during build; although in theory I could pass
     // this information to here from extraction, in practice I just run Ivy once more

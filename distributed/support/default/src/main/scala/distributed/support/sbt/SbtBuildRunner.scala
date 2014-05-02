@@ -63,13 +63,10 @@ object SbtBuilder {
     // The defaults are: "disabled","standard","standard"....
     val defaultCrossVersions = CrossVersionsDefaults.defaults
     val crossVersionStream = config.crossVersion.toStream ++ defaultCrossVersions.drop(config.crossVersion.length)
-    // This is for the first level only
-    val inputDataFirst = RewireInput(ins.head, subprojs.head, crossVersionStream.head, debug)
-    val inputDataRest = (ins.tail, subprojs.tail, crossVersionStream.tail).zipped map {
+    val inputDataAll = (ins, subprojs, crossVersionStream).zipped map {
       case (in, subproj, cross) =>
         RewireInput(in, subproj, cross, debug)
     }
-    val inputDataAll = inputDataFirst +: inputDataRest
     SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll, log, debug)
 
     // preparation of the input data to generateArtifacts()

@@ -26,7 +26,7 @@ case class ProjectBuildConfig(name: String,
   // the default crossVersion for ProjectBuildConfig is an empty
   // sequence: that means the values will be taken from the enclosing
   // ProjectOptions record
-  @JsonProperty("cross-version") crossVersion: SeqString/*Levels*/ = Seq.empty,
+  @JsonProperty("cross-version") crossVersion: Option[Seq/*Levels*/[String]] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = None,
   extra: Option[ExtraConfig]
@@ -39,21 +39,38 @@ case class ProjectBuildConfig(name: String,
     case _ => sys.error("Internal error: \"extra\" has the wrong type in project " + name + ". Please report.")
   }
 
-  // The defaults are: "disabled","standard","standard"....
-  def getCrossVersionHead = if (crossVersion.nonEmpty) crossVersion.head else CrossVersionsDefaults.defaults.head
+  // There are three levels at play. The innermost is the
+  // ProjectBuildConfig, the outer one is the ProjectOptions, and if
+  // neither defines anything, use CrossVersionsDefaults.defaults, which
+  // is also used to fill the positions in the sequences beyond what may
+  // have been defined. Each project may specify CrossVersions as an
+  // Option[Seq], meaning that if no definition is present then it
+  // is None, if an empty array is present, then Some(Seq()), etc.
+  // At some point, each project is processed via expandDefaults,
+  // below, in which the None definitions are replaced with the
+  // general ones offered by the ProjectOptions. From that moment
+  // on, the sequence will be completed for the missing positions
+  // using corresponding elements from the infinite stream supplied
+  // by CrossVersionsDefaults.defaults().
+
+  // call getCrossVersionHead() only after defaults expansion (if at all)
+  def getCrossVersionHead = crossVersion match {
+    case None => CrossVersionsDefaults.defaults.head
+    case Some(seq) => seq.head
+  }
   
   def expandDefaults(defaults: ProjectOptions) = {
-    val cv = if (crossVersion.nonEmpty) crossVersion else defaults.crossVersion
+    val cv = crossVersion getOrElse defaults.crossVersion:Seq[String]
     val jg = useJGit getOrElse defaults.useJGit
     val sp = space getOrElse defaults.space
-    copy(crossVersion = cv, useJGit = Some(jg), space = Some(sp))
+    copy(crossVersion = Some(cv), useJGit = Some(jg), space = Some(sp))
   }
 
   // sanity check on the project name
   Utils.testProjectName(name)
 }
 object CrossVersionsDefaults {
-  def defaults = Stream("disabled") ++ Stream.continually("standard")
+  def defaults = "disabled" +: Stream.continually("standard")
 }
 
 // Do keep the one above and the one below in sync
@@ -63,7 +80,7 @@ private case class ProjectBuildConfigShadow(name: String,
   @JsonProperty("set-version") setVersion: Option[String],
   @JsonProperty("set-version-suffix") setVersionSuffix: Option[String],
   deps: Option[DepsModifiers] = None,
-  @JsonProperty("cross-version") crossVersion: SeqString/*Levels*/ = Seq.empty,
+  @JsonProperty("cross-version") crossVersion: Option[SeqString/*Levels*/] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = None,
   extra: JsonNode = null)
@@ -437,7 +454,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
     ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.setVersionSuffix,
-        generic.deps, generic.crossVersion, generic.useJGit, generic.space, newData)
+        generic.deps, generic.crossVersion map {_.s}, generic.useJGit, generic.space, newData)
   }
 }
 /**

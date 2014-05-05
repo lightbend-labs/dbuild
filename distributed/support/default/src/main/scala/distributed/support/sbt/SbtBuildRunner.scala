@@ -77,16 +77,19 @@ object SbtBuilder {
         debug = debug)
     SbtRunner.placeGenArtsInputFile(projectDir, buildIn)
 
-    // SHOULD BE DISABLED also disabled (see below)
+    // this "ivyCache" is not used for all the levels in which rewiring takes place; for those levels
+    // the "onLoad" sets the ivy cache to a level-specific location. However for the topmost levels,
+    // in which there is no rewiring or setting adjustments, the ivy cache in use will be the one
+    // specified here. No rematerialized artifacts will end up there, hence no possible collisions.
     val dbuildSbtDir = projectDir / dbuildSbtDirName
-    val ivyCache = dbuildSbtDir / "elsewhere" / "ivy2"
+    val topIvyCache = dbuildSbtDir / "topIvy" / "ivy2"
 
     runner.run(
       projectDir = projectDir,
       sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,
       javaProps = Map(
-        "sbt.ivy.home" -> ivyCache.getAbsolutePath
+        "sbt.ivy.home" -> topIvyCache.getAbsolutePath
       ),
       /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */ 
       extraArgs = config.config.options)((config.config.commands).:+("dbuild-build"): _*)

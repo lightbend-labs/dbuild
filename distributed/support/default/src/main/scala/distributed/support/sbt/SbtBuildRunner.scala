@@ -35,9 +35,6 @@ case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, /* not fu
 // script...
 object SbtBuilder {
 
-  def writeRepoFile(repos: List[xsbti.Repository], config: File, repo: File): Unit =
-    Repositories.writeRepoFile(repos, config, "build-local" -> repo.toURI.toASCIIString)
-
   def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig,
     log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
 
@@ -83,6 +80,8 @@ object SbtBuilder {
     // specified here. No rematerialized artifacts will end up there, hence no possible collisions.
     val dbuildSbtDir = projectDir / dbuildSbtDirName
     val topIvyCache = dbuildSbtDir / "topIvy" / "ivy2"
+    // the top levels also do not get the repositories adjustment offered by FixResolvers2() in
+    // DistributedRunner, and rely on the "repositories" file prepared by initSbtGlobalBase()
 
     runner.run(
       projectDir = projectDir,

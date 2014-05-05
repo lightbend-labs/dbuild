@@ -114,20 +114,7 @@ object SbtRunner {
 
   /** inits global base and returns location of launcher jar file. */
   private def initSbtGlobalBase(repos: List[xsbti.Repository], dir: File, debug: Boolean): File = {
-    /*
-     * Let's transfer the plugin and other settings to
-     * each build/extraction local dir. That is necessary
-     * to support plugins, and to use the new onLoad-based
-     * model of extraction/building.
-     * 
-    val pluginDir = dir / "plugins"
-    pluginDir.mkdirs
-    writeQuietIvyLogging(pluginDir, debug)
-    if (!(pluginDir / "deps.sbt").exists) {
-      writeDeps(pluginDir / "deps.sbt")
-      //transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
-    }
-    */
+
     val launcherDir = dir / "launcher"
     val launcherJar = launcherDir / "sbt-launch.jar"
     if (!launcherJar.exists) {
@@ -136,8 +123,12 @@ object SbtRunner {
     }
     //
     // TODO!!! Different builds may use different lists of
-    // repositories, and this location is SINGLE AND SHARED,
-    // which absolutely shouldn't be the case.
+    // repositories, and this location is SINGLE AND SHARED.
+    // It works right now as we have no locking and no parallel
+    // executions of dbuild, and the repositories file is
+    // overwritten each time, before starting. When locking and
+    // multiple dbuild invocations are supported, the sbt global
+    // base and the "repositories" file need to be made unique.
     val repoFile = dir / "repositories"
     // always rewrite the repo file
     writeRepoFile(repos, repoFile)
@@ -345,11 +336,12 @@ object SbtRunner {
    *  Perform a state transformation using onLoad()
    */
   def onLoad(activity: String) = {
+    // Tests. TODO: remove
     //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); Thread.dumpStack(); u }\n\n"
     //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); import scala.collection.JavaConversions._; val t=Thread.getAllStackTraces; val z=t.iterator; z foreach { case (a,b) => s.log.warn(\"Thread \"+a.getName); b foreach {k=> s.log.warn(\" at: \"+k)}}; u }\n\nivyPaths in Global <<= (baseDirectory in Global) { d => new IvyPaths(d, d / \""+"..."+"\" }\n\n"
+    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths,fullResolvers) map { case (u,s,p,r) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); s.log.warn(\"Full resolvers:\"); r foreach {x: sbt.Resolver => s.log.warn(x.toString) }; s.log.warn(\"End resolvers.\"); u }\n\n"
 
-    // "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
-        "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths,fullResolvers) map { case (u,s,p,r) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); s.log.warn(\"Full resolvers:\"); r foreach {x: sbt.Resolver => s.log.warn(x.toString) }; s.log.warn(\"End resolvers.\"); u }\n\n"
+     "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
   }
 
   // stuff related to generateArtifacts()

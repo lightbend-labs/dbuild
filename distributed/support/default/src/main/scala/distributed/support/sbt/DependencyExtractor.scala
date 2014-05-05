@@ -46,7 +46,7 @@ object SbtExtractor {
     // - create in levels 0..n-1 a work directory (".dbuild", SbtRunner.dbuildSbtDirName to be precise)
     // in order to house the extraction output where each level is the main dir, followed by "/project" n times.
     //
-    // We know that projectDir exists, and that it contains no extranoues files (as per the resolve() contract)
+    // We know that projectDir exists, and that it contains no extraneous files (as per the resolve() contract)
     // So:
     val levels = SbtRunner.buildLevels(projectDir)
     log.debug("This sbt build has definitions on " + levels + " levels.")
@@ -84,7 +84,7 @@ object SbtExtractor {
       projectDir = projectDir,
       sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,
-      extraArgs = extra.options)((extra.commands ++ setScalaCommand /* TODO: commands are ignored right now */).:+(""): _*)
+      extraArgs = extra.options)((setScalaCommand ++ extra.commands): _*) // no extraction command is invoked; all is done by OnLoad()
 
     ExtractedBuildMeta(SbtRunner.collectOutputFiles[ProjMeta](projectDir, extractionOutputFileName, levels, log, debug))
   }

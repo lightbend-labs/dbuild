@@ -672,6 +672,7 @@ object DistributedRunner {
 
   private def newState(state: State, extracted: Extracted, update: Seq[Setting[_]] => Seq[Setting[_]]) = {
     import extracted._
+
     val oldSettings = session.mergeSettings
     val newSettings = update(oldSettings)
     // Session strings can't be replayed, but are useful for debugging
@@ -753,8 +754,13 @@ object DistributedRunner {
     val log = sbt.ConsoleLogger()
     if (rewireInfo.debug) log.setLevel(Level.Debug)
 
+    // The property "dbuild.sbt-runner.last-msg" should also be set, as it is prepared
+    // by SbtRunner. Should it not be set, Option() will return None, and the assignment
+    // will fail
+    val Some(lastMsgFileName) = Option(System.getProperty("dbuild.sbt-runner.last-msg"))
+    val lastMsgFile = new File(lastMsgFileName)
+
     val dbuildDir = baseDirectory / dbuildSbtDirName
-    val lastMsgFile = dbuildDir / lastErrorMessageFileName
 
     val modules = getModuleRevisionIds(state, rewireInfo.subproj, log)
 
@@ -785,9 +791,11 @@ object DistributedRunner {
     val log = sbt.ConsoleLogger()
     if (generateArtifactsInfo.debug) log.setLevel(Level.Debug)
 
-    val dbuildDir = baseDirectory / dbuildSbtDirName
-    val lastMsgFile = dbuildDir / lastErrorMessageFileName
+    val Some(lastMsgFileName) = Option(System.getProperty("dbuild.sbt-runner.last-msg"))
+    val lastMsgFile = new File(lastMsgFileName)
 
+    val dbuildDir = baseDirectory / dbuildSbtDirName
+    
     def publishSettings(oldSettings: Seq[Setting[_]]) =
       preparePublishSettings(generateArtifactsInfo.info, log, oldSettings)
 

@@ -253,7 +253,9 @@ object DependencyAnalysis {
     val dbuildDir = baseDirectory / dbuildSbtDirName
     val resultFile = dbuildDir / extractionOutputFileName
     val inputFile = dbuildDir / extractionInputFileName
-    val lastMsgFile = dbuildDir / lastErrorMessageFileName
+
+    val Some(lastMsgFileName) = Option(System.getProperty("dbuild.sbt-runner.last-msg"))
+    val lastMsgFile = new File(lastMsgFileName)
 
     saveLastMsg(lastMsgFile, printDependencies(_, inputFile, resultFile))(state)
   }

@@ -209,9 +209,6 @@ object SbtRunner {
     /** Extraction input data */
     val extractionInputFileName = "extraction-input"
 
-    /** if the dbuild sbt plugin stops prematurely, save the exception information here */
-    val lastErrorMessageFileName = "last-error-message"
-
     /**
      * the name of the files used to pass rewire information
      * to the (onLoad-driven) rewiring code for each level

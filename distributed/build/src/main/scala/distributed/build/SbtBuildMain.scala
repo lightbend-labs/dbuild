@@ -116,7 +116,14 @@ class SbtBuildMain extends xsbti.AppMain {
             if (debug) println("Including properties file: " + s)
             val syntax = ConfigSyntax.PROPERTIES
             val parseOptions = ConfigParseOptions.defaults().setSyntax(syntax).setAllowMissing(false)
-            val config = ConfigFactory.parseURL(new java.net.URI(s).toURL, parseOptions)
+            val url = try {
+              new java.net.URI(s).toURL
+            } catch {
+              case e: IllegalArgumentException =>
+                println("Malformed reference to external properties (did you forget \"file:\"?): " + s)
+                throw e
+            }
+            val config = ConfigFactory.parseURL(url, parseOptions)
             config.atKey("vars")
           }
           val initialConfig = ConfigFactory.parseFile(configFile)

@@ -530,7 +530,7 @@ case class SbtExtraConfig(
    */
   // None is interpreted as default: use build.extraction-version
   @JsonProperty("extraction-version") extractionVersion: Option[String] = None
-  ) extends ExtraConfig
+) extends ExtraConfig
 
 object BuildSystemExtras {
   val buildSystems: Map[String, java.lang.Class[_ <: ExtraConfig]] = Map(

@@ -22,7 +22,7 @@ case class ProjectBuildConfig(name: String,
   // if both set-version and set-version-suffix are specified,
   // then set-version will take precedence
   @JsonProperty("set-version-suffix") setVersionSuffix: Option[String],
-  deps: Option[DepsModifiers] = None,
+  deps: SeqDepsModifiers = Seq.empty,
   // the default crossVersion for ProjectBuildConfig is an empty
   // sequence: that means the values will be taken from the enclosing
   // ProjectOptions record
@@ -79,7 +79,7 @@ private case class ProjectBuildConfigShadow(name: String,
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
   @JsonProperty("set-version-suffix") setVersionSuffix: Option[String],
-  deps: Option[DepsModifiers] = None,
+  deps: SeqDepsModifiers = Seq.empty,
   @JsonProperty("cross-version") crossVersion: Option[SeqString/*Levels*/] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = None,
@@ -343,6 +343,21 @@ object SeqDBC {
   implicit def SeqToSeqDBC(s: Seq[DistributedBuildConfig]): SeqDBC = SeqDBC(s)
   implicit def SeqDBCToSeq(a: SeqDBC): Seq[DistributedBuildConfig] = a.s
 }
+
+/**
+ * For DepsModifiers, we can have one modifier per level, for sbt specifically.
+ */
+@JsonSerialize(using = classOf[SeqDMSerializer])
+@JsonDeserialize(using = classOf[SeqDMDeserializer])
+case class SeqDepsModifiers(override val s:Seq[DepsModifiers]) extends Flex[DepsModifiers](s)
+class SeqDMDeserializer extends SeqFlexDeserializer[DepsModifiers,SeqDepsModifiers]
+class SeqDMSerializer extends SeqFlexSerializer[DepsModifiers]
+object SeqDepsModifiers {
+  implicit def SeqToSeqDM(s: Seq[DepsModifiers]): SeqDepsModifiers = SeqDepsModifiers(s)
+  implicit def SeqDMToSeq(a: SeqDepsModifiers): Seq[DepsModifiers] = a.s
+  implicit def OptToSeqDM(o: Option[DepsModifiers]): SeqDepsModifiers = SeqDepsModifiers(o.toSeq)
+}
+
 
 /**
  * The generic auto-wrapping magic

@@ -750,7 +750,6 @@ object DistributedRunner {
     val Some(baseDirectory) = sbt.Keys.baseDirectory in ThisBuild get extracted.structure.data
     val inputFile = rewireInputFile(baseDirectory)
     val rewireInfo = readValue[RewireInput](inputFile)
-
     val log = sbt.ConsoleLogger()
     if (rewireInfo.debug) log.setLevel(Level.Debug)
 

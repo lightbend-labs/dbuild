@@ -52,20 +52,6 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
 
   def extractDependencies(config: ExtractionConfig, baseDir: File, extr: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
-    // Verify the sbt version number: the new rewiring mechanism requires
-    // sbt >0.13.2 and >0.12.4, as up to those versions existing bugs will prevent
-    // onLoad from working correctly.
-    val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
-    ec.sbtVersion match {
-      case Some(str @ regex(major, minor, rev)) =>
-        if (major == "0" && (
-          minor.toInt < 12 ||
-          (minor == "12" && rev.toInt < 5) ||
-          (minor == "13" && rev.toInt < 5)))
-          sys.error("dbuild 0.9+ requires sbt > 0.12.4 or sbt > 0.13.2. Invalid: " + str)
-      case Some(str) => sys.error("Cannot parse sbt version number: " + str)
-      case None => sys.error("Internal error: sbt version is None in extractDependencies(). Please report")
-    }
     val projDir = projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(extractor)(projDir, ec, log, debug)
   }

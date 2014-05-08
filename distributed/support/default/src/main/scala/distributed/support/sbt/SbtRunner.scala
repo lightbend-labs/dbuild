@@ -33,7 +33,30 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
     javaProps: Map[String, String] = Map.empty,
     javaArgs: Seq[String] = SbtRunner.defaultJavaArgs,
     extraArgs: Seq[String] = Seq.empty)(args: String*): Unit = {
-    removeProjectBuild(projectDir, log)
+
+    val useSbtVersion = if (sbtVersion != "standard") {
+      removeProjectBuild(projectDir, log)
+      log.info("Using sbt version: " + sbtVersion)
+      sbtVersion
+    } else {
+      val ver = getProjectBuild(projectDir) getOrElse
+        sys.error("This project does not define an sbt version with a build.properties file. Please specify one using the \"sbt-version\" option.")
+      log.info("Using the sbt version specified by the project: " + ver)
+      ver
+    }
+    // Verify the sbt version number: the new rewiring mechanism requires
+    // sbt >0.13.2 and >0.12.4, as up to those versions existing bugs will prevent
+    // onLoad from working correctly.
+    val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
+    useSbtVersion match {
+      case regex(major, minor, rev) =>
+        if (major == "0" && (
+          minor.toInt < 12 ||
+          (minor == "12" && rev.toInt < 5) ||
+          (minor == "13" && rev.toInt < 3)))
+          sys.error("dbuild 0.9 requires at least sbt 0.12.5 or sbt 0.13.3. Invalid: " + useSbtVersion)
+      case _ => sys.error("Cannot parse sbt version number: " + useSbtVersion)
+    }
 
     IO.withTemporaryFile("sbtrunner", "lastExceptionMessage") { lastMsg =>
       // TODO: the sbt version in the project description is always set to some version
@@ -41,7 +64,7 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
       val cmd = SbtRunner.makeShell(
         launcherJar.getAbsolutePath,
         defaultProps + ("dbuild.sbt-runner.last-msg" -> lastMsg.getCanonicalPath,
-          "sbt.version" -> sbtVersion),
+          "sbt.version" -> useSbtVersion),
         javaProps,
         javaArgs,
         extraArgs)(args: _*)
@@ -74,6 +97,20 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
       log.debug("Removing " + buildProps.getAbsolutePath)
       IO.delete(buildProps)
     }
+  }
+
+  // if sbt-version is set to "standard", try to parse an existing
+  // "build.properties" file
+  private def getProjectBuild(projectDir: File): Option[String] = {
+    val buildProps = projectDir / "project" / "build.properties"
+    if (buildProps.exists()) {
+      val lines = scala.io.Source.fromFile(buildProps).getLines
+      val regex = " *sbt.version *= *([^ ]*) *".r
+      val sbtVer = (for {
+        regex(v) <- lines
+      } yield v).toList.headOption
+      sbtVer
+    } else None
   }
 
   override def toString = "Sbt(@%s)" format (globalBase.getAbsolutePath)

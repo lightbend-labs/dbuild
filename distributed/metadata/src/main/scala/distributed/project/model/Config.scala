@@ -267,10 +267,9 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   /* deprecated, see deserializer */
   options: Option[DeprecatedBuildOptions],
   @JsonProperty("cross-version") crossVersion: SeqString/*Levels*/ = Seq.empty, //all missing values will be "disabled"
-  // NEVER CHANGE the "0.12.4" below: the default of default will remain 0.12.4
-  // also in the future (for repeatability); if the user wants a default of 0.13.0,
-  // they can specify "build.sbt-version = 0.13.0"
-  @JsonProperty("sbt-version") sbtVersion: String = "0.12.4",
+  // if "standard" (the default), use whatever sbt version is defined by the
+  // project. If none is defined, stop and ask for one.
+  @JsonProperty("sbt-version") sbtVersion: String = "standard",
   // This option applies to all sbt-based projects, unless overridden.
   // see SbtExtraConfig for details.
   @JsonProperty("extraction-version") extractionVersion: String = "standard",

@@ -332,7 +332,10 @@ sbt-version
   A string that specifies the version of sbt that should be used to compile
   this dbuild project. If not specified, the sbt version in use will be the
   one specified in the global build options property "sbt-version" (see
-  :doc:`buildOptions`). If that is also missing, sbt 0.12.4 will be used.
+  :doc:`buildOptions`). If that is also missing, the default value "standard"
+  will be assumed. In that case, an attempt will be made to autodetect the
+  required sbt version from the "build.properties" file of the project.
+  Should that also be missing, dbuild will ask you to provide a version number.
 
 projects
   A sequence of strings that identifies a subset of the sbt subprojects that should be

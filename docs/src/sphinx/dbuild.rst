@@ -228,6 +228,15 @@ set-version-suffix
   will become just "0.8.1". If both "set-version-suffix" and "set-version" are defined, the
   latter will take over, replacing the version string entirely.
 
+  If the special string "%commit%" (lowercase) is used for "set-version-suffix", the resulting
+  suffix will be the string "-R" plus the commit of the project. If you prefer a shortened
+  commit string, just add a length to the string; for example, "%commit%10" will use only
+  the first ten character of the commit hash string.
+
+  Important note: an all-numeric suffix string may be interpreted by Maven-related tools
+  as a snapshot version; please make sure to include at least one alphabetic character in
+  your version suffix string, in order to avoid unexpected behaviors.
+
 deps
   The optional "deps" section can be used to modify the way in which dbuild rewires certain
   dependencies of this project. For instance, it can be used to force dbuild to "forget" about

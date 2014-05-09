@@ -35,36 +35,16 @@ case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, /* not fu
 // script...
 object SbtBuilder {
 
-  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig,
+  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig, 
     log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
 
-    // we do the rewiring on each level using onLoad; we generate the artifacts at the end
-    val levels = SbtRunner.buildLevels(projectDir)
-    // create the .dbuild dirs in each level (we will use it to store the ivy cache, and other info)
-    SbtRunner.prepDBuildDirs(projectDir, levels)
-
-    // preparation of the sbt files used to drive rewiring, via onLoad
-    def generateSbtFiles(allButLast: String, allButFirst: String, all: String): (String, String, String) =
-      (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
-    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
-    val allButFirst = SbtRunner.addDBuildPlugin
-    val all = SbtRunner.ivyQuiet(debug)
-    val (first, middle, last) = generateSbtFiles(allButLast, allButFirst, all)
-    val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
-    SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
-
+    // everything needed for the automatic rewiring, driven by
+    // the onLoad() calls on each level
     // now, let's prepare and place the input data to rewiring
-    val ins = config.info.artifacts.materialized
+    val arts = config.info.artifacts
     val subprojs = config.info.subproj
-    
-    // The defaults are: "disabled","standard","standard"....
-    val defaultCrossVersions = CrossVersionsDefaults.defaults
-    val crossVersionStream = config.crossVersion.toStream ++ defaultCrossVersions.drop(config.crossVersion.length)
-    val inputDataAll = (ins, subprojs, crossVersionStream).zipped map {
-      case (in, subproj, cross) =>
-        RewireInput(in, subproj, cross, debug)
-    }
-    SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll, log, debug)
+    val crossVers = config.crossVersion
+    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, log, debug)
 
     // preparation of the input data to generateArtifacts()
     // This is for the first level only
@@ -93,5 +73,35 @@ object SbtBuilder {
       /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */ 
       extraArgs = config.config.options)((config.config.commands).:+("dbuild-build"): _*)
     return readValue[BuildArtifactsOut](buildArtsFile(projectDir))
+  }
+  
+  def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
+      subprojs: Seq[Seq[String]], crossVers: Seq[String],
+      log: _root_.sbt.Logger, debug: Boolean): Unit = {
+    // we do the rewiring on each level using onLoad; we generate the artifacts at the end
+    val levels = SbtRunner.buildLevels(projectDir)
+    // create the .dbuild dirs in each level (we will use it to store the ivy cache, and other info)
+    SbtRunner.prepDBuildDirs(projectDir, levels)
+
+    // preparation of the sbt files used to drive rewiring, via onLoad
+    def generateSbtFiles(allButLast: String, allButFirst: String, all: String): (String, String, String) =
+      (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
+    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
+    val allButFirst = SbtRunner.addDBuildPlugin
+    val all = SbtRunner.ivyQuiet(debug)
+    val (first, middle, last) = generateSbtFiles(allButLast, allButFirst, all)
+    val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
+    SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
+
+    // now, let's prepare and place the input data to rewiring
+    val ins = artifacts.materialized
+    // The defaults are: "disabled","standard","standard"....
+    val defaultCrossVersions = CrossVersionsDefaults.defaults
+    val crossVersionStream = crossVers.toStream ++ defaultCrossVersions.drop(crossVers.length)
+    val inputDataAll = (ins, subprojs, crossVersionStream).zipped map {
+      case (in, subproj, cross) =>
+        RewireInput(in, subproj, cross, debug)
+    }
+    SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll, log, debug)
   }
 }

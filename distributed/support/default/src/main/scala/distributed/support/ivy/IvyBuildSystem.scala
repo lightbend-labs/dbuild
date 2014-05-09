@@ -212,6 +212,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
           if (direct) Some(PublishIvyInfo(da2, rewritten = true, optional = optional)) else None
         } getOrElse {
           printIvyDependency(None)
+          // TODO: this code is quite similar to the one in DistributedRunner, except this one only
+          // works on the base level (no plugins). TODO: unify again the two.
           if (a.getName != fixName(a.getName) &&
             // Do not inspect the artifacts that we are building right at this time:
             (fixName(a.getName) != currentName || a.getModuleRevisionId.getOrganisation != currentOrg)) {

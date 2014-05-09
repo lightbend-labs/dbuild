@@ -81,7 +81,8 @@ object DistributedRunner {
       val availableProjects = normalizedProjectNames(refs, baseDirectory)
       val notAvailable = requestedProjects.toSet -- availableProjects
       if (notAvailable.nonEmpty)
-        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\"."))
+        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ")+
+           " Found: "+availableProjects.mkString("\"", "\", \"", "\". "))
     } else sys.error("Internal error: subproject list is empty")
   }
 
@@ -154,27 +155,41 @@ object DistributedRunner {
       // That means we either miss a project in our config, or that we
       // explicitly need such a lax resolution in this case
       // (and we should get a warning about that circumstance anyway).
-      if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled) &&
-        // Do not inspect the artifacts that belong to the project we are building at this time:
-        (!(modules exists { i => i.getOrganisation == m.organization && fixName(i.getName) == fixName(m.name) }))) {
-        // If we are here, it means that this is a library dependency that is required,
-        // that refers to an artifact that is not provided by any project in this build,
-        // and that needs a certain Scala version (range) in order to work as intended.
-        // We check crossVersion: if it requires the correspondence to be exact, we fail;
-        // otherwise we just print a warning and leave Ivy to fail if need be.
-        val msg = "**** Missing dependency: the library " + m.organization + "#" + fixName(m.name) +
-          " is not provided by any project in this configuration file."
-        crossVersion match {
-          case "binaryFull" | "disabled" | "full" =>
-            log.error(msg)
-            log.error("In order to control which version is used, please add the corresponding project to the build file")
-            log.error("(or use \"cross-version:standard\" to ignore (not recommended)).")
-            sys.error("Required dependency not found")
-          case "standard" =>
-            log.warn(msg)
-            log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
-            log.warn("In order to control which version is used, you may want to add this dependency to the dbuild configuration file.")
-          case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+      log.debug("Dependency not rewritten: " + m)
+      // Do not inspect the artifacts that belong to the project we are building at this time:
+      if (!(modules exists { i => i.getOrganisation == m.organization && fixName(i.getName) == fixName(m.name) })) {
+        // Do we have a Scala-based library dependency that was not rewritten? We can recognize it
+        // since there is a cross version suffix attached to the name, hence m.name != fixName(m.name)
+        if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled)) {
+          // If we are here, it means that this is a library dependency that is required,
+          // that refers to an artifact that is not provided by any project in this build,
+          // and that needs a certain Scala version (range) in order to work as intended.
+          // We check crossVersion: if it requires the correspondence to be exact, we fail;
+          // otherwise we just print a warning and leave Ivy to fail if need be.
+          val msg = "**** Missing dependency: the library " + m.organization + "#" + fixName(m.name) +
+            " is not provided by any project in this configuration file."
+          crossVersion match {
+            case "binaryFull" | "disabled" | "full" =>
+              log.error(msg)
+              log.error("In order to control which version is used, please add the corresponding project to the build file")
+              log.error("(or use \"cross-version:standard\" to ignore (not recommended)).")
+              sys.error("Required dependency not found")
+            case "standard" =>
+              log.warn(msg)
+              log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+              log.warn("In order to control which version is used, you may want to add this dependency to the dbuild configuration file.")
+            case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
+          }
+        } else {
+          // in the case of plugins, m.name == fixName(m.name), but we will have additional information in the module
+          // to distinguish this case.
+          // Note that we may also encounter the dbuild plugin itself, among the dependencies, which we normally ignore
+          val attrs=m.extraAttributes
+          if (attrs.contains("e:sbtVersion") && attrs.contains("e:scalaVersion")) {
+            if (m.name != "distributed-sbt-plugin" && m.organization != "com.typesafe.dbuild") {
+              log.info("This sbt plugin is not provided by any project in this dbuild config: " + m.organization + "#" + m.name)
+            }
+          }
         }
       }
       m
@@ -710,6 +725,7 @@ object DistributedRunner {
     import extracted._
     val baseDirectory = Keys.baseDirectory in ThisBuild get structure.data
 
+    
     // note: we don't include config.config.directory here; the user needs to be in the
     // right subdir before entering sbt, in any case, so we should be ok
     baseDirectory map { dir =>
@@ -718,10 +734,18 @@ object DistributedRunner {
         log.warn("No artifacts are dependencies of project " + project + " in build " + builduuid)
         state
       } else {
-        // TODO: support for rewiring plugins as well??... Probably.
-        val modules = getModuleRevisionIds(state, proj.depInfo.head.subproj, log)
-        newState(state, extracted, prepareCompileSettings(log, modules, dir / dbuildDirName, /* TODO FIX THIS: repoDir */ null, arts.head.artifacts, _,
-          proj.config.getCrossVersionHead/*FIXME*/))
+
+        val crossVer = proj.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild.")
+        val subProjs = proj.depInfo.map{_.subproj}
+    //... I will have to place all the additional files, then reload in order to perform the rewiring
+        distributed.support.sbt.SbtBuilder.prepareRewireFilesAndDirs(dir, BuildArtifactsInMulti(arts), subProjs, crossVer, log, debug = true)
+
+        state.reload
+//        
+//        // TODO: support for rewiring plugins as well??... Probably.
+//        val modules = getModuleRevisionIds(state, proj.depInfo.head.subproj, log)
+//        newState(state, extracted, prepareCompileSettings(log, modules, dir / dbuildDirName, /* TODO FIX THIS: repoDir */ null, arts.head.artifacts, _,
+//          proj.config.getCrossVersionHead/*FIXME*/))
       }
     } getOrElse {
       log.error("Key baseDirectory is undefined in ThisBuild: aborting.")
@@ -754,12 +778,6 @@ object DistributedRunner {
     val log = sbt.ConsoleLogger()
     if (rewireInfo.debug) log.setLevel(Level.Debug)
 
-    // The property "dbuild.sbt-runner.last-msg" should also be set, as it is prepared
-    // by SbtRunner. Should it not be set, Option() will return None, and the assignment
-    // will fail
-    val Some(lastMsgFileName) = Option(System.getProperty("dbuild.sbt-runner.last-msg"))
-    val lastMsgFile = new File(lastMsgFileName)
-
     val dbuildDir = baseDirectory / dbuildSbtDirName
 
     val modules = getModuleRevisionIds(state, rewireInfo.subproj, log)
@@ -770,10 +788,14 @@ object DistributedRunner {
        prepareCompileSettings(log, modules, dbuildDir, rewireInfo.in.localRepo, rewireInfo.in.artifacts,
         oldSettings, rewireInfo.crossVersion) ++ restore(oldSettings)
 
-    saveLastMsg(lastMsgFile, { s: State =>
-      newState(s, extracted, newSettings)
+    // The property "dbuild.sbt-runner.last-msg" is normally be set by SbtRunner. However, rewire() may
+    // also be called as part of the reload within "dbuild-setup", in which case the property will not
+    // be set. We don't save the last error message into a file, in that case.
+    val saveMsgDef: (State => State) => (State => State) = Option(System.getProperty("dbuild.sbt-runner.last-msg")) match {
+      case Some(lastMsgFileName) => saveLastMsg(new File(lastMsgFileName), _)
+      case None => identity
     }
-    )(state)
+    saveMsgDef(newState(_, extracted, newSettings))(state)
   }
 
   /**
@@ -808,15 +830,15 @@ object DistributedRunner {
   
   // this command can be called ONLY AFTER the rewiring is complete.
   private def buildIt = Command.command("dbuild-build")(generateArtifacts)
-
-  //  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(saveLastMsg(setupCmd))
+  //
+  private def setItUp = Command.args("dbuild-setup", "<builduuid> <projectNameInDBuild>")(setupCmd)
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
   private def comment = Command.args("//", "// [comments]") { (state, _) => state }
 
   /** Settings you can add your build to print dependencies. */
   def buildSettings: Seq[Setting[_]] = Seq(
     Keys.commands += buildIt,
-    //    Keys.commands += setItUp,
+    Keys.commands += setItUp,
     Keys.commands += comment)
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],

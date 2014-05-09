@@ -309,7 +309,7 @@ object SbtRunner {
    * Place each element of "contents" in the subsequent directories
    * dir, dir/project, dir/project/project, and so on.
    */
-  def writeSbtFiles(mainDir: File, contents: Seq[String], log: Logger, debug: Boolean) =
+  def writeSbtFiles(mainDir: File, contents: Seq[String], log: _root_.sbt.Logger, debug: Boolean) =
     placeFiles(mainDir, contents, dbuildSbtFileName, None, s => if (debug) log.debug("Adding dbuild .sbt file to " + s))
 
   /**
@@ -317,7 +317,7 @@ object SbtRunner {
    * in dir/.dbuild, the second in dir/project/.dbuild, the dir/project/project/.dbuild,
    * and so on.
    */
-  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: Logger, debug: Boolean)(implicit m: Manifest[T]) =
+  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: _root_.sbt.Logger, debug: Boolean)(implicit m: Manifest[T]) =
     placeFiles(mainDir, data.map { writeValue(_) }, fileName, Some(dbuildSbtDirName), s => if (debug) log.debug("Placing one input file in " + s))
 
   def rewireInputFile(dir: File) = dir / dbuildSbtDirName / rewireInputFileName

@@ -189,9 +189,25 @@ class SbtBuildMain extends xsbti.AppMain {
         println("Resolvers:")
         repos foreach println
       }
-      val main = new LocalBuildMain(repos, BuildRunOptions(config.options.cleanup, debug, defaultNotifications))
+      //
+      // create a replacement "option.resolvers" section, that will be included
+      // in the repeatable configuration we will save after extraction
+      //
+      val repoStrings: List[String] = repos map {
+        case m: xsbti.MavenRepository => m.id + ": " + m.url
+        case i: xsbti.IvyRepository => i.id + ": " + i.url + ", " + i.ivyPattern
+        case p: xsbti.PredefinedRepository => p.id.toString
+      }
+      val repoMap = (repoStrings.zipWithIndex map {
+        case (str, index) =>
+          val label = "R" + (("0000" + index.toString).reverse.take(4).reverse)
+          label -> str
+      }).toMap
+      val finalConfig = config.copy(options = config.options.copy(resolvers = repoMap))
+
+      val main = new LocalBuildMain(repos, BuildRunOptions(finalConfig.options.cleanup, debug, defaultNotifications))
       val (outcome, time) = try {
-        timed { main.build(config, configFile.getName, buildTarget) }
+        timed { main.build(finalConfig, configFile.getName, buildTarget) }
       } finally main.dispose()
       println("Result: " + outcome.status)
       println("Build " + (if (outcome.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + time)

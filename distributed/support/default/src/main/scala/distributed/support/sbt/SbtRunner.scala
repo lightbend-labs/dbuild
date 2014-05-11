@@ -40,7 +40,7 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
       sbtVersion
     } else {
       val ver = getProjectBuild(projectDir) getOrElse
-        sys.error("This project does not define an sbt version with a build.properties file. Please specify one using the \"sbt-version\" option.")
+        sys.error("This project does not define an sbt version with a build.properties file, or the value cannot be parsed. Please specify an sbt version using the \"sbt-version\" option.")
       log.info("Using the sbt version specified by the project: " + ver)
       ver
     }

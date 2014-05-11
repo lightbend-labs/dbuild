@@ -61,14 +61,18 @@ object SbtBuilder {
     val dbuildSbtDir = projectDir / dbuildSbtDirName
     val topIvyCache = dbuildSbtDir / "topIvy" / "ivy2"
     // the top levels also do not get the repositories adjustment offered by FixResolvers2() in
-    // DistributedRunner, and rely on the "repositories" file prepared by initSbtGlobalBase()
-
+    // DistributedRunner. However, all levels rely on the "repositories" file written here:
+    val repoFile = dbuildSbtDir / repositoriesFileName
+    SbtRunner.writeRepoFile(repos, repoFile)
+    
     runner.run(
       projectDir = projectDir,
       sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,
       javaProps = Map(
-        "sbt.ivy.home" -> topIvyCache.getAbsolutePath
+        "sbt.ivy.home" -> topIvyCache.getCanonicalPath,
+        // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
+        "sbt.repository.config" -> repoFile.getCanonicalPath
       ),
       /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */ 
       extraArgs = config.config.options)((config.config.commands).:+("dbuild-build"): _*)

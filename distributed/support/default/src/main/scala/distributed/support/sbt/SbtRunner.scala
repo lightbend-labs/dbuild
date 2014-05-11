@@ -158,17 +158,6 @@ object SbtRunner {
       launcherDir.mkdirs
       transferResource("sbt-launch.jar", launcherJar)
     }
-    //
-    // TODO!!! Different builds may use different lists of
-    // repositories, and this location is SINGLE AND SHARED.
-    // It works right now as we have no locking and no parallel
-    // executions of dbuild, and the repositories file is
-    // overwritten each time, before starting. When locking and
-    // multiple dbuild invocations are supported, the sbt global
-    // base and the "repositories" file need to be made unique.
-    val repoFile = dir / "repositories"
-    // always rewrite the repo file
-    writeRepoFile(repos, repoFile)
     launcherJar
   }
 
@@ -266,7 +255,10 @@ object SbtRunner {
      * will be stored, at the end of building
      */
     val outBuildArtsName = "build-out-arts"
-
+    /**
+     * name of a private repositories file created in each project build's .dbuild directory
+     */
+    val repositoriesFileName = "repositories"
   }
 
   import SbtFileNames._

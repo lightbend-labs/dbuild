@@ -53,7 +53,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
   def extractDependencies(config: ExtractionConfig, baseDir: File, extr: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
     val projDir = projectDir(baseDir, ec)
-    SbtExtractor.extractMetaData(extractor)(projDir, ec, log, debug)
+    SbtExtractor.extractMetaData(repos, extractor)(projDir, ec, log, debug)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner,

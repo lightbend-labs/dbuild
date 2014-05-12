@@ -85,14 +85,36 @@ class SbtBuildMain extends xsbti.AppMain {
                |""".stripMargin)
       footer("\nFor more information: http://typesafehub.github.io/distributed-build")
       val properties = props[String](descr = "One or more Java-style properties")
-      val configFile = trailArg[String](required = true, descr = "The name of the dbuild configuration file")
+      val configFile = trailArg[String](required = false, descr = "The name of the dbuild configuration file")
       val target = trailArg[String](required = false, descr = "If a target project name is specified, dbuild will build only that project and its dependencies")
       val debug = opt[Boolean](descr = "Print more debugging information")
       val noResolvers = opt[Boolean](short = 'r', descr = "Disable the parsing of the \"options.resolvers\" section from the dbuild configuration file: only use the resolvers defined in dbuild.properties")
       val noNotify = opt[Boolean](short = 'n', descr = "Disable the notifications defined in the configuration file, and only print a report on the console")
       val local = opt[Boolean](short = 'l', descr = "Equivalent to: --no-resolvers --no-notify")
+      val checkout = new Subcommand("checkout") {
+        banner("""Use "dbuild checkout" to check out one project from a previously compiled
+                 |build projects, preparing sbt for a debugging session.
+                 |Options:
+                 |""".stripMargin)
+        val uuid = trailArg[String](descr = "UUID of the build")
+        val project = trailArg[String](descr = "name of the project")
+        val path = trailArg[String](descr = "path into which the source will be checked out")
+      }
+      conflicts(debug,List(checkout.uuid,checkout.project,checkout.path))
+      conflicts(noResolvers,List(checkout.uuid,checkout.project,checkout.path))
+      conflicts(noNotify,List(checkout.uuid,checkout.project,checkout.path))
+      conflicts(local,List(checkout.uuid,checkout.project,checkout.path))
+      // requireOne(checkout.uuid,configFile) // use manual checking (below) to get a better error message
     }
     try {
+      // Are we running "dbuild checkout"?
+      if (conf.subcommand==Some(conf.checkout)) {
+//        dbuildCheckout(conf.checkout.uuid(), conf.checkout.project(), conf.checkout.path())
+        sys.exit(0)
+      }
+      if (conf.configFile.get.isEmpty) {
+        sys.error("The name of the configuration file is required (unless \"dbuild checkout\" is called).")
+      }
       val configFile = new File(conf.configFile())
       if (!configFile.isFile())
         sys.error("Configuration file \"" + conf.configFile() + "\" not found")

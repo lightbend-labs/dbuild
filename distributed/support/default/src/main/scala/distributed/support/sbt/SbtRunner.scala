@@ -151,7 +151,6 @@ object SbtRunner {
 
   /** inits global base and returns location of launcher jar file. */
   private def initSbtGlobalBase(repos: List[xsbti.Repository], dir: File, debug: Boolean): File = {
-
     val launcherDir = dir / "launcher"
     val launcherJar = launcherDir / "sbt-launch.jar"
     if (!launcherJar.exists) {

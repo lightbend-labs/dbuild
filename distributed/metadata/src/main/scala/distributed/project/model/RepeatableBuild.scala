@@ -62,6 +62,8 @@ case class RepeatableDepInfo(
   // in two separate sequences for convenience, as in the code there is no
   // assumption anywhere that they should be kept in sync. If that need should arise,
   // the two Seqs should probably be converted into a Seq[(String,String)].
+  //
+  // Subproj is the list of subprojects that will be compiled on this level
   subproj: Seq[String])
 
 object RepeatableDistributedBuild {

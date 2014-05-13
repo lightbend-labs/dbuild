@@ -162,7 +162,7 @@ object LocalRepoHelper {
     info
   }
 
-  protected def materializeProjectMetadata(uuid: String, remote: ReadableRepository): ProjectArtifactInfo = {
+  def materializeProjectMetadata(uuid: String, remote: ReadableRepository): ProjectArtifactInfo = {
     def getMeta[T](makeMeta: String => String)(implicit m: scala.reflect.Manifest[T]) = {
       val key = makeMeta(uuid)
       val file = remote get key

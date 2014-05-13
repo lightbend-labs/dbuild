@@ -64,7 +64,7 @@ object SbtBuilder {
     // DistributedRunner. However, all levels rely on the "repositories" file written here:
     val repoFile = dbuildSbtDir / repositoriesFileName
     SbtRunner.writeRepoFile(repos, repoFile)
-    
+
     runner.run(
       projectDir = projectDir,
       sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),

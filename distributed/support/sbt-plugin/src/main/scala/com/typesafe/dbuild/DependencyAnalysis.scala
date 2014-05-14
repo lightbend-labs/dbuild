@@ -58,12 +58,18 @@ object DependencyAnalysis {
   //
   // Use these normalization routines only when printing or comparing
   //
-  def normalizedProjectName(s: ProjectRef, baseDirectory: File) = {
+  def normalizedProjectName(s: ProjectRef, baseDirectory: File) = normalizedProjectNameString(s.project, baseDirectory)
+  def normalizedProjectNameString(name: String, baseDirectory: File):String = {
     // we only cover the most common cases. The full logic for 0.13 may involve Load.scala (autoID) and the def default* in Build.scala
     val base = StringUtilities.normalize(baseDirectory.getName)
     val defaultIDs = Seq(Build.defaultID(baseDirectory), "root-" + base, base)
     val defaultName = "default-sbt-project"
-    if (defaultIDs contains s.project) defaultName else s.project
+    if (defaultIDs contains name) defaultName else {
+      if (name.endsWith("-build") && base == "project")
+        normalizedProjectNameString(name.dropRight(6), baseDirectory.getParentFile)
+      else
+        name
+    }
   }
   def normalizedProjectNames(r: Seq[ProjectRef], baseDirectory: File) = r map { p => normalizedProjectName(p, baseDirectory) }
 
@@ -239,7 +245,7 @@ object DependencyAnalysis {
     // return just this version string now; we will append to it more stuff prior to building
 
     val meta = model.ProjMeta(version, deps, normalizedProjectNames(refs)) // return the new list of subprojects as well!
-    writeStringToFile(resultFile, writeValue(meta), /* VM default */null:String)
+    writeStringToFile(resultFile, writeValue(meta), /* VM default */ null: String)
 
     state
   }

@@ -75,7 +75,7 @@ object ProjectRepoMain {
       val projects = for {
           SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(uuid, cache).toSeq
           project <- build.repeatableBuilds
-      } yield (project.config.name, project.uuid)
+      } yield (project.configAndExtracted.config.name, project.uuid)
       val names = padStrings(projects map (_._1))
       val uuids = projects map (_._2)
       for((name, id) <- names zip uuids) {

@@ -109,8 +109,8 @@ object RepeatableDistributedBuildSpec extends Specification {
     }
     
     "Must have transitive dependencies" in {
-      val d = sample.repeatableBuilds find (_.config.name == "d") getOrElse sys.error("Could not find repeatable build for d")
-      d.depInfo.head.dependencyUUIDs must contain(sample.repeatableBuilds find (_.config.name == "a") map (_.uuid) getOrElse sys.error("could not find repeatable build for a"))
+      val d = sample.repeatableBuilds find (_.configAndExtracted.config.name == "d") getOrElse sys.error("Could not find repeatable build for d")
+      d.depInfo.head.dependencyUUIDs must contain(sample.repeatableBuilds find (_.configAndExtracted.config.name == "a") map (_.uuid) getOrElse sys.error("could not find repeatable build for a"))
       d.depInfo.head.dependencyUUIDs must not(contain(d.uuid))
     }
     

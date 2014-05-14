@@ -35,8 +35,12 @@ case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, /* not fu
 // script...
 object SbtBuilder {
 
-  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig, 
-    log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+  // If customProcess is not None, the resulting sbt command line will be prepared and then
+  // passed to customProcess, rather than to the regular Process() in SbtRunner. This feature
+  // is used by "dbuild checkout".
+  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig,
+    log: logging.Logger, debug: Boolean, customProcess: Option[(File, logging.Logger, File, Seq[String]) => Unit] = None,
+    targetCommands: Seq[String] = Seq("dbuild-build"))(): Unit = {
 
     // everything needed for the automatic rewiring, driven by
     // the onLoad() calls on each level
@@ -49,9 +53,9 @@ object SbtBuilder {
     // preparation of the input data to generateArtifacts()
     // This is for the first level only
     val buildIn = GenerateArtifactsInput(config.info,
-        measurePerformance = config.config.measurePerformance,
-        runTests = config.config.runTests,
-        debug = debug)
+      measurePerformance = config.config.measurePerformance,
+      runTests = config.config.runTests,
+      debug = debug)
     SbtRunner.placeGenArtsInputFile(projectDir, buildIn)
 
     // this "ivyCache" is not used for all the levels in which rewiring takes place; for those levels
@@ -74,14 +78,14 @@ object SbtBuilder {
         // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
         "sbt.repository.config" -> repoFile.getCanonicalPath
       ),
-      /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */ 
-      extraArgs = config.config.options)((config.config.commands).:+("dbuild-build"): _*)
-    return readValue[BuildArtifactsOut](buildArtsFile(projectDir))
+      /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */
+      extraArgs = config.config.options,
+      process = customProcess)(config.config.commands ++ targetCommands: _*)
   }
-  
+
   def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
-      subprojs: Seq[Seq[String]], crossVers: Seq[String],
-      log: _root_.sbt.Logger, debug: Boolean): Unit = {
+    subprojs: Seq[Seq[String]], crossVers: Seq[String],
+    log: _root_.sbt.Logger, debug: Boolean): Unit = {
     // we do the rewiring on each level using onLoad; we generate the artifacts at the end
     val levels = SbtRunner.buildLevels(projectDir)
     // create the .dbuild dirs in each level (we will use it to store the ivy cache, and other info)

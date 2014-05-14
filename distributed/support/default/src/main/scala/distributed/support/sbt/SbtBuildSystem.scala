@@ -11,6 +11,8 @@ import distributed.repo.core.{Defaults,GlobalDirs}
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
 import distributed.project.{ BuildSystem, BuildData }
+import distributed.project.model.Utils.{ writeValue, readValue }
+import distributed.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
 
 /** Implementation of the SBT build system. */
 class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boolean) extends BuildSystemCore {
@@ -55,6 +57,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
     val projDir = SbtBuildSystem.projectDir(dir, ec)
     val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."), info)
     SbtBuilder.buildSbtProject(repos, runner)(projDir, config, buildData.log, buildData.debug)
+    readValue[BuildArtifactsOut](buildArtsFile(projDir))
   }
 }
 

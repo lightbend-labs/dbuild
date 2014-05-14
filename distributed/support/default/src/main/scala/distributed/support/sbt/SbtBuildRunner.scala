@@ -92,12 +92,11 @@ object SbtBuilder {
     SbtRunner.prepDBuildDirs(projectDir, levels)
 
     // preparation of the sbt files used to drive rewiring, via onLoad
-    def generateSbtFiles(allButLast: String, allButFirst: String, all: String): (String, String, String) =
-      (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
-    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
+    val onlyMiddle = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
+    val onlyFirst = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad, fixPublishSettings=true)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
-    val (first, middle, last) = generateSbtFiles(allButLast, allButFirst, all)
+    val (first, middle, last) = (onlyFirst + all, onlyMiddle + allButFirst + all, allButFirst + all)
     val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
     SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
 

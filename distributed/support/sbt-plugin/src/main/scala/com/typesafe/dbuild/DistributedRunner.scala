@@ -81,8 +81,8 @@ object DistributedRunner {
       val availableProjects = normalizedProjectNames(refs, baseDirectory)
       val notAvailable = requestedProjects.toSet -- availableProjects
       if (notAvailable.nonEmpty)
-        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ")+
-           " Found: "+availableProjects.mkString("\"", "\", \"", "\". "))
+        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
+          " Found: " + availableProjects.mkString("\"", "\", \"", "\". "))
     } else sys.error("Internal error: subproject list is empty")
   }
 
@@ -184,7 +184,7 @@ object DistributedRunner {
           // in the case of plugins, m.name == fixName(m.name), but we will have additional information in the module
           // to distinguish this case.
           // Note that we may also encounter the dbuild plugin itself, among the dependencies, which we normally ignore
-          val attrs=m.extraAttributes
+          val attrs = m.extraAttributes
           if (attrs.contains("e:sbtVersion") && attrs.contains("e:scalaVersion")) {
             if (m.name != "distributed-sbt-plugin" && m.organization != "com.typesafe.dbuild") {
               log.info("This sbt plugin is not provided by any project in this dbuild config: " + m.organization + "#" + m.name)
@@ -346,17 +346,18 @@ object DistributedRunner {
     fixGeneric2(Keys.version, "Updating version strings") { _ => in.version }
 
   def fixResolvers2(dbuildRepoDir: File, log: Logger) =
-    fixGeneric2(Keys.fullResolvers, "Adding resolvers to retrieve build artifacts") { _ map { old =>
-      // make sure to add our resolvers at the beginning!
-      log.debug("Appending local-repo resolvers: "+dbuildRepoDir.getAbsolutePath())
-      Seq(
-        "dbuild-local-repo-maven" at ("file:" + dbuildRepoDir.getAbsolutePath()),
-        Resolver.file("dbuild-local-repo-ivy", dbuildRepoDir)(Resolver.ivyStylePatterns)) ++
-        (old filterNot { r =>
-          val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy"
-        })
+    fixGeneric2(Keys.fullResolvers, "Adding resolvers to retrieve build artifacts") {
+      _ map { old =>
+        // make sure to add our resolvers at the beginning!
+        log.debug("Appending local-repo resolvers: " + dbuildRepoDir.getAbsolutePath())
+        Seq(
+          "dbuild-local-repo-maven" at ("file:" + dbuildRepoDir.getAbsolutePath()),
+          Resolver.file("dbuild-local-repo-ivy", dbuildRepoDir)(Resolver.ivyStylePatterns)) ++
+          (old filterNot { r =>
+            val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy"
+          })
+      }
     }
-  }
 
   // sbt will try to check the scala binary version we use in this project (the full version,
   // including suffixes) against what Ivy reports as the version of the scala library (which is
@@ -395,7 +396,7 @@ object DistributedRunner {
   def fixIvyPaths2(log: Logger) =
     fixGenericTransform2(Keys.baseDirectory) { r: Setting[IvyPaths] =>
       val sc = r.key.scope
-      log.debug("ivy-paths found in scope "+sc)
+      log.debug("ivy-paths found in scope " + sc)
       Keys.ivyPaths in sc <<= (Keys.baseDirectory in sc) {
         d =>
           new IvyPaths(d, Some(sbtIvyCache(d)))
@@ -494,35 +495,35 @@ object DistributedRunner {
       }
     }, log)
 
-//  def fixBuildSettings(config: SbtBuildConfig, state: State): State = {
-//    // TODO: replace with the correct logger
-//    val log = sbt.ConsoleLogger()
-//    log.info("Updating dependencies...")
-//    val extracted = Project.extract(state)
-//    import extracted._
-//    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
-//
-//    dbuildDirectory map { dbuildDir =>
-//      val repoDir = dbuildDir / inArtsDirName
-//
-//      val refs = getProjectRefs(extracted)
-//
-//      // config.info.subproj is the list of projects calculated in DependencyAnalysis;
-//      // conversely, config.config.projects is the list specified in the
-//      // configuration file (in the "extra" section)
-//      val modules = getModuleRevisionIds(state, config.info.subproj.head /* TODO FIX */ , log)
-//
-//      def newSettings(oldSettings: Seq[Setting[_]]) =
-//        preparePublishSettings(config, log, oldSettings) ++
-//          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
-//            oldSettings, config.crossVersion)
-//
-//      newState(state, extracted, newSettings)
-//
-//    } getOrElse {
-//      sys.error("Key baseDirectory is undefined in ThisBuild: aborting.")
-//    }
-//  }
+  //  def fixBuildSettings(config: SbtBuildConfig, state: State): State = {
+  //    // TODO: replace with the correct logger
+  //    val log = sbt.ConsoleLogger()
+  //    log.info("Updating dependencies...")
+  //    val extracted = Project.extract(state)
+  //    import extracted._
+  //    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
+  //
+  //    dbuildDirectory map { dbuildDir =>
+  //      val repoDir = dbuildDir / inArtsDirName
+  //
+  //      val refs = getProjectRefs(extracted)
+  //
+  //      // config.info.subproj is the list of projects calculated in DependencyAnalysis;
+  //      // conversely, config.config.projects is the list specified in the
+  //      // configuration file (in the "extra" section)
+  //      val modules = getModuleRevisionIds(state, config.info.subproj.head /* TODO FIX */ , log)
+  //
+  //      def newSettings(oldSettings: Seq[Setting[_]]) =
+  //        preparePublishSettings(config, log, oldSettings) ++
+  //          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
+  //            oldSettings, config.crossVersion)
+  //
+  //      newState(state, extracted, newSettings)
+  //
+  //    } getOrElse {
+  //      sys.error("Key baseDirectory is undefined in ThisBuild: aborting.")
+  //    }
+  //  }
 
   def printPR(state: State): Unit = {
     val extracted = Project.extract(state)
@@ -689,14 +690,13 @@ object DistributedRunner {
     newState
   }
 
-  
   // TODO: Note to self: is it wise to re-apply onLoad? Probably so, since it is reapplied at the end of the
   // now-modified state
   def restorePreviousOnLoad(previousOnLoad: State => State) =
     fixGeneric2(Keys.onLoad, "Resetting onLoad...") { _ => previousOnLoad }
 
   /** called by onLoad() during building */
-  def rewire(state: State, previousOnLoad: State => State): State = {
+  def rewire(state: State, previousOnLoad: State => State, fixPublishSettings: Boolean = false): State = {
     import distributed.support.sbt.SbtRunner.SbtFileNames._
 
     val extracted = Project.extract(state)
@@ -712,9 +712,16 @@ object DistributedRunner {
 
     def restore(oldSettings: Seq[Setting[_]]) = restorePreviousOnLoad(previousOnLoad)(oldSettings, log)
 
+    def publishSettings(oldSettings: Seq[Setting[_]]) = if (fixPublishSettings) {
+      val Some(baseDirectory) = sbt.Keys.baseDirectory in ThisBuild get extracted.structure.data
+      val inputFile = genArtsInputFile(baseDirectory)
+      val generateArtifactsInfo = readValue[GenerateArtifactsInput](inputFile)
+      preparePublishSettings(generateArtifactsInfo.info, log, oldSettings)
+    } else Seq.empty
+
     def newSettings(oldSettings: Seq[Setting[_]]) =
-       prepareCompileSettings(log, modules, dbuildDir, rewireInfo.in.localRepo, rewireInfo.in.artifacts,
-        oldSettings, rewireInfo.crossVersion) ++ restore(oldSettings)
+      prepareCompileSettings(log, modules, dbuildDir, rewireInfo.in.localRepo, rewireInfo.in.artifacts,
+        oldSettings, rewireInfo.crossVersion) ++ publishSettings(oldSettings) ++ restore(oldSettings)
 
     // The property "dbuild.sbt-runner.last-msg" is normally be set by SbtRunner. However, rewire() may
     // also be called as part of the reload within "dbuild-setup", in which case the property will not
@@ -735,7 +742,6 @@ object DistributedRunner {
 
     val extracted = Project.extract(state)
     val Some(baseDirectory) = sbt.Keys.baseDirectory in ThisBuild get extracted.structure.data
-    val buildArts = buildArtsFile(baseDirectory)
     val inputFile = genArtsInputFile(baseDirectory)
     val generateArtifactsInfo = readValue[GenerateArtifactsInput](inputFile)
 
@@ -745,18 +751,10 @@ object DistributedRunner {
     val Some(lastMsgFileName) = Option(System.getProperty("dbuild.sbt-runner.last-msg"))
     val lastMsgFile = new File(lastMsgFileName)
 
-    val dbuildDir = baseDirectory / dbuildSbtDirName
-    
-    def publishSettings(oldSettings: Seq[Setting[_]]) =
-      preparePublishSettings(generateArtifactsInfo.info, log, oldSettings)
-
-    saveLastMsg(lastMsgFile, { s: State =>
-      val ns = newState(s, extracted, publishSettings)
-      buildStuff(ns, buildArts, generateArtifactsInfo)
-    }
-    )(state)
+    val buildArts = buildArtsFile(baseDirectory)
+    saveLastMsg(lastMsgFile, buildStuff(_, buildArts, generateArtifactsInfo))(state)
   }
-  
+
   // this command can be called ONLY AFTER the rewiring is complete.
   private def buildIt = Command.command("dbuild-build")(generateArtifacts)
   // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session

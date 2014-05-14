@@ -34,14 +34,17 @@ case class ProjectConfigAndExtracted(config: ProjectBuildConfig, extracted: Extr
  * included in the BuildInput, which eventually gets to the build system
  * via LocalBuildRunner, when the project is eventually built.
  */
-case class RepeatableProjectBuild(config: ProjectBuildConfig,
+case class RepeatableProjectBuild(configAndExtracted: ProjectConfigAndExtracted,
   // see below the description of RepeatableDepInfo for details
   depInfo: Seq /*Levels*/ [RepeatableDepInfo]) {
   /** UUID for this project. */
   def uuid = hashing sha1 this
 
-  def extra[T](implicit m: Manifest[T]) = config.getExtra[T]
-  def getCommit = try Option((new java.net.URI(config.uri)).getFragment) catch {
+  // shortcut to the ProjectBuildConfig
+  def config = configAndExtracted.config
+
+  def extra[T](implicit m: Manifest[T]) = configAndExtracted.config.getExtra[T]
+  def getCommit = try Option((new java.net.URI(configAndExtracted.config.uri)).getFragment) catch {
     case e: java.net.URISyntaxException => None
   }
 }
@@ -57,14 +60,12 @@ case class RepeatableDepInfo(
   // The list of dependencies is transitive (within the boundaries
   // of the relevant spaces, see below)
   dependencyNames: Seq[String], // names corresponding to a RepeatableProjectBuild
-  dependencyUUIDs: Seq[String], // uuids corresponding to a RepeatableProjectBuild
+  dependencyUUIDs: Seq[String]  // uuids corresponding to a RepeatableProjectBuild
   // dependencyUUIDs and dependencyNames refer to the same elements. They are
   // in two separate sequences for convenience, as in the code there is no
   // assumption anywhere that they should be kept in sync. If that need should arise,
   // the two Seqs should probably be converted into a Seq[(String,String)].
-  //
-  // Subproj is the list of subprojects that will be compiled on this level
-  subproj: Seq[String])
+)
 
 object RepeatableDistributedBuild {
   def fromExtractionOutcome(outcome: ExtractionOK) = RepeatableDistributedBuild(outcome.pces)
@@ -82,7 +83,7 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
   /** Our own graph helper for interacting with the build meta information. */
   lazy val graph = new BuildGraph(builds)
   /** All of our repeatable build configuration in build order. */
-  lazy val buildMap = repeatableBuilds.map(b => b.config.name -> b).toMap
+  lazy val buildMap = repeatableBuilds.map(b => b.configAndExtracted.config.name -> b).toMap
   lazy val repeatableBuilds: Seq[RepeatableProjectBuild] = {
     def makeMeta(remaining: Seq[ProjectConfigAndExtracted],
       current: Map[String, RepeatableProjectBuild],
@@ -112,12 +113,12 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
               //
               dep <- (subgraph - head) if canSeeSpace(fromSpace, dep.getSpace.to)
             } yield current get dep.config.name getOrElse sys.error("Internal error: unexpected circular dependency. Please report.")
-            val sortedDeps = dependencies.toSeq.sortBy(_.config.name)
-            RepeatableDepInfo(info.version, sortedDeps.map(_.config.name), sortedDeps.map(_.uuid), info.subproj)
+            val sortedDeps = dependencies.toSeq.sortBy(_.configAndExtracted.config.name)
+            RepeatableDepInfo(info.version, sortedDeps.map(_.configAndExtracted.config.name), sortedDeps.map(_.uuid))
         }
-        val headMeta = RepeatableProjectBuild(head.config,
+        val headMeta = RepeatableProjectBuild(head,
           allDependencies) // pick defaults if no BuildOptions specified
-        makeMeta(remaining.tail, current + (headMeta.config.name -> headMeta), ordered :+ headMeta)
+        makeMeta(remaining.tail, current + (head.config.name -> headMeta), ordered :+ headMeta)
       }
     val orderedBuilds = (graph.safeTopological map (_.value)).reverse
     makeMeta(orderedBuilds, Map.empty, Seq.empty)

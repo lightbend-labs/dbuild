@@ -60,7 +60,7 @@ class LocalBuildRunner(builder: BuildRunner,
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
       val results = builder.runBuild(build, dir,
-        BuildInput(dependencies, version, build.depInfo.map { _.subproj }, writeRepo, build.config.name), this, buildData)
+        BuildInput(dependencies, version, build.configAndExtracted.extracted.projInfo.map{_.subproj}, writeRepo, build.config.name), this, buildData)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
       markSuccess(dir)
       results

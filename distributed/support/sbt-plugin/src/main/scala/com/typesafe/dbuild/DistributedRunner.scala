@@ -736,9 +736,9 @@ object DistributedRunner {
       } else {
 
         val crossVer = proj.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild.")
-        val subProjs = proj.depInfo.map{_.subproj}
+//        val subProjs = proj.depInfo.map{_.subproj}
     //... I will have to place all the additional files, then reload in order to perform the rewiring
-        distributed.support.sbt.SbtBuilder.prepareRewireFilesAndDirs(dir, BuildArtifactsInMulti(arts), subProjs, crossVer, log, debug = true)
+//        distributed.support.sbt.SbtBuilder.prepareRewireFilesAndDirs(dir, BuildArtifactsInMulti(arts), subProjs, crossVer, log, debug = true)
 
         state.reload
 //        

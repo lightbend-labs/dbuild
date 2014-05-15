@@ -759,13 +759,9 @@ object DistributedRunner {
 
   // this command can be called ONLY AFTER the rewiring is complete.
   private def buildIt = Command.command("dbuild-build")(generateArtifacts)
-  // The "//" command does nothing, which is exactly what should happen if anyone tries to save and re-play the session
-  private def comment = Command.args("//", "// [comments]") { (state, _) => state }
 
   /** Settings you can add your build to print dependencies. */
-  def buildSettings: Seq[Setting[_]] = Seq(
-    Keys.commands += buildIt,
-    Keys.commands += comment)
+  def buildSettings: Seq[Setting[_]] = Seq(Keys.commands += buildIt)
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
     cross: CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {

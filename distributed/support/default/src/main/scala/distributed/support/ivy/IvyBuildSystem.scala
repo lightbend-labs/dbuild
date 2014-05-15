@@ -28,6 +28,7 @@ import distributed.support.ivy.IvyMachinery.PublishIvyInfo
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
 import distributed.repo.core.GlobalDirs.dbuildHomeDir
+import distributed.support.SbtUtil.pluginAttrs
 
 /** Implementation of the Scala  build system. workingDir is the "target" general dbuild dir */
 class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystemCore {
@@ -138,7 +139,9 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val trimName = fixName(name)
       val cross = if (trimName != name) name.substring(trimName.length) else ""
       val classifier = Option(a.getExtraAttributes.get("classifier").asInstanceOf[String])
-      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/ , cross)
+      val q=a.getExtraAttributes()
+      val o=mr.getExtraAttributes()
+      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/ , cross, pluginAttrs(mr))
     }
 
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq

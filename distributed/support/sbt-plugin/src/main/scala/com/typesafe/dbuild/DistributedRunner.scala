@@ -21,6 +21,8 @@ import distributed.project.build.BuildDirs._
 import distributed.project.model.BuildInput
 import distributed.support.sbt.SbtRunner.{ sbtIvyCache, rewireInputFile, buildArtsFile, genArtsInputFile }
 import distributed.support.sbt.{ RewireInput, GenerateArtifactsInput }
+import distributed.support.SbtUtil.{ pluginAttrs, fixAttrs }
+import distributed.project.model.SbtPluginAttrs
 
 object DistributedRunner {
 
@@ -144,9 +146,10 @@ object DistributedRunner {
               a.copy(classifier = Some(fixName(a.classifier.get) + art.crossSuffix))
             else
               a
-          }
+          },
+          extraAttributes = fixAttrs(m.extraAttributes, art.pluginAttrs)
         )
-      log.debug("Rewriting " + m + " to " + newArt + ";" + art.version)
+      log.debug("Rewriting " + m + " to " + newArt + " (against: " + art + " )")
       newArt
     } getOrElse {
       // TODO: here I should discover whether there are libDeps of the kind:
@@ -181,11 +184,10 @@ object DistributedRunner {
             case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
           }
         } else {
-          // in the case of plugins, m.name == fixName(m.name), but we will have additional information in the module
-          // to distinguish this case.
+          // in the case of plugins, m.name == fixName(m.name), so we cannot rely on them being different in order to detect
+          // the missing dependency. However, we can inspect the extraAttributes to find out if we are dealing with an sbt plugin
           // Note that we may also encounter the dbuild plugin itself, among the dependencies, which we normally ignore
-          val attrs = m.extraAttributes
-          if (attrs.contains("e:sbtVersion") && attrs.contains("e:scalaVersion")) {
+          if (pluginAttrs(m) != None) {
             if (m.name != "distributed-sbt-plugin" && m.organization != "com.typesafe.dbuild") {
               log.info("This sbt plugin is not provided by any project in this dbuild config: " + m.organization + "#" + m.name)
             }
@@ -766,16 +768,18 @@ object DistributedRunner {
     Keys.commands += comment)
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
-    cross: CrossVersion, sv: String, sbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
+    cross: CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
     val crossSuffix = CrossVersion.applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
     } yield model.ArtifactLocation(
       model.ProjectRef(artifact.name, org, artifact.extension, artifact.classifier),
-      version, if (isSbtPlugin) "" else crossSuffix)
+      // we cannot use pluginAttrs(artifact) to produce the SbtPluginAttrs descriptor, as the extra attributes
+      // are strangely not set in the Artifact while sbt is producing them.
+      version, if (isSbtPlugin) "" else crossSuffix, if (isSbtPlugin) Some(SbtPluginAttrs(sbtbv,sbv)) else None)
   }
 
   def projectSettings: Seq[Setting[_]] = Seq(
     extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
-      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations)
+      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations)
 }

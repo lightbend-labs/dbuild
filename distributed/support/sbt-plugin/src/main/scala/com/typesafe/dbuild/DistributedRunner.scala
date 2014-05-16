@@ -109,7 +109,7 @@ object DistributedRunner {
   // cross version suffix attached to its "name" field; therefore, we apply
   // fixName() only to the ModuleID we are trying to rewrite right now.
   def fixModule(arts: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
-    log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
+    checkMissing: Boolean, log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
     def expandName(a: Artifact) = {
       import a._
       classifier match {
@@ -172,12 +172,14 @@ object DistributedRunner {
           val msg = "**** Missing dependency: the library " + m.organization + "#" + fixName(m.name) +
             " is not provided by any project in this configuration file."
           crossVersion match {
-            case "binaryFull" | "disabled" | "full" =>
+            case "binaryFull" | "disabled" | "full" if checkMissing =>
               log.error(msg)
               log.error("In order to control which version is used, please add the corresponding project to the build file")
-              log.error("(or use \"cross-version:standard\" to ignore (not recommended)).")
+              log.error("(or use \"check-missing:false\" to ignore (not recommended)).")
               sys.error("Required dependency not found")
-            case "standard" =>
+            case "binaryFull" | "disabled" | "full" | "standard" =>
+              if (crossVersion == "standard" && checkMissing)
+                log.warn("*** The option \"check-missing\" is ignored when \"cross-version\" is set to \"standard\"")
               log.warn(msg)
               log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
               log.warn("In order to control which version is used, you may want to add this dependency to the dbuild configuration file.")
@@ -336,11 +338,12 @@ object DistributedRunner {
 
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
-  def fixDependencies2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String, log: Logger) =
+  def fixDependencies2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
+    checkMissing: Boolean, log: Logger) =
     fixGenericTransform2(Keys.allDependencies) { r: Setting[Task[Seq[sbt.ModuleID]]] =>
       val sc = r.key.scope
       Keys.allDependencies in sc <<= (Keys.allDependencies in sc, Keys.name in sc, Keys.organization in sc) map { (old, n, o) =>
-        old map fixModule(locs, modules, crossVersion, log, n.toLowerCase, o.toLowerCase)
+        old map fixModule(locs, modules, crossVersion, checkMissing, log, n.toLowerCase, o.toLowerCase)
       }
     }("Updating dependencies") _
 
@@ -659,10 +662,11 @@ object DistributedRunner {
   }
 
   private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
-    repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion: String) = {
+    repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion: String,
+    checkMissing: Boolean) = {
     Seq[Fixer](
       fixResolvers2(repoDir, log),
-      fixDependencies2(arts, modules, crossVersion, log),
+      fixDependencies2(arts, modules, crossVersion, checkMissing, log),
       fixScalaVersion2(dbuildDir, repoDir, arts),
       fixInterProjectResolver2bis(modules),
       fixCrossVersions2(crossVersion),
@@ -723,7 +727,7 @@ object DistributedRunner {
 
     def newSettings(oldSettings: Seq[Setting[_]]) =
       prepareCompileSettings(log, modules, dbuildDir, rewireInfo.in.localRepo, rewireInfo.in.artifacts,
-        oldSettings, rewireInfo.crossVersion) ++ publishSettings(oldSettings) ++ restore(oldSettings)
+        oldSettings, rewireInfo.crossVersion, rewireInfo.checkMissing) ++ publishSettings(oldSettings) ++ restore(oldSettings)
 
     // The property "dbuild.sbt-runner.last-msg" is normally be set by SbtRunner. However, rewire() may
     // also be called as part of the reload within "dbuild-setup", in which case the property will not
@@ -772,7 +776,7 @@ object DistributedRunner {
       model.ProjectRef(artifact.name, org, artifact.extension, artifact.classifier),
       // we cannot use pluginAttrs(artifact) to produce the SbtPluginAttrs descriptor, as the extra attributes
       // are strangely not set in the Artifact while sbt is producing them.
-      version, if (isSbtPlugin) "" else crossSuffix, if (isSbtPlugin) Some(SbtPluginAttrs(sbtbv,sbv)) else None)
+      version, if (isSbtPlugin) "" else crossSuffix, if (isSbtPlugin) Some(SbtPluginAttrs(sbtbv, sbv)) else None)
   }
 
   def projectSettings: Seq[Setting[_]] = Seq(

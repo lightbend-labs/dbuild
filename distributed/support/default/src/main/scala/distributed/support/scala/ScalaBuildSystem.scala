@@ -295,19 +295,12 @@ object ScalaBuildSystem extends BuildSystemCore {
    */
   private def readMeta(baseDir: File, exclude: Seq[String], log: logging.Logger): ExtractedBuildMeta = {
     val dbuildMetaFile = new File(baseDir, "dbuild-meta.json")
-    val readMeta = try readValue[ExtractedBuildMeta](dbuildMetaFile)
+    val readMeta = try ExtractedBuildMeta(Seq(readValue[ProjMeta](dbuildMetaFile)))
     catch {
       case e: Exception =>
         log.error("Failed to read scala metadata file: " + dbuildMetaFile.getAbsolutePath)
         logging.Logger.prepareLogMsg(log, e)
         log.error("Falling back to default.")
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        sys.exit(9991)
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
         fallbackMeta(baseDir)
     }
     // There are no real subprojects in the Scala build;

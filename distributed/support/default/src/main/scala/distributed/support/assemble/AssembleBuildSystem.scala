@@ -25,6 +25,7 @@ import org.apache.ivy.util.ChecksumHelper
 import distributed.support.NameFixer.fixName
 import _root_.sbt.NameFilter
 import org.apache.ivy
+import distributed.project.build.BuildDirs.localRepos
 
 /**
  * The "assemble" build system accepts a list of nested projects, with the same format
@@ -44,7 +45,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     case None => AssembleExtraConfig() // pick default values
     case Some(ec: AssembleExtraConfig) =>
       // perform the defaults substitution in turn on the nested projects
-      ec.copy(parts = Seq(DistributedBuildConfig(BuildSystem.expandDistributedBuildConfig(ec.parts, systems),None)))
+      ec.copy(parts = Seq(DistributedBuildConfig(BuildSystem.expandDistributedBuildConfig(ec.parts, systems), None)))
     case _ => throw new Exception("Internal error: Assemble build config options have the wrong type. Please report")
   }
 
@@ -68,10 +69,10 @@ object AssembleBuildSystem extends BuildSystemCore {
       case None => None
       case Some(extra: AssembleExtraConfig) =>
         val newParts = extra.parts map { nestedConf =>
-          val buildConfig = nestedConf// use expandDistributedBuildConfig !!!!!!
+          val buildConfig = nestedConf // use expandDistributedBuildConfig !!!!!!
           val nestedResolvedProjects =
             buildConfig.projects.map { p =>
-              val projDir=projectsDir(dir, p)
+              val projDir = projectsDir(dir, p)
               projDir.mkdirs()
               log.info("----------")
               log.info("Resolving part: " + p.name)
@@ -133,10 +134,10 @@ object AssembleBuildSystem extends BuildSystemCore {
         // remove all dependencies that are not already provided by this
         // assembled project (we pretend the resulting assembled set has
         // no external dependency)
-        val ignoredDeps=p.dependencies.filterNot(artifacts contains _)
+        val ignoredDeps = p.dependencies.filterNot(artifacts contains _)
         ignoredDeps.foreach { d =>
           log.warn("WARN: The dependency of " + p.name + " on " + d.organization + "#" + d.name + " will be ignored.")
-          }
+        }
         p.copy(dependencies = p.dependencies.diff(ignoredDeps))
       }),
       partOutcomes.map { _.project })
@@ -148,21 +149,8 @@ object AssembleBuildSystem extends BuildSystemCore {
   // Therefore, we will call localBuildRunner.checkCacheThenBuild() on each part,
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      buildData: BuildData): BuildArtifactsOut = {
+    buildData: BuildData): BuildArtifactsOut = {
 
-    
-    
-    
-    
-    sys.error("not implemented")
-    
-    /* /* /* /*
-    
-    
-    
-    
-    
-    
     val ec = project.extra[ExtraType]
     val version = input.version // IGNORED!!
 
@@ -233,11 +221,10 @@ object AssembleBuildSystem extends BuildSystemCore {
             sys.error("Internal error: PCES empty after cachedExtractOr(); please report")
           case _ => sys.error("Internal error: cachedExtractOr() returned incorrect outcome; please report.")
         }
-        val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted.config, partConfigAndExtracted.extracted.version,
-          Seq.empty, Seq.empty, // remove all dependencies, and pretend that this project stands alone
-          partConfigAndExtracted.extracted.subproj)
+        val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted,Seq(RepeatableDepInfo(partConfigAndExtracted.extracted.version,
+          Seq.empty, Seq.empty))) // remove all dependencies, and pretend that this project stands alone))
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild,
-            Seq.empty, Seq.empty, buildData)
+          Seq.empty, Seq.empty, buildData)
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)
@@ -281,7 +268,8 @@ object AssembleBuildSystem extends BuildSystemCore {
     val uuids = repeatableProjectBuilds map { _.uuid }
     log.info("Retrieving artifacts")
     log.debug("into " + localRepo)
-    val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, localRepo, uuids)
+    val repos = localRepos(dir)
+    val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, repos, Seq(uuids)) // retrieve only the base level
 
     // ------
     // ok. At this point, we have:
@@ -321,7 +309,7 @@ object AssembleBuildSystem extends BuildSystemCore {
       case Part(z) => z
       case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
     }
-    val crossSuff = project.config.getCrossVersion match {
+    val crossSuff = project.config.getCrossVersionHead match {
       case "disabled" => ""
       case l @ "full" => "_" + getScalaVersion(l)
       case l @ "binary" => "_" + binary(getScalaVersion(l))
@@ -579,23 +567,5 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.debug("out: " + writeValue(out))
     out
 
-  
-  
-  
-  
-  
-  
-  */
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   }
-  
 }

@@ -76,7 +76,7 @@ object AssembleBuildSystem extends BuildSystemCore {
               projDir.mkdirs()
               log.info("----------")
               log.info("Resolving part: " + p.name)
-              extractor.dependencyExtractor.resolve(p, projDir, extractor, log)
+              extractor.dependencyExtractor.resolve(p, projDir, extractor, log.newNestedLogger(p.name, p.name))
             }
           DistributedBuildConfig(nestedResolvedProjects, buildConfig.options)
         }
@@ -99,7 +99,8 @@ object AssembleBuildSystem extends BuildSystemCore {
       buildConfig.projects map { p =>
         log.info("----------")
         val nestedExtractionConfig = ExtractionConfig(p)
-        extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p), log, debug)
+        extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p),
+            log.newNestedLogger(p.name, p.name), debug)
       }
     }
     if (partOutcomes.exists(_.isInstanceOf[ExtractionFailed])) {
@@ -213,7 +214,8 @@ object AssembleBuildSystem extends BuildSystemCore {
         log.info("----------")
         log.info("Building part: " + p.name)
         val nestedExtractionConfig = ExtractionConfig(p)
-        val partConfigAndExtracted = localBuildRunner.extractor.cachedExtractOr(nestedExtractionConfig, log) {
+        val partConfigAndExtracted = localBuildRunner.extractor.cachedExtractOr(nestedExtractionConfig, 
+            log.newNestedLogger(p.name, p.name)) {
           // if it's not cached, something wrong happened.
           sys.error("Internal error: extraction metadata not found for part " + p.name)
         } match {
@@ -224,7 +226,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted,Seq(RepeatableDepInfo(partConfigAndExtracted.extracted.version,
           Seq.empty, Seq.empty))) // remove all dependencies, and pretend that this project stands alone))
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild,
-          Seq.empty, Seq.empty, buildData)
+          Seq.empty, Seq.empty, BuildData(log.newNestedLogger(p.name, p.name), buildData.debug))
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)

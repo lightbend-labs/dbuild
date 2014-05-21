@@ -100,7 +100,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         log.info("----------")
         val nestedExtractionConfig = ExtractionConfig(p)
         extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p),
-            log.newNestedLogger(p.name, p.name), debug)
+          log.newNestedLogger(p.name, p.name), debug)
       }
     }
     if (partOutcomes.exists(_.isInstanceOf[ExtractionFailed])) {
@@ -214,17 +214,19 @@ object AssembleBuildSystem extends BuildSystemCore {
         log.info("----------")
         log.info("Building part: " + p.name)
         val nestedExtractionConfig = ExtractionConfig(p)
-        val partConfigAndExtracted = localBuildRunner.extractor.cachedExtractOr(nestedExtractionConfig, 
-            log.newNestedLogger(p.name, p.name)) {
-          // if it's not cached, something wrong happened.
-          sys.error("Internal error: extraction metadata not found for part " + p.name)
-        } match {
-          case outcome: ExtractionOK => outcome.pces.headOption getOrElse
+        val partConfigAndExtracted = localBuildRunner.extractor.cachedExtractOr(nestedExtractionConfig,
+          log.newNestedLogger(p.name, p.name)) {
+            // if it's not cached, something wrong happened.
+            sys.error("Internal error: extraction metadata not found for part " + p.name)
+          } match {
+            case outcome: ExtractionOK => outcome.pces.headOption getOrElse
             sys.error("Internal error: PCES empty after cachedExtractOr(); please report")
-          case _ => sys.error("Internal error: cachedExtractOr() returned incorrect outcome; please report.")
-        }
-        val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted,Seq(RepeatableDepInfo(partConfigAndExtracted.extracted.version,
-          Seq.empty, Seq.empty))) // remove all dependencies, and pretend that this project stands alone))
+            case _ => sys.error("Internal error: cachedExtractOr() returned incorrect outcome; please report.")
+          }
+        partConfigAndExtracted.extracted.projInfo.map { pm => RepeatableDepInfo(pm.version, Seq.empty, Seq.empty) }
+        val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted,
+          // remove all dependencies, and pretend that this project stands alone))
+          partConfigAndExtracted.extracted.projInfo.map { pm => RepeatableDepInfo(pm.version, Seq.empty, Seq.empty) })
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild,
           Seq.empty, Seq.empty, BuildData(log.newNestedLogger(p.name, p.name), buildData.debug))
         val artifactsOut = outcome match {

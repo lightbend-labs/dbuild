@@ -65,8 +65,8 @@ object DependencyAnalysis {
     val defaultIDs = Seq(Build.defaultID(baseDirectory), "root-" + base, base)
     val defaultName = "default-sbt-project"
     if (defaultIDs contains name) defaultName else {
-      if (name.endsWith("-build") && base == "project")
-        normalizedProjectNameString(name.dropRight(6), baseDirectory.getParentFile)
+      if (name.endsWith("-build") && base == "project" && normalizedProjectNameString(name.dropRight(6), baseDirectory.getParentFile) == defaultName)
+        defaultName
       else
         name
     }

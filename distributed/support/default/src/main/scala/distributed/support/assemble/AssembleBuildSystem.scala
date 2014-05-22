@@ -223,7 +223,6 @@ object AssembleBuildSystem extends BuildSystemCore {
             sys.error("Internal error: PCES empty after cachedExtractOr(); please report")
             case _ => sys.error("Internal error: cachedExtractOr() returned incorrect outcome; please report.")
           }
-        partConfigAndExtracted.extracted.projInfo.map { pm => RepeatableDepInfo(pm.version, Seq.empty, Seq.empty) }
         val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted,
           // remove all dependencies, and pretend that this project stands alone))
           partConfigAndExtracted.extracted.projInfo.map { pm => RepeatableDepInfo(pm.version, Seq.empty, Seq.empty) })
@@ -272,8 +271,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val uuids = repeatableProjectBuilds map { _.uuid }
     log.info("Retrieving artifacts")
     log.debug("into " + localRepo)
-    val repos = localRepos(dir)
-    val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, repos, Seq(uuids)) // retrieve only the base level
+    val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository, Seq(localRepo), Seq(uuids)) // retrieve only the base level
 
     // ------
     // ok. At this point, we have:

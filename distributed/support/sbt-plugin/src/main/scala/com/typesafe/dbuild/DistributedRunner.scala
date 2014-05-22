@@ -401,7 +401,7 @@ object DistributedRunner {
   def fixIvyPaths2(log: Logger) =
     fixGenericTransform2(Keys.baseDirectory) { r: Setting[IvyPaths] =>
       val sc = r.key.scope
-      log.debug("ivy-paths found in scope " + sc)
+//      log.debug("ivy-paths found in scope " + sc)
       Keys.ivyPaths in sc <<= (Keys.baseDirectory in sc) {
         d =>
           new IvyPaths(d, Some(sbtIvyCache(d)))

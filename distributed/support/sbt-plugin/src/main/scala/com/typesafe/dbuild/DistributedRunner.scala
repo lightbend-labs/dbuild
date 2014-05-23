@@ -355,12 +355,19 @@ object DistributedRunner {
       _ map { old =>
         // make sure to add our resolvers at the beginning!
         log.debug("Appending local-repo resolvers: " + dbuildRepoDir.getAbsolutePath())
-        Seq(
-          "dbuild-local-repo-maven" at ("file:" + dbuildRepoDir.getAbsolutePath()),
-          Resolver.file("dbuild-local-repo-ivy", dbuildRepoDir)(Resolver.ivyStylePatterns)) ++
+        val qq = Seq(
+          // IMPORTANT: the mvn-build-local and ivy-build-local names MUST match those
+          // used through writeRepoFile() by SbtBuilder.buildSbtProject() (look for the
+          // writeRepoFile() call: "build-local" is prefixed by "ivy-" and "mvn-"
+          "mvn-build-local" at ("file:" + dbuildRepoDir.getAbsolutePath()),
+          Resolver.file("ivy-build-local", dbuildRepoDir)(Resolver.ivyStylePatterns)) ++
           (old filterNot { r =>
-            val n = r.name; n == "dbuild-local-repo-maven" || n == "dbuild-local-repo-ivy"
+            val n = r.name; n == "mvn-build-local" || n == "ivy-build-local"
           })
+          log.debug("---------Modified list of resolvers:---------")
+          qq foreach {r=>log.debug(r.toString)}
+          log.debug("---------------------------------------------")
+          qq
       }
     }
 

@@ -195,8 +195,8 @@ object SbtRunner {
   def writeDeps(file: File): Unit =
     IO.write(file, """addSbtPlugin("com.typesafe.dbuild" % "distributed-sbt-plugin" % """ + '"' + Defaults.version + "\")")
 
-  def writeRepoFile(repos: List[xsbti.Repository], config: File): Unit =
-    Repositories.writeRepoFile(repos, config)
+  def writeRepoFile(repos: List[xsbti.Repository], config: File, repositories: (String, String)*): Unit =
+    Repositories.writeRepoFile(repos, config, repositories:_*)
 
   /**
    * Given a freshly cleaned up checkout of an sbt project (all unrelated files and dirs must be deleted),

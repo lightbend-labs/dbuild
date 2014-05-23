@@ -69,7 +69,8 @@ object SbtBuilder {
     // the top levels also do not get the repositories adjustment offered by FixResolvers2() in
     // DistributedRunner. However, all levels rely on the "repositories" file written here:
     val repoFile = dbuildSbtDir / repositoriesFileName
-    SbtRunner.writeRepoFile(repos, repoFile)
+    val baseRematerializedRepo = localRepos(projectDir).head
+    SbtRunner.writeRepoFile(repos, repoFile, "build-local" -> baseRematerializedRepo.toURI.toASCIIString)
 
     runner.run(
       projectDir = projectDir,

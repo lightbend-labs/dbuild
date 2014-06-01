@@ -55,7 +55,7 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
       val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(repository, build, outProjects, dir, log)
-      log.info("Running local build: " + build.config + " in directory: " + dir)
+      log.debug("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
       val results = builder.runBuild(build, dir,

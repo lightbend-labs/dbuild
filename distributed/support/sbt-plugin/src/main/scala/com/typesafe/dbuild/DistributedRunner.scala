@@ -191,7 +191,7 @@ object DistributedRunner {
           // Note that we may also encounter the dbuild plugin itself, among the dependencies, which we normally ignore
           if (pluginAttrs(m) != None) {
             if (m.name != "distributed-sbt-plugin" && m.organization != "com.typesafe.dbuild") {
-              log.info("This sbt plugin is not provided by any project in this dbuild config: " + m.organization + "#" + m.name)
+              log.info("This sbt plugin is not provided in this space by any project of this dbuild config: " + m.organization + "#" + m.name)
             }
           }
         }

@@ -191,7 +191,13 @@ object DistributedRunner {
           // Note that we may also encounter the dbuild plugin itself, among the dependencies, which we normally ignore
           if (pluginAttrs(m) != None) {
             if (m.name != "distributed-sbt-plugin" && m.organization != "com.typesafe.dbuild") {
-              log.info("This sbt plugin is not provided in this space by any project of this dbuild config: " + m.organization + "#" + m.name)
+              val msg="This sbt plugin is not provided in this space by any project of this dbuild config: " + m.organization + "#" + m.name
+              if (checkMissing) {
+                log.error(msg)
+                sys.error("Required dependency not found")
+              } else {
+                log.warn(msg)
+              }
             }
           }
         }

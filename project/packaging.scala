@@ -21,7 +21,7 @@ object Packaging {
      wixConfig := <wix/>,
      maintainer := "Antonio Cunei <antonio.cunei@typesafe.com>",
      packageSummary := "Multi-project builder.",
-     packageDescription := """A multi-project builder capable of gluing together a set of related projects.""",
+     packageDescription := """A multi-project builder capable of glueing together a set of related projects.""",
      mappings in Universal <+= SbtSupport.sbtLaunchJar map { jar =>
        jar -> "bin/sbt-launch.jar"
      },
@@ -33,8 +33,8 @@ object Packaging {
 
      // S3 stuff
      host in upload := "downloads.typesafe.com",
-     mappings in upload <<= (packageZipTarball in Universal, packageBin in Universal, name, version) map
-       {(tgz,zip,n,v) => Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
+     mappings in upload <<= (packageZipTarball in Universal, packageBin in Universal, name, version, scalaVersion) map
+       {(tgz,zip,n,v,sv) => if(sv.startsWith("2.10")) Seq.empty else Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
      progress in upload := true,
      credentials += Credentials(Path.userHome / ".s3credentials"),
      upload <<= upload dependsOn (clean),
@@ -42,7 +42,7 @@ object Packaging {
 
      publishArtifact in Compile := false,
 
-     // NB: A must be executed before both packageZipTarball and packageZipTarball,
+     // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
      // otherwise Universal may end up using outdated files.
 
      publishLocal <<= publishLocal dependsOn (clean),
@@ -59,6 +59,7 @@ object Packaging {
   ) ++
     addArtifact(artifact in (Universal, packageZipTarball), packageZipTarball in Universal) ++
     addArtifact(artifact in (Universal, packageBin), packageBin in Universal)
+
 
   def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"repo","distributed.repo.core.SbtRepoMain")
   def makeDbuildProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"build","distributed.build.SbtBuildMain")

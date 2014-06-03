@@ -31,9 +31,16 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     settings(
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDbuildProps,
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in drepo, version in drepo) map Packaging.makeDRepoProps,
-      version := MyVersion
+      version := MyVersion,
+      selectScalaVersion,
+      // disable the publication of artifacts in dist if 2.10
+      // (we only retain the correct launcher, which is the
+      // one generated using 2.9)
+      // This is a pretty ugly hack, but it is quite difficult to prevent sbt from
+      // skipping publishing completely (including the ivy file) upon a given condition.
+      publishConfiguration <<= (publishConfiguration,scalaVersion) map { (p,sv) => 
+        if (sv.startsWith("2.10")) new sbt.PublishConfiguration(None,p.resolverName,Map.empty,Seq.empty,p.logging) else p}
     )
-    settings(skip210:_*)
   )
 
   // The component projects...

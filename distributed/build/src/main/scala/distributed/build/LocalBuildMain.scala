@@ -62,18 +62,3 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
     system.awaitTermination(1.minute)
   }
 }
-/*
-object LocalBuildMain {
-  def build(build: DistributedBuildConfig) = {
-      val main = new LocalBuildMain
-      try main build build
-      finally main.dispose
-  }
-  def main(args: Array[String]): Unit = 
-    // TODO - Parse inputs for realz...
-    if(args.length == 1) {
-      readValue[DistributedBuildConfig](new File(args(0)))
-    }
-    else System.err.println("Usage: dbuild {build-file}")
-}
-*/

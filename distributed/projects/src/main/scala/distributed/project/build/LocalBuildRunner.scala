@@ -21,8 +21,10 @@ class LocalBuildRunner(builder: BuildRunner,
   val repository: Repository) {
 
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome],
-      log: Logger, debug: Boolean): BuildOutcome = {
+      buildData:BuildData): BuildOutcome = {
+    val log = buildData.log
     try {
+//(log: Logger, debug: Boolean, timestamp: String
       try {
         val subArtifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
         LocalRepoHelper.debugArtifactsInfo(subArtifactsOut, log)
@@ -31,16 +33,17 @@ class LocalBuildRunner(builder: BuildRunner,
         case t: RepositoryException =>
           log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
           //log.trace(t)
-          BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects, log, debug))
+          BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects,
+              buildData))
       }
     } catch {
       case t =>
-        BuildFailed(build.config.name, children, prepareLogMsg(log, t))
+        BuildFailed(build.config.name, children, prepareLogMsg(buildData.log, t))
     }
   }
 
   def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project],
-      log: Logger, debug: Boolean): BuildArtifactsOut =
+      buildData:BuildData): BuildArtifactsOut =
     distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       updateTimeStamp(dir)
       // extractor.resolver.resolve() only resolves the main URI,
@@ -48,6 +51,7 @@ class LocalBuildRunner(builder: BuildRunner,
       // here we only resolve the ROOT project, as we will later call the runBuild()
       // of the build system, which in turn will call checkCacheThenBuild(), above, on all subprojects,
       // which will again call this method, thereby resolve()ing each project right before building it.
+      val log = buildData.log
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
@@ -87,7 +91,8 @@ class LocalBuildRunner(builder: BuildRunner,
           val value = build.baseVersion
           val defaultVersion = (if (value endsWith "-SNAPSHOT") {
             value replace ("-SNAPSHOT", "")
-          } else value) + "-dbuildx" + build.uuid
+          } else value) + "-" +
+            ("dbuildx" + build.uuid)
           libVersion getOrElse defaultVersion
         }
       }
@@ -104,7 +109,7 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       val results = builder.runBuild(build, dir,
-        BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, log, debug)
+        BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, buildData)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
       markSuccess(dir)
       results

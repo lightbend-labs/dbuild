@@ -10,14 +10,18 @@ import distributed.project.model.TemplateFormatter
 import distributed.project.model.CleanupOptions
 import java.util.Properties
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigValueFactory
 import distributed.project.model.Utils.readValueT
 import distributed.utils.Time.timed
 import collection.immutable.SortedMap
-import java.util.Calendar
 import distributed.repo.core.Defaults
 import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+import collection.JavaConverters._
 
 /** These options are created by SbtBuildMain, and are propagated to most stages of building, as
  *  they alter secondary details of the build process in various ways (for example, the logging
@@ -100,6 +104,11 @@ class SbtBuildMain extends xsbti.AppMain {
         println("Using configuration: " + configFile.getName)
         buildTarget foreach { t => println("Build target: " + t) }
       }
+      val now = new java.util.Date()
+      val dateFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss'UTC'")
+      dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
+      val autoTimestamp = dateFormat.format(now)
+      if (debug) println("The timestamp is: " + autoTimestamp)
       val (config, resolvers) =
         try {
           val properties = readProperties(configFile): Seq[String]
@@ -113,9 +122,10 @@ class SbtBuildMain extends xsbti.AppMain {
           val initialConfig = ConfigFactory.parseFile(configFile)
           val foldConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
           val systemVars = ConfigFactory.systemProperties().atPath("vars.sys")
+          val autoConfig = ConfigValueFactory.fromMap(Map("timestamp" -> autoTimestamp).asJava).atPath("vars.auto")
           // let system properties take precedence over values in the config file
           // which should happen to be in the same vars.sys space
-          val endConfig = systemVars.withFallback(foldConfig)
+          val endConfig = systemVars.withFallback(autoConfig).withFallback(foldConfig)
           val resolvedConfig = endConfig.resolve
           // Let's extract the (possible) list of resolvers defined in the configuration file.
           // Parse them even if useLocalResolvers==true, in order to catch definition errors

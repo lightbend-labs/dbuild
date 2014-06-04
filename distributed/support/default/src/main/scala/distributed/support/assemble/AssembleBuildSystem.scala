@@ -272,7 +272,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.info("Retrieving artifacts")
     log.debug("into " + localRepo)
     val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository,
-        Seq(localRepo), Seq(uuids), Seq("")) // retrieve only the base level, space "" (no external dependencies)
+        Seq(localRepo), Seq(uuids), Seq(""), buildData.debug) // retrieve only the base level, space "" (no external dependencies)
 
     // ------
     // ok. At this point, we have:

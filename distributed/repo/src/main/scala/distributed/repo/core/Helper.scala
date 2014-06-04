@@ -219,25 +219,25 @@ object LocalRepoHelper {
    *   @return The list of *versioned* artifacts that are now in the local repo,
    *   plus a log message as a sequence of strings.
    */
-  def materializeProjectRepository(uuid: String, remote: ReadableRepository, localRepo: File): (Seq[ArtifactLocation], Seq[String]) =
-    materializePartialProjectRepository(uuid, Seq.empty, remote, localRepo)
+  def materializeProjectRepository(uuid: String, remote: ReadableRepository, localRepo: File, debug: Boolean): (Seq[ArtifactLocation], Seq[String]) =
+    materializePartialProjectRepository(uuid, Seq.empty, remote, localRepo, debug)
 
   /* Materialize only parts of a given projects, and specifically
    * those specified by the given subproject list. If the list is empty, grab everything.
    */
   def materializePartialProjectRepository(uuid: String, subprojs: Seq[String], remote: ReadableRepository,
-    localRepo: File): (Seq[ArtifactLocation], Seq[String]) = {
+    localRepo: File, debug: Boolean): (Seq[ArtifactLocation], Seq[String]) = {
     val (meta, _, arts) = resolvePartialArtifacts(uuid, subprojs, remote) { (resolved, artifact) =>
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
     val space = meta.project.config.space getOrElse
       sys.error("Internal error: space is None in " + meta.project.config.name + " while rematerializing artifacts.")
-    val spaceInfo = space.to.length match {
+    val spaceInfo = if (debug) space.to.length match {
       case 0 => sys.error("Internal error: rematerializing artifacts from project published in no spaces: " + meta.project.config.name)
-      case 1 => ", space: " + space.to.head
-      case _ => space.to.mkString(", spaces: ", ",", "")
-    }
+      case 1 => ", published to space: " + space.to.head
+      case _ => space.to.mkString(", published to spaces: ", ",", "")
+    } else ""
     val fragment = " (commit: " + (meta.project.getCommit getOrElse "none") + spaceInfo + ")"
     val info1 = "Retrieved from project " +
       meta.project.config.name + fragment
@@ -250,15 +250,15 @@ object LocalRepoHelper {
   // rematerialize artifacts. "uuid" is a sequence: each element represents group of artifacts that
   // needs to be rematerialized into a separate directory, each for a separate level of the build
   // Returns for each group the list of rematerialized artifacts
-  def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, localRepos: Seq /*Levels*/ [File],
-    uuidGroups: Seq /*Levels*/ [Seq[String]], fromSpaces: Seq /*Levels*/ [String]): BuildArtifactsInMulti =
+  def getArtifactsFromUUIDs(diagnostic: ( => String) => Unit, repo: Repository, localRepos: Seq /*Levels*/ [File],
+    uuidGroups: Seq /*Levels*/ [Seq[String]], fromSpaces: Seq /*Levels*/ [String], debug: Boolean): BuildArtifactsInMulti =
     BuildArtifactsInMulti(
       ((uuidGroups, fromSpaces, localRepos).zipped.toSeq.zipWithIndex) map {
         case ((uuids, fromSpace, localRepo), index) =>
-          if (uuidGroups.length > 1 && uuids.length > 0) diagnostic("Resolving artifacts, level " + index)
+          if (uuidGroups.length > 1 && uuids.length > 0) diagnostic("Resolving artifacts, level " + index + ", space: " + fromSpace)
           val artifacts = for {
             uuid <- uuids
-            (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo)
+            (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo, debug)
             _ = msg foreach { diagnostic(_) }
             art <- arts
           } yield art

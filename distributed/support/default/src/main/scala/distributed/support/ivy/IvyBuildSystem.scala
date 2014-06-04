@@ -138,8 +138,6 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val trimName = fixName(name)
       val cross = if (trimName != name) name.substring(trimName.length) else ""
       val classifier = Option(a.getExtraAttributes.get("classifier").asInstanceOf[String])
-      val q = a.getExtraAttributes()
-      val o = mr.getExtraAttributes()
       ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/ , cross, pluginAttrs(mr))
     }
 

@@ -24,7 +24,6 @@ import distributed.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
  *                     the first one, but it still controls whether missing dependencies will be
  *                     detected or not while rewiring.
  */
-// TODO: split crossVersion into crossVersion and detectMissing.
 case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String],
   crossVersion: String, checkMissing: Boolean, debug: Boolean)
 /**
@@ -32,8 +31,6 @@ case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String],
  */
 case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, /* not fully supported */ measurePerformance: Boolean, debug: Boolean)
 
-// Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
-// script...
 object SbtBuilder {
 
   // If customProcess is not None, the resulting sbt command line will be prepared and then

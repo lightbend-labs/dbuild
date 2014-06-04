@@ -10,7 +10,7 @@ import _root_.java.io.File
 import distributed.repo.core.{Defaults,ProjectDirs}
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
-import distributed.project.BuildSystem
+import distributed.project.{ BuildSystem, BuildData }
 
 /** Implementation of the SBT build system. */
 class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boolean) extends BuildSystemCore {
@@ -61,13 +61,13 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+      buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
     val config = SbtBuildConfig(ec, project.config.getCrossVersion, info)
-    SbtBuilder.buildSbtProject(repos, runner)(pdir, config, log, debug)
+    SbtBuilder.buildSbtProject(repos, runner)(pdir, config, buildData.log, buildData.debug)
   }
 
 }

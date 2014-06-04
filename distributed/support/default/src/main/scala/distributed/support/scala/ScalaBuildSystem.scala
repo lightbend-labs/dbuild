@@ -15,7 +15,7 @@ import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
-import distributed.project.BuildSystem
+import distributed.project.{ BuildSystem, BuildData }
 import collection.JavaConverters._
 import org.apache.maven.model.{ Model, Dependency }
 import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
@@ -63,8 +63,9 @@ object ScalaBuildSystem extends BuildSystemCore {
   // but not for the submodules. After building the core, we will call localBuildRunner.checkCacheThenBuild() on each module,
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-    log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+    buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
+    val log = buildData.log
 
     // if requested, overwrite build.number. This is unrelated to
     // the version that is possibly overridden by "set-version".
@@ -120,7 +121,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       name: String, org: String): Option[String] =
       getVersion(findArtifact(arts, name, org))
 
-    val debugOptions = if (debug) Seq("-debug") else Seq.empty
+    val debugOptions = if (buildData.debug) Seq("-debug") else Seq.empty
 
     val rewireOptions = if (hasPublishLocal) {
 

@@ -112,6 +112,11 @@ vars
   you can refer to the value of the property by using ``${vars.sys.x.y}``, also when
   defining further variables.
 
+  The path ``vars.auto`` contains some special utility variables, computed by dbuild
+  before the build is started. At this time, ``${vars.auto.timestamp}`` contains a
+  timestamp corresponding to the start of the build, which can be appended for instance
+  to other file names or artifact names.
+
 .. _properties:
 
 properties

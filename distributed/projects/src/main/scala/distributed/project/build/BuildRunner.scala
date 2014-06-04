@@ -20,7 +20,7 @@ trait BuildRunner {
    * @param log  The log to write to.
    */
   def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut
+      buildData:BuildData): BuildArtifactsOut
     
   /**
    * Determines the appropriate base for a project-specific ".dbuild" directory
@@ -38,8 +38,8 @@ class AggregateBuildRunner(systems: Seq[BuildSystem[Extractor, LocalBuildRunner]
     BuildSystem.forName(proj.system, systems)
 
   def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut =
-    findBuildSystem(b.config).runBuild(b, dir, input, localBuildRunner, log, debug)
+      buildData:BuildData): BuildArtifactsOut =
+    findBuildSystem(b.config).runBuild(b, dir, input, localBuildRunner, buildData)
 
   def projectDbuildDir(dir:File, proj: RepeatableProjectBuild): File =
     findBuildSystem(proj.config).projectDbuildDir(dir, proj)

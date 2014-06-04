@@ -650,14 +650,14 @@ object DistributedRunner {
     state3
   }
 
-  def loadBuildArtifacts(localRepos: Seq /*Levels*/ [File], builduuid: String, thisProject: String, log: Logger) = {
+  def loadBuildArtifacts(localRepos: Seq /*Levels*/ [File], builduuid: String, thisProject: String, log: Logger, debug: Boolean) = {
     import distributed.repo.core._
     val cache = Repository.default
     val project = findRepeatableProjectBuild(builduuid, thisProject, log)
     log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
     val uuids = project.depInfo map { _.dependencyUUIDs }
     val fromSpaces = project.configAndExtracted.getSpace.fromStream // one per uuidGroup
-    val BuildArtifactsInMulti(artifacts) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, localRepos, uuids, fromSpaces)
+    val BuildArtifactsInMulti(artifacts) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, localRepos, uuids, fromSpaces, debug)
     (project, artifacts)
   }
 

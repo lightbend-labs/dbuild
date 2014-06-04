@@ -58,7 +58,7 @@ object Checkout {
 
         // it is now time to set up the project, exactly as we would before the build stage in dbuild
         val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(cache, project,
-          project.configAndExtracted.extracted.projects, dir, log)
+          project.configAndExtracted.extracted.projects, dir, log, debug)
 
         // Let's retrieve the list of repositories from the original repeatable description;
         // we will have to do some post-processing in order to get again a List[xsbti.Repository]

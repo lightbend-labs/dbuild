@@ -103,7 +103,7 @@ abstract class OptionTask(log: Logger) {
           case SelectorSubProjects(SubProjects(from, publish)) => publish
           case SelectorProject(_) => Seq[String]()
         }
-        val (arts, msg) = LocalRepoHelper.materializePartialProjectRepository(proj.uuid, subprojs, cache, dir)
+        val (arts, msg) = LocalRepoHelper.materializePartialProjectRepository(proj.uuid, subprojs, cache, dir, debug = false)
         msg foreach { log.info(_) }
     }
     def issueMsg(set: Set[(SelectorElement, RepeatableProjectBuild)], msg: String, l: (=> String) => Unit) =

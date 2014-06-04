@@ -152,7 +152,7 @@ object DistributedRunner {
       log.debug("Rewriting " + m + " to " + newArt + " (against: " + art + " )")
       newArt
     } getOrElse {
-      // TODO: here I should discover whether there are libDeps of the kind:
+      // Here I need to discover whether there are libDeps of the kind:
       // "a" % "b_someScalaVer" % "ver" (cross disabled, therefore), or
       // other cross-versioned dependencies that we have been unable to fix.
       // That means we either miss a project in our config, or that we
@@ -414,7 +414,6 @@ object DistributedRunner {
   def fixIvyPaths2(log: Logger) =
     fixGenericTransform2(Keys.baseDirectory) { r: Setting[IvyPaths] =>
       val sc = r.key.scope
-      //      log.debug("ivy-paths found in scope " + sc)
       Keys.ivyPaths in sc <<= (Keys.baseDirectory in sc) {
         d =>
           new IvyPaths(d, Some(sbtIvyCache(d)))
@@ -512,36 +511,6 @@ object DistributedRunner {
         case _ => false
       }
     }, log)
-
-  //  def fixBuildSettings(config: SbtBuildConfig, state: State): State = {
-  //    // TODO: replace with the correct logger
-  //    val log = sbt.ConsoleLogger()
-  //    log.info("Updating dependencies...")
-  //    val extracted = Project.extract(state)
-  //    import extracted._
-  //    val dbuildDirectory = Keys.baseDirectory in ThisBuild get structure.data map (_ / dbuildDirName)
-  //
-  //    dbuildDirectory map { dbuildDir =>
-  //      val repoDir = dbuildDir / inArtsDirName
-  //
-  //      val refs = getProjectRefs(extracted)
-  //
-  //      // config.info.subproj is the list of projects calculated in DependencyAnalysis;
-  //      // conversely, config.config.projects is the list specified in the
-  //      // configuration file (in the "extra" section)
-  //      val modules = getModuleRevisionIds(state, config.info.subproj.head /* TODO FIX */ , log)
-  //
-  //      def newSettings(oldSettings: Seq[Setting[_]]) =
-  //        preparePublishSettings(config, log, oldSettings) ++
-  //          prepareCompileSettings(log, modules, dbuildDir, repoDir, config.info.artifacts.artifacts,
-  //            oldSettings, config.crossVersion)
-  //
-  //      newState(state, extracted, newSettings)
-  //
-  //    } getOrElse {
-  //      sys.error("Key baseDirectory is undefined in ThisBuild: aborting.")
-  //    }
-  //  }
 
   def printPR(state: State): Unit = {
     val extracted = Project.extract(state)

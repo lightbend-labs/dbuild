@@ -74,7 +74,8 @@ object LocalBuildRunner {
     //
     val readRepos = localRepos(dir)
     val uuidGroups = build.depInfo map (_.dependencyUUIDs)
-    val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups)
+    val fromSpaces = build.configAndExtracted.getSpace.fromStream // one per uuidGroup
+    val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups, fromSpaces)
     val BuildArtifactsInMulti(artifactLocations) = dependencies
     // Special case: scala-compiler etc must have the same version number
     // as scala-library: projects that rely on scala-compiler as a dependency

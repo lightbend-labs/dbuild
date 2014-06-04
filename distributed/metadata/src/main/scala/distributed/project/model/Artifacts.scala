@@ -52,8 +52,11 @@ case class ProjectArtifactInfo(
  *
  * If the build system has no subproject support, BuildArtifactsOut will contain
  * just one element, where the subproject name is the empty string.
+ * 
+ * The "space" field is not used to process or discover artifacts in any way
+ * (that is done via the artifacts UUIDs): it is only used in diagnostic messages
  */
-case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], localRepo: File)
+case class BuildArtifactsIn(artifacts: Seq[ArtifactLocation], fromSpace: String, localRepo: File)
 // variant for multi-level build systems
 case class BuildArtifactsInMulti(materialized: Seq /*Levels*/ [BuildArtifactsIn]) {
   // to simplify single-level build systems, the following convenience methods

@@ -9,7 +9,7 @@ case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfi
   }
   override def toString() = "   Project \"" + value.config.name + "\". Contains the subprojects:\n" + (value.extracted.projInfo.zipWithIndex map {
     case (pi, index) =>
-      "      Level " + index + ":" +
+      "     Level " + index + ":\n" +
         (pi.projects map { p =>
           "      " + p.organization + ":" + p.name + "\n" +
             (if (p.dependencies.nonEmpty) "         depends on:\n" + p.dependencies.mkString("            ", "\n            ", "\n") else "")

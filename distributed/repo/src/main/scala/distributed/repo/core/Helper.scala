@@ -7,7 +7,7 @@ import java.io.File
 import sbt.{ RichFile, IO, Path }
 import Path._
 import distributed.project.model.Utils.{ writeValue, readValue }
-import distributed.project.model.{ArtifactLocation, BuildArtifactsIn}
+import distributed.project.model.{ ArtifactLocation, BuildArtifactsIn }
 import logging.Logger
 
 object LocalRepoHelper {
@@ -38,7 +38,7 @@ object LocalRepoHelper {
   // we use publishMeta() when we need to publish some data that may already be
   // in the remote repository (for instance: repeatable build info, or repeatable project info)
   def publishMeta[T <: { def uuid: String }](data: T, remote: Repository,
-      makeKey: String => String, log: Logger)(implicit m: scala.reflect.Manifest[T]): Unit =
+    makeKey: String => String, log: Logger)(implicit m: scala.reflect.Manifest[T]): Unit =
     IO.withTemporaryFile("meta-data", data.uuid) { file =>
       val key = makeKey(data.uuid)
       // is the file already there? We might try to publish twice, as a previous run
@@ -108,7 +108,7 @@ object LocalRepoHelper {
         }
     }
   }
-  
+
   /**
    * Publishes all files in the localRepo directory, according to the SHAs calculated
    * by the build system.
@@ -250,19 +250,20 @@ object LocalRepoHelper {
   // rematerialize artifacts. "uuid" is a sequence: each element represents group of artifacts that
   // needs to be rematerialized into a separate directory, each for a separate level of the build
   // Returns for each group the list of rematerialized artifacts
-  def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, localRepos: Seq/*Levels*/[File],
-    uuidGroups: Seq /*Levels*/ [Seq[String]]): BuildArtifactsInMulti = BuildArtifactsInMulti(
-    ((uuidGroups zip localRepos) zipWithIndex) map {
-      case ((uuids, localRepo), index) =>
-        if (uuidGroups.length > 1 && uuids.length > 0) diagnostic("Resolving artifacts, level " + index)
-        val artifacts = for {
-          uuid <- uuids
-          (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo)
-          _ = msg foreach { diagnostic(_) }
-          art <- arts
-        } yield art
-        BuildArtifactsIn(artifacts, localRepo)
-    })
+  def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, localRepos: Seq /*Levels*/ [File],
+    uuidGroups: Seq /*Levels*/ [Seq[String]], fromSpaces: Seq /*Levels*/ [String]): BuildArtifactsInMulti =
+    BuildArtifactsInMulti(
+      ((uuidGroups, fromSpaces, localRepos).zipped.toSeq.zipWithIndex) map {
+        case ((uuids, fromSpace, localRepo), index) =>
+          if (uuidGroups.length > 1 && uuids.length > 0) diagnostic("Resolving artifacts, level " + index)
+          val artifacts = for {
+            uuid <- uuids
+            (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo)
+            _ = msg foreach { diagnostic(_) }
+            art <- arts
+          } yield art
+          BuildArtifactsIn(artifacts, fromSpace, localRepo)
+      })
 
   def getProjectInfo(uuid: String, remote: ReadableRepository) =
     resolveArtifacts(uuid, remote)((x, y) => x -> y)
@@ -271,7 +272,7 @@ object LocalRepoHelper {
   def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): Seq[BuildSubArtifactsOut] = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
-    log.info("Found cached project build, uuid "+uuid)
+    log.info("Found cached project build, uuid " + uuid)
     meta.versions
   }
 

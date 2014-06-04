@@ -109,7 +109,7 @@ object DistributedRunner {
   // cross version suffix attached to its "name" field; therefore, we apply
   // fixName() only to the ModuleID we are trying to rewrite right now.
   def fixModule(arts: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
-    checkMissing: Boolean, log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
+    checkMissing: Boolean, fromSpace: String, log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
     def expandName(a: Artifact) = {
       import a._
       classifier match {
@@ -170,7 +170,7 @@ object DistributedRunner {
           // We check crossVersion: if it requires the correspondence to be exact, we fail;
           // otherwise we just print a warning and leave Ivy to fail if need be.
           val msg = "**** Missing dependency: the library " + m.organization + "#" + fixName(m.name) +
-            " is not provided by any project in this configuration file."
+            " is not provided (in space \"" + fromSpace + "\") by any project in this configuration file."
           crossVersion match {
             case "binaryFull" | "disabled" | "full" if checkMissing =>
               log.error(msg)
@@ -189,9 +189,9 @@ object DistributedRunner {
           // in the case of plugins, m.name == fixName(m.name), so we cannot rely on them being different in order to detect
           // the missing dependency. However, we can inspect the extraAttributes to find out if we are dealing with an sbt plugin
           // Note that we may also encounter the dbuild plugin itself, among the dependencies, which we normally ignore
-          if (pluginAttrs(m) != None) {
+          pluginAttrs(m) map { attrs => // if pluginAttrs(m) is not None, then:
             if (m.name != "distributed-sbt-plugin" && m.organization != "com.typesafe.dbuild") {
-              val msg="This sbt plugin is not provided (in this space) by any project within this dbuild config: " + m.organization + "#" + m.name
+              val msg = "This sbt plugin is not provided (in space \"" + fromSpace + "\") by any project within this dbuild config: " + m.organization + "#" + m.name + " (sbtVersion=" + attrs.sbtVersion + ", scalaVersion=" + attrs.scalaVersion + ")"
               if (checkMissing) {
                 log.error(msg)
                 sys.error("Required dependency not found")
@@ -345,11 +345,11 @@ object DistributedRunner {
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
   def fixDependencies2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
-    checkMissing: Boolean, log: Logger) =
+    checkMissing: Boolean, fromSpace: String, log: Logger) =
     fixGenericTransform2(Keys.allDependencies) { r: Setting[Task[Seq[sbt.ModuleID]]] =>
       val sc = r.key.scope
       Keys.allDependencies in sc <<= (Keys.allDependencies in sc, Keys.name in sc, Keys.organization in sc) map { (old, n, o) =>
-        old map fixModule(locs, modules, crossVersion, checkMissing, log, n.toLowerCase, o.toLowerCase)
+        old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log, n.toLowerCase, o.toLowerCase)
       }
     }("Updating dependencies") _
 
@@ -370,10 +370,10 @@ object DistributedRunner {
           (old filterNot { r =>
             val n = r.name; n == "mvn-build-local" || n == "ivy-build-local"
           })
-          log.debug("---------Modified list of resolvers:---------")
-          qq foreach {r=>log.debug(r.toString)}
-          log.debug("---------------------------------------------")
-          qq
+        log.debug("---------Modified list of resolvers:---------")
+        qq foreach { r => log.debug(r.toString) }
+        log.debug("---------------------------------------------")
+        qq
       }
     }
 
@@ -414,7 +414,7 @@ object DistributedRunner {
   def fixIvyPaths2(log: Logger) =
     fixGenericTransform2(Keys.baseDirectory) { r: Setting[IvyPaths] =>
       val sc = r.key.scope
-//      log.debug("ivy-paths found in scope " + sc)
+      //      log.debug("ivy-paths found in scope " + sc)
       Keys.ivyPaths in sc <<= (Keys.baseDirectory in sc) {
         d =>
           new IvyPaths(d, Some(sbtIvyCache(d)))
@@ -656,7 +656,8 @@ object DistributedRunner {
     val project = findRepeatableProjectBuild(builduuid, thisProject, log)
     log.info("Retrieving dependencies for " + project.uuid + " " + project.config.name)
     val uuids = project.depInfo map { _.dependencyUUIDs }
-    val BuildArtifactsInMulti(artifacts) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, localRepos, uuids)
+    val fromSpaces = project.configAndExtracted.getSpace.fromStream // one per uuidGroup
+    val BuildArtifactsInMulti(artifacts) = LocalRepoHelper.getArtifactsFromUUIDs(log.info, cache, localRepos, uuids, fromSpaces)
     (project, artifacts)
   }
 
@@ -676,10 +677,10 @@ object DistributedRunner {
 
   private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
     repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion: String,
-    checkMissing: Boolean) = {
+    checkMissing: Boolean, fromSpace: String) = {
     Seq[Fixer](
       fixResolvers2(repoDir, log),
-      fixDependencies2(arts, modules, crossVersion, checkMissing, log),
+      fixDependencies2(arts, modules, crossVersion, checkMissing, fromSpace, log),
       fixScalaVersion2(dbuildDir, repoDir, arts),
       fixInterProjectResolver2bis(modules),
       fixCrossVersions2(crossVersion),
@@ -740,7 +741,8 @@ object DistributedRunner {
 
     def newSettings(oldSettings: Seq[Setting[_]]) =
       prepareCompileSettings(log, modules, dbuildDir, rewireInfo.in.localRepo, rewireInfo.in.artifacts,
-        oldSettings, rewireInfo.crossVersion, rewireInfo.checkMissing) ++ publishSettings(oldSettings) ++ restore(oldSettings)
+        oldSettings, rewireInfo.crossVersion, rewireInfo.checkMissing, rewireInfo.in.fromSpace) ++
+        publishSettings(oldSettings) ++ restore(oldSettings)
 
     // The property "dbuild.sbt-runner.last-msg" is normally be set by SbtRunner. However, rewire() may
     // also be called as part of the reload within "dbuild-setup", in which case the property will not

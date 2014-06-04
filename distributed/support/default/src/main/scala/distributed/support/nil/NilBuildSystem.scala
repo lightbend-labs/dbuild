@@ -1,7 +1,7 @@
 package distributed.support.nil
 
 import distributed.project.model.NilExtraConfig
-import distributed.project.BuildSystem
+import distributed.project.{ BuildSystem, BuildData }
 import distributed.support.BuildSystemCore
 import distributed.project.model._
 import distributed.logging.Logger
@@ -30,12 +30,12 @@ object NilBuildSystem extends BuildSystemCore {
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+      buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
 
     val version = input.version
     val meta=readMeta(project.config)
-    log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
+    buildData.log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
 
     BuildArtifactsOut(meta.projects map {
       proj => BuildSubArtifactsOut(proj.name,Seq.empty,Seq.empty)})

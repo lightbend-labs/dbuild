@@ -3,51 +3,118 @@ package support
 package sbt
 
 import project.model._
-import _root_.sbt.{IO, Path, PathExtra}
+import _root_.sbt.{ IO, Path, PathExtra }
 import Path._
 import _root_.java.io.File
 import sys.process.Process
-import distributed.project.model.Utils.{writeValue,readValue}
+import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.logging.Logger.logFullStackTrace
+import distributed.project.build.BuildDirs._
+import distributed.support.sbt.SbtRunner.SbtFileNames._
+import distributed.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
 
-// Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
-// script...
+/**
+ * Rewiring a level needs the information contained in RewireInput:
+ *
+ * @param in The BuildArtifactsIn, comprising: a description of the artifacts contained in the local repo,
+ *        plus the directory where those artifacts have been rematerialized
+ * @param subproj The sbt subprojects that will be rebuilt in this level (empty means all subprojects)
+ * @param crossVersion The cross version selector for the artifacts that will result from the
+ *                     rebuilding of this level. It is not really relevant for the levels other than
+ *                     the first one, but it still controls whether missing dependencies will be
+ *                     detected or not while rewiring.
+ */
+case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String],
+  crossVersion: String, checkMissing: Boolean, debug: Boolean)
+/**
+ * Input to generateArtifacts()
+ */
+case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, /* not fully supported */ measurePerformance: Boolean, debug: Boolean)
+
 object SbtBuilder {
-  
-  def writeRepoFile(repos:List[xsbti.Repository], config: File, repo: File): Unit =
-    Repositories.writeRepoFile(repos, config, "build-local" -> repo.toURI.toASCIIString)
 
-  def buildSbtProject(repos:List[xsbti.Repository], runner: SbtRunner)(project: File, config: SbtBuildConfig,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {    
-    IO.withTemporaryDirectory { tmpDir => 
-      val resultFile = tmpDir / "results.dbuild"
-      // TODO - Where should depsfile + repo file be?  
-      // For debugging/reproducing issues, we're putting them in a local directory for now.
-      val dbuildDir = project / ".dbuild"
-      val depsFile = dbuildDir / "deps.dbuild"
-      val repoFile = dbuildDir / "repositories"
-      // We need a new ivy cache to ensure no corruption of minors (or projects)
-      val ivyCache = dbuildDir / "ivy2"
-      IO.write(depsFile, writeValue(config))
-      writeRepoFile(repos, repoFile, config.info.artifacts.localRepo)
-      log.debug("Runing SBT build in " + project + " with depsFile " + depsFile)
-      SbtRunner.silenceIvy(project, log, debug)
-      runner.run(
-        projectDir = project,
-        sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
-        log = log,
-        javaProps = Map(
-            "sbt.repository.config" -> repoFile.getAbsolutePath,
-            "dbuild.project.build.results.file" -> resultFile.getAbsolutePath,
-            "dbuild.project.build.deps.file" -> depsFile.getAbsolutePath,
-            "sbt.ivy.home" -> ivyCache.getAbsolutePath),
-        extraArgs = config.config.options
-      )(config.config.commands.:+("dbuild-build"):_*)
-      try readValue[BuildArtifactsOut](resultFile)
-      catch { case e:Exception =>
-        logFullStackTrace(log, e)
-        sys.error("Failed to generate or load build results!")
-      }
+  // If customProcess is not None, the resulting sbt command line will be prepared and then
+  // passed to customProcess, rather than to the regular Process() in SbtRunner. This feature
+  // is used by "dbuild checkout".
+  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig,
+    log: logging.Logger, debug: Boolean, customProcess: Option[(File, logging.Logger, File, Seq[String]) => Unit] = None,
+    targetCommands: Seq[String] = Seq("dbuild-build"))(): Unit = {
+
+    // everything needed for the automatic rewiring, driven by
+    // the onLoad() calls on each level
+    // now, let's prepare and place the input data to rewiring
+    val arts = config.info.artifacts
+    val subprojs = config.info.subproj
+    val crossVers = config.crossVersion
+    val checkMissing = config.checkMissing
+    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, checkMissing, log, debug)
+
+    // preparation of the input data to generateArtifacts()
+    // This is for the first level only
+    val buildIn = GenerateArtifactsInput(config.info,
+      measurePerformance = config.config.measurePerformance,
+      runTests = config.config.runTests,
+      debug = debug)
+    SbtRunner.placeGenArtsInputFile(projectDir, buildIn)
+
+    // this "ivyCache" is not used for all the levels in which rewiring takes place; for those levels
+    // the "onLoad" sets the ivy cache to a level-specific location. However for the topmost levels,
+    // in which there is no rewiring or setting adjustments, the ivy cache in use will be the one
+    // specified here. No rematerialized artifacts will end up there, hence no possible collisions.
+    val dbuildSbtDir = projectDir / dbuildSbtDirName
+    val topIvyCache = dbuildSbtDir / "topIvy" / "ivy2"
+    // the top levels also do not get the repositories adjustment offered by FixResolvers2() in
+    // DistributedRunner. However, all levels rely on the "repositories" file written here:
+    val repoFile = dbuildSbtDir / repositoriesFileName
+    val baseRematerializedRepo = localRepos(projectDir).head
+    SbtRunner.writeRepoFile(repos, repoFile, "build-local" -> baseRematerializedRepo.toURI.toASCIIString)
+
+    runner.run(
+      projectDir = projectDir,
+      sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
+      log = log,
+      javaProps = Map(
+        "sbt.ivy.home" -> topIvyCache.getCanonicalPath,
+        // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
+        "sbt.repository.config" -> repoFile.getCanonicalPath
+      ),
+      /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */
+      extraArgs = config.config.options,
+      process = customProcess)(config.config.commands ++ targetCommands: _*)
+  }
+
+  def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
+    subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean],
+    log: _root_.sbt.Logger, debug: Boolean): Unit = {
+    // we do the rewiring on each level using onLoad; we generate the artifacts at the end
+    val levels = SbtRunner.buildLevels(projectDir)
+    // create the .dbuild dirs in each level (we will use it to store the ivy cache, and other info)
+    SbtRunner.prepDBuildDirs(projectDir, levels)
+
+    // preparation of the sbt files used to drive rewiring, via onLoad
+    val onlyMiddle = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
+    val onlyFirst = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad, fixPublishSettings=true)")
+    val allButFirst = SbtRunner.addDBuildPlugin
+    val all = SbtRunner.ivyQuiet(debug)
+    val (first, middle, last) = (onlyFirst + all, onlyMiddle + allButFirst + all, allButFirst + all)
+    val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
+    SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
+
+    // now, let's prepare and place the input data to rewiring
+    val ins = artifacts.materialized
+    // The defaults are: "disabled","standard","standard"....
+    val defaultCrossVersions = CrossVersionsDefaults.defaults
+    val crossVersionStream = crossVers.toStream ++ defaultCrossVersions.drop(crossVers.length)
+    val checkMissingStream = checkMiss.toStream ++ crossVersionStream.drop(checkMiss.length).map {
+      // The default value for checkMissing is true, except if crossVersion is "standard", as
+      // we are unable to perform the check in that case.
+      _ != "standard"
     }
+    // .zipped works on three elements at most, hence the nesting
+    val inputDataAll = ((ins, subprojs).zipped, crossVersionStream, checkMissingStream).zipped map {
+      case ((in, subproj), cross, checkMissing) =>
+        RewireInput(in, subproj, cross, checkMissing, debug)
+    }
+    SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll.toSeq, log, debug)
   }
 }

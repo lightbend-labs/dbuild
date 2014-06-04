@@ -6,7 +6,7 @@ import sys.process.ProcessLogger
 import sbt.Level._
 
 trait Logger extends SbtLogger with ProcessLogger {
-  def newNestedLogger(name: String): Logger
+  def newNestedLogger(name: String, projName: String = ""): Logger
 }
 object Logger {
   private def processLogMsg(log: Logger, t: Throwable, short: Boolean) = {
@@ -32,6 +32,11 @@ object Logger {
   def logFullStackTrace(log: Logger, t: Throwable): Unit = processLogMsg(log, t, false)
 }
 
+
+object ConsoleLogger {
+  def apply(debug: Boolean): Logger = new StreamLogger(System.out, debug)
+}
+
 //
 //  Below this line, unused code
 //
@@ -43,7 +48,7 @@ class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger
 
   if (debug) setLevel(Debug)
 
-  def newNestedLogger(name: String): Logger = this
+  def newNestedLogger(name: String, projName: String): Logger = this
   def trace(t: => Throwable): Unit =
     out.synchronized {
       val traceLevel = getTrace
@@ -73,8 +78,4 @@ class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger
         out.println()
       }
     }
-}
-
-object ConsoleLogger {
-  def apply(debug: Boolean): Logger = new StreamLogger(System.out, debug)
 }

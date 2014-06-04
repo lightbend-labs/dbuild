@@ -112,6 +112,12 @@ vars
   you can refer to the value of the property by using ``${vars.sys.x.y}``, also when
   defining further variables.
 
+  The path ``vars.auto`` contains some special utility variables, computed by dbuild
+  before the build is started. At this time, ``${vars.auto.timestamp}`` contains a
+  timestamp corresponding to the start of the build, which can be used to construct
+  file names or artifact names, for example using the "set-version-suffix" option
+  (see below).
+
 .. _properties:
 
 properties
@@ -166,14 +172,15 @@ Each project descriptions has this structure:
 .. code-block:: javascript
 
    {
-    "name"          : <project-name>,
-    "system"        : <build-system>,
-    "uri"           : <source-repository-uri>,
-    "set-version"   : <optional-output-version>
-    "deps"          : <optional-dependencies-modifiers>
-    "cross-version" : <cross-version-selector>
-    "use-jgit"      : <jgit-selector>
-    "extra"         : <optional-extra-build-parameters>
+    "name"               : <project-name>,
+    "system"             : <build-system>,
+    "uri"                : <source-repository-uri>,
+    "set-version"        : <optional-output-version>
+    "set-version-suffix" : <optional-output-version-suffix>
+    "deps"               : <optional-dependencies-modifiers>
+    "cross-version"      : <cross-version-selector>
+    "use-jgit"           : <jgit-selector>
+    "extra"              : <optional-extra-build-parameters>
    }
 
 Within a project description, only the name is mandatory; all the rest is optional, although
@@ -212,6 +219,23 @@ set-version
   override the default value by specifying a specific version string here. If you are planning to
   use this feature in order to release artifact, then you also need to set the option "cross-version"
   to "standard", as explained in the section :ref:`section-build-options`.
+
+set-version-suffix
+  As an alternative to "set-version", this options will change only the version suffix, while
+  retaining the main version number that is defined by the project itself. For example, if the
+  project defines as version "0.8.1-SNAPSHOT", and set-version-suffix is "test", the resulting
+  version will be "0.8.1-test". If the suffix is set to the empty string, the version
+  will become just "0.8.1". If both "set-version-suffix" and "set-version" are defined, the
+  latter will take over, replacing the version string entirely.
+
+  If the special string "%commit%" (lowercase) is used for "set-version-suffix", the resulting
+  suffix will be the string "-R" plus the commit of the project. If you prefer a shortened
+  commit string, just add a length to the string; for example, "%commit%10" will use only
+  the first ten character of the commit hash string.
+
+  Important note: an all-numeric suffix string may be interpreted by Maven-related tools
+  as a snapshot version; please make sure to include at least one alphabetic character in
+  your version suffix string, in order to avoid unexpected behaviors.
 
 deps
   The optional "deps" section can be used to modify the way in which dbuild rewires certain
@@ -308,7 +332,10 @@ sbt-version
   A string that specifies the version of sbt that should be used to compile
   this dbuild project. If not specified, the sbt version in use will be the
   one specified in the global build options property "sbt-version" (see
-  :doc:`buildOptions`). If that is also missing, sbt 0.12.4 will be used.
+  :doc:`buildOptions`). If that is also missing, the default value "standard"
+  will be assumed. In that case, an attempt will be made to autodetect the
+  required sbt version from the "build.properties" file of the project.
+  Should that also be missing, dbuild will ask you to provide a version number.
 
 projects
   A sequence of strings that identifies a subset of the sbt subprojects that should be

@@ -8,7 +8,7 @@ object StateHelpers {
   def getProjectRefs(extracted: Extracted): Seq[ProjectRef] =
     extracted.structure.allProjectRefs
 
-  private def saveMsg(e: Throwable, lastMsg: String) = {
+  private def saveMsg(e: Throwable, lastMsgFile: File) = {
     val msg = e match {
       case x:sbt.Incomplete =>
         x.message match {
@@ -20,27 +20,21 @@ object StateHelpers {
         }
       case x => x.getMessage
     }
-    writeStringToFile(new File(lastMsg), msg, "UTF-8")
+    writeStringToFile(lastMsgFile, msg, "UTF-8")
     e.printStackTrace()
     throw e
   }
-  def saveLastMsg(f: State => State)(state: State): State = try {
-    f(state)
-  } catch {
-    case e =>
-      Option(System.getProperty("dbuild.sbt-runner.last-msg")) match {
-        case None => throw e
-        case Some(lastMsg) => saveMsg(e, lastMsg)
-      }
-  }
   
-  def saveLastMsg(f: (State, Seq[String]) => State)(state: State, args: Seq[String]): State = try {
+  def saveLastMsg(lastMsgFile: File, f: (State, Seq[String]) => State)(state: State, args: Seq[String]): State = try {
     f(state, args)
   } catch {
-    case e =>
-      Option(System.getProperty("dbuild.sbt-runner.last-msg")) match {
-        case None => throw e
-        case Some(lastMsg) => saveMsg(e, lastMsg)
-      }
+    case e => saveMsg(e, lastMsgFile)
   }
+  
+  def saveLastMsg(lastMsgFile: File, f: State => State)(state: State): State = try {
+    f(state)
+  } catch {
+    case e => saveMsg(e, lastMsgFile)
+  }
+
 }

@@ -15,11 +15,11 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.8.2-SNAPSHOT"
+  def MyVersion: String = "0.9.0-SNAPSHOT"
   
   lazy val root = (
     Project("root", file(".")) 
-    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, gitSupport, drepo, dmeta, ddocs)
+    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, gitSupport, drepo, dmeta, ddocs, dist)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
     settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
@@ -31,7 +31,15 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     settings(
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDbuildProps,
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in drepo, version in drepo) map Packaging.makeDRepoProps,
-      version := MyVersion
+      version := MyVersion,
+      selectScalaVersion,
+      // disable the publication of artifacts in dist if 2.10
+      // (we only retain the correct launcher, which is the
+      // one generated using 2.9)
+      // This is a pretty ugly hack, but it is quite difficult to prevent sbt from
+      // skipping publishing completely (including the ivy file) upon a given condition.
+      publishConfiguration <<= (publishConfiguration,scalaVersion) map { (p,sv) => 
+        if (sv.startsWith("2.10")) new sbt.PublishConfiguration(None,p.resolverName,Map.empty,Seq.empty,p.logging) else p}
     )
   )
 
@@ -71,7 +79,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val dprojects = (
       DmodProject("projects")
-      dependsOn(dcore, logging)
+      dependsOn(dcore, drepo, logging)
       dependsOnRemote(javaMail, commonsIO)
       dependsOnSbt(sbtIo, sbtIvy)
     )
@@ -83,7 +91,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
   lazy val drepo = (
     DmodProject("repo")
-    dependsOn(dmeta,logging)
+    dependsOn(dmeta, logging)
     dependsOnRemote(mvnAether, aetherWagon, dispatch)
     dependsOnSbt(sbtIo, sbtLaunchInt)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion, streams) map { (dir, version, org, sv, s) =>

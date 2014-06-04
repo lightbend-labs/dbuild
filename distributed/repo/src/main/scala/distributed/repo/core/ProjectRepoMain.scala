@@ -29,8 +29,8 @@ object ProjectRepoMain {
   // TODO - this file-specific knowledge is evil
   val cacheDir = Repository.defaultCacheDir
   val cache = Repository.default
-  val projectRepo = new ReadableProjectRepository(cache)
-  
+  private def getProjectInfo(uuid:String) = LocalRepoHelper.getProjectInfo(uuid, cache)
+
   def main(args: Array[String]): Unit = {
     args.toSeq match {
       case Seq("project", uuid) => printProjectInfo(uuid)
@@ -75,7 +75,7 @@ object ProjectRepoMain {
       val projects = for {
           SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(uuid, cache).toSeq
           project <- build.repeatableBuilds
-      } yield (project.config.name, project.uuid)
+      } yield (project.configAndExtracted.config.name, project.uuid)
       val names = padStrings(projects map (_._1))
       val uuids = projects map (_._2)
       for((name, id) <- names zip uuids) {
@@ -92,8 +92,8 @@ object ProjectRepoMain {
   }
   
   private def printProjects(uuids: Seq[String]): Unit = {
-    val meta = uuids map { id => 
-      val (info, _, _) = projectRepo getProjectInfo id
+    val meta = uuids map { uuid =>
+      val (info, _, _) = getProjectInfo(uuid)
       info
     }
     val names = padStrings(meta map (_.project.config.name))
@@ -114,14 +114,14 @@ object ProjectRepoMain {
   }
   
   def printProjectDependencies(uuid:String): Unit = {
-    val (meta, _, _) = projectRepo.getProjectInfo(uuid)
+    val (meta, _, _) = getProjectInfo(uuid)
     println(" -- Dependencies --")
-    for(uuid <- meta.project.dependencyUUIDs)
+    for(uuid <- meta.project.depInfo flatMap (_.dependencyUUIDs))
       println("    * " + uuid)
   }
   
   def printProjectArtifacts(uuid:String): Unit = {
-    val (meta, _, arts) = projectRepo.getProjectInfo(uuid)
+    val (meta, _, arts) = getProjectInfo(uuid)
     println(" -- Artifacts -- ")
     val groups = padStrings(arts map (_.info.organization))
     val names = padStrings(arts map (_.info.name))
@@ -143,7 +143,7 @@ object ProjectRepoMain {
   }
   
   def printProjectFiles(uuid: String): Unit = {
-    val (_, artFiles,arts) = projectRepo.getProjectInfo(uuid)
+    val (_, artFiles,arts) = getProjectInfo(uuid)
     println(" -- Files -- ")
     
     val groups = artFiles groupBy { x => x._2.location.take(x._2.location.lastIndexOf('/')) }

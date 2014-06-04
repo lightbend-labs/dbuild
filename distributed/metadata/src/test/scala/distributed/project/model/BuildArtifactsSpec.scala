@@ -11,8 +11,8 @@ object BuildArtifactsSpec extends Specification {
       val data = 
         BuildArtifactsOut( 
           Seq(BuildSubArtifactsOut("x",Seq(
-              ArtifactLocation(ProjectRef("p3", "o2"), "1.0", ""),
-              ArtifactLocation(ProjectRef("p3", "o2"), "2.0", "")
+              ArtifactLocation(ProjectRef("p3", "o2"), "1.0", "", None),
+              ArtifactLocation(ProjectRef("p3", "o2"), "2.0", "", None)
           ),Seq.empty))
         )
       val config = writeValue(data)

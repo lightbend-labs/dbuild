@@ -154,7 +154,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
           if (good.nonEmpty) try {
             // Are we signing? If so, proceed
             options.sign foreach { signOptions =>
-              val secretRingFile = signOptions.secretRing map { new File(_) } getOrElse (ProjectDirs.userhome / ".gnupg" / "secring.gpg")
+              val secretRingFile = signOptions.secretRing map { new File(_) } getOrElse (GlobalDirs.userhome / ".gnupg" / "secring.gpg")
               PGP.init
               val passPhrase = {
                 val passPhraseFile = io.Source.fromFile(signOptions.passphrase)

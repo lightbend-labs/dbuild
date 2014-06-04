@@ -32,7 +32,7 @@ class GitProjectResolver extends ProjectResolver {
 
     val uri = new _root_.java.net.URI(config.uri)
     val uriString = UriUtil.dropFragment(uri).toASCIIString
-    val cloneDir = distributed.repo.core.ProjectDirs.clonesDir / (hashing sha1 uriString)
+    val cloneDir = distributed.repo.core.GlobalDirs.clonesDir / (hashing sha1 uriString)
     val ref = Option(uri.getFragment()) getOrElse "master"
 
     // We cache a single git clone for this repository URI (sans fragment),
@@ -55,6 +55,7 @@ class GitProjectResolver extends ProjectResolver {
     val localRepo = if (!(dir / ".git").exists) git.clone(cloneDir.getCanonicalPath, dir, log) else git.getRepo(dir)
 
     git.fetch(localRepo, false /* stop on failures */ , log)
+    // scrub the dir from all extraneous stuff before returning
     git.clean(localRepo, log)
 
     val sha = git.checkoutRef(localRepo, ref, log)

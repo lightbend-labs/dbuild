@@ -15,7 +15,7 @@ import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
-import distributed.project.BuildSystem
+import distributed.project.{ BuildSystem, BuildData }
 import collection.JavaConverters._
 import org.apache.maven.model.{ Model, Dependency }
 import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
@@ -23,6 +23,7 @@ import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import distributed.support.NameFixer.fixName
 import _root_.sbt.NameFilter
+import distributed.project.build.BuildDirs.dbuildDirName
 
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystemCore {
@@ -63,8 +64,9 @@ object ScalaBuildSystem extends BuildSystemCore {
   // but not for the submodules. After building the core, we will call localBuildRunner.checkCacheThenBuild() on each module,
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-    log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+    buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
+    val log = buildData.log
 
     // if requested, overwrite build.number. This is unrelated to
     // the version that is possibly overridden by "set-version".
@@ -120,7 +122,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       name: String, org: String): Option[String] =
       getVersion(findArtifact(arts, name, org))
 
-    val debugOptions = if (debug) Seq("-debug") else Seq.empty
+    val debugOptions = if (buildData.debug) Seq("-debug") else Seq.empty
 
     val rewireOptions = if (hasPublishLocal) {
 
@@ -167,7 +169,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     // The ant build script calls maven, meaning that if we use strange version numbers
     // for the artifacts they 1) pollute ~/.m2 and 2) once one is in the cache, all hope to get it evicted is lost
     // Therefore: we use a local .m2 cache for each build, to avoid pollution & collisions
-    val dbuildDir = dir / ".dbuild"
+    val dbuildDir = dir / dbuildDirName
     // See the special use of _JAVA_OPTIONS, below
     val localM2repo = dbuildDir / ".m2" / "repository"
     localM2repo.mkdirs()
@@ -274,7 +276,9 @@ object ScalaBuildSystem extends BuildSystemCore {
       BuildArtifactsOut(meta.projects map {
         proj =>
           val (cross, ver) = findCrossAndVer(localRepo, proj.organization, proj.name)
-          BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, ver, cross) },
+          // The "None" in ArtifactLocation is the set of extraAttributes, which is only relevant in case
+          // the artifact is an sbt plugin; we do not expect the Scala compiler to produce sbt plugins.
+          BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, ver, cross, pluginAttrs = None) },
             projSHAs(proj.artifacts, cross))
       })
 
@@ -291,7 +295,7 @@ object ScalaBuildSystem extends BuildSystemCore {
    */
   private def readMeta(baseDir: File, exclude: Seq[String], log: logging.Logger): ExtractedBuildMeta = {
     val dbuildMetaFile = new File(baseDir, "dbuild-meta.json")
-    val readMeta = try readValue[ExtractedBuildMeta](dbuildMetaFile)
+    val readMeta = try ExtractedBuildMeta(Seq(readValue[ProjMeta](dbuildMetaFile)))
     catch {
       case e: Exception =>
         log.error("Failed to read scala metadata file: " + dbuildMetaFile.getAbsolutePath)
@@ -306,7 +310,8 @@ object ScalaBuildSystem extends BuildSystemCore {
     // Also filter according to the "exclude" list; however,
     // any dependencies on excluded subprojects will be preserved.
     val allSubProjects = readMeta.projects map { _.name }
-    val meta = if (exclude.nonEmpty) {
+    val readMetaInfo = readMeta.projInfo.headOption getOrElse sys.error("Internal error: readMeta had no projInfo")
+    val metaInfo = if (exclude.nonEmpty) {
       val notFound = exclude.diff(allSubProjects)
       if (notFound.nonEmpty) sys.error(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
       val subProjects = allSubProjects.diff(exclude)
@@ -317,13 +322,15 @@ object ScalaBuildSystem extends BuildSystemCore {
       // considering that ant always build everything; the "subproj" list is only
       // used here to decide what to publish to the dbuild repo at the end of
       // the compilation.
-      readMeta.copy(subproj = subProjects).copy(projects = readMeta.projects.filter {
+      readMetaInfo.copy(subproj = subProjects).copy(projects = readMeta.projects.filter {
         p => subProjects.contains(p.name)
       })
-    } else readMeta.copy(subproj = allSubProjects)
-
+    } else readMetaInfo.copy(subproj = allSubProjects)
     // override the "dbuild.json" version with the one from "build.number" (if it exists)
-    readBuildNumberFile(baseDir) map { v => meta.copy(version = v) } getOrElse meta
+    val metaInfo2 = readBuildNumberFile(baseDir) map { v => metaInfo.copy(version = v) } getOrElse metaInfo
+    // re-package the projInfo inside an ExtractedBuildMeta
+    val meta = readMeta.copy(projInfo = Seq(metaInfo2))
+    meta
   }
 
   def readBuildNumberFile(baseDir: File) = {
@@ -358,7 +365,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     // hard-coded
-    ExtractedBuildMeta(version, Seq(
+    ExtractedBuildMeta(Seq(ProjMeta(version, Seq(
       Project("continuations", "org.scala-lang.plugins",
         Seq(ProjectRef("continuations", "org.scala-lang.plugins")),
         Seq.empty),
@@ -389,6 +396,6 @@ object ScalaBuildSystem extends BuildSystemCore {
         Seq(Project("scala-actors-migration", "org.scala-lang",
         Seq(ProjectRef("scala-actors-migration", "org.scala-lang")),
         Seq(ProjectRef("scala-library", "org.scala-lang"), ProjectRef("scala-actors", "org.scala-lang"))))
-      else Seq.empty))
+      else Seq.empty))))
   }
 }

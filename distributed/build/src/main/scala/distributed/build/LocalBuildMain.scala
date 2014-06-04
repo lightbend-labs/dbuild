@@ -14,11 +14,11 @@ import distributed.project.dependencies.Extractor
 import distributed.support.BuildSystemCore
 import akka.pattern.ask
 import akka.util.duration._
-import distributed.repo.core.ProjectDirs.checkForObsoleteDirs
+import distributed.repo.core.GlobalDirs.checkForObsoleteDirs
 
-class LocalBuildMain(repos: List[xsbti.Repository], options: BuildOptions) {
+class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
 
-  val targetDir = ProjectDirs.targetDir
+  val targetDir = GlobalDirs.targetDir
   val resolvers = Seq(
     new support.git.GitProjectResolver,
     new support.svn.SvnProjectResolver,
@@ -62,18 +62,3 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildOptions) {
     system.awaitTermination(1.minute)
   }
 }
-/*
-object LocalBuildMain {
-  def build(build: DistributedBuildConfig) = {
-      val main = new LocalBuildMain
-      try main build build
-      finally main.dispose
-  }
-  def main(args: Array[String]): Unit = 
-    // TODO - Parse inputs for realz...
-    if(args.length == 1) {
-      readValue[DistributedBuildConfig](new File(args(0)))
-    }
-    else System.err.println("Usage: dbuild {build-file}")
-}
-*/

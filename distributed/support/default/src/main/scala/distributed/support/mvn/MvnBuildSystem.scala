@@ -2,7 +2,7 @@ package distributed
 package support
 package mvn
 
-import project.BuildSystem
+import project.{ BuildSystem, BuildData }
 import project.model._
 import _root_.java.io.File
 import logging.Logger
@@ -30,7 +30,8 @@ object MvnBuildSystem extends BuildSystemCore {
   }
   
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+      buildData: BuildData): BuildArtifactsOut = {
+    val log = buildData.log
     log.info("Running maven...")
     val mc = project.extra[ExtraType]
     val pom = 

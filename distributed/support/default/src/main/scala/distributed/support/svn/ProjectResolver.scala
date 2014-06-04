@@ -3,6 +3,7 @@ package support
 package svn
 
 import _root_.sbt.Path._
+import _root_.sbt.IO
 import project.model._
 import project.resolve.ProjectResolver
 
@@ -21,9 +22,8 @@ class SvnProjectResolver extends ProjectResolver {
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: logging.Logger): ProjectBuildConfig = {
     val uri = new _root_.java.net.URI(config.uri)
 
-    // First clone into the directory or fetch
-    // TODO - better git checkout detection...
-    if(!dir.getParentFile.exists) dir.getParentFile.mkdirs()
+    // clean the directory content, just in case there are leftovers
+    IO.delete(dir.*("*").get)
     if(!(dir / ".svn" ).exists) Svn.checkout(uri, dir, log)
     else Svn.revert(dir, log)
 

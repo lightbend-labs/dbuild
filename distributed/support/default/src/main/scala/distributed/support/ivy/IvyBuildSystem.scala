@@ -1,7 +1,7 @@
 package distributed.support.ivy
 
 import distributed.support.BuildSystemCore
-import distributed.project.BuildSystem
+import distributed.project.{ BuildSystem, BuildData }
 import distributed.project.model._
 import distributed.repo.core.LocalArtifactMissingException
 import java.io.File
@@ -27,6 +27,8 @@ import org.apache.ivy.core.module.descriptor.DefaultArtifact
 import distributed.support.ivy.IvyMachinery.PublishIvyInfo
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
+import distributed.repo.core.GlobalDirs.dbuildHomeDir
+import distributed.support.SbtUtil.pluginAttrs
 
 /** Implementation of the Scala  build system. workingDir is the "target" general dbuild dir */
 class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystemCore {
@@ -35,7 +37,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   type ExtraType = IvyExtraConfig
 
   // this is the general dbuild one (we don't use it here)
-  val dbuildIvyHome = (distributed.repo.core.ProjectDirs.dbuildDir / ".ivy2").getAbsolutePath
+  val dbuildIvyHome = (dbuildHomeDir / ".ivy2").getAbsolutePath
 
   def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     case None => IvyExtraConfig(false, false, true, Seq.empty, None) // pick default values
@@ -92,7 +94,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   // build system is doing at this time
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: Logger, debug: Boolean): BuildArtifactsOut = {
+    buildData: BuildData): BuildArtifactsOut = {
+    val log = buildData.log
     log.debug("BuildInput is: " + input)
     // first, get the dependencies
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)
@@ -124,7 +127,6 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     log.info("Will publish as:")
     log.info("  " + module.getOrganisation + "#" + module.getName + ";" + version)
 
-
     // this is transitive = false, only used to retrieve the jars that should be republished later
     val response = IvyMachinery.resolveIvy(newProjectConfig, baseDir, repos, log, transitive = false)
     val report = response.report
@@ -136,7 +138,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val trimName = fixName(name)
       val cross = if (trimName != name) name.substring(trimName.length) else ""
       val classifier = Option(a.getExtraAttributes.get("classifier").asInstanceOf[String])
-      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/ , cross)
+      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/ , cross, pluginAttrs(mr))
     }
 
     val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
@@ -159,7 +161,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
     // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
     import scala.collection.JavaConversions._
-    val crossVersion = project.config.getCrossVersion
+    val crossVersion = project.config.getCrossVersionHead
+    val checkMissing = project.config.getCheckMissingHead
     val arts = input.artifacts.artifacts
     // I need to get my dependencies again during build; although in theory I could pass
     // this information to here from extraction, in practice I just run Ivy once more
@@ -210,6 +213,10 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
           if (direct) Some(PublishIvyInfo(da2, rewritten = true, optional = optional)) else None
         } getOrElse {
           printIvyDependency(None)
+          // TODO: this code is quite similar to the one in DistributedRunner, except this one only
+          // works on the base level (no plugins), and has been adapted to operate on Ivy Artifacts,
+          // rather than Artifact locations. Still, the similarities means the two should probably
+          // be somehow consolidated into common code. TODO: unify the two, in some manner
           if (a.getName != fixName(a.getName) &&
             // Do not inspect the artifacts that we are building right at this time:
             (fixName(a.getName) != currentName || a.getModuleRevisionId.getOrganisation != currentOrg)) {
@@ -222,7 +229,10 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
               " is not provided by any project in this configuration file."
             crossVersion match {
               case "binaryFull" | "disabled" | "full" =>
-                if (optional) {
+                if (!checkMissing) {
+                  log.warn(msg)
+                  log.warn("The library (and possibly some of its dependencies) will be retrieved from the external repositories.")
+                } else if (optional) {
                   log.warn(msg)
                   log.warn("This dependency is marked optional, and may be not actually in use; continuing...")
                   log.warn("If another project does request this optional dependency, an unspecified version")
@@ -231,11 +241,13 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
                 } else {
                   log.error(msg)
                   log.error("In order to control which version is used, please add the corresponding project to the build file")
-                  log.error("(or use \"build.cross-version:standard\" to ignore (not recommended)).")
+                  log.error("(or use \"build.check-missing:false\" to ignore (not recommended)).")
                   sys.error("Required dependency not found")
                 }
               case "standard" =>
                 log.warn(msg)
+                if (checkMissing)
+                  log.warn("*** The option \"check-missing\" is ignored when \"cross-version\" is set to \"standard\"")
                 if (optional) {
                   log.warn("The dependency is marked optional, and may be not actually in use. If another project requests")
                   log.warn("this optional dependency, however, it will be retrieved from the external repositories.")

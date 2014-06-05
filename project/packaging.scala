@@ -31,20 +31,20 @@ object Packaging {
      rpmUrl := Some("http://github.com/typesafehub/distributed-build"),
      rpmLicense := Some("BSD"),
 
+     // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
+     // otherwise Universal may end up using outdated files.
+     // The command "release" in root will perform a clean, followed by a publish.
+
      // S3 stuff
      host in upload := "downloads.typesafe.com",
      mappings in upload <<= (packageZipTarball in Universal, packageBin in Universal, name, version, scalaVersion) map
        {(tgz,zip,n,v,sv) => if(sv.startsWith("2.10")) Seq.empty else Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
      progress in upload := true,
      credentials += Credentials(Path.userHome / ".s3credentials"),
-     upload <<= upload dependsOn (clean),
+     // Important: always issue "clean" before an S3 upload
      // until here
 
      publishArtifact in Compile := false,
-
-     // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
-     // otherwise Universal may end up using outdated files.
-     // The command "release" in root will perform a clean, followed by a publish.
 
      publishMavenStyle := false,
      autoScalaLibrary := false,

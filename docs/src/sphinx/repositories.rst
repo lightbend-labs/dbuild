@@ -129,4 +129,4 @@ If no options are present, it will print a list of options and commands. The mai
 
 |
 
-*Next:* :doc:`plugin`.
+*Next:* :doc:`caveats`.

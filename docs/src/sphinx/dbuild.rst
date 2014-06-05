@@ -1,36 +1,6 @@
 Using dbuild
 ============
 
-Using dbuild
-------------
-
-The stand-alone ``dbuild`` tool is called by specifying on the command line its build configuration file:
-
-.. code-block:: bash
-
-   $ bin/dbuild build-file.dbuild
-
-The build tool will create, if not existing, a ``~/.dbuild`` directory in your home, which stores general
-dbuild support files and the local repository cache, and a ``target`` in your current directory, which is
-used as a staging area for the current build.
-
-Unless specified otherwise, the end results of the build (artifacts and build information) will be stored
-into a local repository in ``~/.dbuild``. It is also possible to use a remote Ivy repository as storage;
-that is explained later in the section :doc:`repositories`.
-
-Properties file
----------------
-
-By default, dbuild will use the file ``dbuild.properties`` to retrieve information about its internal
-configuration. There is usually no need to touch this file, as it contains defaults that should be
-adequate for most projects. However, you can modify this file if you would like to modify the standard
-behavior in some way (for instance, relocating the default ``~/.dbuild`` directory, or the location of
-the Ivy cache it uses).
-
-The ``dbuild.properties`` file also contains the default list of resolvers that are used to resolve
-artifacts within dbuild. The list can be modified here, or via variables or further properties files,
-as explained in the section :ref:`custom-resolvers`, below.
-
 The build configuration file
 ----------------------------
 
@@ -38,16 +8,17 @@ The central part of the build tool operation revolves around the build configura
 in detail which software projects are involved in the build, which version of each should be used, and many
 other aspects of the build process.
 
-The build file is written in a JSON format. The file is parsed by using the Typesafe config library,
+The build file is written in a JSON format. The file is parsed using the Typesafe config library,
 therefore the syntax of the file can be simplified by using the conventions of that library: double
 quotes and commas may be omitted, variable substitution is available, and other facilities are
 available. You should check the many options that are available to simplify the syntax of
 configuration file; they are all documented on the website of the
 `config library <http://github.com/typesafehub/config>`_. In addition, dbuild has one special
 feature concerning lists of strings: whenever a list of strings is expected, in the form
-``"x":["a","b","c"]``, if you have only one element you can also omit the square brackets altogether.
-In accordance with the typesafe config library, you can then usually omit the double quotes
-and in the end just write ``x:a``.
+``x:[a,b,c]``, if you only have one element you can also omit the square brackets altogether,
+and just write ``x:a``. The same automatic "single element to array" conversion also applies
+to other arrays of configuration elements; the various cases are described later.
+Note that the double quotes around strings can be omitted in most cases.
 
 The order of items in the configuration file is never relevant, unless explicitly mentioned
 in the documentation. The top level of the configuration file is:
@@ -62,7 +33,7 @@ in the documentation. The top level of the configuration file is:
    }
 
 build
-  This section is required, and contains all of the information needed to generate the build.
+  This section is required, and contains the main information needed to generate the build.
   It includes the description of the various projects, and other options that control the
   generation of the code. It is described in detail below.
 
@@ -81,11 +52,11 @@ options
       "cleanup"       : <cleanup_options>
      }
 
-   The various options are described in detail in the rest of this guide.
+The various options are described in detail in the rest of this guide.
 
 vars
   This section is optional; it may contain a list of variables, in JSON format, whose content
-  is simply substituted in the rest of the configuration file, using the conventions of the
+  is simply substituted in the rest of the configuration file using the conventions of the
   Typesafe config library. For example, if you define it as:
 
   .. code-block:: javascript
@@ -160,8 +131,8 @@ projects
   ``build.projects: [...]``. The list of projects, enclosed in square brackets, describes
   the various software projects that should be built together by dbuild. 
 
-default options
-  Rather than specifying for each project all of its parameters, some common options can be
+defaults
+  Rather than specifying for each project all of its parameters, some common options can optionally be
   just described once, and they will act as defaults for all the enclosed projects. These options
   are described in more detail on the page :doc:`buildOptions`, which also contains
   some examples.
@@ -172,13 +143,14 @@ Each project descriptions has this structure:
 .. code-block:: javascript
 
    {
-    "name"               : <project-name>,
-    "system"             : <build-system>,
-    "uri"                : <source-repository-uri>,
+    "name"               : <project-name>
+    "system"             : <build-system>
+    "uri"                : <source-repository-uri>
     "set-version"        : <optional-output-version>
     "set-version-suffix" : <optional-output-version-suffix>
     "deps"               : <optional-dependencies-modifiers>
     "cross-version"      : <cross-version-selector>
+    "check-missing"      : <check-missing-flag>
     "use-jgit"           : <jgit-selector>
     "extra"              : <optional-extra-build-parameters>
    }
@@ -187,22 +159,22 @@ Within a project description, only the name is mandatory; all the rest is option
 you will almost certainly also need to specify uri and system. The options, in detail, are:
 
 name
-  A string identifying the software project. This can be arbitrary, and is only used within dbuild,
+  A string identifying the software project. The name can be arbitrary and it is only used within dbuild,
   although you will want to use something meaningful, like "akka" for Akka, or "scala-arm" for the
   Scala ARM project.
 
 system
-  A string that describes the build system used by this software project. Valid values are currently
-  "scala" (custom for the Scala project), "sbt", "ivy", and "assemble". Additional mechanisms will
-  be added soon (Maven support is in the works). If not specified, "sbt" is assumed.
+  A string that describes the build system used by this software project. Possible values are
+  "scala" (specific to build the Scala project), "sbt", "ivy", and "assemble". Additional mechanisms
+  will be added soon (Maven support is in the works). If unspecified, "sbt" is used.
 
 uri
   A string pointing to the source repository for this project. It can be git-based (if the uri begins
   with ``git://`` or ends with ``.git``), or svn (schemes ``http://``, ``https://``, ``svn://``, only
-  if an svn repository is detected). Other source repository formats may be added in the future.
+  if an svn repository is detected).
 
-  The uri may optionally be prefixed with a ``'#'`` and either a commit hash, an svn version, or a
-  branch name. For example:
+  A git/svn uri may optionally be followed by a ``'#'`` and either a commit hash, an svn version, or a
+  branch name. For example, in:
 
   .. code-block:: javascript
 
@@ -212,13 +184,18 @@ uri
   exact version or commit in case if specified . If no prefix is added, dbuild will fetch the most recent
   version in git master, or svn head.
 
+  Some other source repository formats are used in special cases: the
+  ``ivy:`` scheme is only used together with the Ivy build system (see below), and the ``nil:``
+  uri means that no source files are used. This options is normally always specified, but in
+  case it should be missing, "nil:" will be used.
+
 set-version
-  This component is optional, and normally not used. During compilation, dbuild will automatically
-  generate a version string that is used for the various artifacts that are produced by each
+  This component is optional, and normally not used. During compilation, dbuild automatically
+  generates a special version string that is used while producing the various artifacts of each
   project. However, in case you need to obtain artifacts with a specific version string, you can
-  override the default value by specifying a specific version string here. If you are planning to
-  use this feature in order to release artifact, then you also need to set the option "cross-version"
-  to "standard", as explained in the section :ref:`section-build-options`.
+  completely override the default value by specifying a specific version string here. If you are
+  planning to use this feature in order to release artifact, then you may need to set the option
+  "cross-version" to "standard", as explained in the section :ref:`section-build-options`.
 
 set-version-suffix
   As an alternative to "set-version", this options will change only the version suffix, while
@@ -230,19 +207,22 @@ set-version-suffix
 
   If the special string "%commit%" (lowercase) is used for "set-version-suffix", the resulting
   suffix will be the string "-R" plus the commit of the project. If you prefer a shortened
-  commit string, just add a length to the string; for example, "%commit%10" will use only
-  the first ten character of the commit hash string.
+  commit string, just append a numeric length; for example, "%commit%10" will only use
+  the first ten characters of the commit hash string.
 
-  Important note: an all-numeric suffix string may be interpreted by Maven-related tools
-  as a snapshot version; please make sure to include at least one alphabetic character in
-  your version suffix string, in order to avoid unexpected behaviors.
+.. warning::
+
+  An all-numeric suffix string may be interpreted by Maven-related tools as referring to a
+  "SNAPSHOT" version, which may lead to unexpected results. Please make sure to include at
+  least one alphabetic character in your version suffix strings, in order to avoid any
+  unintended behavior.
 
 deps
   The optional "deps" section can be used to modify the way in which dbuild rewires certain
-  dependencies of this project. For instance, it can be used to force dbuild to "forget" about
-  some dependencies that it detected during dependency extraction, or it can be used to
-  "inject" some dependencies that dbuild was unable to detect (or both). The content of this
-  section is:
+  dependencies of this project. This is an advanced option. For instance, it can be used to
+  force dbuild to "forget" about some dependencies that it detected during dependency extraction,
+  or it can be used to "inject" some dependencies that dbuild was unable to detect (or both).
+  The content of this section is:
 
   .. code-block:: javascript
 
@@ -285,11 +265,11 @@ deps
   guide, for further details on using multiple spaces).
 
   Please note that the options "deps.ignore" and "deps.inject"
-  only affects dbuild's view of dependencies; it does not alter the list of
+  only affects dbuild's view of dependencies; they do not alter the list of
   library dependencies used within the project. If you wish to completely remove
-  or add a dependency in an sbt project, you should use instead the "extra.commands"
-  option, with a line like "set libraryDependencies ..." (see the sbt build
-  section in this manual for further details on "extra.commands").
+  or add a dependency in an sbt project, you may need to use instead the
+  "extra.commands" option, with a line like "set libraryDependencies ..."
+  (see the sbt build section in this manual for further details on "extra.commands").
 
   The options "deps.ignore" and "deps.inject" are an advanced feature, and should
   be used sparingly, if at all.
@@ -298,14 +278,19 @@ cross-version
   Controls the cross-versioning of the resulting artifacts. Please refer to the
   description at :doc:`buildOptions` for further details.
 
+check-missing
+  When set to true, dbuild will try to detect whether any of the Scala-based dependent
+  libraries of this project are not part of the configuration file. Please refer to the
+  description at :doc:`buildOptions` for further details.
+
 use-jgit
   It controls whether, for special applications, jgit should be used in place of the
   standard git utility. This option is not normally needed. 
 
 extra
   The "extra" component is optional, as are all of its sub-components; it describes additional
-  parameters used while building the project, and its content depends on the build system, as
-  detailed below.
+  parameters used while building the project. Its content depends on the build system, as
+  detailed in the following sections.
 
 .. _sbt-options:
 
@@ -334,12 +319,24 @@ sbt-version
   one specified in the global build options property "sbt-version" (see
   :doc:`buildOptions`). If that is also missing, the default value "standard"
   will be assumed. In that case, an attempt will be made to autodetect the
-  required sbt version from the "build.properties" file of the project.
-  Should that also be missing, dbuild will ask you to provide a version number.
+  sbt version from the "build.properties" file of the project. Should that
+  also be missing, dbuild will ask you to provide a version number.
+
+.. note::
+  From dbuild 0.9, the minimum required version of sbt is 0.13.5. That is
+  due to an important bug fix that is not present in previous sbt versions.
+  In case you need to build a project that requires the semantics of previous
+  versions of sbt, the custom versions ``0.12.5-dbuild`` and ``0.13.3-dbuild`` are
+  available, which are based on 0.12.4 and 0.13.2, respectively, and include the
+  necessary fix. These unsupported sbt versions are available from the same
+  repository that contains the other dbuild modules, and no additional
+  configuration is necessary to use them within dbuild: just set ``sbt-version``
+  to the required version number.
 
 projects
-  A sequence of strings that identifies a subset of the sbt subprojects that should be
-  built within this dbuild project. For instance, you can specify:
+  A sequence of strings (or a single string) that identifies a subset of the sbt
+  subprojects that should be built within this dbuild project. For instance, you
+  can specify:
 
   .. code-block:: javascript
 
@@ -353,12 +350,12 @@ projects
   subprojects will be included.
 
   If the project uses sbt's default projects, the actual subproject name may
-  vary over time, and take forms like "default-e3c4f7". In order to refer to
+  vary over time and take forms like "default-e3c4f7". In order to refer to
   sbt's default subproject, you can use the predefined name `"default-sbt-project"`.
 
 exclude
   Sometimes it may be useful to split a single project into two or more parts.
-  This clause can be used to exclude explicitly some of the subprojects, which
+  This clause can be used to exclude explicitly one or more of the subprojects, which
   can then be compiled in a different project within the same configuration file,
   using a different project name but using the same uri.
 
@@ -383,6 +380,10 @@ commands
   Note that a default list of commands (as detailed in :doc:`buildOptions`) will not
   be replaced by this option: the general commands will be executed before this list.
 
+  Please note that dbuild offers no guarantees on whether commands will be run before
+  or after the rewriting of dependencies, needed to make sure they refer to the artifacts
+  created by other projects in the same configuration file.
+  
 extraction-version
   This value can be used to override the Scala compiler version used during dependency
   extraction. It is optional within each project; it is also possible to specify this
@@ -705,43 +706,18 @@ The list can be customized, for instance in order to use
 a local Artifactory instance that acts as a proxy (useful
 to speed up resolution), or to add further custom repositories.
 
-There are various ways in which the list of resolvers can
-be customized. The simplest approach is just to modify the
-stanza ``[repositories]`` of the file ``dbuild.properties``,
-in the ``bin`` subdirectory. This is a
-simple way to customize the list of resolvers for all of
-the dbuild invocations on a development machine.
+The list of repositories can be specified in one (or both)
+of two ways: as a local configuration, or directly in the
+build configuration file.
 
-As a more flexible alternative, the list can also be
-customized for each individual configuration file. That
-is done by defining a set of repositories under the
-``options.resolvers`` path.
+Locally, the list of resolvers can be customized by 
+modifying the stanza ``[repositories]`` of the file
+``dbuild.properties``, in the ``bin`` subdirectory that
+also contains the ``dbuild`` executable.
 
-For example, they can be described in a Java-style
-properties file as in this example:
-
-.. code-block:: text
-
-  resolvers.0: local
-  resolvers.1: cachemvn: http://localhost:8088/artifactory/repo
-  resolvers.2: cacheivy: http://localhost:8088/artifactory/repo, [organization]/[...
-  ...
-
-The list can then be included in a dbuild configuration file
-just by adding:
-
-.. code-block:: javascript
-
-  properties: "file:/some/path/file.props"
-  options.resolvers: ${vars.resolvers}
-
-This is especially convenient if you have multiple lists
-of repositories: just by changing the file referred to by
-the "properties" field, you can select the appropriate one.
-
-In case you prefer to embed the list of resolvers directly in
-the configuration file, the properties can be defined
-there instead, as in this example:
+Conversely, in each build configuration file, the set of
+repositories can be specified by defining them under the
+``options.resolvers`` path, as in this example:
 
 .. code-block:: text
 
@@ -753,16 +729,8 @@ there instead, as in this example:
     ...
   }
 
-This last approach may be more convenient in the case in which
-the dbuild job runs under Jenkins, as the list of
-repository can be customized together with the
-rest of the configuration file, without having to change
-the local setup.
-
-It is also possible to combine variables defined in the
-configuration file together with multiple properties files,
-as described in more detail in the subsection
-:ref:`custom-resolvers`, above.
+The syntax for the each resolver specification is exactly
+the same that is also used by sbt.
 
 All of the properties defined under `options.resolvers` in that
 manner are collected, and sorted alphabetically by key; the
@@ -774,14 +742,58 @@ is not important; all of the resolvers found within
 sorted alphabetically by key. In the example above,
 "local" (with label "0") would come before "cachemvn"
 (label "1") even if the lines were swapped. The
-labels need not be numerical al all, but can be any string.
+labels need not be numerical al all, but can be any string:
+they are sorted alphabetically.
 
-If at least one resolver has been defined via properties,
-as described above, the list of default resolvers that
-is specified in ``dbuild.properties`` will be ignored.
+In case the list is shared by multiple build files, a definition
+can also be obtained using the ``vars`` facility, in conjunction
+with an external property file that may live on the local file
+system, or at a given URL. For example, the build configuration
+file could contain:
 
-The syntax for the each resolver specification is exactly
-the same that is also used by sbt.
+.. code-block:: javascript
+
+  properties: "file:/some/path/file.props"
+  options.resolvers: ${vars.resolvers}
+
+where the file ``file.props`` would contain the following:
+
+.. code-block:: text
+
+  resolvers.0: local
+  resolvers.1: cachemvn: http://localhost:8088/artifactory/repo
+  resolvers.2: cacheivy: http://localhost:8088/artifactory/repo, [organization]/[...
+  ...
+
+
+The way in which the local list and the build configuration
+file list are used is the following:
+
+- If no resolvers are defined in the build file, then
+  the list in ``dbuild.properties`` is used.
+
+- If at least one resolver has been defined in the build file,
+  the list of default resolvers in ``dbuild.properties`` is
+  ignored.
+
+- However, if the option ``--no-resolvers`` (or ``-r``) is
+  passed to dbuild, the resolvers in ``dbuild.properties``
+  are always used, and the ones in the build configuration
+  file are skipped.
+
+Frequently, and especially if dbuild is used under Jenkins,
+it is convenient to include the repositories directly in the
+configuration file, under ``options.resolvers``, so that it
+can be more easily modified. Such a list will typically
+include proxies or other resolvers that may not be available
+elsewhere. By using the ``--no-resolvers`` option, the same
+configuration file can be tested unchanged on a local machine,
+and it will use only the resolvers list defined locally 
+on that specific machine.
+
+The related options ``--no-notify`` and ``--local`` options
+may also apply in that case (use ``dbuild --help`` for
+details).
 
 Building a single target project
 --------------------------------
@@ -796,9 +808,6 @@ an additional argument on the command line, for example:
 .. code-block:: bash
 
    $ bin/dbuild config.dbuild project
-
-You can get further information about other available
-options by using the command ``dbuild --help``.
 
 Automatic cleanup
 -----------------
@@ -847,6 +856,13 @@ If all ages are set to zero, all prior data will be
 removed when dbuild starts; the temporary files
 corresponding to the current run of dbuild will
 be preserved in any case.
+
+.. note::
+
+  Some of the options described on this page have further extensions that are used
+  when compiling and using sbt plugins. Those extensions will be described later,
+  as they rely on the "spaces" feature of dbuild, which is introduced in a subsequent
+  section.
 
 |
 

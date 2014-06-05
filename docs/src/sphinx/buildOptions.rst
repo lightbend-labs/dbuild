@@ -13,10 +13,12 @@ default for all of the projects enclosed in the same section. The available opti
 
    build: {
     cross-version       : <cross-version-level>
+    check-missing       : <check-missing-flag>
     sbt-version         : <sbt-version>
     sbt-commands        : [<command1>,<command2>,...]
     extraction-version  : <compiler-version-string>
     use-jgit            : <true-or-false>
+    space               : <space-definition>
 
     projects: [...]
    }
@@ -25,45 +27,28 @@ Each of the listed options is optional (the defaults are listed below). Further,
 them can be again overridden individually in each of the projects. Some examples are below.
 
 cross-version
-  This option controls the way in which the various sbt-based projects will use the cross-version
-  facility, which appends a Scala version suffix to the artifact id. Consider the following two cases.
+  This options controls the way in which sbt's cross-version suffixes are used when the
+  compiled artifacts are generated. It also, indirectly, affects dbuild's ability to
+  detect missing dependencies, as explained in the documentation of "check-missing", below.
 
-  1. If a dbuild configuration file includes a project that has a Scala-based dependent project,
-     but the dependency is not included, sbt may try to resolve the dependency against an external
-     Maven repositories, built with a different version of Scala. This is undesirable during
-     the development and testing of a new Scala version, as the aim is to compile all of the
-     dependencies against the same new version of Scala. Dbuild, in this case, is able to
-     enforce the policy that all the dependencies must use the exact same version of scala:
-     compilation will fail with an informative message otherwise.
-
-  2. Conversely, when releasing, it is desirable to preserve the same cross-version policy
-     that the various projects normally use. In this case, we can ask dbuild not to adjust
-     cross-versioning, so that the published artifacts follow their native publishing scheme.
-
-  This option can therefore control how strict or lax the cross-version suffix should be
-  during building, and how sbt will look for alternatives in case of dependencies that
-  are not part of the current configuration file.
-
-  The available options are:
-
+  The possible values for the "cross-version" option are:
+  
   disabled
     This is the default setting, and it will be used if a "build-options" section is not
     specified. The cross-version suffixes are disabled, and each project is published
-    using just a single version, which contains a dbuild-specific version suffix
-    (unless "set-version" is used).
-    The library dependencies that refer to Scala projects that are not included in this build
-    configuration, and which have "binary" or "full" CrossVersion, will be adjusted;
-    as a result, missing dependent projects will be detected.
+    using just plain name, organization, and version.
 
   standard
     Each project will compile with its own natural cross-version suffix.
     This setting is necessary when releasing, usually in conjunction with "set-version",
-    in order to make sure that the standard suffix is used while publishing.
+    in order to make sure that the standard suffix is used while publishing. It is not
+    recommended that this option is selected during the usual testing cycle, as it causes
+    the option "check-missing" to become ineffective (see below).
 
   full
-    Similar to "disabled", except the full Scala version string is used as a
+    In this case the full Scala version string is used as a
     cross-version suffix while publishing (even for those projects that would normally
-    have cross-version disabled). Missing dependent projects will be detected.
+    have cross-version disabled).
 
   binaryFull
     The sbt projects that publish artifacts using the "Binary" cross-version setting are
@@ -72,12 +57,40 @@ cross-version
     Missing dependent projects will be detected. This option exists mainly for testing,
     and is not intended for regular use.
 
-  In practice, you can omit the "build-options" section entirely during normal use, and
-  just add the following if you are releasing using "set-version":
+check-missing
+  This option can be true or false; the default is true. This option is only effective when
+  "cross-version" is set to "disable" or "full".
 
-.. code-block:: javascript
+  Consider the case in which a dbuild configuration file contains a selection of projects.
+  Each of the projects will have their own set of dependencies. The ones that are supplied
+  by other projects in the same file will be used automatically, but for the ones that
+  are not available, sbt will try to resolve those dependencies against an external
+  Maven repository. In this case, dbuild has no control over the resolution process:
+  different projects may use different versions of the same libraries, or in certain
+  cases versions that have been compiled against different Scala versions.
 
-   build.options:{cross-version:standard}
+  In order to avoid that case, the option "check-missing" can be used. When enabled, dbuild
+  will inspect the dependencies of each project, and will try to detect which Scala-based
+  dependencies are missing from the configuration file. If any are found, a message
+  will be printed with detailed information.
+
+  This option works by comparing the cross-version suffix of the requested dependencies
+  against the cross-version suffix used within each project. Because of this reason,
+  the option "check-missing" is only effective when "cross-version" is set to "disable"
+  or to "full". Also, in the unlikely case in which a Scala project uses a pure Java
+  library, and that Java library uses a Scala library, dbuild will no longer be able
+  to detect the missing transitive Scala dependency, which may manifest itself with
+  an sbt error message about conflicting cross version suffixes. These errors can
+  be solved by explicitly including the transitive dependencies as well
+  in the build configuration file. That may require manual inspection of the Ivy
+  resolution reports, in order to identify which Scala project is being pulled in
+  by the Java project; however, those cases should be fairly rare.
+
+  As previously mentioned, if dbuild is used to issue a release, the option "cross-version"
+  will normally be set to "standard" in order to generate artifacts that contain the
+  correct cross-version suffix. However, the option "cross-version" should normally
+  be omitted during normal use, as the use of "cross-version:standard" will cause
+  the missing dependencies check to become ineffective.
 
 sbt-version
   You can optionally specify here the sbt version that should be used to compile
@@ -99,8 +112,12 @@ use-jgit
   order to resolve a git repository. As an alternative, a jgit-based implementation
   can also be selected by setting this flag to true. Be aware that, due to the
   lack of hard-linking in jgit, more disk space will be necessary in order to
-  compile the projects in that case.
+  compile the projects.
 
+space-definition
+  This option specifies the space that will be used to build the contained projects;
+  the "spaces" feature will be introduced shortly, in the following section of this guide.
+  If unspecified, the space "default" is used.
 
 Organizing defaults
 --------------------

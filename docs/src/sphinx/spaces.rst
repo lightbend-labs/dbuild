@@ -368,5 +368,12 @@ then define the three occurrences. For example:
 
 |
 
-*Next:* :doc:`deploy`.
+.. note::
+  Spaces work as artifact repositories of sorts. Each project has a single "from",
+  and only the dependent artifacts that are reachable within that particular space, also transitively,
+  will be made available to the project, but not those in other spaces. The fact that cross-space transitive
+  dependencies are not included is by design: it would be impossible to support bootstrap cycles
+  otherwise.
+
+*Next:* :doc:`plugins`.
 

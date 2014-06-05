@@ -55,6 +55,11 @@ shortened syntax. An example can be found later on this page.
 If the list of notifications is empty, by default a short report will be printed to
 the console.
 
+If you are working on a build configuration file that is normally deployed elsewhere,
+for instance on a remote Jenkins server, and you want to test it locally without
+having notifications sent out, just append the flag ``--no-notify`` (or ``-n``) to
+your command line. Use ``dbuild --help`` to find out further details and options.
+
 
 Notifications
 -------------

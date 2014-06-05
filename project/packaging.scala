@@ -44,9 +44,7 @@ object Packaging {
 
      // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
      // otherwise Universal may end up using outdated files.
-
-     publishLocal <<= publishLocal dependsOn (clean),
-     publish <<= publish dependsOn (clean),
+     // The command "release" in root will perform a clean, followed by a publish.
 
      publishMavenStyle := false,
      autoScalaLibrary := false,

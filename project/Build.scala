@@ -23,6 +23,9 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
     settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
+    settings(commands += Command.command("release") { state =>
+      "clean" :: "publish" :: state
+    })
   )
 
   lazy val dist = (

@@ -1,7 +1,7 @@
 package distributed.support.ivy
 
 import distributed.support.BuildSystemCore
-import distributed.project.BuildSystem
+import distributed.project.{ BuildSystem, BuildData }
 import distributed.project.model._
 import distributed.repo.core.LocalArtifactMissingException
 import java.io.File
@@ -92,7 +92,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
   // build system is doing at this time
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: Logger, debug: Boolean): BuildArtifactsOut = {
+      buildData: BuildData): BuildArtifactsOut = {
+    val log = buildData.log
     log.debug("BuildInput is: " + input)
     // first, get the dependencies
     val rewrittenDeps = checkDependencies(project, baseDir, input, log)

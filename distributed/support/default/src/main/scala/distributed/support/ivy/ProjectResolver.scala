@@ -38,7 +38,7 @@ class IvyProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolver 
       // uniquely this particular snapshot. The string is not actively used, but
       // it gets included in the hash calculation, making it unique
       val dateFormat = new MailDateFormat()
-      dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+      dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
       
       // Try to find, if it exists, the report for the main jar. If not present,
       // pick the first artifact in the list

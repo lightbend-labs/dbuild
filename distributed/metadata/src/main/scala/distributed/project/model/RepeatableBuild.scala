@@ -49,6 +49,9 @@ case class RepeatableProjectBuild(config: ProjectBuildConfig,
   def uuid = hashing sha1 this
 
   def extra[T](implicit m: Manifest[T]) = config.getExtra[T]
+  def getCommit = try Option((new java.net.URI(config.uri)).getFragment) catch {
+      case e: java.net.URISyntaxException => None
+    }
 }
 
 object RepeatableDistributedBuild {

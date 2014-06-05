@@ -15,6 +15,7 @@ import distributed.repo.core.LocalRepoHelper
 import distributed.project.model.Utils.{ writeValue, readValue }
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
+import distributed.project.BuildData
 import distributed.project.BuildSystem
 import collection.JavaConverters._
 import org.apache.maven.model.{ Model, Dependency }
@@ -70,9 +71,11 @@ object AssembleBuildSystem extends BuildSystemCore {
           val buildConfig = nestedConf// use expandDistributedBuildConfig !!!!!!
           val nestedResolvedProjects =
             buildConfig.projects.map { p =>
+              val projDir=projectsDir(dir, p)
+              projDir.mkdirs()
               log.info("----------")
               log.info("Resolving part: " + p.name)
-              extractor.dependencyExtractor.resolve(p, projectsDir(dir, p), extractor, log)
+              extractor.dependencyExtractor.resolve(p, projDir, extractor, log)
             }
           DistributedBuildConfig(nestedResolvedProjects, buildConfig.options)
         }
@@ -145,10 +148,11 @@ object AssembleBuildSystem extends BuildSystemCore {
   // Therefore, we will call localBuildRunner.checkCacheThenBuild() on each part,
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+      buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
     val version = input.version // IGNORED!!
 
+    val log = buildData.log
     log.info(ec.parts.toSeq.flatMap(_.projects).map(_.name).mkString("These subprojects will be built: ", ", ", ""))
 
     val localRepo = input.outRepo
@@ -218,7 +222,8 @@ object AssembleBuildSystem extends BuildSystemCore {
         val repeatableProjectBuild = RepeatableProjectBuild(partConfigAndExtracted.config, partConfigAndExtracted.extracted.version,
           Seq.empty, Seq.empty, // remove all dependencies, and pretend that this project stands alone
           partConfigAndExtracted.extracted.subproj)
-        val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild, Seq.empty, Seq.empty, log, debug)
+        val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild,
+            Seq.empty, Seq.empty, buildData)
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)

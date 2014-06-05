@@ -19,6 +19,9 @@ case class ProjectBuildConfig(name: String,
   system: String = "sbt",
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
+  // if both set-version and set-version-suffix are specified,
+  // then set-version will take precedence
+  @JsonProperty("set-version-suffix") setVersionSuffix: Option[String],
   deps: Option[DepsModifiers] = None,
   @JsonProperty("cross-version") crossVersion: Option[String] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
@@ -52,6 +55,7 @@ private case class ProjectBuildConfigShadow(name: String,
   system: String = "sbt",
   uri: String = "nil",
   @JsonProperty("set-version") setVersion: Option[String],
+  @JsonProperty("set-version-suffix") setVersionSuffix: Option[String],
   deps: Option[DepsModifiers] = None,
   @JsonProperty("cross-version") crossVersion: Option[String] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
@@ -426,7 +430,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       jp.nextToken()
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
-    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion,
+    ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.setVersionSuffix,
         generic.deps, generic.crossVersion, generic.useJGit, generic.space, newData)
   }
 }

@@ -10,16 +10,24 @@ import distributed.project.model.TemplateFormatter
 import distributed.project.model.CleanupOptions
 import java.util.Properties
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigValueFactory
 import distributed.project.model.Utils.readValueT
 import distributed.utils.Time.timed
 import collection.immutable.SortedMap
-import java.util.Calendar
 import distributed.repo.core.Defaults
 import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+import collection.JavaConverters._
 
-case class BuildOptions(cleanup: CleanupOptions, debug: Boolean, defaultNotifications: Boolean)
+/** These options are created by SbtBuildMain, and are propagated to most stages of building, as
+ *  they alter secondary details of the build process in various ways (for example, the logging
+ *  level, or how frequently old data is deleted).
+ */
+case class BuildRunOptions(cleanup: CleanupOptions, debug: Boolean, defaultNotifications: Boolean)
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -96,6 +104,11 @@ class SbtBuildMain extends xsbti.AppMain {
         println("Using configuration: " + configFile.getName)
         buildTarget foreach { t => println("Build target: " + t) }
       }
+      val now = new java.util.Date()
+      val dateFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss'UTC'")
+      dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
+      val autoTimestamp = dateFormat.format(now)
+      if (debug) println("The timestamp is: " + autoTimestamp)
       val (config, resolvers) =
         try {
           val properties = readProperties(configFile): Seq[String]
@@ -109,9 +122,10 @@ class SbtBuildMain extends xsbti.AppMain {
           val initialConfig = ConfigFactory.parseFile(configFile)
           val foldConfig = propConfigs.foldLeft(initialConfig)(_.withFallback(_))
           val systemVars = ConfigFactory.systemProperties().atPath("vars.sys")
+          val autoConfig = ConfigValueFactory.fromMap(Map("timestamp" -> autoTimestamp).asJava).atPath("vars.auto")
           // let system properties take precedence over values in the config file
           // which should happen to be in the same vars.sys space
-          val endConfig = systemVars.withFallback(foldConfig)
+          val endConfig = systemVars.withFallback(autoConfig).withFallback(foldConfig)
           val resolvedConfig = endConfig.resolve
           // Let's extract the (possible) list of resolvers defined in the configuration file.
           // Parse them even if useLocalResolvers==true, in order to catch definition errors
@@ -164,9 +178,29 @@ class SbtBuildMain extends xsbti.AppMain {
         // of toList is "backing.reverse". So we have to reverse again.
         (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
       }
-      val main = new LocalBuildMain(repos, BuildOptions(config.options.cleanup, debug, defaultNotifications))
+      if (debug) {
+        println("Resolvers:")
+        repos foreach println
+      }
+      //
+      // create a replacement "option.resolvers" section, that will be included
+      // in the repeatable configuration we will save after extraction
+      //
+      val repoStrings: List[String] = repos map {
+        case m: xsbti.MavenRepository => m.id + ": " + m.url
+        case i: xsbti.IvyRepository => i.id + ": " + i.url + ", " + i.ivyPattern
+        case p: xsbti.PredefinedRepository => p.id.toString
+      }
+      val repoMap = (repoStrings.zipWithIndex map {
+        case (str, index) =>
+          val label = "R" + (("0000" + index.toString).reverse.take(4).reverse)
+          label -> str
+      }).toMap
+      val finalConfig = config.copy(options = config.options.copy(resolvers = repoMap))
+
+      val main = new LocalBuildMain(repos, BuildRunOptions(finalConfig.options.cleanup, debug, defaultNotifications))
       val (outcome, time) = try {
-        timed { main.build(config, configFile.getName, buildTarget) }
+        timed { main.build(finalConfig, configFile.getName, buildTarget) }
       } finally main.dispose()
       println("Result: " + outcome.status)
       println("Build " + (if (outcome.isInstanceOf[BuildBad]) "failed" else "succeeded") + " after: " + time)

@@ -17,3 +17,6 @@ To recompile, publish, etc., just type the following in the root project:
   ^command
 
 where command is one of compile, clean, test, publish, publish-local, etc.
+
+To create a full release, point publishTo and credentials to the appropriate
+values, then from the root project type "^release".

@@ -21,7 +21,8 @@ import java.io.PrintWriter
  * This is an sbt-specific functionality, which replaces the previous "dbuild-setup" plugin command.
  */
 object Checkout {
-  def dbuildCheckout(uuid: String, projectName: String, path: String, debug: Boolean) = {
+  def dbuildCheckout(uuid: String, projectName: String, path: String, debug: Boolean,
+      useLocalResolvers: Boolean, localRepos: List[xsbti.Repository]) = {
     val dir = (new File(path)).getCanonicalFile
     if (dir.exists)
       sys.error("The path \"" + path + "\" already exists. Please move it aside, or use a different name.")
@@ -74,7 +75,18 @@ object Checkout {
         // getRepositories contains a ListMap.toList, where sbt's definition
         // of toList is "backing.reverse". So we have to reverse again,
         // and we finally get the needed List[xsbti.Repository]
-        val repos = (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
+        val savedRepos = (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
+        
+        val repos = if (useLocalResolvers || savedRepos.isEmpty)
+          localRepos
+        else {
+          savedRepos
+        }
+        if (debug) {
+          println("Resolvers:")
+          repos foreach println
+        }
+
         log.debug("Resolvers:")
         repos foreach { r => log.debug(r.toString) }
 

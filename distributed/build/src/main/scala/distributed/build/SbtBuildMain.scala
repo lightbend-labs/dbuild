@@ -107,9 +107,14 @@ class SbtBuildMain extends xsbti.AppMain {
       // requireOne(checkout.uuid,configFile) // use manual checking (below) to get a better error message
     }
     try {
+      val useLocalResolvers = conf.noResolvers() || conf.local()
+      val defaultNotifications = conf.noNotify() || conf.local()
+      // These are the repositories defined in dbuild.properties:
+      val localRepos = configuration.provider.scalaProvider.launcher.ivyRepositories.toList
       // Are we running "dbuild checkout"?
       if (conf.subcommand == Some(conf.checkout)) {
-        Checkout.dbuildCheckout(conf.checkout.uuid(), conf.checkout.project(), conf.checkout.path(), conf.debug())
+        Checkout.dbuildCheckout(conf.checkout.uuid(), conf.checkout.project(),
+          conf.checkout.path(), conf.debug(), useLocalResolvers, localRepos)
       } else {
         if (conf.configFile.get.isEmpty) {
           sys.error("The name of the configuration file is required (unless \"dbuild checkout\" is called).")
@@ -118,8 +123,6 @@ class SbtBuildMain extends xsbti.AppMain {
         if (!configFile.isFile())
           sys.error("Configuration file \"" + conf.configFile() + "\" not found")
         val debug = conf.debug()
-        val useLocalResolvers = conf.noResolvers() || conf.local()
-        val defaultNotifications = conf.noNotify() || conf.local()
         val buildTarget = conf.target.get
         if (debug) {
           println("Using configuration: " + configFile.getName)
@@ -199,7 +202,7 @@ class SbtBuildMain extends xsbti.AppMain {
           printClassLoaders(getClass.getClassLoader)
         }
         val repos = if (useLocalResolvers || resolvers.isEmpty)
-          configuration.provider.scalaProvider.launcher.ivyRepositories.toList
+          localRepos
         else {
           val listMap = xsbt.boot.ListMap(resolvers.toSeq.reverse: _*)
           // getRepositories contains a ListMap.toList, where sbt's definition

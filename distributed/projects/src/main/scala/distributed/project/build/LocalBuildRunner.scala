@@ -55,7 +55,6 @@ class LocalBuildRunner(builder: BuildRunner,
       val log = buildData.log
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
-      log.info("Resolving artifacts")
       val readRepos = localRepos(dir)
       val uuidGroups = build.depInfo map (_.dependencyUUIDs)
       val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups)
@@ -88,14 +87,25 @@ class LocalBuildRunner(builder: BuildRunner,
         // calculate some (hopefully unique) default version
         case Some(v) => v
         case _ => {
-          val value = build.depInfo.head.baseVersion // TODO, this is just the ground level
+          val value = build.depInfo.head.baseVersion // We only collect the artifacts from the base level, hence the "head"
           val defaultVersion = (if (value endsWith "-SNAPSHOT") {
             value replace ("-SNAPSHOT", "")
           } else value) +
             (build.config.setVersionSuffix match {
               case None => "-" + ("dbuildx" + build.uuid)
-              case Some("") => ""
-              case Some(suffix) => "-" + suffix
+              case Some("") =>
+              case Some(suffix) if suffix.startsWith("%commit%") =>
+                val len = try { suffix.drop(8).toInt } catch { case e: NumberFormatException => 99999 }
+                // note: the suffix must contain at least one letter! numeric-only suffixes will be
+                // understood by Maven as some variation over snapshots, leading to unexpected results
+                val commit = build.getCommit getOrElse sys.error("This project is unable to provide a commit string, cannot use set-version-suffix: "+build.config.name)
+                "-R" + commit.take(len)
+              case Some(suffix) => {
+                val numbers=('0' to '9').toSet
+                if (suffix.forall(numbers))
+                  log.warn("*** WARNING: an all-numeric suffix may be interpreted by Maven as a snapshot version; this is probably not what you want (suffix: \"" + suffix + "\"")
+                "-" + suffix
+              }
             })
           libVersion getOrElse defaultVersion
         }

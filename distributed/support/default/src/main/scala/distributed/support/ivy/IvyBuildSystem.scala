@@ -161,7 +161,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     // I can run a check to verify that libraries that are cross-versioned (and therefore Scala-based) 
     // have been made available via BuildArtifactsIn. If not, emit a message and possibly stop.
     import scala.collection.JavaConversions._
-    val crossVersion = project.config.getCrossVersion
+    val crossVersion = project.config.getCrossVersionHead
     val arts = input.artifacts.artifacts
     // I need to get my dependencies again during build; although in theory I could pass
     // this information to here from extraction, in practice I just run Ivy once more
@@ -212,6 +212,8 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
           if (direct) Some(PublishIvyInfo(da2, rewritten = true, optional = optional)) else None
         } getOrElse {
           printIvyDependency(None)
+          // TODO: this code is quite similar to the one in DistributedRunner, except this one only
+          // works on the base level (no plugins). TODO: unify again the two.
           if (a.getName != fixName(a.getName) &&
             // Do not inspect the artifacts that we are building right at this time:
             (fixName(a.getName) != currentName || a.getModuleRevisionId.getOrganisation != currentOrg)) {

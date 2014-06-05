@@ -228,6 +228,15 @@ set-version-suffix
   will become just "0.8.1". If both "set-version-suffix" and "set-version" are defined, the
   latter will take over, replacing the version string entirely.
 
+  If the special string "%commit%" (lowercase) is used for "set-version-suffix", the resulting
+  suffix will be the string "-R" plus the commit of the project. If you prefer a shortened
+  commit string, just add a length to the string; for example, "%commit%10" will use only
+  the first ten character of the commit hash string.
+
+  Important note: an all-numeric suffix string may be interpreted by Maven-related tools
+  as a snapshot version; please make sure to include at least one alphabetic character in
+  your version suffix string, in order to avoid unexpected behaviors.
+
 deps
   The optional "deps" section can be used to modify the way in which dbuild rewires certain
   dependencies of this project. For instance, it can be used to force dbuild to "forget" about
@@ -323,7 +332,10 @@ sbt-version
   A string that specifies the version of sbt that should be used to compile
   this dbuild project. If not specified, the sbt version in use will be the
   one specified in the global build options property "sbt-version" (see
-  :doc:`buildOptions`). If that is also missing, sbt 0.12.4 will be used.
+  :doc:`buildOptions`). If that is also missing, the default value "standard"
+  will be assumed. In that case, an attempt will be made to autodetect the
+  required sbt version from the "build.properties" file of the project.
+  Should that also be missing, dbuild will ask you to provide a version number.
 
 projects
   A sequence of strings that identifies a subset of the sbt subprojects that should be

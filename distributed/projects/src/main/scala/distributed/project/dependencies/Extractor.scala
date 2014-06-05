@@ -6,7 +6,7 @@ import sbt.IO
 import sbt.Path._
 import java.io.File
 import project.resolve.ProjectResolver
-import model.{ ProjectConfigAndExtracted, ProjectBuildConfig, ExtractedBuildMeta }
+import model.{ ProjectConfigAndExtracted, ProjectBuildConfig, ExtractedBuildMeta, SeqDepsModifiers }
 import model.{ ExtractionOK, ExtractionOutcome, ExtractionFailed, ExtractionConfig, DepsModifiers }
 import logging._
 import repo.core.Repository
@@ -30,35 +30,41 @@ class Extractor(
    * contained in DepsModifiers. It is presently used to ignore (and not rewire) certain
    * dependencies; that could be further extended in the future in order to
    * modify the project dependencies in other manners.
-   * 
+   *
    * For multi-level builds, at this time only the first level is changed. TODO: change
    * DepsModifier into an autowrapping object, and adapt multiple levels, if applicable.
    */
-  def modifiedDeps(depsMods: Option[DepsModifiers], extractedDeps: ExtractedBuildMeta, log: logging.Logger): ExtractedBuildMeta = {
-    depsMods match {
-      case None => extractedDeps
-      case Some(all) =>
-        val ignored = all.ignore.map(ModuleId.parse)
+  def modifiedDeps(depsMods: SeqDepsModifiers, extractedDeps: ExtractedBuildMeta, log: logging.Logger): ExtractedBuildMeta = {
+    // we can have more depsMods than extracted levels, in which case we emit a warning
+    if (depsMods.length > extractedDeps.projInfo.length)
+      log.warn("** WARNING: There are more depedency modifier records than extracted dependency levels, the last " +
+        (extractedDeps.projInfo.length - depsMods.length) + " will be ignored")
+    // the last ones will remain unchanged:
+    val unchanged = extractedDeps.projInfo.drop(depsMods.length)
+    // the initial ones will be modified as follows:
+    val modified = (extractedDeps.projInfo zip depsMods) map {
+      case (extr, mod) =>
+        val ignored = mod.ignore.map(ModuleId.parse)
         // are these ignored modules present? if not, print a warning
-        val allRealDeps = extractedDeps.projects.flatMap(_.dependencies)
+        val allRealDeps = extr.projects.flatMap(_.dependencies)
         def sameId(dep: ProjectRef, mod: ModuleId) =
           mod.getOrganisation == dep.organization && mod.getName == dep.name
         val notFound = ignored.filterNot(mod =>
           allRealDeps.exists(dep => sameId(dep, mod)))
         if (notFound.nonEmpty)
           log.warn(notFound.mkString("*** WARNING: These dependencies (marked as \"ignore\") were not found: ", ", ", ""))
-        // TODO: add "deps" for EACH level
-        val modDeps = extractedDeps.getHead.copy(projects = extractedDeps.getHead.projects.map(proj =>
+
+        val modDeps = extr.copy(projects = extractedDeps.getHead.projects.map(proj =>
           proj.copy(dependencies = proj.dependencies.filterNot(dep =>
             ignored.exists(mod => sameId(dep, mod))))))
-        val added = all.inject.map(ModuleId.parse)
+        val added = mod.inject.map(ModuleId.parse)
         val result = modDeps.copy(projects = modDeps.projects.map(proj =>
           proj.copy(dependencies = (proj.dependencies.++(added.map { d =>
             ProjectRef(d.getName, d.getOrganisation)
           }).distinct))))
-        val newProjInfo = result +: extractedDeps.projInfo.tail
-        extractedDeps.copy(projInfo = newProjInfo)
+        result
     }
+    ExtractedBuildMeta(modified ++ unchanged)
   }
 
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */

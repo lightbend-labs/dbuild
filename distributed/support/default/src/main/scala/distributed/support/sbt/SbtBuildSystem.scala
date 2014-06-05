@@ -31,6 +31,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
         case None => defaults.sbtVersion
         case Some(v) => v
       }
+
       val extrVer = ec.extractionVersion match {
         case None => defaults.extractionVersion
         case Some(c) => c
@@ -52,7 +53,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
   def extractDependencies(config: ExtractionConfig, baseDir: File, extr: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
     val projDir = projectDir(baseDir, ec)
-    SbtExtractor.extractMetaData(extractor)(projDir, ec, log, debug)
+    SbtExtractor.extractMetaData(repos, extractor)(projDir, ec, log, debug)
   }
 
   def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner,
@@ -61,7 +62,7 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
     val name = project.config.name
     // TODO - Does this work correctly?
     val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
-    val config = SbtBuildConfig(ec, project.config.getCrossVersion, info)
+    val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."), info)
     SbtBuilder.buildSbtProject(repos, runner)(pdir, config, buildData.log, buildData.debug)
   }
 

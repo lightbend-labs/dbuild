@@ -33,7 +33,30 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
     javaProps: Map[String, String] = Map.empty,
     javaArgs: Seq[String] = SbtRunner.defaultJavaArgs,
     extraArgs: Seq[String] = Seq.empty)(args: String*): Unit = {
-    removeProjectBuild(projectDir, log)
+
+    val useSbtVersion = if (sbtVersion != "standard") {
+      removeProjectBuild(projectDir, log)
+      log.info("Using sbt version: " + sbtVersion)
+      sbtVersion
+    } else {
+      val ver = getProjectBuild(projectDir) getOrElse
+        sys.error("This project does not define an sbt version with a build.properties file, or the value cannot be parsed. Please specify an sbt version using the \"sbt-version\" option.")
+      log.info("Using the sbt version specified by the project: " + ver)
+      ver
+    }
+    // Verify the sbt version number: the new rewiring mechanism requires
+    // sbt >0.13.2 and >0.12.4, as up to those versions existing bugs will prevent
+    // onLoad from working correctly.
+    val regex = "(\\d+)\\.(\\d+)\\.(\\d+).*".r
+    useSbtVersion match {
+      case regex(major, minor, rev) =>
+        if (major == "0" && (
+          minor.toInt < 12 ||
+          (minor == "12" && rev.toInt < 5) ||
+          (minor == "13" && rev.toInt < 3)))
+          sys.error("dbuild 0.9 requires at least sbt 0.12.5 or sbt 0.13.3. Invalid: " + useSbtVersion)
+      case _ => sys.error("Cannot parse sbt version number: " + useSbtVersion)
+    }
 
     IO.withTemporaryFile("sbtrunner", "lastExceptionMessage") { lastMsg =>
       // TODO: the sbt version in the project description is always set to some version
@@ -41,7 +64,7 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
       val cmd = SbtRunner.makeShell(
         launcherJar.getAbsolutePath,
         defaultProps + ("dbuild.sbt-runner.last-msg" -> lastMsg.getCanonicalPath,
-          "sbt.version" -> sbtVersion),
+          "sbt.version" -> useSbtVersion),
         javaProps,
         javaArgs,
         extraArgs)(args: _*)
@@ -74,6 +97,20 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
       log.debug("Removing " + buildProps.getAbsolutePath)
       IO.delete(buildProps)
     }
+  }
+
+  // if sbt-version is set to "standard", try to parse an existing
+  // "build.properties" file
+  private def getProjectBuild(projectDir: File): Option[String] = {
+    val buildProps = projectDir / "project" / "build.properties"
+    if (buildProps.exists()) {
+      val lines = scala.io.Source.fromFile(buildProps).getLines
+      val regex = " *sbt.version *= *([^ ]*) *".r
+      val sbtVer = (for {
+        regex(v) <- lines
+      } yield v).toList.headOption
+      sbtVer
+    } else None
   }
 
   override def toString = "Sbt(@%s)" format (globalBase.getAbsolutePath)
@@ -114,33 +151,13 @@ object SbtRunner {
 
   /** inits global base and returns location of launcher jar file. */
   private def initSbtGlobalBase(repos: List[xsbti.Repository], dir: File, debug: Boolean): File = {
-    /*
-     * Let's transfer the plugin and other settings to
-     * each build/extraction local dir. That is necessary
-     * to support plugins, and to use the new onLoad-based
-     * model of extraction/building.
-     * 
-    val pluginDir = dir / "plugins"
-    pluginDir.mkdirs
-    writeQuietIvyLogging(pluginDir, debug)
-    if (!(pluginDir / "deps.sbt").exists) {
-      writeDeps(pluginDir / "deps.sbt")
-      //transferResource("sbt/deps.sbt", pluginDir / "deps.sbt")
-    }
-    */
+
     val launcherDir = dir / "launcher"
     val launcherJar = launcherDir / "sbt-launch.jar"
     if (!launcherJar.exists) {
       launcherDir.mkdirs
       transferResource("sbt-launch.jar", launcherJar)
     }
-    //
-    // TODO!!! Different builds may use different lists of
-    // repositories, and this location is SINGLE AND SHARED,
-    // which absolutely shouldn't be the case.
-    val repoFile = dir / "repositories"
-    // always rewrite the repo file
-    writeRepoFile(repos, repoFile)
     launcherJar
   }
 
@@ -218,9 +235,6 @@ object SbtRunner {
     /** Extraction input data */
     val extractionInputFileName = "extraction-input"
 
-    /** if the dbuild sbt plugin stops prematurely, save the exception information here */
-    val lastErrorMessageFileName = "last-error-message"
-
     /**
      * the name of the files used to pass rewire information
      * to the (onLoad-driven) rewiring code for each level
@@ -230,6 +244,21 @@ object SbtRunner {
      * the suffix to the ivy cache for each level
      */
     val ivyCacheName = "ivy2"
+
+    /**
+     * name of the file where the complete SbtConfig will be
+     * dumped, as input to the final building stage at the main level
+     */
+    val getArtsInputFileName = "build-input-data"
+    /**
+     * name of the file where the resulting BuildArtifactsOut
+     * will be stored, at the end of building
+     */
+    val outBuildArtsName = "build-out-arts"
+    /**
+     * name of a private repositories file created in each project build's .dbuild directory
+     */
+    val repositoriesFileName = "repositories"
   }
 
   import SbtFileNames._
@@ -272,7 +301,7 @@ object SbtRunner {
    * Place each element of "contents" in the subsequent directories
    * dir, dir/project, dir/project/project, and so on.
    */
-  def writeSbtFiles(mainDir: File, contents: Seq[String], log: Logger, debug: Boolean) =
+  def writeSbtFiles(mainDir: File, contents: Seq[String], log: _root_.sbt.Logger, debug: Boolean) =
     placeFiles(mainDir, contents, dbuildSbtFileName, None, s => if (debug) log.debug("Adding dbuild .sbt file to " + s))
 
   /**
@@ -280,13 +309,11 @@ object SbtRunner {
    * in dir/.dbuild, the second in dir/project/.dbuild, the dir/project/project/.dbuild,
    * and so on.
    */
-  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: Logger, debug: Boolean)(implicit m: Manifest[T]) =
+  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: _root_.sbt.Logger, debug: Boolean)(implicit m: Manifest[T]) =
     placeFiles(mainDir, data.map { writeValue(_) }, fileName, Some(dbuildSbtDirName), s => if (debug) log.debug("Placing one input file in " + s))
-
 
   def rewireInputFile(dir: File) = dir / dbuildSbtDirName / rewireInputFileName
 
-    
   /**
    * The location of the (per-level) dir used for the ivy cache
    */
@@ -335,6 +362,20 @@ object SbtRunner {
    *  Perform a state transformation using onLoad()
    */
   def onLoad(activity: String) = {
-    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
+    // Tests. TODO: remove
+    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); Thread.dumpStack(); u }\n\n"
+    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); import scala.collection.JavaConversions._; val t=Thread.getAllStackTraces; val z=t.iterator; z foreach { case (a,b) => s.log.warn(\"Thread \"+a.getName); b foreach {k=> s.log.warn(\" at: \"+k)}}; u }\n\nivyPaths in Global <<= (baseDirectory in Global) { d => new IvyPaths(d, d / \""+"..."+"\" }\n\n"
+    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths,fullResolvers) map { case (u,s,p,r) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); s.log.warn(\"Full resolvers:\"); r foreach {x: sbt.Resolver => s.log.warn(x.toString) }; s.log.warn(\"End resolvers.\"); u }\n\n"
+
+     "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
   }
+
+  // stuff related to generateArtifacts()
+  /** Place input data file needed by generateArtifacts() */
+  def placeGenArtsInputFile(projectDir: File, content: GenerateArtifactsInput) =
+    placeOneFile(getArtsInputFileName, projectDir / dbuildSbtDirName, writeValue(content))
+  /** The file where placeGenArtsInputFile() (which which must be consistent) placed its data. */
+  def genArtsInputFile(projectDir: File) = projectDir / dbuildSbtDirName / getArtsInputFileName
+  /** The file where the resulting BuildArtifactsOut will be stored, at the end of building */
+  def buildArtsFile(projectDir: File) = projectDir / dbuildSbtDirName / outBuildArtsName
 }

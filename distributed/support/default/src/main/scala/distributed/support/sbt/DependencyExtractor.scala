@@ -22,7 +22,7 @@ case class ExtractionInput(
 object SbtExtractor {
 
   // TODO - Better synchronize?
-  def extractMetaData(runner: SbtRunner)(projectDir: File, extra: SbtExtraConfig, log: logging.Logger, debug: Boolean): ExtractedBuildMeta = {
+  def extractMetaData(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, extra: SbtExtraConfig, log: logging.Logger, debug: Boolean): ExtractedBuildMeta = {
     log.debug("Extracting dependencies of SBT build:")
     log.debug("  " + projectDir.getCanonicalPath())
     val scalaCompiler = extra.extractionVersion getOrElse
@@ -46,7 +46,7 @@ object SbtExtractor {
     // - create in levels 0..n-1 a work directory (".dbuild", SbtRunner.dbuildSbtDirName to be precise)
     // in order to house the extraction output where each level is the main dir, followed by "/project" n times.
     //
-    // We know that projectDir exists, and that it contains no extranoues files (as per the resolve() contract)
+    // We know that projectDir exists, and that it contains no extraneous files (as per the resolve() contract)
     // So:
     val levels = SbtRunner.buildLevels(projectDir)
     log.debug("This sbt build has definitions on " + levels + " levels.")
@@ -75,6 +75,14 @@ object SbtExtractor {
     val inputDataAll = inputDataFirst +: Stream.fill(levels - 1)(ExtractionInput(Seq.empty, Seq.empty, debug))
     SbtRunner.placeInputFiles(projectDir, extractionInputFileName, inputDataAll, log, debug)
 
+    // The "repositories" file used to be common for all sbt invocations, defined in SbtRunner.
+    // That would have led to problems in the future, as simultaneous dbuild invocation would have
+    // overwritten each other's repositories set. Instead, we create a repositories file in each
+    // project build/extraction dir. That makes it also easier to implement a future "dbuild --checkout" feature.
+    val dbuildSbtDir = projectDir / dbuildSbtDirName
+    val repoFile = dbuildSbtDir / repositoriesFileName
+    SbtRunner.writeRepoFile(repos, repoFile)
+
     // NOTE: all of the extractions use the same global ivy cache, in ~/.dbuild/ivy2. This should be safe,
     // as rewiring is only done during building, and sbt locks the ivy cache. If snapshot resolution should
     // lead to problems, it is possible to redefine ivyPaths as an extra setting in the additional sbt file
@@ -84,7 +92,11 @@ object SbtExtractor {
       projectDir = projectDir,
       sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,
-      extraArgs = extra.options)((extra.commands ++ setScalaCommand /* TODO: commands are ignored right now */).:+(""): _*)
+      javaProps = Map(
+        // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
+        "sbt.repository.config" -> repoFile.getCanonicalPath
+      ),
+      extraArgs = extra.options)((setScalaCommand ++ extra.commands): _*) // no extraction command is invoked; all is done by OnLoad()
 
     ExtractedBuildMeta(SbtRunner.collectOutputFiles[ProjMeta](projectDir, extractionOutputFileName, levels, log, debug))
   }

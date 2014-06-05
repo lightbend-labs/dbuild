@@ -101,7 +101,6 @@ class SbtBuildMain extends xsbti.AppMain {
         val project = trailArg[String](descr = "name of the project")
         val path = trailArg[String](descr = "path into which the source will be checked out")
       }
-      conflicts(noResolvers, List(checkout.uuid, checkout.project, checkout.path))
       conflicts(noNotify, List(checkout.uuid, checkout.project, checkout.path))
       conflicts(local, List(checkout.uuid, checkout.project, checkout.path))
       // requireOne(checkout.uuid,configFile) // use manual checking (below) to get a better error message

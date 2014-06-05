@@ -26,6 +26,7 @@ import distributed.support.sbt.Repositories.ivyPattern
 import org.apache.ivy.core.resolve.IvyNode
 import org.apache.ivy.core.module.descriptor.Configuration
 import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
+import distributed.project.build.BuildDirs._
 
 object IvyMachinery {
   // there are two stages to the madness below. The first: we create a dummy caller, and add the module we need as a dependency.
@@ -42,7 +43,7 @@ object IvyMachinery {
     val module = config.uri.substring(4)
     ModuleRevisionId.parse(module)
   }
-  
+
   def resolveIvy(config: ProjectBuildConfig, baseDir: File, repos: List[xsbti.Repository], log: Logger,
     transitive: Boolean = true, useOptional: Boolean = true): ResolveResponse = {
     log.info("Running Ivy to extract project info: " + config.name)
@@ -52,7 +53,7 @@ object IvyMachinery {
     val ivyHome = (baseDir / ".ivy2")
     val settings = new IvySettings()
     settings.setDefaultIvyUserDir(ivyHome)
-    val dbuildRepoDir = baseDir / ".dbuild" / "local-repo"
+    val dbuildRepoDir = localRepos(baseDir).head
     addResolvers(settings, ivyHome, repos, dbuildRepoDir)
     settings.setDefaultCacheArtifactPattern(ivyPattern)
     val cache = settings.getDefaultCache()
@@ -92,7 +93,7 @@ object IvyMachinery {
       val allConfigs = if (useOptional) configs :+ "optional" else configs
       // do /not/ add "default" by default, otherwise the default mapping *->* will drag in also optional libraries,
       // which we do not want (unless explicitly requested)
-      allConfigs foreach {c=>md.addConfiguration(new Configuration(c))}
+      allConfigs foreach { c => md.addConfiguration(new Configuration(c)) }
       if (allConfigs contains "compile") {
         dd.addDependencyConfiguration("compile", "default(compile)")
       }
@@ -132,7 +133,7 @@ object IvyMachinery {
         log.debug("is optional: " + n.getConfigurations("optional").nonEmpty)
         if (n.isLoaded) {
           log.debug("Artifacts:")
-          n.getAllArtifacts() foreach { a => log.debug("  " + a+" configs:"+a.getConfigurations.mkString(",")) }
+          n.getAllArtifacts() foreach { a => log.debug("  " + a + " configs:" + a.getConfigurations.mkString(",")) }
         }
       }
 
@@ -141,7 +142,7 @@ object IvyMachinery {
   }
 
   case class PublishIvyInfo(art: Artifact, rewritten: Boolean, optional: Boolean)
-  
+
   // publishIvy works by first retrieving the resolved artifacts (only the artifacts we need to republish, hence transitive is false
   // in the resolve whose report we use here). Then, we generate the ixy.xml.
   def publishIvy(response: ResolveResponse, ivyxmlDir: File, deps: Seq[PublishIvyInfo], publishVersion: String, log: Logger) = {
@@ -196,7 +197,7 @@ object IvyMachinery {
         val mrid = d.getModuleRevisionId()
         val depDesc = new DefaultDependencyDescriptor(md2,
           mrid, /*force*/ rewritten, /*changing*/ mrid.getRevision.endsWith("-SNAPSHOT"), /*transitive*/ true)
-        log.debug("Adding dependency: " + d + ", which has extra attrs: " + d.getExtraAttributes()+" and configurations: " + d.getConfigurations.mkString(","))
+        log.debug("Adding dependency: " + d + ", which has extra attrs: " + d.getExtraAttributes() + " and configurations: " + d.getConfigurations.mkString(","))
         val art = new DefaultDependencyArtifactDescriptor(
           depDesc,
           d.getName,

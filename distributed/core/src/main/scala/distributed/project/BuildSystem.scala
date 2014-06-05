@@ -48,16 +48,6 @@ abstract class BuildSystem[Extractor, LocalBuildRunner] {
       buildData:BuildData): BuildArtifactsOut
   
   /**
-   * Determines the appropriate base for a per-project ".dbuild" directory
-   * for a project in "dir", configured according to "config".
-   * Build systems can override the default: dir / .dbuild
-   * 
-   * @param dir The dir containing the checkout of the project
-   * @param config The configuration record of this project
-   */
-  def projectDbuildDir(dir: File, proj: RepeatableProjectBuild): File = dir / ".dbuild"
-  
-  /**
    * Before extractDependencies() is called, the ProjectBuildConfig must be resolved: this entails
    * fetching the code from the specified URI, and replacing the URI (which may contain moving
    * references to a branch tip, or a moving tag) with a fixed commit, or other fixed reference

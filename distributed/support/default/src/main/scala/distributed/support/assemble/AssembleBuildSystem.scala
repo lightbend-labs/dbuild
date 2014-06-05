@@ -149,6 +149,20 @@ object AssembleBuildSystem extends BuildSystemCore {
   // which will in turn resolve it and then build it (if not already in cache).
   def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
       buildData: BuildData): BuildArtifactsOut = {
+
+    
+    
+    
+    
+    sys.error("not implemented")
+    
+    /* /* /* /*
+    
+    
+    
+    
+    
+    
     val ec = project.extra[ExtraType]
     val version = input.version // IGNORED!!
 
@@ -564,6 +578,24 @@ object AssembleBuildSystem extends BuildSystemCore {
     })
     log.debug("out: " + writeValue(out))
     out
-  }
 
+  
+  
+  
+  
+  
+  
+  */
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  }
+  
 }

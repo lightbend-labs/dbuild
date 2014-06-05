@@ -11,6 +11,7 @@ import distributed.repo.core._
 import sbt.Path._
 import dependencies.Extractor
 import distributed.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
+import BuildDirs._
 
 /**
  * This class encodes the logic to resolve a project and run its build given
@@ -21,7 +22,7 @@ class LocalBuildRunner(builder: BuildRunner,
   val repository: Repository) {
 
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome],
-      buildData:BuildData): BuildOutcome = {
+    buildData: BuildData): BuildOutcome = {
     val log = buildData.log
     try {
 //(log: Logger, debug: Boolean, timestamp: String
@@ -34,7 +35,7 @@ class LocalBuildRunner(builder: BuildRunner,
           log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
           //log.trace(t)
           BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects,
-              buildData))
+            buildData))
       }
     } catch {
       case t =>
@@ -43,8 +44,8 @@ class LocalBuildRunner(builder: BuildRunner,
   }
 
   def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project],
-      buildData:BuildData): BuildArtifactsOut =
-    distributed.repo.core.ProjectDirs.useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
+    buildData: BuildData): BuildArtifactsOut =
+    useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       updateTimeStamp(dir)
       // extractor.resolver.resolve() only resolves the main URI,
       // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
@@ -55,14 +56,11 @@ class LocalBuildRunner(builder: BuildRunner,
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
       log.info("Resolving artifacts")
-      val dbuildDir = builder.projectDbuildDir(dir, build)
-      val readRepo = dbuildDir / "local-repo"
-      val writeRepo = dbuildDir / "local-publish-repo"
-      if (!writeRepo.exists()) writeRepo.mkdirs()
-      val uuids = build.dependencyUUIDs.toSeq
-      val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepo, uuids)
-      // TODO - Load this while resolving!
-      val dependencies: BuildArtifactsIn = BuildArtifactsIn(artifactLocations, readRepo)
+      val readRepos = localRepos(dir)
+      val uuidGroups = build.depInfo map (_.dependencyUUIDs)
+      val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups)
+      buildData.log.info("Artifacts left in: "+dir.getCanonicalPath())
+      val BuildArtifactsInMulti(artifactLocations) = dependencies
       // Special case: scala-compiler etc must have the same version number
       // as scala-library: projects that rely on scala-compiler as a dependency
       // (notably sbt) may need that.
@@ -76,7 +74,9 @@ class LocalBuildRunner(builder: BuildRunner,
       // this project will also get a new uuid.
       // TODO: can we work around this quirk in a cleaner manner?
       log.debug(build.toString)
-      val scalaLib = artifactLocations find { a =>
+      // inspect only the artifacts reloaded at the base level
+      val baseArtifacts = (artifactLocations.headOption getOrElse sys.error("Internal error: zero artifacts levels.")).artifacts
+      val scalaLib = baseArtifacts find { a =>
         a.info.organization == "org.scala-lang" && a.info.name == "scala-library"
       }
       val libVersion = scalaLib flatMap { lib =>
@@ -88,7 +88,7 @@ class LocalBuildRunner(builder: BuildRunner,
         // calculate some (hopefully unique) default version
         case Some(v) => v
         case _ => {
-          val value = build.baseVersion
+          val value = build.depInfo.head.baseVersion // TODO, this is just the ground level
           val defaultVersion = (if (value endsWith "-SNAPSHOT") {
             value replace ("-SNAPSHOT", "")
           } else value) +
@@ -112,8 +112,11 @@ class LocalBuildRunner(builder: BuildRunner,
       }
       log.info("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
+      val writeRepo = publishRepo(dir)
+      if (!writeRepo.exists()) writeRepo.mkdirs()
+      if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
       val results = builder.runBuild(build, dir,
-        BuildInput(dependencies, build.uuid, version, build.subproj, writeRepo, build.config.name), this, buildData)
+        BuildInput(dependencies, version, build.depInfo.map{_.subproj}, writeRepo, build.config.name), this, buildData)
       LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
       markSuccess(dir)
       results

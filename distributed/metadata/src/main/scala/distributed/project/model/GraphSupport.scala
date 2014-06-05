@@ -27,13 +27,24 @@ class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectCo
   private val edgeMap: Map[Nd, Seq[Ed]] =
     buildNodes.map(n => n -> edgesImpl(n))(collection.breakOut)
   private def edgesImpl(n: Nd): Seq[Ed] = {
+    def projMetaWithSpaces(e:ProjectConfigAndExtracted) = {
+      // associate each "from" space with the dependencies of that level
+      e.getSpace.fromStream zip (e.extracted.projInfo map {_.projects flatMap {_.dependencies}})
+    }
     (for {
-      p <- n.value.extracted.projects
-      nSpace = n.value.getSpace.from
-      d <- p.dependencies
       m <- buildNodes
-      mSpaces = m.value.getSpace.to
-      if (m != n) && (m.hasProject(d) && Utils.canSeeSpace(nSpace, mSpaces))
+      (nSpace, deps) <- projMetaWithSpaces(n.value)
+      d <- deps
+      if (m != n) && (m.hasProject(d) && Utils.canSeeSpace(nSpace, m.value.getSpace.to))
+// The alternative below superficially makes sense, but is cause for even worse cycles in the Scala compiler compilation 
+//      if (
+//          (m != n) && (m.hasProject(d) && Utils.canSeeSpace(nSpace, mSpaces)) ||
+//              buildNodes.exists { x => x.hasProject(d) && 
+//            Utils.canSeeSpace(nSpace, x.value.getSpace.to) &&
+//            x.value.extracted.projects.flatMap(_.dependencies).exists { xd =>
+//             m.hasProject(xd) && Utils.canSeeSpace(nSpace, mSpaces) && !Utils.canSeeSpace(x.value.getSpace.from, mSpaces)
+//          }}
+//      )
     } yield EmptyEdge(n, m)).toSet.toSeq // n depends on m (n.deps contains something provided by m)
   }
 }

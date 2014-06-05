@@ -3,9 +3,11 @@ package com.typesafe.dbuild
 import sbt._
 import distributed.project.model
 import StateHelpers._
+import distributed.support.sbt.ExtractionInput
 import distributed.support.NameFixer.fixName
-import distributed.project.model.Utils.writeValue
-import DistributedRunner.{getSortedProjects,verifySubProjects}
+import DistributedRunner.{ getSortedProjects, verifySubProjects }
+import distributed.project.model.Utils.{ writeValue, readValue }
+import org.apache.commons.io.FileUtils.writeStringToFile
 
 object DependencyAnalysis {
   // TODO - make a task that generates this metadata and just call it!
@@ -43,7 +45,6 @@ object DependencyAnalysis {
         deps.distinct)
     }
 
-
   // TODO: move to a different file; the two routines below are used both by DependencyAnalysis and by DistributedRunner
   // Also move there verifySubProjects() and isValidProject().
 
@@ -59,19 +60,18 @@ object DependencyAnalysis {
   //
   def normalizedProjectName(s: ProjectRef, baseDirectory: File) = {
     // we only cover the most common cases. The full logic for 0.13 may involve Load.scala (autoID) and the def default* in Build.scala
-    val base=StringUtilities.normalize(baseDirectory.getName)
-    val defaultIDs = Seq(Build.defaultID(baseDirectory), "root-"+base, base)
+    val base = StringUtilities.normalize(baseDirectory.getName)
+    val defaultIDs = Seq(Build.defaultID(baseDirectory), "root-" + base, base)
     val defaultName = "default-sbt-project"
     if (defaultIDs contains s.project) defaultName else s.project
   }
   def normalizedProjectNames(r: Seq[ProjectRef], baseDirectory: File) = r map { p => normalizedProjectName(p, baseDirectory) }
 
+  /** Prints the dependencies to the given file. */
+  def printDependencies(state: State, inputFile: File, resultFile: File): State = {
 
+    val ExtractionInput(projects, excludedProjects, debug) = readValue[ExtractionInput](inputFile)
 
-  /** Actually prints the dependencies to the given file. */
-  def printDependencies(state: State, uri: String, file: String, projects: Seq[String],
-      excludedProjects: Seq[String], debug: Boolean): Unit = {
-    // TODO: fix logging
     val log = sbt.ConsoleLogger()
     if (debug) log.setLevel(Level.Debug)
 
@@ -79,15 +79,17 @@ object DependencyAnalysis {
     import extracted._
 
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
-    def normalizedProjectNames(r:Seq[ProjectRef])=DependencyAnalysis.normalizedProjectNames(r,baseDirectory)
-    def normalizedProjectName(p:ProjectRef)=DependencyAnalysis.normalizedProjectName(p,baseDirectory)
+    log.debug("Extracting dependencies: " + baseDirectory.getCanonicalPath)
+
+    def normalizedProjectNames(r: Seq[ProjectRef]) = DependencyAnalysis.normalizedProjectNames(r, baseDirectory)
+    def normalizedProjectName(p: ProjectRef) = DependencyAnalysis.normalizedProjectName(p, baseDirectory)
 
     val allRefs = getProjectRefs(extracted)
 
     // we rely on allRefs to not contain duplicates. Let's insert an additional sanity check, just in case
     val allRefsNames = normalizedProjectNames(allRefs)
-    if (allRefsNames.distinct.size!=allRefsNames.size)
-      sys.error(allRefsNames.mkString("Unexpected internal error: found duplicate name in ProjectRefs. List is: ",",",""))
+    if (allRefsNames.distinct.size != allRefsNames.size)
+      sys.error(allRefsNames.mkString("Unexpected internal error: found duplicate name in ProjectRefs. List is: ", ",", ""))
 
     // now let's get the list of projects excluded and requested, as specified in the dbuild configuration file
     // note that getSortedProjects() already calls verifySubProjects(), which checks all arguments for sanity, printing messages
@@ -105,15 +107,15 @@ object DependencyAnalysis {
         val requestedPreExclusion = getSortedProjects(projects, allRefs, baseDirectory)
         if (requestedPreExclusion.intersect(excluded).nonEmpty) {
           log.warn(normalizedProjectNames(requestedPreExclusion.intersect(excluded))
-            mkString("*** Warning *** You are simultaneously requesting and excluding some subprojects; they will be excluded. They are: ", ",", ""))
+            mkString ("*** Warning *** You are simultaneously requesting and excluding some subprojects; they will be excluded. They are: ", ",", ""))
         }
         requestedPreExclusion.diff(excluded)
       }
     }
-    
+
     // this will be the list of ProjectRefs that will actually be built, in the right sequence
     val refs = {
-      
+
       import graph._
       // we need to linearize the list of subprojects. If this is not done,
       // when we try to build one of the (sbt) subprojects, multiple ones can be
@@ -186,11 +188,11 @@ object DependencyAnalysis {
       log.info("sorting...")
       val allProjSorted = allProjGraph.safeTopological
       log.debug(normalizedProjectNames(allRefs).mkString("original: ", ", ", ""))
-      log.debug(normalizedProjectNames(allProjSorted.map { _.value}).mkString("sorted: ", ", ", ""))
+      log.debug(normalizedProjectNames(allProjSorted.map { _.value }).mkString("sorted: ", ", ", ""))
       log.debug("dot: " + allProjGraph.toDotFile(normalizedProjectName))
 
       // Excellent. 2) Now we need the set of projects transitively reachable from "requested".
-      
+
       // note that excluded subprojects are only excluded individually: no transitive analysis
       // is performed on exclusions.
       // (if we are building all subprojects, and there are no exclusions, skip this step)
@@ -216,7 +218,7 @@ object DependencyAnalysis {
         } else {
           log.info(normalizedProjectNames(result).mkString("These subprojects will be built: ", ", ", ""))
         }
-        
+
         // Have some of the needed subprojects been excluded? If so, print a warning.
         if (needed.intersect(excluded.toSet).nonEmpty) {
           log.warn("*** Warning *** Some subprojects are dependencies, but have been explicitly excluded.")
@@ -226,41 +228,34 @@ object DependencyAnalysis {
 
         result
       }
-    }.reverse  // from the leaves to the roots
+    }.reverse // from the leaves to the roots
 
     if (refs.isEmpty) sys.error("Fatal: no subprojects will be compiled in this project")
-    
+
     val deps = getProjectInfos(extracted, state, refs)
 
     // TODO: why only the root version? We might as well grab that of each subproject
     val Some(version) = Keys.version in currentRef get structure.data
     // return just this version string now; we will append to it more stuff prior to building
 
-    val meta = model.ExtractedBuildMeta(version, deps, normalizedProjectNames(refs)) // return the new list of subprojects as well!
-    val output = new java.io.PrintStream(new java.io.FileOutputStream(file))
-    try output println writeValue(meta)
-    finally output.close()
-  }
-  
-  /** The implementation of the print-deps command. */
-  def printCmd(state: State): State = {
-    val uri = System.getProperty("dbuild.remote.project.uri")
-    def reloadProjects(props:String) = (Option(System.getProperty(props)) getOrElse "") match {
-      case "" => Seq.empty
-      case projs => projs.split(",").toSeq
-    }
-    val projects = reloadProjects("dbuild.project.dependency.metadata.subprojects")
-    val excluded = reloadProjects("dbuild.project.dependency.metadata.excluded")
-    val debug = reloadProjects("dbuild.project.dependency.metadata.debug") == "true"
-    (Option(System.getProperty("dbuild.project.dependency.metadata.file"))
-        foreach (f => printDependencies(state, uri, f, projects, excluded, debug)))
+    val meta = model.ProjMeta(version, deps, normalizedProjectNames(refs)) // return the new list of subprojects as well!
+    writeStringToFile(resultFile, writeValue(meta), /* VM default */null:String)
+
     state
   }
 
-  private def print = Command.command("print-deps")(saveLastMsg(printCmd))
+  /** called by onLoad() during extraction */
+  def printCmd(state: State): State = {
+    import distributed.support.sbt.SbtRunner.SbtFileNames._
 
-  /** Settings you can add your build to print dependencies. */
-  def printSettings: Seq[Setting[_]] = Seq(
-    Keys.commands += print
-  )
+    val extracted = Project.extract(state)
+    val Some(baseDirectory) = sbt.Keys.baseDirectory in ThisBuild get extracted.structure.data
+    val dbuildDir = baseDirectory / dbuildSbtDirName
+    val resultFile = dbuildDir / extractionOutputFileName
+    val inputFile = dbuildDir / extractionInputFileName
+    val lastMsgFile = dbuildDir / lastErrorMessageFileName
+
+    saveLastMsg(lastMsgFile, printDependencies(_, inputFile, resultFile))(state)
+  }
+
 }

@@ -7,7 +7,7 @@ import _root_.sbt.Path._
 import logging.Logger
 import distributed.project.model.SbtExtraConfig
 import _root_.java.io.File
-import distributed.repo.core.{Defaults,ProjectDirs}
+import distributed.repo.core.{Defaults,GlobalDirs}
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
 import distributed.project.{ BuildSystem, BuildData }
@@ -39,11 +39,6 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
       ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer), commands = allCommands)
     }
     case _ => throw new Exception("Internal error: sbt build config options have the wrong type. Please report.")
-  }
-
-  override def projectDbuildDir(baseDir: File, config: RepeatableProjectBuild): File = {
-    val ec = config.extra[ExtraType]
-    projectDir(baseDir, ec) / ".dbuild"
   }
 
   private def projectDir(baseDir: _root_.java.io.File, ec: SbtExtraConfig): _root_.java.io.File = {

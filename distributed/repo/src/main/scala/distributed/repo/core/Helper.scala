@@ -7,7 +7,7 @@ import java.io.File
 import sbt.{ RichFile, IO, Path }
 import Path._
 import distributed.project.model.Utils.{ writeValue, readValue }
-import distributed.project.model.ArtifactLocation
+import distributed.project.model.{ArtifactLocation, BuildArtifactsIn}
 import logging.Logger
 
 object LocalRepoHelper {
@@ -247,13 +247,21 @@ object LocalRepoHelper {
     (arts, msg)
   }
 
-  def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, readRepo: java.io.File, uuids: Seq[String]): Seq[ArtifactLocation] =
-    for {
-      uuid <- uuids
-      (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, readRepo)
-      _ = msg foreach { diagnostic(_) }
-      art <- arts
-    } yield art
+  // rematerialize artifacts. "uuid" is a sequence: each element represents group of artifacts that
+  // needs to be rematerialized into a separate directory, each for a separate level of the build
+  // Returns for each group the list of rematerialized artifacts
+  def getArtifactsFromUUIDs(diagnostic: (=> String) => Unit, repo: Repository, localRepos: Seq/*Levels*/[File],
+    uuidGroups: Seq /*Levels*/ [Seq[String]]): BuildArtifactsInMulti = BuildArtifactsInMulti(
+    (uuidGroups zip localRepos) map {
+      case (uuids, localRepo) =>
+        val artifacts = for {
+          uuid <- uuids
+          (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo)
+          _ = msg foreach { diagnostic(_) }
+          art <- arts
+        } yield art
+        BuildArtifactsIn(artifacts, localRepo)
+    })
 
   def getProjectInfo(uuid: String, remote: ReadableRepository) =
     resolveArtifacts(uuid, remote)((x, y) => x -> y)

@@ -16,7 +16,7 @@ import akka.util.Timeout
 import actorpatterns.forwardingErrorsToFutures
 import sbt.Path._
 import java.io.File
-import distributed.repo.core.ProjectDirs
+import distributed.repo.core.GlobalDirs
 import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
 
@@ -171,7 +171,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   val targetGraph = filterGraph(buildTarget, fullBuild)
                   val findBuild = fullBuild.buildMap
                   val futureBuildResult = runBuild(targetGraph, findBuild, expandedDBuildConfig.uuid,
-                      fullLogger, options.debug)
+                    fullLogger, options.debug)
                   afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
                 }
               }
@@ -222,7 +222,28 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     log.info("---== Dependency Information ===---")
     build.repeatableBuilds foreach { b =>
       log.info("Project " + b.config.name)
-      log.info(b.dependencyNames mkString ("  depends on: ", ", ", ""))
+      /*
+      //
+      // see note on ghost dependencies in class RepeatableDistributedBuild;
+      // the (commented) algorithm below is disabled as it would print those
+      // ghost dependencies as well, which may confuse the end user
+      //
+      // to print dependencies:
+      // - check if any level beyond the first had a non-empty list of deps
+      // - if not, print a simple one-liner list
+      // - if yes, print the range from the first to the last level that is non-empty,
+      //   prefixing with an id or number to indicate the plugin level
+      val last = b.depInfo.lastIndexWhere(_.dependencyNames.nonEmpty)
+      if (last < 1)
+        // also print this line if no dependencies
+        log.info((b.depInfo.head.dependencyNames) mkString ("  depends on: ", ", ", ""))
+      else {
+        (0 to last) zip b.depInfo foreach { case (i,d) =>
+          log.info(d.dependencyNames mkString ("  level "+i+" depends on: ", ", ", ""))
+        }
+      }
+      */
+      log.info((b.depInfo.flatMap(_.dependencyNames).distinct) mkString ("  depends on: ", ", ", ""))
     }
     log.info("---== End Dependency Information ===---")
   }
@@ -241,7 +262,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   implicit val buildTimeout: Timeout = 4 hours
   type ProjectGraph = graph.Graph[ProjectConfigAndExtracted, Nothing]
   type BuildFinder = Function1[String, RepeatableProjectBuild]
-  
+
   def filterGraph(buildTarget: Option[String], fullBuild: RepeatableDistributedBuild): ProjectGraph = {
     import fullBuild.graph
     buildTarget match {
@@ -255,9 +276,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   }
 
   def runBuild(targetGraph: ProjectGraph, findBuild: BuildFinder, uuid: String,
-      log: Logger, debug: Boolean): Future[BuildOutcome] = {
+    log: Logger, debug: Boolean): Future[BuildOutcome] = {
     implicit val ctx = context.system
-    val tdir = ProjectDirs.targetDir
+    val tdir = GlobalDirs.targetDir
     type State = Future[BuildOutcome]
     def runBuild(): Seq[State] = {
       targetGraph.traverse { (children: Seq[State], p: ProjectConfigAndExtracted) =>
@@ -286,21 +307,18 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         }
       }(Some((a, b) => a.config.name < b.config.name))
     }
-    // TODO - REpository management here!!!!
-    ProjectDirs.userRepoDirFor(uuid) { localRepo =>
-      // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
-      Future.sequence(runBuild()).map { outcomes =>
-        if (outcomes exists { case _: BuildBad => true; case _ => false })
-          // "." is the name of the root project
-          BuildFailed(".", outcomes,
-            // pick the ones that failed, but not because any of their dependencies failed.
-            outcomes.filter { o =>
-              o.isInstanceOf[BuildBad] &&
-                !o.outcomes.exists { _.isInstanceOf[BuildBad] }
-            }.map { _.project }.mkString("failed: ", ", ", ""))
-        else {
-          BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
-        }
+    // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
+    Future.sequence(runBuild()).map { outcomes =>
+      if (outcomes exists { case _: BuildBad => true; case _ => false })
+        // "." is the name of the root project
+        BuildFailed(".", outcomes,
+          // pick the ones that failed, but not because any of their dependencies failed.
+          outcomes.filter { o =>
+            o.isInstanceOf[BuildBad] &&
+              !o.outcomes.exists { _.isInstanceOf[BuildBad] }
+          }.map { _.project }.mkString("failed: ", ", ", ""))
+      else {
+        BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
       }
     }
   }
@@ -338,6 +356,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   // TODO - Repository Knowledge here
   // outProjects is the list of Projects that will be generated by this build, as reported during extraction.
   // we will need it to calculate the version string in LocalBuildRunner, but won't need it any further 
-  def buildProject(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], buildData:BuildData): Future[BuildOutcome] =
+  def buildProject(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], buildData: BuildData): Future[BuildOutcome] =
     (builder ? RunBuild(build, outProjects, children, buildData)).mapTo[BuildOutcome]
 }

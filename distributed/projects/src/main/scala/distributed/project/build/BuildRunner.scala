@@ -21,15 +21,6 @@ trait BuildRunner {
    */
   def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, localBuildRunner: LocalBuildRunner,
       buildData:BuildData): BuildArtifactsOut
-    
-  /**
-   * Determines the appropriate base for a project-specific ".dbuild" directory
-   * for a project in "dir", configured according to "config".
-   * 
-   * @param dir The dir containing the checkout of the project
-   * @param config The configuration record of this project
-   */
-  def projectDbuildDir(dir: File, proj: RepeatableProjectBuild): File
 }
 
 /** Aggregate builder. */
@@ -40,7 +31,4 @@ class AggregateBuildRunner(systems: Seq[BuildSystem[Extractor, LocalBuildRunner]
   def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, localBuildRunner: LocalBuildRunner,
       buildData:BuildData): BuildArtifactsOut =
     findBuildSystem(b.config).runBuild(b, dir, input, localBuildRunner, buildData)
-
-  def projectDbuildDir(dir:File, proj: RepeatableProjectBuild): File =
-    findBuildSystem(proj.config).projectDbuildDir(dir, proj)
 }

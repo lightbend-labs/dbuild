@@ -30,6 +30,9 @@ class Extractor(
    * contained in DepsModifiers. It is presently used to ignore (and not rewire) certain
    * dependencies; that could be further extended in the future in order to
    * modify the project dependencies in other manners.
+   * 
+   * For multi-level builds, at this time only the first level is changed. TODO: change
+   * DepsModifier into an autowrapping object, and adapt multiple levels, if applicable.
    */
   def modifiedDeps(depsMods: Option[DepsModifiers], extractedDeps: ExtractedBuildMeta, log: logging.Logger): ExtractedBuildMeta = {
     depsMods match {
@@ -44,7 +47,8 @@ class Extractor(
           allRealDeps.exists(dep => sameId(dep, mod)))
         if (notFound.nonEmpty)
           log.warn(notFound.mkString("*** WARNING: These dependencies (marked as \"ignore\") were not found: ", ", ", ""))
-        val modDeps = extractedDeps.copy(projects = extractedDeps.projects.map(proj =>
+        // TODO: add "deps" for EACH level
+        val modDeps = extractedDeps.getHead.copy(projects = extractedDeps.getHead.projects.map(proj =>
           proj.copy(dependencies = proj.dependencies.filterNot(dep =>
             ignored.exists(mod => sameId(dep, mod))))))
         val added = all.inject.map(ModuleId.parse)
@@ -52,14 +56,15 @@ class Extractor(
           proj.copy(dependencies = (proj.dependencies.++(added.map { d =>
             ProjectRef(d.getName, d.getOrganisation)
           }).distinct))))
-        result
+        val newProjInfo = result +: extractedDeps.projInfo.tail
+        extractedDeps.copy(projInfo = newProjInfo)
     }
   }
 
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */
   def extract(tdir: File, extractionConfig: ExtractionConfig, logger: logging.Logger, debug: Boolean): ExtractionOutcome = try {
     val build = extractionConfig.buildConfig
-    distributed.repo.core.ProjectDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
+    distributed.project.dependencies.ExtractionDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
       updateTimeStamp(dir)
       // NB: while resolving projects:
       // extractor.resolver.resolve() only resolves the main URI,
@@ -112,8 +117,9 @@ class Extractor(
       logger.debug("Dependencies are cached!")
       val deps = readValue[ExtractedBuildMeta](file)
       logger.debug("Dependencies = " + writeValue(deps))
-      if (deps.subproj.nonEmpty)
-        logger.info(deps.subproj.mkString("The following subprojects will be built in project " + config.buildConfig.name + ": ", ", ", ""))
+      val baseLevelProjInfo = deps.getHead
+      if (baseLevelProjInfo.subproj.nonEmpty)
+        logger.info(baseLevelProjInfo.subproj.mkString("The following subprojects will be built in project " + config.buildConfig.name + ": ", ", ", ""))
       ExtractionOK(config.buildConfig.name, Seq.empty, Seq(ProjectConfigAndExtracted(config.buildConfig, deps)))
     } catch {
       case _: Exception => f

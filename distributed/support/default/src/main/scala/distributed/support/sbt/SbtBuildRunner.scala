@@ -35,8 +35,12 @@ case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, /* not fu
 // script...
 object SbtBuilder {
 
-  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig, 
-    log: logging.Logger, debug: Boolean): BuildArtifactsOut = {
+  // If customProcess is not None, the resulting sbt command line will be prepared and then
+  // passed to customProcess, rather than to the regular Process() in SbtRunner. This feature
+  // is used by "dbuild checkout".
+  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig,
+    log: logging.Logger, debug: Boolean, customProcess: Option[(File, logging.Logger, File, Seq[String]) => Unit] = None,
+    targetCommands: Seq[String] = Seq("dbuild-build"))(): Unit = {
 
     // everything needed for the automatic rewiring, driven by
     // the onLoad() calls on each level
@@ -49,9 +53,9 @@ object SbtBuilder {
     // preparation of the input data to generateArtifacts()
     // This is for the first level only
     val buildIn = GenerateArtifactsInput(config.info,
-        measurePerformance = config.config.measurePerformance,
-        runTests = config.config.runTests,
-        debug = debug)
+      measurePerformance = config.config.measurePerformance,
+      runTests = config.config.runTests,
+      debug = debug)
     SbtRunner.placeGenArtsInputFile(projectDir, buildIn)
 
     // this "ivyCache" is not used for all the levels in which rewiring takes place; for those levels
@@ -64,7 +68,7 @@ object SbtBuilder {
     // DistributedRunner. However, all levels rely on the "repositories" file written here:
     val repoFile = dbuildSbtDir / repositoriesFileName
     SbtRunner.writeRepoFile(repos, repoFile)
-    
+
     runner.run(
       projectDir = projectDir,
       sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
@@ -74,26 +78,25 @@ object SbtBuilder {
         // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
         "sbt.repository.config" -> repoFile.getCanonicalPath
       ),
-      /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */ 
-      extraArgs = config.config.options)((config.config.commands).:+("dbuild-build"): _*)
-    return readValue[BuildArtifactsOut](buildArtsFile(projectDir))
+      /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */
+      extraArgs = config.config.options,
+      process = customProcess)(config.config.commands ++ targetCommands: _*)
   }
-  
+
   def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
-      subprojs: Seq[Seq[String]], crossVers: Seq[String],
-      log: _root_.sbt.Logger, debug: Boolean): Unit = {
+    subprojs: Seq[Seq[String]], crossVers: Seq[String],
+    log: _root_.sbt.Logger, debug: Boolean): Unit = {
     // we do the rewiring on each level using onLoad; we generate the artifacts at the end
     val levels = SbtRunner.buildLevels(projectDir)
     // create the .dbuild dirs in each level (we will use it to store the ivy cache, and other info)
     SbtRunner.prepDBuildDirs(projectDir, levels)
 
     // preparation of the sbt files used to drive rewiring, via onLoad
-    def generateSbtFiles(allButLast: String, allButFirst: String, all: String): (String, String, String) =
-      (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
-    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
+    val onlyMiddle = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
+    val onlyFirst = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad, fixPublishSettings=true)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
-    val (first, middle, last) = generateSbtFiles(allButLast, allButFirst, all)
+    val (first, middle, last) = (onlyFirst + all, onlyMiddle + allButFirst + all, allButFirst + all)
     val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
     SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
 

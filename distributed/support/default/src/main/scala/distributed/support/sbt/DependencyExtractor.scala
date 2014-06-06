@@ -55,15 +55,11 @@ object SbtExtractor {
     //
     // We need a suitable .sbt file in each directory. Some definitions go only in the first one,
     // some in all the middle ones, and some only in the last one.
-    // Create a tuple for (first, middle, last) possible contents 
-    def generateSbtFiles(allButLast: String, allButFirst: String, all: String): (String, String, String) =
-      (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
-
     val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DependencyAnalysis.printCmd(state)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
-
-    val (first, middle, last) = generateSbtFiles(allButLast, allButFirst, all)
+    // Create a tuple for (first, middle, last) possible contents 
+    val (first, middle, last) = (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
     // this is the sequence of contents of the various files 
     val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
     // Let's place them in the required dirs

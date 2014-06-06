@@ -11,6 +11,8 @@ import distributed.repo.core.{Defaults,GlobalDirs}
 import distributed.project.dependencies.Extractor
 import distributed.project.build.LocalBuildRunner
 import distributed.project.{ BuildSystem, BuildData }
+import distributed.project.model.Utils.{ writeValue, readValue }
+import distributed.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
 
 /** Implementation of the SBT build system. */
 class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boolean) extends BuildSystemCore {
@@ -42,17 +44,9 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
     case _ => throw new Exception("Internal error: sbt build config options have the wrong type. Please report.")
   }
 
-  private def projectDir(baseDir: _root_.java.io.File, ec: SbtExtraConfig): _root_.java.io.File = {
-    val projectDir=if(ec.directory.isEmpty) baseDir else baseDir / ec.directory
-    // sanity check, in case "directory" is something like "../xyz" or "/xyz/..."
-    if (!(projectDir.getAbsolutePath().startsWith(baseDir.getAbsolutePath())))
-        sys.error("The specified subdirectory \""+ec.directory+"\" does not seem to be a subdir of the project directory")
-    projectDir
-  }
-
   def extractDependencies(config: ExtractionConfig, baseDir: File, extr: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
-    val projDir = projectDir(baseDir, ec)
+    val projDir = SbtBuildSystem.projectDir(baseDir, ec)
     SbtExtractor.extractMetaData(repos, extractor)(projDir, ec, log, debug)
   }
 
@@ -60,10 +54,19 @@ class SbtBuildSystem(repos:List[xsbti.Repository], workingDir:File, debug: Boole
       buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
     val name = project.config.name
-    // TODO - Does this work correctly?
-    val pdir = if(ec.directory.isEmpty) dir else dir / ec.directory
+    val projDir = SbtBuildSystem.projectDir(dir, ec)
     val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."), info)
-    SbtBuilder.buildSbtProject(repos, runner)(pdir, config, buildData.log, buildData.debug)
+    SbtBuilder.buildSbtProject(repos, runner)(projDir, config, buildData.log, buildData.debug)
+    readValue[BuildArtifactsOut](buildArtsFile(projDir))
   }
+}
 
+object SbtBuildSystem {
+  def projectDir(baseDir: _root_.java.io.File, ec: SbtExtraConfig): _root_.java.io.File = {
+    val projectDir=if(ec.directory.isEmpty) baseDir else baseDir / ec.directory
+    // sanity check, in case "directory" is something like "../xyz" or "/xyz/..."
+    if (!(projectDir.getAbsolutePath().startsWith(baseDir.getAbsolutePath())))
+        sys.error("The specified subdirectory \""+ec.directory+"\" does not seem to be a subdir of the project directory")
+    projectDir
+  }
 }

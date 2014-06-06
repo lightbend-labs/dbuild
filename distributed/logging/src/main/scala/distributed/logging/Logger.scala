@@ -32,6 +32,11 @@ object Logger {
   def logFullStackTrace(log: Logger, t: Throwable): Unit = processLogMsg(log, t, false)
 }
 
+
+object ConsoleLogger {
+  def apply(debug: Boolean): Logger = new StreamLogger(System.out, debug)
+}
+
 //
 //  Below this line, unused code
 //
@@ -73,8 +78,4 @@ class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger
         out.println()
       }
     }
-}
-
-object ConsoleLogger {
-  def apply(debug: Boolean): Logger = new StreamLogger(System.out, debug)
 }

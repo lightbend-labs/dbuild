@@ -27,12 +27,15 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
   def localIvyProps: Map[String, String] =
     Map("sbt.ivy.home" -> (globalBase / ".ivy2").getAbsolutePath)
 
+  // "process" defaults to processCommand(), below, but it can be
+  // customized in order to process the command line in some special manner
   def run(projectDir: File,
     sbtVersion: String,
     log: Logger,
     javaProps: Map[String, String] = Map.empty,
     javaArgs: Seq[String] = SbtRunner.defaultJavaArgs,
-    extraArgs: Seq[String] = Seq.empty)(args: String*): Unit = {
+    extraArgs: Seq[String] = Seq.empty,
+    process: Option[(File, Logger, File, Seq[String]) => Unit] = None)(args: String*): Unit = {
 
     val useSbtVersion = if (sbtVersion != "standard") {
       removeProjectBuild(projectDir, log)
@@ -70,22 +73,26 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
         extraArgs)(args: _*)
 
       log.debug("Running: " + cmd.mkString("[", ",", "]"))
-      // I need a sort of back channel to return a diagnostic string from sbt,
-      // aside from stdin/stderr which are captured by the logger. I use a
-      // temporary file and ask the sbt plugin to fill it in, in case of
-      // exception, as last thing before returning. If I return, there is
-      // nothing in the file, but the return code is !=0, I revert to a
-      // generic message.
-      Process(cmd, Some(projectDir)) ! log match {
-        case 0 => ()
-        case n => { // Always exit this block with a throw or sys.error
-          val lastErr = try {
-            readFileToString(lastMsg, "UTF-8")
-          } catch {
-            case _ => sys.error("Failure to run sbt!  Error code: " + n)
-          }
-          sys.error(lastErr)
+      (process getOrElse processCommand _)(projectDir, log, lastMsg, cmd)
+    }
+  }
+
+  private def processCommand(projectDir: File, log: Logger, lastMsg: File, cmd: Seq[String]): Unit = {
+    // I need a sort of back channel to return a diagnostic string from sbt,
+    // aside from stdin/stderr which are captured by the logger. I use a
+    // temporary file and ask the sbt plugin to fill it in, in case of
+    // exception, as last thing before returning. If I return, there is
+    // nothing in the file, but the return code is !=0, I revert to a
+    // generic message.
+    Process(cmd, Some(projectDir)) ! log match {
+      case 0 => ()
+      case n => { // Always exit this block with a throw or sys.error
+        val lastErr = try {
+          readFileToString(lastMsg, "UTF-8")
+        } catch {
+          case _ => sys.error("Failure to run sbt!  Error code: " + n)
         }
+        sys.error(lastErr)
       }
     }
   }
@@ -151,7 +158,6 @@ object SbtRunner {
 
   /** inits global base and returns location of launcher jar file. */
   private def initSbtGlobalBase(repos: List[xsbti.Repository], dir: File, debug: Boolean): File = {
-
     val launcherDir = dir / "launcher"
     val launcherJar = launcherDir / "sbt-launch.jar"
     if (!launcherJar.exists) {
@@ -367,7 +373,7 @@ object SbtRunner {
     //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); import scala.collection.JavaConversions._; val t=Thread.getAllStackTraces; val z=t.iterator; z foreach { case (a,b) => s.log.warn(\"Thread \"+a.getName); b foreach {k=> s.log.warn(\" at: \"+k)}}; u }\n\nivyPaths in Global <<= (baseDirectory in Global) { d => new IvyPaths(d, d / \""+"..."+"\" }\n\n"
     //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths,fullResolvers) map { case (u,s,p,r) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); s.log.warn(\"Full resolvers:\"); r foreach {x: sbt.Resolver => s.log.warn(x.toString) }; s.log.warn(\"End resolvers.\"); u }\n\n"
 
-     "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
+    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
   }
 
   // stuff related to generateArtifacts()

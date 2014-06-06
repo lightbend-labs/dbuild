@@ -96,7 +96,7 @@ version 0.9.0, the options are:
    
    Subcommand: checkout
    Use "dbuild checkout" to check out one project from a previously compiled
-   build projects, preparing sbt for a debugging session.
+   build, preparing sbt for a debugging session.
    Options:
    
          --help   Show help message

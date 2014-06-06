@@ -24,15 +24,13 @@ import distributed.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
  *                     the first one, but it still controls whether missing dependencies will be
  *                     detected or not while rewiring.
  */
-// TODO: split crossVersion into crossVersion and detectMissing.
-case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String], crossVersion: String, debug: Boolean)
+case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String],
+  crossVersion: String, checkMissing: Boolean, debug: Boolean)
 /**
  * Input to generateArtifacts()
  */
 case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, /* not fully supported */ measurePerformance: Boolean, debug: Boolean)
 
-// Yeah, this need a ton of cleanup, but hey it was pulled from a BASH
-// script...
 object SbtBuilder {
 
   // If customProcess is not None, the resulting sbt command line will be prepared and then
@@ -48,7 +46,8 @@ object SbtBuilder {
     val arts = config.info.artifacts
     val subprojs = config.info.subproj
     val crossVers = config.crossVersion
-    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, log, debug)
+    val checkMissing = config.checkMissing
+    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, checkMissing, log, debug)
 
     // preparation of the input data to generateArtifacts()
     // This is for the first level only
@@ -67,7 +66,8 @@ object SbtBuilder {
     // the top levels also do not get the repositories adjustment offered by FixResolvers2() in
     // DistributedRunner. However, all levels rely on the "repositories" file written here:
     val repoFile = dbuildSbtDir / repositoriesFileName
-    SbtRunner.writeRepoFile(repos, repoFile)
+    val baseRematerializedRepo = localRepos(projectDir).head
+    SbtRunner.writeRepoFile(repos, repoFile, "build-local" -> baseRematerializedRepo.toURI.toASCIIString)
 
     runner.run(
       projectDir = projectDir,
@@ -84,7 +84,7 @@ object SbtBuilder {
   }
 
   def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
-    subprojs: Seq[Seq[String]], crossVers: Seq[String],
+    subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean],
     log: _root_.sbt.Logger, debug: Boolean): Unit = {
     // we do the rewiring on each level using onLoad; we generate the artifacts at the end
     val levels = SbtRunner.buildLevels(projectDir)
@@ -105,10 +105,16 @@ object SbtBuilder {
     // The defaults are: "disabled","standard","standard"....
     val defaultCrossVersions = CrossVersionsDefaults.defaults
     val crossVersionStream = crossVers.toStream ++ defaultCrossVersions.drop(crossVers.length)
-    val inputDataAll = (ins, subprojs, crossVersionStream).zipped map {
-      case (in, subproj, cross) =>
-        RewireInput(in, subproj, cross, debug)
+    val checkMissingStream = checkMiss.toStream ++ crossVersionStream.drop(checkMiss.length).map {
+      // The default value for checkMissing is true, except if crossVersion is "standard", as
+      // we are unable to perform the check in that case.
+      _ != "standard"
     }
-    SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll, log, debug)
+    // .zipped works on three elements at most, hence the nesting
+    val inputDataAll = ((ins, subprojs).zipped, crossVersionStream, checkMissingStream).zipped map {
+      case ((in, subproj), cross, checkMissing) =>
+        RewireInput(in, subproj, cross, checkMissing, debug)
+    }
+    SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll.toSeq, log, debug)
   }
 }

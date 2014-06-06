@@ -62,8 +62,6 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
     }
 
     IO.withTemporaryFile("sbtrunner", "lastExceptionMessage") { lastMsg =>
-      // TODO: the sbt version in the project description is always set to some version
-      // Fetch it here, and use it to run the appropriate SBT
       val cmd = SbtRunner.makeShell(
         launcherJar.getAbsolutePath,
         defaultProps + ("dbuild.sbt-runner.last-msg" -> lastMsg.getCanonicalPath,
@@ -98,7 +96,6 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
   }
 
   private def removeProjectBuild(projectDir: File, log: Logger): Unit = {
-    // TODO - Just overwrite sbt.version if necessary....
     val buildProps = projectDir / "project" / "build.properties"
     if (buildProps.exists) {
       log.debug("Removing " + buildProps.getAbsolutePath)
@@ -134,27 +131,6 @@ object SbtRunner {
     "-XX:MaxPermSize=640m",
     "-XX:ReservedCodeCacheSize=192m"
   )
-
-  /* TODO: remove the two dead methods below, now replaced by sbt files */
-  def writeQuietIvyLogging(dir: File, debug: Boolean) = {
-    val file = new File(dir, ".dbuild.ivy.quiet.sbt")
-    if (debug) {
-      file.delete()
-    } else {
-      val p = new _root_.java.io.PrintWriter(file)
-      p.write("ivyLoggingLevel in Global := UpdateLogging.Quiet\n")
-      p.close
-    }
-  }
-  def silenceIvy(dir: File, log: Logger, debug: Boolean): Unit = {
-    val dirP = dir / "project"
-    val dirPP = dirP / "project"
-    dirP.mkdir()
-    Seq(dir, dirP).foreach(writeQuietIvyLogging(_, debug))
-    // only change dirPP it need be, otherwise we incur
-    // an extra Ivy update for all projects
-    if (dirPP.exists()) writeQuietIvyLogging(dirPP, debug)
-  }
 
   /** inits global base and returns location of launcher jar file. */
   private def initSbtGlobalBase(repos: List[xsbti.Repository], dir: File, debug: Boolean): File = {
@@ -195,8 +171,8 @@ object SbtRunner {
   def writeDeps(file: File): Unit =
     IO.write(file, """addSbtPlugin("com.typesafe.dbuild" % "distributed-sbt-plugin" % """ + '"' + Defaults.version + "\")")
 
-  def writeRepoFile(repos: List[xsbti.Repository], config: File): Unit =
-    Repositories.writeRepoFile(repos, config)
+  def writeRepoFile(repos: List[xsbti.Repository], config: File, repositories: (String, String)*): Unit =
+    Repositories.writeRepoFile(repos, config, repositories:_*)
 
   /**
    * Given a freshly cleaned up checkout of an sbt project (all unrelated files and dirs must be deleted),
@@ -368,11 +344,6 @@ object SbtRunner {
    *  Perform a state transformation using onLoad()
    */
   def onLoad(activity: String) = {
-    // Tests. TODO: remove
-    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); Thread.dumpStack(); u }\n\n"
-    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths) map { case (u,s,p) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); import scala.collection.JavaConversions._; val t=Thread.getAllStackTraces; val z=t.iterator; z foreach { case (a,b) => s.log.warn(\"Thread \"+a.getName); b foreach {k=> s.log.warn(\" at: \"+k)}}; u }\n\nivyPaths in Global <<= (baseDirectory in Global) { d => new IvyPaths(d, d / \""+"..."+"\" }\n\n"
-    //    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\nupdate <<= (update,streams,ivyPaths,fullResolvers) map { case (u,s,p,r) => s.log.warn(\"we called update, and ivyPaths.home is:\"+p.ivyHome+\", ivyPath.baseDirectory is: \"+p.baseDirectory); s.log.warn(\"Full resolvers:\"); r foreach {x: sbt.Resolver => s.log.warn(x.toString) }; s.log.warn(\"End resolvers.\"); u }\n\n"
-
     "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
   }
 

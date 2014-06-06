@@ -58,12 +58,18 @@ object DependencyAnalysis {
   //
   // Use these normalization routines only when printing or comparing
   //
-  def normalizedProjectName(s: ProjectRef, baseDirectory: File) = {
+  def normalizedProjectName(s: ProjectRef, baseDirectory: File) = normalizedProjectNameString(s.project, baseDirectory)
+  def normalizedProjectNameString(name: String, baseDirectory: File): String = {
     // we only cover the most common cases. The full logic for 0.13 may involve Load.scala (autoID) and the def default* in Build.scala
     val base = StringUtilities.normalize(baseDirectory.getName)
     val defaultIDs = Seq(Build.defaultID(baseDirectory), "root-" + base, base)
     val defaultName = "default-sbt-project"
-    if (defaultIDs contains s.project) defaultName else s.project
+    if (defaultIDs contains name) defaultName else {
+      if (name.endsWith("-build") && base == "project" && normalizedProjectNameString(name.dropRight(6), baseDirectory.getParentFile) == defaultName)
+        defaultName
+      else
+        name
+    }
   }
   def normalizedProjectNames(r: Seq[ProjectRef], baseDirectory: File) = r map { p => normalizedProjectName(p, baseDirectory) }
 
@@ -156,21 +162,33 @@ object DependencyAnalysis {
       // utility map from the project name to its ProjectRef
       val allProjRefsMap = (allRefs map { r => (r.project, r) }).toMap
 
-      // let's extract sbt inter-project dependencies (only direct ones)
-      val allProjDeps = extracted.currentUnit.defined map { p =>
-        (allProjRefsMap(p._1), p._2.dependencies map { _.project } toSet)
-      }
-      // similarly for the "aggregate" relationship (only direct ones, not the transitive set)
-      // in order to extract it, I go through the list of all ResolvedProjects (in structure.allProjects)
+      // Now let's extract sbt inter-project dependencies (only the direct ones).
+      // Note that the subprojects defined by dependsOn(uri) *do not* appear in
+      // extracted.currentUnit.defined; we consequently scan extracted.structure.allProjects
+      // instead (which in theory should contain the same information as allRefs,
+      // aka extracted.structure.allProjectRefs).
+      val allProjDeps = (extracted.structure.allProjects map { p =>
+        (allProjRefsMap(p.id), (extracted.currentUnit.defined.get(p.id) map { rp =>
+          rp.dependencies map { _.project } toSet
+        }) getOrElse Set[ProjectRef]())
+      }).toMap
+
+      // The same, for the "aggregate" relationship (only direct ones, not the transitive set)
       val allProjAggregates = extracted.structure.allProjects map { p =>
         (allProjRefsMap(p.id), p.aggregate.toSet)
       } toMap
 
       // some debugging won't hurt
       log.info("Dependencies among subprojects:")
-      allProjDeps map { case (s, l) => log.info(normalizedProjectName(s) + " -> " + normalizedProjectNames(l.toSeq).mkString(",")) }
+      def dumpDeps(deps: Map[ProjectRef, Set[ProjectRef]]) = {
+        deps map {
+          case (s, l) =>
+            log.info(normalizedProjectName(s) + " -> " + normalizedProjectNames(l.toSeq).mkString(","))
+        }
+      }
+      dumpDeps(allProjDeps)
       log.info("Aggregates of subprojects:")
-      allProjAggregates map { case (s, l) => log.info(normalizedProjectName(s) + " -> " + normalizedProjectNames(l.toSeq).mkString(",")) }
+      dumpDeps(allProjAggregates)
       log.info("Building graph...")
       val allProjGraph = new SubProjGraph(allRefs, allProjDeps, allProjAggregates)
       log.debug("The graph contains:")
@@ -239,7 +257,7 @@ object DependencyAnalysis {
     // return just this version string now; we will append to it more stuff prior to building
 
     val meta = model.ProjMeta(version, deps, normalizedProjectNames(refs)) // return the new list of subprojects as well!
-    writeStringToFile(resultFile, writeValue(meta), /* VM default */null:String)
+    writeStringToFile(resultFile, writeValue(meta), /* VM default */ null: String)
 
     state
   }

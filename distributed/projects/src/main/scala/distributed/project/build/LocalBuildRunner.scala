@@ -25,7 +25,6 @@ class LocalBuildRunner(builder: BuildRunner,
     buildData: BuildData): BuildOutcome = {
     val log = buildData.log
     try {
-//(log: Logger, debug: Boolean, timestamp: String
       try {
         val subArtifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
         LocalRepoHelper.debugArtifactsInfo(subArtifactsOut, log)
@@ -39,7 +38,7 @@ class LocalBuildRunner(builder: BuildRunner,
       }
     } catch {
       case t =>
-        BuildFailed(build.config.name, children, prepareLogMsg(buildData.log, t))
+        BuildFailed(build.config.name, children, prepareLogMsg(log, t))
     }
   }
 
@@ -55,8 +54,8 @@ class LocalBuildRunner(builder: BuildRunner,
       val log = buildData.log
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
       extractor.resolver.resolve(build.config, dir, log)
-      val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(repository, build, outProjects, dir, log)
-      log.info("Running local build: " + build.config + " in directory: " + dir)
+      val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(repository, build, outProjects, dir, log, buildData.debug)
+      log.debug("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
       val results = builder.runBuild(build, dir,
@@ -71,11 +70,12 @@ object LocalBuildRunner {
   // Rematerializes the project's dependencies, and prepares some other build information,
   // prior to the actual build.
   // Returns: (dependencies, version, writeRepo)
-  def prepareDepsArtifacts(repository: Repository, build: RepeatableProjectBuild, outProjects: Seq[Project], dir: File, log: logging.Logger): (BuildArtifactsInMulti, String, File) = {
+  def prepareDepsArtifacts(repository: Repository, build: RepeatableProjectBuild, outProjects: Seq[Project], dir: File, log: logging.Logger, debug: Boolean): (BuildArtifactsInMulti, String, File) = {
     //
     val readRepos = localRepos(dir)
     val uuidGroups = build.depInfo map (_.dependencyUUIDs)
-    val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups)
+    val fromSpaces = build.configAndExtracted.getSpace.fromStream // one per uuidGroup
+    val dependencies = LocalRepoHelper.getArtifactsFromUUIDs(log.info, repository, readRepos, uuidGroups, fromSpaces, debug)
     val BuildArtifactsInMulti(artifactLocations) = dependencies
     // Special case: scala-compiler etc must have the same version number
     // as scala-library: projects that rely on scala-compiler as a dependency

@@ -58,7 +58,7 @@ object Checkout {
 
         // it is now time to set up the project, exactly as we would before the build stage in dbuild
         val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(cache, project,
-          project.configAndExtracted.extracted.projects, dir, log)
+          project.configAndExtracted.extracted.projects, dir, log, debug)
 
         // Let's retrieve the list of repositories from the original repeatable description;
         // we will have to do some post-processing in order to get again a List[xsbti.Repository]
@@ -102,7 +102,8 @@ object Checkout {
 
         // Ready to go!
         val info = BuildInput(dependencies, version, subprojs, writeRepo, projectName)
-        val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."), info)
+        val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."),
+            project.config.checkMissing getOrElse sys.error("Internal error: checkMissing not expanded in runBuild."), info)
         val artsOut = distributed.support.sbt.SbtBuilder.buildSbtProject(repos, sbtRunner)(projDir, config, log, debug, customProcess = Some({
           (_, _, _, cmd: Seq[String]) =>
             val commandFile = dir / dbuildSbtDirName / "start"

@@ -276,7 +276,9 @@ object ScalaBuildSystem extends BuildSystemCore {
       BuildArtifactsOut(meta.projects map {
         proj =>
           val (cross, ver) = findCrossAndVer(localRepo, proj.organization, proj.name)
-          BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, ver, cross) },
+          // The "None" in ArtifactLocation is the set of extraAttributes, which is only relevant in case
+          // the artifact is an sbt plugin; we do not expect the Scala compiler to produce sbt plugins.
+          BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, ver, cross, pluginAttrs = None) },
             projSHAs(proj.artifacts, cross))
       })
 
@@ -293,19 +295,12 @@ object ScalaBuildSystem extends BuildSystemCore {
    */
   private def readMeta(baseDir: File, exclude: Seq[String], log: logging.Logger): ExtractedBuildMeta = {
     val dbuildMetaFile = new File(baseDir, "dbuild-meta.json")
-    val readMeta = try readValue[ExtractedBuildMeta](dbuildMetaFile)
+    val readMeta = try ExtractedBuildMeta(Seq(readValue[ProjMeta](dbuildMetaFile)))
     catch {
       case e: Exception =>
         log.error("Failed to read scala metadata file: " + dbuildMetaFile.getAbsolutePath)
         logging.Logger.prepareLogMsg(log, e)
         log.error("Falling back to default.")
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        sys.exit(9991)
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
-        // DEBUGGING ONLY *******************************************************************************************************
         fallbackMeta(baseDir)
     }
     // There are no real subprojects in the Scala build;

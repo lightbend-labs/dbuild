@@ -18,20 +18,20 @@ package object hashing {
       }
       case bytes: Array[Byte] => md update bytes
       case s: String          => md update s.getBytes
-      case s: Product         =>
-        // Add a product marker
-        md update 5.toByte
-        s.productIterator foreach addBytes
       case map: Map[String,_] =>
         val data = map.toSeq.sortBy(_._1)
         data foreach { case (k,v) =>
           addBytes(k)
           addBytes(v)
-        }        
+        }
       case s: Traversable[_] =>
         // First add a traversable marker..
         md update 1.toByte
         s foreach addBytes
+      case s: Product         =>
+        // Add a product marker
+        md update 5.toByte
+        s.productIterator foreach addBytes
       case list: java.util.List[_] =>
         md update 1.toByte
         list.asScala foreach addBytes

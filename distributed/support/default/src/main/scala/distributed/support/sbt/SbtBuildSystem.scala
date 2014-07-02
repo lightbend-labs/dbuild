@@ -26,7 +26,9 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
   def expandExtra(extra: Option[ExtraConfig], systems: Seq[BuildSystem[Extractor, LocalBuildRunner]], defaults: ExtraOptions) = extra match {
     // no 'extra' section in an sbt project? pick default values from ExtraOptions
     case None => SbtExtraConfig(sbtVersion = Some(defaults.sbtVersion),
-      extractionVersion = Some(defaults.extractionVersion))
+      extractionVersion = Some(defaults.extractionVersion),
+      commands = defaults.sbtCommands,
+      settings = defaults.sbtSettings)
     // an 'extra' section is present. One or both of 'sbtVersion' and 'compiler' might be missing.
     case Some(ec: SbtExtraConfig) => {
       val sbtVer = ec.sbtVersion match {

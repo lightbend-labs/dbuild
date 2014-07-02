@@ -60,10 +60,13 @@ object SbtExtractor {
     val all = SbtRunner.ivyQuiet(debug)
     // Create a tuple for (first, middle, last) possible contents 
     val (first, middle, last) = (allButLast + all, allButLast + allButFirst + all, allButFirst + all)
-    // this is the sequence of contents of the various files 
+    // this is the sequence of contents of the various files, sans sbtSettings 
     val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
+    // to each file, prepend the additional settings
+    val settings = (extra.settings.expand.map { _.map { _ + "\n\n" }.mkString }).toStream ++ Stream.continually("")
+    val finalSbtFiles = (settings zip sbtFiles) map { case (a, b) => a + b }
     // Let's place them in the required dirs
-    SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
+    SbtRunner.writeSbtFiles(projectDir, finalSbtFiles, log, debug)
 
     import SbtRunner.SbtFileNames._
     // This is for the first level only
@@ -74,7 +77,7 @@ object SbtExtractor {
     // The "repositories" file used to be common for all sbt invocations, defined in SbtRunner.
     // That would have led to problems in the future, as simultaneous dbuild invocation would have
     // overwritten each other's repositories set. Instead, we create a repositories file in each
-    // project build/extraction dir. That makes it also easier to implement a future "dbuild --checkout" feature.
+    // project build/extraction dir. That makes it also easier to implement the "dbuild --checkout" feature.
     val dbuildSbtDir = projectDir / dbuildSbtDirName
     val repoFile = dbuildSbtDir / repositoriesFileName
     SbtRunner.writeRepoFile(repos, repoFile)

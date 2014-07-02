@@ -12,7 +12,7 @@ import distributed.logging.Logger.logFullStackTrace
 import distributed.project.build.BuildDirs._
 import distributed.support.sbt.SbtRunner.SbtFileNames._
 import distributed.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
-
+import distributed.project.model.SeqSeqString
 /**
  * Rewiring a level needs the information contained in RewireInput:
  *
@@ -47,7 +47,8 @@ object SbtBuilder {
     val subprojs = config.info.subproj
     val crossVers = config.crossVersion
     val checkMissing = config.checkMissing
-    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, checkMissing, log, debug)
+    val settings = config.config.settings.expand
+    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, checkMissing, settings, log, debug)
 
     // preparation of the input data to generateArtifacts()
     // This is for the first level only
@@ -84,7 +85,7 @@ object SbtBuilder {
   }
 
   def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
-    subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean],
+    subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean], sbtSettings: Seq[Seq[String]],
     log: _root_.sbt.Logger, debug: Boolean): Unit = {
     // we do the rewiring on each level using onLoad; we generate the artifacts at the end
     val levels = SbtRunner.buildLevels(projectDir)
@@ -98,7 +99,10 @@ object SbtBuilder {
     val all = SbtRunner.ivyQuiet(debug)
     val (first, middle, last) = (onlyFirst + all, onlyMiddle + allButFirst + all, allButFirst + all)
     val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
-    SbtRunner.writeSbtFiles(projectDir, sbtFiles, log, debug)
+    // to each file, prepend the additional settings
+    val settings = (sbtSettings.map { _.map { _ + "\n\n" }.mkString }).toStream ++ Stream.continually("")
+    val finalSbtFiles = (settings zip sbtFiles) map { case (a, b) => a + b }
+    SbtRunner.writeSbtFiles(projectDir, finalSbtFiles, log, debug)
 
     // now, let's prepare and place the input data to rewiring
     val ins = artifacts.materialized

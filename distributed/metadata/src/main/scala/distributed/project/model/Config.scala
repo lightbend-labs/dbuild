@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ser.std.StringSerializer
 import com.fasterxml.jackson.databind.ser.impl.StringArraySerializer
+import collection.JavaConverters._
 
 /**
  * Metadata about a build.  This is extracted from a config file and contains enough information
@@ -284,6 +285,8 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   // an effect on building (for instance due to a difference in checkout because
   // of an implementation bug)
   @JsonProperty("use-jgit") useJGit: Boolean = false,
+  // settings for sbt-based builds
+  @JsonProperty("sbt-settings") sbtSettings: SeqSeqString /* Levels */ = Seq.empty,
   // commands for sbt-based builds
   @JsonProperty("sbt-commands") sbtCommands: SeqString = Seq.empty,
   // Default space for regular project
@@ -379,6 +382,53 @@ object SeqDepsModifiers {
 }
 
 /**
+ * We can use a SeqSeqString when we would like to supply either a single String or an
+ * array of Strings (which becomes a Seq containing one element, which is a Seq[String]),
+ * or directly an array of array of Strings (which becomes directly a Seq(Seq())).
+ * It is only used by sbtSettings, currently.
+ */
+@JsonSerialize(using = classOf[SeqSeqStringSerializer])
+@JsonDeserialize(using = classOf[SeqSeqStringDeserializer])
+case class SeqSeqString(override val s: Seq[SeqString]) extends Flex[SeqString](s) {
+  // turn the SeqSeqString into a Seq[Seq[String]]
+  def expand = s map {_.s}
+}
+object SeqSeqString {
+  implicit def SeqToSeqSeqString(s: Seq[SeqString]): SeqSeqString = SeqSeqString(s)
+  implicit def SeqSeqStringToSeq(a: SeqSeqString): Seq[SeqString] = a.s
+}
+class SeqSeqStringSerializer extends SeqFlexSerializer[SeqString]
+// Flex cannot cope with the special case of SeqSeqString deserialization; we write a custom one.
+class SeqSeqStringDeserializer extends JsonDeserializer[SeqSeqString] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqSeqString = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[JsonNode]), null)
+    val generic = d.deserialize(p, ctx).asInstanceOf[JsonNode]
+    val jp = generic.traverse()
+    jp.nextToken()
+    def valueAs[T](cls: Class[T]) = {
+      val vd = ctx.findContextualValueDeserializer(tf.constructType(cls), null)
+      cls.cast(vd.deserialize(jp, ctx))
+    }
+    // If generic is already an array of arrays, do not wrap, else wrap;
+    // since we might have stuff like [ x, [ y,z ]], we need to traverse
+    // the whole generic to look for arrays of arrays.
+    val needsWrapping = if (generic.isArray()) {
+      !generic.iterator().asScala.exists(_.isArray)
+    } else {
+      true
+    }
+    if (needsWrapping) {
+      SeqSeqString(Seq(valueAs(classOf[SeqString])))
+    } else {
+      // this valueAs() will return a WrappedArray; with the latest sha fixes,
+      // it should have the same sha as a default Seq (a List)
+      SeqSeqString(valueAs(classOf[Array[SeqString]]))
+    }
+  }
+}
+
+/**
  * The generic auto-wrapping magic
  */
 class Flex[T](val s: Seq[T])
@@ -395,11 +445,10 @@ class SeqFlexDeserializer[T, ST <: Flex[T]](implicit m: Manifest[T], ms: Manifes
     }
     val constructor = ms.erasure.asInstanceOf[Class[ST]].getConstructor(classOf[Seq[T]])
     if (generic.isArray()) {
-      // The valueAs() returns a WrappedArray; we use
-      // its values to build a new Seq, in order to keep
-      // the same sha1 UUID (just in case)
+      // The valueAs() returns an Array; we use its values to build a new Seq.
       constructor.newInstance(Seq(valueAs(m.arrayManifest.erasure.asInstanceOf[Class[Array[T]]]): _*))
     } else {
+      // Retrieve the single value, and wrap it into a Seq()
       constructor.newInstance(Seq(valueAs[T](m.erasure.asInstanceOf[Class[T]])))
     }
   }
@@ -554,7 +603,9 @@ case class SbtExtraConfig(
   @JsonProperty("measure-performance") measurePerformance: Boolean = false,
   @JsonProperty("run-tests") runTests: Boolean = true,
   options: SeqString = Seq.empty,
-  // before extraction or building, run these commands ("set" or others)
+  // before rewiring, append these settings
+  settings: SeqSeqString = Seq.empty, /*Levels*/
+  // before building, run these commands ("set" or others)
   commands: SeqString = Seq.empty,
   projects: SeqString = Seq.empty, // if empty -> build all projects (default)
   exclude: SeqString = Seq.empty, // if empty -> exclude no projects (default)
@@ -704,6 +755,7 @@ object SeqNotification {
 trait ExtraOptions {
   def sbtVersion: String
   def extractionVersion: String
+  def sbtSettings: SeqSeqString /*Levels*/
   def sbtCommands: SeqString
 }
 trait ProjectOptions {

@@ -150,7 +150,25 @@ the main artifacts, are the following:
   applied to the detected dependencies). This is an advanced
   setting.
 
-You can refer to the example above as a starting point in order
+``settings`` and ``sbt-settings``
+  Additional settings can be inserted into the main project definition,
+  as well as into the plugins build definition, and further upper
+  levels if needed.
+
+  If you wish to inject settings for plugin definitions, these options
+  may be written as an array of arrays of strings; some of the inner
+  arrays may also be the empty array```[]```. In place of some of the
+  inner arrays, simple strings can also be used as long as at least
+  one of the inner elements is an array. For instance, possible
+  definitions could be ```[xx,[yy,zz]]```, or ```[[],fff]```,
+  where ``[yy,zz]`` and ``fff`` refer to plugins.
+
+  If no inner arrays
+  are detected, as for example in ``[aa,bb,cc]``, then the specified
+  settings will all be taken to refer to the main build level.
+
+
+You can use the example above as a starting point in order
 to experiment with building sbt plugins in a dbuild configuration file.
 
 *Next:* :doc:`comparison`.

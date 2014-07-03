@@ -308,6 +308,7 @@ In this case the "extra" argument is a record with the following content:
     "run-tests"           : <run-tests>
     "options"             : [ opt1, opt2,... ]
     "commands"            : [ cmd1, cmd2,... ]
+    "settings"            : [ setting1, setting2,... ]
     "extraction-version"  : <compiler-version-string>
    }
 
@@ -374,16 +375,31 @@ options
   to build this project.
 
 commands
-  A sequence of sbt commands; they will be executed by sbt before dbuild rearranges
-  the project dependencies. These commands can be used, for example, to change settings
-  using forms like "set setting := ...".
+  A sequence of sbt commands; they will be executed by sbt only after dbuild rearranges
+  the project dependencies, but prior to building.
   Note that a default list of commands (as detailed in :doc:`buildOptions`) will not
-  be replaced by this option: the general commands will be executed before this list.
+  be replaced by this option: the default commands will be executed before this list.
 
-  Please note that dbuild offers no guarantees on whether commands will be run before
-  or after the rewriting of dependencies, needed to make sure they refer to the artifacts
-  created by other projects in the same configuration file.
-  
+  These commands are executed before building, but only after dbuild has adjusted the
+  list of dependencies and the other settings in order to ensure that the various
+  projects are built on top of each other. They should not be used therefore to
+  to modify or append dependencies; you can use instead the option "settings", described
+  below. These commands are also not run during extraction.
+
+.. note::
+  Prior to dbuild 0.9, commands were executed prior to dependency rewiring. If you
+  were using commands like ``set libraryDependency ...``, you will need to move them
+  to the "settings" section, instead.
+
+settings
+  A sequence of sbt settings, in the format in which they would normally be specified
+  in a ``.sbt`` file. These settings will be appended to the end of all other settings
+  in the sbt project definitions, prior to the dbuild's dependency rewiring.
+  It has a corresponding default in the option "sbt-settings", which can be specified
+  once directly in the build section, as explained in the section :doc:`buildOptions`.
+  If both defaults and project-specific settings are specified, they will be concatenated,
+  with the latter caming last.
+
 extraction-version
   This value can be used to override the Scala compiler version used during dependency
   extraction. It is optional within each project; it is also possible to specify this

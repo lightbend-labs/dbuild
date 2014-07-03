@@ -663,7 +663,7 @@ object DistributedRunner {
       fixPGPs2,
       fixVersions2(in)) flatMap { _(oldSettings, log) }
 
-  private def newState(state: State, extracted: Extracted, update: Seq[Setting[_]] => Seq[Setting[_]]) = {
+  def newState(state: State, extracted: Extracted, update: Seq[Setting[_]] => Seq[Setting[_]]) = {
     import extracted._
 
     val oldSettings = session.mergeSettings

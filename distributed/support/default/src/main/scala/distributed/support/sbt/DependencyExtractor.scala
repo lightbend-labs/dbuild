@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 case class ExtractionInput(
   projects: Seq[String],
   @JsonProperty("excluded-projects") excludedProjects: Seq[String],
+  extractionScalaVersion: Option[String],
   debug: Boolean)
 
 object SbtExtractor {
@@ -27,13 +28,13 @@ object SbtExtractor {
     log.debug("  " + projectDir.getCanonicalPath())
     val scalaCompiler = extra.extractionVersion getOrElse
       sys.error("Internal error: \"compiler\" has not been expanded. Please report.")
-    val setScalaCommand: Seq[String] = scalaCompiler match {
+    val scalaVersion = scalaCompiler match {
       case "standard" =>
         log.info("Using project's standard Scala version during extraction.")
-        Seq.empty
+        None
       case v =>
         log.info("Using Scala " + v + " during extraction.")
-        Seq("set every scalaVersion := \"" + v + "\"")
+        Some(v)
     }
 
     // We need to set up all the plugins, and other changes to the build definitions that are necessary
@@ -55,7 +56,7 @@ object SbtExtractor {
     //
     // We need a suitable .sbt file in each directory. Some definitions go only in the first one,
     // some in all the middle ones, and some only in the last one.
-    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DependencyAnalysis.printCmd(state)")
+    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DependencyAnalysis.printCmd(state,previousOnLoad)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
     // Create a tuple for (first, middle, last) possible contents 
@@ -70,8 +71,8 @@ object SbtExtractor {
 
     import SbtRunner.SbtFileNames._
     // This is for the first level only
-    val inputDataFirst = ExtractionInput(extra.projects, extra.exclude, debug)
-    val inputDataAll = inputDataFirst +: Stream.fill(levels - 1)(ExtractionInput(Seq.empty, Seq.empty, debug))
+    val inputDataFirst = ExtractionInput(extra.projects, extra.exclude, scalaVersion, debug)
+    val inputDataAll = inputDataFirst +: Stream.fill(levels - 1)(ExtractionInput(Seq.empty, Seq.empty, None, debug))
     SbtRunner.placeInputFiles(projectDir, extractionInputFileName, inputDataAll, log, debug)
 
     // The "repositories" file used to be common for all sbt invocations, defined in SbtRunner.
@@ -95,7 +96,7 @@ object SbtExtractor {
         // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
         "sbt.repository.config" -> repoFile.getCanonicalPath
       ),
-      extraArgs = extra.options)((setScalaCommand ++ extra.commands): _*) // no extraction command is invoked; all is done by OnLoad()
+      extraArgs = extra.options)((Seq.empty): _*) // no extraction command is invoked; all is done by OnLoad()
 
     ExtractedBuildMeta(SbtRunner.collectOutputFiles[ProjMeta](projectDir, extractionOutputFileName, levels, log, debug))
   }

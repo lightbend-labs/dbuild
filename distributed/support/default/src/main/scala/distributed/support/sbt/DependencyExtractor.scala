@@ -96,7 +96,7 @@ object SbtExtractor {
         // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
         "sbt.repository.config" -> repoFile.getCanonicalPath
       ),
-      extraArgs = extra.options)((Seq.empty): _*) // no extraction command is invoked; all is done by OnLoad()
+      extraArgs = extra.options)((Seq("")): _*) // no extraction command is invoked; all is done by OnLoad()
 
     ExtractedBuildMeta(SbtRunner.collectOutputFiles[ProjMeta](projectDir, extractionOutputFileName, levels, log, debug))
   }

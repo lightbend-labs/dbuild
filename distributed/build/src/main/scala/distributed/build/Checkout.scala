@@ -32,6 +32,7 @@ object Checkout {
     // ok. First of all, we need to retrieve from the cache the build description, and the project
     val cache = Repository.default
     val log = ConsoleLogger(debug)
+    println("Please wait...") // reloading the metadata may take several seconds
     val buildMeta = LocalRepoHelper.readBuildMeta(uuid, cache) getOrElse
       sys.error("The requested UUID \"" + uuid + "\" was not found in the cache.")
     log.debug("Build UUID " + uuid + " found in cache.")

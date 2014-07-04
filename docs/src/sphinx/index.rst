@@ -28,9 +28,9 @@ Contents
    dbuild
    buildOptions
    spaces
+   plugins
    deploy
    notifications
    comparison
    repositories
-   plugin
    caveats

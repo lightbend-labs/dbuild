@@ -73,13 +73,16 @@ object DependencyAnalysis {
   }
   def normalizedProjectNames(r: Seq[ProjectRef], baseDirectory: File) = r map { p => normalizedProjectName(p, baseDirectory) }
 
+  /** Do we need to use a specific Scala version during extraction? If so, set it now. */
+  def fixExtractionScalaVersion2(opt: Option[String]): (Seq[Setting[_]], sbt.Logger) => Seq[Setting[_]] = opt match {
+    case None => (a: Seq[Setting[_]], _) => a
+    case Some(v) => DistributedRunner.fixGeneric2(Keys.scalaVersion, "Setting extraction Scala version to " + v) { _ => v }
+  }
+
   /** Prints the dependencies to the given file. */
-  def printDependencies(state: State, inputFile: File, resultFile: File): State = {
+  def printDependencies(state: State, extractionInput: ExtractionInput, resultFile: File, log: Logger): State = {
 
-    val ExtractionInput(projects, excludedProjects, debug) = readValue[ExtractionInput](inputFile)
-
-    val log = sbt.ConsoleLogger()
-    if (debug) log.setLevel(Level.Debug)
+    val ExtractionInput(projects, excludedProjects, extractionScalaVersion, debug) = extractionInput
 
     val extracted = Project.extract(state)
     import extracted._
@@ -263,7 +266,7 @@ object DependencyAnalysis {
   }
 
   /** called by onLoad() during extraction */
-  def printCmd(state: State): State = {
+  def printCmd(state: State, previousOnLoad: State => State): State = {
     import distributed.support.sbt.SbtRunner.SbtFileNames._
 
     val extracted = Project.extract(state)
@@ -275,7 +278,19 @@ object DependencyAnalysis {
     val Some(lastMsgFileName) = Option(System.getProperty("dbuild.sbt-runner.last-msg"))
     val lastMsgFile = new File(lastMsgFileName)
 
-    saveLastMsg(lastMsgFile, printDependencies(_, inputFile, resultFile))(state)
+    val extractionInput = readValue[ExtractionInput](inputFile)
+
+    val log = sbt.ConsoleLogger()
+    if (extractionInput.debug) log.setLevel(Level.Debug)
+
+    def prepareExtractionSettings(oldSettings: Seq[Setting[_]]) = {
+      Seq[(Seq[Setting[_]], Logger) => Seq[Setting[_]]](
+        fixExtractionScalaVersion2(extractionInput.extractionScalaVersion),
+        DistributedRunner.restorePreviousOnLoad(previousOnLoad)) flatMap { _(oldSettings, log) }
+    }
+
+    saveLastMsg(lastMsgFile, printDependencies(_, extractionInput, resultFile,
+      log))(DistributedRunner.newState(state, extracted, prepareExtractionSettings))
   }
 
 }

@@ -94,7 +94,7 @@ class SbtBuildMain extends xsbti.AppMain {
       val local = opt[Boolean](short = 'l', descr = "Equivalent to: --no-resolvers --no-notify")
       val checkout = new Subcommand("checkout") {
         banner("""Use "dbuild checkout" to check out one project from a previously compiled
-                 |build projects, preparing sbt for a debugging session.
+                 |build, preparing sbt for a debugging session.
                  |Options:
                  |""".stripMargin)
         val uuid = trailArg[String](descr = "UUID of the build")

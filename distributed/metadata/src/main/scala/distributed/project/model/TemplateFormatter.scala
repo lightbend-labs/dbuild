@@ -28,7 +28,7 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome, confName
   lazy val subprojectsReport: String = {
 //    def get(o: BuildOutcome) = new TemplateFormatter(templ, o, confName).summary
 //    val s = outcome.outcomes.map(get)
-    val s = outcome.outcomes.sortBy(_.project).map{o=>paddedProjectDescription(o)+": "+o.status}
+    val s = outcome.outcomes.sortBy(_.project.toLowerCase).map{o=>paddedProjectDescription(o)+": "+o.status}
     if (s.isEmpty) "" else s.mkString("", "\n", "\n")
   }
   def paddedProjectDescription(outcome:BuildOutcome) =

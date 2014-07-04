@@ -9,7 +9,7 @@ extensions = ['sphinxcontrib.issuetracker', 'sphinx.ext.extlinks', 'howto']
 
 project = 'dbuild'
 version = '0.9.0'
-release = '0.9.0-SNAPSHOT'
+release = '0.9.0'
 sbt_version = '0.12.4'
 
 # General settings
@@ -63,8 +63,8 @@ issuetracker_title_template = '#{issue.id}'
 rst_epilog = """
 .. role:: nv
 .. role:: s2
-.. _zip: %(dbuild_native_package_base)s/%(version)s/%(project)s-%(version)s.zip
-.. _tgz: %(dbuild_native_package_base)s/%(version)s/%(project)s-%(version)s.tgz
+.. _zip: %(dbuild_native_package_base)s/%(project)s/%(version)s/zips/%(project)s-%(version)s.zip
+.. _tgz: %(dbuild_native_package_base)s/%(project)s/%(version)s/tgzs/%(project)s-%(version)s.tgz
 .. |version| replace:: %(version)s
 .. |sbtversion| replace:: %(sbtversion)s
 .. |addSbtplugin| replace:: addSbtPlugin(:s2:`"com.typesafe.dbuild"` %% :s2:`"distributed-sbt-plugin"` %% :s2:`"%(version)s"`)
@@ -72,5 +72,5 @@ rst_epilog = """
    'sbtversion': sbt_version,
    'version': release,
    'project': project,
-   'dbuild_native_package_base': 'http://downloads.typesafe.com/dbuild',
+   'dbuild_native_package_base': 'http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots/com.typesafe.dbuild',
 }

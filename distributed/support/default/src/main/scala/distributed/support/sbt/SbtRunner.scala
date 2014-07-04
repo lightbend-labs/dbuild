@@ -57,7 +57,7 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
           minor.toInt < 12 ||
           (minor == "12" && rev.toInt < 5) ||
           (minor == "13" && rev.toInt < 3)))
-          sys.error("dbuild 0.9 requires at least sbt 0.12.5 or sbt 0.13.3. Invalid: " + useSbtVersion)
+          sys.error("dbuild 0.9 requires at least sbt 0.12.5 or sbt 0.13.3; see docs for the option \"sbt-version\". Invalid: " + useSbtVersion)
       case _ => sys.error("Cannot parse sbt version number: " + useSbtVersion)
     }
 

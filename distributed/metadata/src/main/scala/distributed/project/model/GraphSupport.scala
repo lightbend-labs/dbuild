@@ -13,7 +13,7 @@ case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfi
         (pi.projects map { p =>
           "      " + p.organization + ":" + p.name + "\n" +
             (if (p.dependencies.nonEmpty) "         depends on:\n" + p.dependencies.mkString("            ", "\n            ", "\n") else "")
-        })
+        }).mkString
   }).mkString
 }
 

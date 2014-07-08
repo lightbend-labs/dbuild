@@ -29,9 +29,9 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
     def edges(n: Nd): Seq[Ed] =
       Graph.this.edges(n) filter { e => (nodes contains e.to) && (nodes contains e.from) }
   }
-  
-  def tarjanSubGraphs: Set[Graph[N,E]] =
-    tarjan map { setEdges:Set[Node[N]] => FilteredByNodesGraph(setEdges) }
+
+  def tarjanSubGraphs: Set[Graph[N, E]] =
+    tarjan map { setEdges: Set[Node[N]] => FilteredByNodesGraph(setEdges) }
 
   // Note this is used to detect cycles. Breaks
   // the graph into strongly connected subgraphs.
@@ -79,10 +79,16 @@ abstract class Graph[N,E] extends GraphCore[N,E] {
   def checkCycles() = {
     if (isCyclic)
       // I have no access to logging here, so I have to
-      // create a long error message instead
-      throw new CycleException((cycles map { comp: Set[Node[N]] =>
-        comp mkString ("Found a cycle among the following:\n\n", "\n", "\n")
-      }).mkString + "The graph is not acyclic.")
+      // create a long error message instead.
+      // Nodes of the cycle, in the right order
+      val messages = (cycles map { comp: Set[Node[N]] =>
+        def connections(from: Node[N]) = {
+          (edges(from) filter { n => comp.contains(n.to) } groupBy { _.to } flatMap { _._2.toString }).mkString("", "\n", "\n")
+        }
+        "These projects are part of cycles, and are all reachable from each other:\n\n" + (comp map connections).mkString
+      }).mkString
+      throw new CycleException(messages + "The graph is not acyclic.")
+    }
   }
 
   def safeTopological: Seq[Node[N]] = {

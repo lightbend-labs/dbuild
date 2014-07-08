@@ -21,6 +21,11 @@ case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfi
   }).mkString
 }
 
+case class BuildEdge(from: Node[ProjectConfigAndExtracted], to: BuildNode,
+    value: (Project, ProjectRef)) extends Edge[ProjectConfigAndExtracted,(Project, ProjectRef)] {
+  override def toString() = "   Project \"" + from.value.config.name +"\" uses "+value._2+", which is provided by: \""+to.value.config.name+"\"."
+}
+
 class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectConfigAndExtracted, (Project, ProjectRef)] {
   private val buildNodes = builds.map(b => new BuildNode(b))(collection.breakOut)
   override val nodes: Set[Nd] = buildNodes.toSet
@@ -55,6 +60,6 @@ class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectCo
       //      )
 
       // store in the value the witness by which we reached m from n 
-    } yield SimpleEdge(n, m, (p, d))).toSet.toSeq // n depends on m (n.deps contains something provided by m)
+    } yield BuildEdge(n, m, (p, d))).toSet.toSeq // n depends on m (n.deps contains something provided by m)
   }
 }

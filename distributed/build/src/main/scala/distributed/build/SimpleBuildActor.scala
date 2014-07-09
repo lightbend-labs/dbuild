@@ -260,7 +260,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     }
 
   implicit val buildTimeout: Timeout = 4 hours
-  type ProjectGraph = graph.Graph[ProjectConfigAndExtracted, (Project, ProjectRef)]
+  type ProjectGraph = graph.Graph[ProjectConfigAndExtracted, EdgeData]
   type BuildFinder = Function1[String, RepeatableProjectBuild]
 
   def filterGraph(buildTarget: Option[String], fullBuild: RepeatableDistributedBuild): ProjectGraph = {

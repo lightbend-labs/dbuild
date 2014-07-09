@@ -21,12 +21,15 @@ case class BuildNode(value: ProjectConfigAndExtracted) extends Node[ProjectConfi
   }).mkString
 }
 
+case class EdgeData(dep: ProjectRef, level: Int, space: String)
 case class BuildEdge(from: Node[ProjectConfigAndExtracted], to: BuildNode,
-    value: (Project, ProjectRef)) extends Edge[ProjectConfigAndExtracted,(Project, ProjectRef)] {
-  override def toString() = "   Project \"" + from.value.config.name +"\" uses "+value._2+", which is provided by: \""+to.value.config.name+"\"."
+  value: EdgeData) extends Edge[ProjectConfigAndExtracted, EdgeData] {
+  override def toString() = "   Project \"" + from.value.config.name + "\" uses " + value.dep +
+    " (build level " + value.level + ", space \"" + value.space + "\")"+
+    ", which is provided by: \"" + to.value.config.name + "\"."
 }
 
-class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectConfigAndExtracted, (Project, ProjectRef)] {
+class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectConfigAndExtracted, EdgeData] {
   private val buildNodes = builds.map(b => new BuildNode(b))(collection.breakOut)
   override val nodes: Set[Nd] = buildNodes.toSet
 
@@ -46,7 +49,7 @@ class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectCo
     }
     (for {
       m <- buildNodes if (m != n)
-      (nSpace, deps) <- projMetaWithSpaces(n.value)
+      ((nSpace, deps), level) <- projMetaWithSpaces(n.value).zipWithIndex
       d <- deps
       p <- m.findProject(d) if Utils.canSeeSpace(nSpace, m.value.getSpace.to)
       // The alternative below superficially makes sense, but is cause for even worse cycles in the Scala compiler compilation 
@@ -60,6 +63,6 @@ class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectCo
       //      )
 
       // store in the value the witness by which we reached m from n 
-    } yield BuildEdge(n, m, (p, d))).toSet.toSeq // n depends on m (n.deps contains something provided by m)
+    } yield BuildEdge(n, m, EdgeData(d, level, nSpace))).toSet.toSeq // n depends on m (n.deps contains something provided by m)
   }
 }

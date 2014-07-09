@@ -286,7 +286,11 @@ case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
   // of an implementation bug)
   @JsonProperty("use-jgit") useJGit: Boolean = false,
   // settings for sbt-based builds
-  @JsonProperty("sbt-settings") sbtSettings: SeqSeqString /* Levels */ = Seq.empty,
+  // Note on the default value: it must contain a single empty SeqString. Using as a
+  // default value an empty Seq[SeqString] will result in the value obtained after
+  // serialization and deserialization to be different, which causes troubles when
+  // checking repository consistency.
+  @JsonProperty("sbt-settings") sbtSettings: SeqSeqString /* Levels */ = SeqSeqString(Seq(Seq.empty)),
   // commands for sbt-based builds
   @JsonProperty("sbt-commands") sbtCommands: SeqString = Seq.empty,
   // Default space for regular project
@@ -604,7 +608,7 @@ case class SbtExtraConfig(
   @JsonProperty("run-tests") runTests: Boolean = true,
   options: SeqString = Seq.empty,
   // before rewiring, append these settings
-  settings: SeqSeqString = Seq.empty, /*Levels*/
+  settings: SeqSeqString = SeqSeqString(Seq(Seq.empty)), /*Levels*/
   // before building, run these commands ("set" or others)
   commands: SeqString = Seq.empty,
   projects: SeqString = Seq.empty, // if empty -> build all projects (default)

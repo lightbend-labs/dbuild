@@ -76,6 +76,8 @@ object LocalRepoHelper {
         log.error("The data already present in the dbuild repository for this data (uuid = " + data.uuid + ")")
         log.error("does not match the current metadata. This shouldn't happen! Please report.")
         log.error("Key: " + key)
+        log.error("Old: " + existingBuild)
+        log.error("New: " + data)
         throw new Exception("Repository consistency check failed")
       }
     }

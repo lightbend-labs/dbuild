@@ -97,7 +97,7 @@ abstract class OptionTask(log: Logger) {
     // if not partialOK:
     //   if bad is empty, then issue message for good and reload everything
     //   if bad is not empty, then issue message for bad and do nothing else
-    def reloadGood() = good map {
+    def reloadGood() = good flatMap {
       case (depl, proj) =>
         val subprojs: Seq[String] = depl match {
           case SelectorSubProjects(SubProjects(from, publish)) => publish
@@ -105,11 +105,12 @@ abstract class OptionTask(log: Logger) {
         }
         val (arts, msg) = LocalRepoHelper.materializePartialProjectRepository(proj.uuid, subprojs, cache, dir, debug = false)
         msg foreach { log.info(_) }
+        arts
     }
     def issueMsg(set: Set[(SelectorElement, RepeatableProjectBuild)], msg: String, l: (=> String) => Unit) =
       if (set.nonEmpty) l(msg + (set.map(_._1.name).toSeq.sorted.mkString("", ", ", "")))
 
-    if (partialOK) {
+    val goodArts = if (partialOK) {
       issueMsg(good, msgGood, log.info)
       issueMsg(bad, msgBad, log.warn)
       reloadGood()
@@ -119,8 +120,9 @@ abstract class OptionTask(log: Logger) {
         reloadGood()
       } else {
         issueMsg(bad, msgBad, log.warn)
+        Set[ArtifactLocation]()
       }
     }
-    (good, bad)
+    (good, goodArts, bad)
   }
 }

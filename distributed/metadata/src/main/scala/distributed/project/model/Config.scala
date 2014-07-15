@@ -520,7 +520,7 @@ case class IndexOptions (
   uri: String,
   /** path to the credentials file */
   credentials: Option[String],
-  fileName: String) extends DeployTarget
+  filename: String) extends DeployTarget
 
 /** Comparison information. */
 case class ComparisonOptions(

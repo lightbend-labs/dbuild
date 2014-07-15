@@ -83,7 +83,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         // for build.uuid. We stage them in a temporary directory first,
         // to make sure all is in order
         try IO.withTemporaryDirectory { dir =>
-          val (good, bad) = rematerialize(options.projects, outcome, build, dir, "deploy",
+          val (good, goodArts, bad) = rematerialize(options.projects, outcome, build, dir, "deploy",
             msgGood = "Deploying: ",
             msgBad = "Cannot deploy: ",
             partialOK = true, log)
@@ -119,6 +119,43 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
               log.error("***ERROR*** Not a valid hexadecimal value: " + options.sign.get.id.get)
               log.error("***ERROR*** Will not deploy.")
               throw e
+          }
+
+          // Now we need to prepare an index file, if requested
+          options.index foreach { indexOptions =>
+            try IO.withTemporaryDirectory { indexDir =>
+              val indexFile = new File(indexDir, indexOptions.filename)
+              // extraction of ModuleInfo:
+              // We need the info contained in ArtifactLocation instances
+              // They are inside each BuildArtifactsOut
+              // which is inside all Outcomes that are instances of BuildGood.
+              // The retrieval is already done by rematerialize(), so we reuse that returned value.
+//              goodArts map { art =>
+//                val crossVer = if (art.crossSuffix.startsWith("_")
+//                    Some(art.crossSuffix.drop(1))
+//                    else
+//                      None
+//                ModuleInfo(art.info.organization,art.info.name,art.version,
+//                    CrossBuildProperties(crossVer,
+//                
+//              }
+
+              val builds: Seq[ProjectConfigAndExtracted] = build.builds
+              val projMetas = builds map { _.extracted.getHead }
+              //            case class ModuleInfo(
+              //  organization: String,
+              //  name: String,
+              //  version: String,
+              //  cross: CrossBuildProperties)
+              //// TODO- Hard-coded or loose map?
+              //case class CrossBuildProperties(scalaVersion: Option[String], sbtVersion: Option[String])
+
+            }
+            catch {
+              case e =>
+                log.error("***ERROR*** Encountered an error while generating or deploying the index file to " + url(indexOptions.uri).host)
+                throw e
+            }
           }
         }
         catch {

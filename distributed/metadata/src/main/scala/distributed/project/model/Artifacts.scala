@@ -30,8 +30,7 @@ case class ArtifactSha(sha: String, location: String)
  */
 case class ProjectArtifactInfo(
   project: RepeatableProjectBuild,
-  // (Subprojects,Relative locations
-  versions: Seq[BuildSubArtifactsOut])
+  versions: BuildArtifactsOut)
 
 /**
  * This represents two pieces of data:

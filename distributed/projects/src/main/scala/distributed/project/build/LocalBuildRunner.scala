@@ -26,9 +26,9 @@ class LocalBuildRunner(builder: BuildRunner,
     val log = buildData.log
     try {
       try {
-        val subArtifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
-        LocalRepoHelper.debugArtifactsInfo(subArtifactsOut, log)
-        BuildUnchanged(build.config.name, children, BuildArtifactsOut(subArtifactsOut))
+        val artifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
+        LocalRepoHelper.debugArtifactsInfo(artifactsOut, log)
+        BuildUnchanged(build.config.name, children, artifactsOut)
       } catch {
         case t: RepositoryException =>
           log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
@@ -60,7 +60,7 @@ class LocalBuildRunner(builder: BuildRunner,
       if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
       val results = builder.runBuild(build, dir,
         BuildInput(dependencies, version, build.configAndExtracted.extracted.projInfo.map{_.subproj}, writeRepo, build.config.name), this, buildData)
-      LocalRepoHelper.publishArtifactsInfo(build, results.results, writeRepo, repository, log)
+      LocalRepoHelper.publishArtifactsInfo(build, results, writeRepo, repository, log)
       markSuccess(dir)
       results
     }

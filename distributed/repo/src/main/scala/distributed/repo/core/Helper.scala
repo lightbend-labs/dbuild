@@ -99,9 +99,9 @@ object LocalRepoHelper {
 
   // In case we already have an existing build in the cache, we might be interested in getting diagnostic
   // information on what is in there. That is done here.
-  def debugArtifactsInfo(extracted: Seq[BuildSubArtifactsOut], log: Logger) = {
+  def debugArtifactsInfo(extracted: BuildArtifactsOut, log: Logger) = {
     log.debug("Published files:")
-    extracted foreach {
+    extracted.results foreach {
       case BuildSubArtifactsOut(subproj, _, shas) =>
         if (subproj != "") log.debug("in subproject: " + subproj)
         shas foreach {
@@ -133,7 +133,7 @@ object LocalRepoHelper {
     log.debug("Publishing artifacts meta info for project " + meta.project.config.name + ", uuid " + key)
     // padding string, as withTemporaryFile() will fail if the prefix is too short
     IO.withTemporaryFile(meta.project.config.name + "-padding", meta.project.uuid) { file =>
-      IO.write(file, writeValue(BuildArtifactsOut(meta.versions)))
+      IO.write(file, writeValue(meta.versions))
       remote put (key, file)
     }
   }
@@ -156,9 +156,9 @@ object LocalRepoHelper {
    * @param extracted The extracted artifacts that this project generates.
    * @param remote  The repository to publish into.
    */
-  def publishArtifactsInfo(project: RepeatableProjectBuild, extracted: Seq[BuildSubArtifactsOut],
+  def publishArtifactsInfo(project: RepeatableProjectBuild, extracted: BuildArtifactsOut,
     localRepo: File, remote: Repository, log: Logger): ProjectArtifactInfo = {
-    extracted foreach { case BuildSubArtifactsOut(subproj, _, shas) => publishRawArtifacts(localRepo, subproj, shas, remote, log) }
+    extracted.results foreach { case BuildSubArtifactsOut(subproj, _, shas) => publishRawArtifacts(localRepo, subproj, shas, remote, log) }
     val info = ProjectArtifactInfo(project, extracted)
     publishArtifactsMetadata(info, remote, log)
     info
@@ -175,7 +175,7 @@ object LocalRepoHelper {
     }
     val projectMeta = getMeta[RepeatableProjectBuild](makeProjectMetaKey)
     val artifactsMeta = getMeta[BuildArtifactsOut](makeArtifactsMetaKey)
-    ProjectArtifactInfo(projectMeta, artifactsMeta.results)
+    ProjectArtifactInfo(projectMeta, artifactsMeta)
   }
 
   /**
@@ -192,21 +192,21 @@ object LocalRepoHelper {
   protected def resolvePartialArtifacts[T](uuid: String, subprojs: Seq[String], remote: ReadableRepository)(f: (File, ArtifactSha) => T): (ProjectArtifactInfo, Seq[T], Seq[ArtifactLocation]) = {
     val metadata =
       materializeProjectMetadata(uuid, remote)
-    val fetch = if (subprojs.isEmpty) metadata.versions.map { _.subName } else {
-      val unknown = subprojs.diff(metadata.versions.map { _.subName })
+    val fetch = if (subprojs.isEmpty) metadata.versions.results.map { _.subName } else {
+      val unknown = subprojs.diff(metadata.versions.results.map { _.subName })
       if (unknown.nonEmpty) {
         sys.error(unknown.mkString("The following subprojects are unknown: ", ", ", ""))
       }
       subprojs
     }
-    val artifactFiles = metadata.versions.filter { v => fetch.contains(v.subName) }.flatMap { _.shas }
+    val artifactFiles = metadata.versions.results.filter { v => fetch.contains(v.subName) }.flatMap { _.shas }
     val results = for {
       artifactFile <- artifactFiles
       key = makeRawFileKey(artifactFile.sha)
       resolved = remote get key
     } yield f(resolved, artifactFile)
 
-    val artifacts = metadata.versions.filter { v => fetch.contains(v.subName) }.flatMap { _.artifacts }
+    val artifacts = metadata.versions.results.filter { v => fetch.contains(v.subName) }.flatMap { _.artifacts }
 
     (metadata, results, artifacts)
   }
@@ -271,7 +271,7 @@ object LocalRepoHelper {
     resolveArtifacts(uuid, remote)((x, y) => x -> y)
 
   /** Checks whether or not a given project (by UUID) is published. */
-  def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): Seq[BuildSubArtifactsOut] = {
+  def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): BuildArtifactsOut = {
     // We run this to ensure all artifacts are resolved correctly.
     val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
     log.info("Found cached project build, uuid " + uuid)

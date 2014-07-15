@@ -20,6 +20,40 @@ import logging.Logger.prepareLogMsg
 import distributed.logging.Logger
 import Creds.loadCreds
 import com.jcraft.jsch.{ IO => sshIO, _ }
+import java.util.Date
+
+
+//----------------------------------------------------------------------------------------
+// temporarily copying the case classes here; they will be shared with the plugin, later.
+
+/**
+ * Represents a manifest of all information included in a
+ * typesafe-reactive-platform build.
+ */
+case class Manifest(trp: PlatformInfo, modules: Seq[ModuleInfo])
+/**
+ * Represents the information for a given Ivy module within the typesafe reactive-platform.
+ */
+case class ModuleInfo(
+  organization: String,
+  name: String,
+  version: String,
+  cross: CrossBuildProperties)
+// TODO- Hard-coded or loose map?
+case class CrossBuildProperties(scalaVersion: Option[String], sbtVersion: Option[String])
+/**
+ * Represents information about the version/end-of-life of a typeasfe-reactive-platform release.
+ */
+case class PlatformInfo(
+  version: String, // Specific version, e.g. 2014-10-patch-1
+  family: String, // Version for this "family", e.g. 2014-10
+  // for details on Date serialization, see http://wiki.fasterxml.com/JacksonFAQDateHandling
+  endOfLife: Date // The time when we EOL this platform.
+)
+
+//----------------------------------------------------------------------------------------
+
+
 
 class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
@@ -28,7 +62,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
       // just a sanity check on the project list (we don't use the result)
       val _ = d.projects.flattenAndCheckProjectList(projectNames.toSet)
     }
-    checkDeployFullBuild(options.deploy, log)
+    checkDeployFullBuild(options.deploy)
   }
   def afterBuild(optRepBuild: Option[RepeatableDistributedBuild], outcome: BuildOutcome) = {
     def dontRun() = log.error("*** Deploy cannot run: build did not complete.")
@@ -36,12 +70,12 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
     if (outcome.isInstanceOf[TimedOut]) dontRun() else
       optRepBuild match {
         case None => dontRun
-        case Some(repBuild) => deployFullBuild(options, repBuild, outcome, log)
+        case Some(repBuild) => deployFullBuild(repBuild, outcome)
       }
   }
 
   // first, a proper sanity check
-  def checkDeployFullBuild(optionsSeq: Seq[DeployOptions], log: Logger) = {
+  def checkDeployFullBuild(optionsSeq: Seq[DeployOptions]) = {
     optionsSeq foreach { options =>
       val uri = new _root_.java.net.URI(options.uri)
       uri.getScheme match {
@@ -62,8 +96,8 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
   private def isNotChecksum(path: String): Boolean =
     !(path.endsWith(".sha1") || path.endsWith(".md5"))
 
-  def deployStuff[T](options: DeployOptions, dir: File, log: Logger, init: Creds => T,
-    message: (Logger, String) => Unit, deploy: (T, Creds, String, File, java.net.URI) => Unit,
+  def deployStuff[T](options: DeployTarget, dir: File, init: Creds => T,
+    message: String => Unit, deploy: (T, Creds, String, File, java.net.URI) => Unit,
     close: T => Unit = { _: T => () }) {
     val Some(credsFile) = options.credentials
     val credentials = loadCreds(credsFile)
@@ -118,7 +152,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
 
       ordered foreach { file =>
         val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error in relative paths creation during deployment. Please report.")
-        message(log, relative)
+        message(relative)
         // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
         val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
         deploy(handler, credentials, relative, file, targetURI)
@@ -133,7 +167,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
    * - The root build, denoted by ".", has no artifacts of its own.
    * - This rule also applies applies to nested hierarchical build systems, if they are in turn recursive.
    */
-  def deployFullBuild(optons: GeneralOptions, build: RepeatableDistributedBuild, outcome: BuildOutcome, log: logging.Logger) = {
+  def deployFullBuild(build: RepeatableDistributedBuild, outcome: BuildOutcome) = {
     val projectOutcomes = outcome.outcomes.map(o => (o.project, o)).toMap
     // This does not contain the root ".", but we know that the root has no artifacts to be published of its own,
     // therefore the set for "." is the union of those of the children, regardless if "." failed or not.
@@ -178,10 +212,10 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
             // dir is staged; time to deploy
             val uri = new _root_.java.net.URI(options.uri)
             uri.getScheme match {
-              case "file" => deployFiles(log, dir, uri)
-              case "http" | "https" => deployHTTP(log, options, dir)
-              case "ssh" => deploySSH(log, options, dir)
-              case "s3" => deployS3(log, options, dir)
+              case "file" => deployFiles(options, dir)
+              case "http" | "https" => deployHTTP(options, dir)
+              case "ssh" => deploySSH(options, dir)
+              case "s3" => deployS3(options, dir)
             }
           } catch {
             case e: NumberFormatException =>
@@ -200,8 +234,8 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
     }
   }
 
-  def deploySSH(log: Logger, options: DeployOptions, dir: File) =
-    deployStuff[ChannelSftp](options, dir, log,
+  def deploySSH(target: DeployTarget, dir: File) =
+    deployStuff[ChannelSftp](target, dir,
       init = { credentials =>
         val jsch = new JSch()
         JSch.setConfig("StrictHostKeyChecking", "no")
@@ -240,7 +274,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
           case _ => sys.error("Could not open an SFTP channel.")
         }
       },
-      message = { (log, relative) =>
+      message = { relative =>
         log.info("Deploying: " + relative)
       },
       deploy = { (sftp, credentials, relative, file, uri) =>
@@ -269,11 +303,11 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         }
       })
 
-  def deployS3(log: Logger, options: DeployOptions, dir: File) =
-    deployStuff[AmazonS3Client](options, dir, log, { credentials =>
+  def deployS3(options: DeployTarget, dir: File) =
+    deployStuff[AmazonS3Client](options, dir, { credentials =>
       new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
         new ClientConfiguration().withProtocol(Protocol.HTTPS))
-    }, { (log, relative) =>
+    }, { relative =>
       if (isNotChecksum(relative))
         log.info("Uploading: " + relative)
     }, { (client, credentials, _, file, uri) =>
@@ -284,9 +318,9 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
     })
 
-  def deployHTTP(log: Logger, options: DeployOptions, dir: File) =
-    deployStuff[Unit](options, dir, log, { _ => () },
-      { (log, relative) =>
+  def deployHTTP(options: DeployTarget, dir: File) =
+    deployStuff[Unit](options, dir, { _ => () },
+      { relative =>
         if (isNotChecksum(relative))
           log.info("Deploying: " + relative)
         else
@@ -304,9 +338,9 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         }
       })
 
-  def deployFiles(log: Logger, dir: File, uri: URI) = {
+  def deployFiles(options: DeployTarget, dir: File) = {
     // copy to a local path
-    val target = uri.getPath
+    val target = (new _root_.java.net.URI(options.uri)).getPath
     log.info("Copying artifacts to " + target + "...")
     // Overwrite, and preserve timestamps
     IO.copyDirectory(dir, new File(target), true, true)

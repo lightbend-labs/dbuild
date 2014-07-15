@@ -470,6 +470,16 @@ class SeqFlexSerializer[T](implicit m: Manifest[T]) extends JsonSerializer[Flex[
   }
 }
 
+/**
+ * A generic (S3, http, https, etc) deploy target.
+ * The uri refers to a remote directory or container, and
+ * does not include the deployed file names.
+ */
+abstract class DeployTarget {
+  def uri: String
+  def credentials: Option[String]
+}
+
 /** Deploy information. */
 case class DeployOptions(
   /** deploy target */
@@ -479,7 +489,9 @@ case class DeployOptions(
   /** names of the projects that should be deployed. Default: ".", meaning all */
   projects: SeqSelectorElement = Seq(SelectorProject(".")),
   /** signing options */
-  sign: Option[DeploySignOptions])
+  sign: Option[DeploySignOptions],
+  /** index generation options */
+  index: Option[IndexOptions]) extends DeployTarget
 /** used to select subprojects from one project */
 case class SubProjects(from: String, publish: SeqString)
 
@@ -493,6 +505,22 @@ case class DeploySignOptions(
   @JsonProperty("secret-ring") secretRing: Option[String],
   id: Option[String],
   passphrase: String)
+
+/**
+ * Index generation options.
+ * This set of options is handled by the Deploy task, and assumes that the set of
+ * projects/subprojects is the same as those published to the repository.
+ * However, the uri/credentials are different, as the index file may be deployed elsewhere.
+ */
+case class IndexOptions (
+  /**
+   * index publication target. This uri must refer to the path, but not include the
+   * file name, which is specified separately.
+   */
+  uri: String,
+  /** path to the credentials file */
+  credentials: Option[String],
+  fileName: String) extends DeployTarget
 
 /** Comparison information. */
 case class ComparisonOptions(

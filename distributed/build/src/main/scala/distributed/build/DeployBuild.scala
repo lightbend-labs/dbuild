@@ -23,36 +23,6 @@ import com.jcraft.jsch.{ IO => sshIO, _ }
 import java.util.Date
 import com.jcraft.jsch.ChannelSftp
 
-//----------------------------------------------------------------------------------------
-// temporarily copying the case classes here; they will be shared with the plugin, later.
-
-/**
- * Represents a manifest of all information included in a
- * typesafe-reactive-platform build.
- */
-case class Manifest(trp: PlatformInfo, modules: Seq[ModuleInfo])
-/**
- * Represents the information for a given Ivy module within the typesafe reactive-platform.
- */
-case class ModuleInfo(
-  organization: String,
-  name: String,
-  version: String,
-  cross: CrossBuildProperties)
-// TODO- Hard-coded or loose map?
-case class CrossBuildProperties(scalaVersion: Option[String], sbtVersion: Option[String])
-/**
- * Represents information about the version/end-of-life of a typeasfe-reactive-platform release.
- */
-case class PlatformInfo(
-  version: String, // Specific version, e.g. 2014-10-patch-1
-  family: String, // Version for this "family", e.g. 2014-10
-  // for details on Date serialization, see http://wiki.fasterxml.com/JacksonFAQDateHandling
-  endOfLife: Date // The time when we EOL this platform.
-  )
-
-//----------------------------------------------------------------------------------------
-
 class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
   def beforeBuild(projectNames: Seq[String]) = {

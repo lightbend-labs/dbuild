@@ -763,7 +763,15 @@ object DistributedRunner {
       version, if (isSbtPlugin) "" else crossSuffix, if (isSbtPlugin) Some(SbtPluginAttrs(sbtbv, sbv)) else None)
   }
 
+  def generateModuleInfo(organization: String, name: String, version: String, scalaVersion: String, scalaBinaryVersion: String,
+    sbtVersion: String, sbtBinaryVersion: String, sbtPlugin: Boolean, crossVersion: sbt.CrossVersion): com.typesafe.reactiveplatform.manifest.ModuleInfo = {
+    import com.typesafe.reactiveplatform.manifest._
+    ModuleInfo(organization, name, version, CrossBuildProperties(Some(scalaVersion), Some(sbtVersion)))
+  }
+  
   def projectSettings: Seq[Setting[_]] = Seq(
     extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
-      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations)
+      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations,
+    moduleInfo <<= (Keys.organization, Keys.name, Keys.version, Keys.scalaVersion, Keys.scalaBinaryVersion,
+        Keys.sbtVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin, Keys.crossVersion) map generateModuleInfo)
 }

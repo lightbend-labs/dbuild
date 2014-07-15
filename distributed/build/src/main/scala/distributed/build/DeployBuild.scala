@@ -21,7 +21,7 @@ import distributed.logging.Logger
 import Creds.loadCreds
 import com.jcraft.jsch.{ IO => sshIO, _ }
 import java.util.Date
-
+import com.jcraft.jsch.ChannelSftp
 
 //----------------------------------------------------------------------------------------
 // temporarily copying the case classes here; they will be shared with the plugin, later.
@@ -49,11 +49,9 @@ case class PlatformInfo(
   family: String, // Version for this "family", e.g. 2014-10
   // for details on Date serialization, see http://wiki.fasterxml.com/JacksonFAQDateHandling
   endOfLife: Date // The time when we EOL this platform.
-)
+  )
 
 //----------------------------------------------------------------------------------------
-
-
 
 class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
@@ -93,72 +91,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
     }
   }
 
-  private def isNotChecksum(path: String): Boolean =
-    !(path.endsWith(".sha1") || path.endsWith(".md5"))
-
-  def deployStuff[T](options: DeployTarget, dir: File, init: Creds => T,
-    message: String => Unit, deploy: (T, Creds, String, File, java.net.URI) => Unit,
-    close: T => Unit = { _: T => () }) {
-    val Some(credsFile) = options.credentials
-    val credentials = loadCreds(credsFile)
-    val handler = init(credentials)
-    try {
-      val targetBaseURI = new java.net.URI(options.uri)
-      //
-      // We have to upload files in a certain order, in order to comply with
-      // the requirements of Artifactory concerning the upload of -SNAPSHOT artifacts.
-      // In particular, whenever there are a .pom and a .jar with the same name, and
-      // other artifacts in the same group, these artifacts get the same id only if:
-      // - the jar is uploaded first
-      // - the pom is uploaded immediately afterward
-      // - then the remaining artifacts are uploaded
-      // - finally, the checksums are uploaded after the main artifacts
-      //
-
-      val allFiles = (dir.***).get.filter(f => !f.isDirectory)
-      val poms = allFiles.filter(f => f.getName.endsWith("-SNAPSHOT.pom"))
-      //
-      // we fold over the poms, reducing the set of files until we are left with just
-      // the files that are not in any pom-containing directory. Meanwhile, we accumulate
-      // the snapshot files in the right order, for each pom
-      val (remainder, newSeq) = poms.foldLeft((allFiles, Seq[File]())) {
-        case ((fileSeq, newSeq), pom) =>
-          val pomFile = pom.getCanonicalFile()
-          val thisDir = pomFile.getParentFile()
-          if (thisDir == null) sys.error("Unexpected: file has not parent in deploy")
-          // select the files in this directory (but not in subdirectories)
-          val theseFiles = (thisDir.***).get.filter(f => !f.isDirectory && f.getCanonicalFile().getParentFile() == thisDir)
-          // if there is a matching jar, upload the jar first
-          val jarFile = new java.io.File(pomFile.getCanonicalPath().replaceAll("\\.[^\\.]*$", ".jar"))
-          val thisSeq = if (theseFiles contains jarFile) {
-            val rest = theseFiles.diff(Seq(jarFile, pomFile)).partition(f => isNotChecksum(f.getName))
-            Seq(jarFile, pomFile) ++ rest._1 ++ rest._2
-          } else {
-            // no jar?? upload the pom first anyway
-            val rest = theseFiles.diff(Seq(pomFile)).partition(f => isNotChecksum(f.getName))
-            Seq(pomFile) ++ rest._1 ++ rest._2
-          }
-          //
-          (fileSeq.diff(theseFiles), newSeq ++ thisSeq)
-      }
-
-      // We need in any case to upload the main files first,
-      // and only afterwards we can upload md5 and sha1 files
-      // (otherwise we get 404 errors from Artifactory)
-      // Note that a 409 error means the checksum calculated on
-      // the server does not match the checksum we are trying to upload
-      val split = remainder.partition(f => isNotChecksum(f.getName))
-      val ordered = newSeq ++ split._1 ++ split._2
-
-      ordered foreach { file =>
-        val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error in relative paths creation during deployment. Please report.")
-        message(relative)
-        // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
-        val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
-        deploy(handler, credentials, relative, file, targetURI)
-      }
-    } finally { close(handler) }
-  }
+  def isNotChecksum(path: String): Boolean = !(path.endsWith(".sha1") || path.endsWith(".md5"))
 
   /**
    * The semantics of selection is:
@@ -210,13 +143,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
               }
             }
             // dir is staged; time to deploy
-            val uri = new _root_.java.net.URI(options.uri)
-            uri.getScheme match {
-              case "file" => deployFiles(options, dir)
-              case "http" | "https" => deployHTTP(options, dir)
-              case "ssh" => deploySSH(options, dir)
-              case "s3" => deployS3(options, dir)
-            }
+            Deploy(target = options, dir)
           } catch {
             case e: NumberFormatException =>
               log.error("***ERROR*** Not a valid hexadecimal value: " + options.sign.get.id.get)
@@ -234,118 +161,223 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
     }
   }
 
-  def deploySSH(target: DeployTarget, dir: File) =
-    deployStuff[ChannelSftp](target, dir,
-      init = { credentials =>
-        val jsch = new JSch()
-        JSch.setConfig("StrictHostKeyChecking", "no")
-        import log.{ debug => ld, info => li, warn => lw, error => le }
-        JSch.setLogger(new com.jcraft.jsch.Logger {
-          def isEnabled(level: Int) = true
-          import com.jcraft.jsch.Logger._
-          def log(level: Int, message: String) = level match {
-            // levels are arranged so that ssh info is debug for dbuild
-            case DEBUG => ld(message)
-            case INFO => ld(message)
-            case WARN => li(message)
-            case ERROR => lw(message)
-            case FATAL => le(message)
-          }
-        })
-        // try to locate a private key; if it exists, add
-        // the identity (for passwordless authentication)
-        // Only the default location is supported, and no passphrase
-        val privateKeyLocation = new File(System.getProperty("user.home")) / ".ssh" / "id_rsa"
-        try {
-          val is = new java.io.FileInputStream(privateKeyLocation)
-          val privateKey = org.apache.commons.io.IOUtils.toByteArray(is)
-          val passPrivateKey = "".getBytes()
-          jsch.addIdentity(credentials.user, privateKey, null, passPrivateKey)
-        } catch {
-          case e: java.io.FileNotFoundException => // ignore
+  /**
+   * Some mechanism to deploy the files contained in the
+   * given directory to some target.
+   */
+  abstract class Deploy[T] {
+    def deploy[T](options: DeployTarget, dir: File)
+  }
+  object Deploy {
+    def apply(target: DeployTarget, dir: File) = {
+      val uri = new _root_.java.net.URI(target.uri)
+      val deployer = uri.getScheme match {
+        case "file" => new DeployFiles
+        case "http" | "https" => new DeployHTTP
+        case "ssh" => new DeploySSH
+        case "s3" => new DeployS3
+      }
+      deployer.deploy(target, dir)
+    }
+  }
+
+  /**
+   * Some method to deploy stuff by scanning files one at a time;
+   * special care is taken to deploy items in an order that is
+   * compatible with Artifactory and the like.
+   */
+  abstract class IterativeDeploy[T] extends Deploy[T] {
+    protected def init(credentials: Creds): T
+    protected def message(relative: String)
+    protected def deployItem(handler: T, credentials: Creds, relative: String, file: File, targetURI: URI)
+    protected def close(handler: T) = ()
+
+    /**
+     * Generic code that deploys to some repository. The subclasses provide
+     * implementations for the "init", "message", "deploy", and "close"
+     * handlers.
+     *
+     * This routine takes special care to upload artifacts in the proper
+     * order, in order to comply with the peculiar requirements of
+     * Maven/Ivy repositories (Artifactory, in particular).
+     */
+    def deploy[T](options: DeployTarget, dir: File) {
+      val Some(credsFile) = options.credentials
+      val credentials = loadCreds(credsFile)
+      val handler = init(credentials)
+      try {
+        val targetBaseURI = new java.net.URI(options.uri)
+        //
+        // We have to upload files in a certain order, in order to comply with
+        // the requirements of Artifactory concerning the upload of -SNAPSHOT artifacts.
+        // In particular, whenever there are a .pom and a .jar with the same name, and
+        // other artifacts in the same group, these artifacts get the same id only if:
+        // - the jar is uploaded first
+        // - the pom is uploaded immediately afterward
+        // - then the remaining artifacts are uploaded
+        // - finally, the checksums are uploaded after the main artifacts
+        //
+
+        val allFiles = (dir.***).get.filter(f => !f.isDirectory)
+        val poms = allFiles.filter(f => f.getName.endsWith("-SNAPSHOT.pom"))
+        //
+        // we fold over the poms, reducing the set of files until we are left with just
+        // the files that are not in any pom-containing directory. Meanwhile, we accumulate
+        // the snapshot files in the right order, for each pom
+        val (remainder, newSeq) = poms.foldLeft((allFiles, Seq[File]())) {
+          case ((fileSeq, newSeq), pom) =>
+            val pomFile = pom.getCanonicalFile()
+            val thisDir = pomFile.getParentFile()
+            if (thisDir == null) sys.error("Unexpected: file has not parent in deploy")
+            // select the files in this directory (but not in subdirectories)
+            val theseFiles = (thisDir.***).get.filter(f => !f.isDirectory && f.getCanonicalFile().getParentFile() == thisDir)
+            // if there is a matching jar, upload the jar first
+            val jarFile = new java.io.File(pomFile.getCanonicalPath().replaceAll("\\.[^\\.]*$", ".jar"))
+            val thisSeq = if (theseFiles contains jarFile) {
+              val rest = theseFiles.diff(Seq(jarFile, pomFile)).partition(f => isNotChecksum(f.getName))
+              Seq(jarFile, pomFile) ++ rest._1 ++ rest._2
+            } else {
+              // no jar?? upload the pom first anyway
+              val rest = theseFiles.diff(Seq(pomFile)).partition(f => isNotChecksum(f.getName))
+              Seq(pomFile) ++ rest._1 ++ rest._2
+            }
+            //
+            (fileSeq.diff(theseFiles), newSeq ++ thisSeq)
         }
-        val session = jsch.getSession(credentials.user, credentials.host, 22)
-        session.setPassword(credentials.pass)
-        session.connect(900)
-        val channel = session.openChannel("sftp")
-        channel.connect(900)
-        channel match {
-          case sftp: ChannelSftp => sftp
-          case _ => sys.error("Could not open an SFTP channel.")
+
+        // We need in any case to upload the main files first,
+        // and only afterwards we can upload md5 and sha1 files
+        // (otherwise we get 404 errors from Artifactory)
+        // Note that a 409 error means the checksum calculated on
+        // the server does not match the checksum we are trying to upload
+        val split = remainder.partition(f => isNotChecksum(f.getName))
+        val ordered = newSeq ++ split._1 ++ split._2
+
+        ordered foreach { file =>
+          val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error in relative paths creation during deployment. Please report.")
+          message(relative)
+          // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
+          val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
+          deployItem(handler, credentials, relative, file, targetURI)
         }
-      },
-      message = { relative =>
-        log.info("Deploying: " + relative)
-      },
-      deploy = { (sftp, credentials, relative, file, uri) =>
-        val path = uri.getPath
-        def mkParents(s: String): Unit = {
-          val l = s.lastIndexOf('/')
-          val dir = s.substring(0, l)
-          try {
-            sftp.cd(dir)
-          } catch {
-            case e: Exception =>
-              mkParents(dir)
-              sftp.mkdir(dir)
-          }
-        }
-        if (!path.startsWith("/")) sys.error("Internal error: ssh upload uri path is not absolute")
-        mkParents(path)
-        sftp.put(file.getCanonicalPath, path)
-      },
-      close = { sftp =>
-        if (sftp != null) {
-          sftp.disconnect()
-          val session = sftp.getSession()
-          if (session != null)
-            session.disconnect()
+      } finally { close(handler) }
+    }
+  }
+
+  class DeploySSH extends IterativeDeploy[ChannelSftp] {
+    protected def init(credentials: Creds) = {
+      val jsch = new JSch()
+      JSch.setConfig("StrictHostKeyChecking", "no")
+      import log.{ debug => ld, info => li, warn => lw, error => le }
+      JSch.setLogger(new com.jcraft.jsch.Logger {
+        def isEnabled(level: Int) = true
+        import com.jcraft.jsch.Logger._
+        def log(level: Int, message: String) = level match {
+          // levels are arranged so that ssh info is debug for dbuild
+          case DEBUG => ld(message)
+          case INFO => ld(message)
+          case WARN => li(message)
+          case ERROR => lw(message)
+          case FATAL => le(message)
         }
       })
+      // try to locate a private key; if it exists, add
+      // the identity (for passwordless authentication)
+      // Only the default location is supported, and no passphrase
+      val privateKeyLocation = new File(System.getProperty("user.home")) / ".ssh" / "id_rsa"
+      try {
+        val is = new java.io.FileInputStream(privateKeyLocation)
+        val privateKey = org.apache.commons.io.IOUtils.toByteArray(is)
+        val passPrivateKey = "".getBytes()
+        jsch.addIdentity(credentials.user, privateKey, null, passPrivateKey)
+      } catch {
+        case e: java.io.FileNotFoundException => // ignore
+      }
+      val session = jsch.getSession(credentials.user, credentials.host, 22)
+      session.setPassword(credentials.pass)
+      session.connect(900)
+      val channel = session.openChannel("sftp")
+      channel.connect(900)
+      channel match {
+        case sftp: ChannelSftp => sftp
+        case _ => sys.error("Could not open an SFTP channel.")
+      }
+    }
 
-  def deployS3(options: DeployTarget, dir: File) =
-    deployStuff[AmazonS3Client](options, dir, { credentials =>
+    protected def message(relative: String) = log.info("Deploying: " + relative)
+
+    protected def deployItem(sftp: ChannelSftp, credentials: Creds, relative: String, file: File, uri: URI) = {
+      val path = uri.getPath
+      def mkParents(s: String): Unit = {
+        val l = s.lastIndexOf('/')
+        val dir = s.substring(0, l)
+        try {
+          sftp.cd(dir)
+        } catch {
+          case e: Exception =>
+            mkParents(dir)
+            sftp.mkdir(dir)
+        }
+      }
+      if (!path.startsWith("/")) sys.error("Internal error: ssh upload uri path is not absolute")
+      mkParents(path)
+      sftp.put(file.getCanonicalPath, path)
+    }
+
+    override protected def close(sftp: ChannelSftp) = {
+      if (sftp != null) {
+        sftp.disconnect()
+        val session = sftp.getSession()
+        if (session != null)
+          session.disconnect()
+      }
+    }
+  }
+
+  class DeployS3 extends IterativeDeploy[AmazonS3Client] {
+    protected def init(credentials: Creds) =
       new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
         new ClientConfiguration().withProtocol(Protocol.HTTPS))
-    }, { relative =>
-      if (isNotChecksum(relative))
-        log.info("Uploading: " + relative)
-    }, { (client, credentials, _, file, uri) =>
+    protected def message(relative: String) = if (isNotChecksum(relative))
+      log.info("Uploading: " + relative)
+    protected def deployItem(client: AmazonS3Client, credentials: Creds, relative: String, file: File, uri: URI) =
       // putObject() will automatically calculate an MD5, upload, and compare with the response
       // from the server. Any upload failure results in an exception; so no need to process
       // the sha1/md5 here.
       if (isNotChecksum(uri.getPath))
         client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
-    })
-
-  def deployHTTP(options: DeployTarget, dir: File) =
-    deployStuff[Unit](options, dir, { _ => () },
-      { relative =>
-        if (isNotChecksum(relative))
-          log.info("Deploying: " + relative)
-        else
-          log.info("Verifying checksum: " + relative)
-      }, { (_, credentials, relative, file, uri) =>
-        import dispatch._
-        val sender =
-          url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
-        val response = (new Http with NoLogging)(sender >- { str =>
-          Utils.readSomePath[ArtifactoryResponse](str)
-        })
-        if (response != None && response.get.path != None) {
-          val out = response.get.path.get.replaceFirst("^/", "")
-          if (out != relative) log.info("Deployed:  " + out)
-        }
-      })
-
-  def deployFiles(options: DeployTarget, dir: File) = {
-    // copy to a local path
-    val target = (new _root_.java.net.URI(options.uri)).getPath
-    log.info("Copying artifacts to " + target + "...")
-    // Overwrite, and preserve timestamps
-    IO.copyDirectory(dir, new File(target), true, true)
   }
 
+  class DeployHTTP extends IterativeDeploy[Unit] {
+    protected def init(credentials: Creds) = ()
+    protected def message(relative: String) =
+      if (isNotChecksum(relative))
+        log.info("Deploying: " + relative)
+      else
+        log.info("Verifying checksum: " + relative)
+    protected def deployItem(handler: Unit, credentials: Creds, relative: String, file: File, uri: URI) = {
+      import dispatch._
+      val sender =
+        url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
+      val response = (new Http with NoLogging)(sender >- { str =>
+        Utils.readSomePath[ArtifactoryResponse](str)
+      })
+      if (response != None && response.get.path != None) {
+        val out = response.get.path.get.replaceFirst("^/", "")
+        if (out != relative) log.info("Deployed:  " + out)
+      }
+    }
+  }
+
+  class DeployFiles extends Deploy[Unit] {
+    def deploy[Unit](options: DeployTarget, dir: File) = {
+      // copy to a local path
+      val target = (new _root_.java.net.URI(options.uri)).getPath
+      log.info("Copying artifacts to " + target + "...")
+      // Overwrite, and preserve timestamps
+      IO.copyDirectory(dir, new File(target), true, true)
+    }
+  }
 }
 // Response from Artifactory
 case class ArtifactoryResponse(path: Option[String])

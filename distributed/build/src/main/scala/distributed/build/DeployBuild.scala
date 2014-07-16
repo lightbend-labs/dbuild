@@ -171,6 +171,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         case "http" | "https" => new DeployHTTP
         case "ssh" => new DeploySSH
         case "s3" => new DeployS3
+        case s => sys.error("Unknown scheme in deploy uri: "+s)
       }
       deployer.deploy(target, dir)
     }

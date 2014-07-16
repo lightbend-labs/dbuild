@@ -128,7 +128,7 @@ class SbtBuildMain extends xsbti.AppMain {
           buildTarget foreach { t => println("Build target: " + t) }
         }
         val now = new java.util.Date()
-        val dateFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss'UTC'")
+        val dateFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'")
         dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
         // NB: formats are not thread-safe. We are ok here, in any case.
         val autoTimestamp = dateFormat.format(now)

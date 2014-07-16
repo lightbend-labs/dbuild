@@ -136,8 +136,8 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
            if (!(indexFile.getAbsolutePath().startsWith(indexDir.getAbsolutePath())))
              sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
             // Date handling. Note that the date will still be serialized/deserialized as a timestamp.
-            // Jackson has support for ISO-8601 format; we use it to parse the selected date, but
-            // it is then serialized as a simple timestamp (see http://wiki.fasterxml.com/JacksonFAQDateHandling)
+            // Jackson has support for ISO-8601 format; we use it to parse the selected date, but it is
+            // serialized as a simple timestamp (see http://wiki.fasterxml.com/JacksonFAQDateHandling for more details)
             val date = new ISO8601DateFormat().parse(indexOptions.date)
             val platformInfo = com.typesafe.reactiveplatform.manifest.PlatformInfo(indexOptions.version, indexOptions.family, date)
             val index = com.typesafe.reactiveplatform.manifest.Manifest(platformInfo, moduleInfos.toSeq)

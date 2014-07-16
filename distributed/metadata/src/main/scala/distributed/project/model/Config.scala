@@ -512,7 +512,7 @@ case class DeploySignOptions(
  * projects/subprojects is the same as those published to the repository.
  * However, the uri/credentials are different, as the index file may be deployed elsewhere.
  */
-case class IndexOptions (
+case class IndexOptions(
   /**
    * index publication target. This uri must refer to the path, but not include the
    * file name, which is specified separately.
@@ -520,7 +520,11 @@ case class IndexOptions (
   uri: String,
   /** path to the credentials file */
   credentials: Option[String],
-  filename: String) extends DeployTarget
+  filename: String,
+  version: String,
+  family: String,
+  // Specified in ISO-8601 format, parsed via com.fasterxml.jackson.databind.util.ISO8601DateFormat
+  date: String) extends DeployTarget
 
 /** Comparison information. */
 case class ComparisonOptions(

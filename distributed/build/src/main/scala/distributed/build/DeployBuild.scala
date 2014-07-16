@@ -22,6 +22,7 @@ import Creds.loadCreds
 import com.jcraft.jsch.{ IO => sshIO, _ }
 import java.util.Date
 import com.jcraft.jsch.ChannelSftp
+import com.fasterxml.jackson.databind.util.ISO8601DateFormat
 
 class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
@@ -134,7 +135,13 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
            // sanity check, in case the supplied file name is something silly like "../xyz" or "/xyz/..."
            if (!(indexFile.getAbsolutePath().startsWith(indexDir.getAbsolutePath())))
              sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
-            IO.write(indexFile, Utils.writeValue(moduleInfos))
+            // Date handling. Note that the date will still be serialized/deserialized as a timestamp.
+            // Jackson has support for ISO-8601 format; we use it to parse the selected date, but
+            // it is then serialized as a simple timestamp (see http://wiki.fasterxml.com/JacksonFAQDateHandling)
+            val date = new ISO8601DateFormat().parse(indexOptions.date)
+            val platformInfo = com.typesafe.reactiveplatform.manifest.PlatformInfo(indexOptions.version, indexOptions.family, date)
+            val index = com.typesafe.reactiveplatform.manifest.Manifest(platformInfo, moduleInfos.toSeq)
+            IO.write(indexFile, Utils.writeValue(index))
             Deploy.deploy(target = indexOptions, indexDir)
           }
           catch {

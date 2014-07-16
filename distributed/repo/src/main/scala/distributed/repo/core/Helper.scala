@@ -180,17 +180,28 @@ object LocalRepoHelper {
   }
 
   /**
+   * This utility case class is used to return information that was rematerialized via resolveArtifacts or
+   * resolvePartialArtifacts, or getProjectInfo. It is never serialized.
+   */
+  case class ResolutionResult[T](projectInfo: ProjectArtifactInfo, results: Seq[T],
+      filteredArts: Seq[ArtifactLocation], filteredModuleInfos: Seq[com.typesafe.reactiveplatform.manifest.ModuleInfo])
+  /**
    * This method takes in a project UUID, a repository and a function that operates on every
    * Artifact that the project has in the repository.  It returns the project metadata and a sequence of
    * results of the operation run against each artifact in the repository.
    */
   protected def resolveArtifacts[T](uuid: String,
-    remote: ReadableRepository): ((File, ArtifactSha) => T) => (ProjectArtifactInfo, Seq[T], Seq[ArtifactLocation]) =
+    remote: ReadableRepository): ((File, ArtifactSha) => T) => ResolutionResult[T] =
     resolvePartialArtifacts(uuid, Seq.empty, remote)
 
-  // As above, but only for a list of subprojects. If the list is empty, grab all the files.
-  // Also return the list of artifacts corresponding to the selected subprojects.
-  protected def resolvePartialArtifacts[T](uuid: String, subprojs: Seq[String], remote: ReadableRepository)(f: (File, ArtifactSha) => T): (ProjectArtifactInfo, Seq[T], Seq[ArtifactLocation]) = {
+  /**
+   * As for resolveArtifacts, but only for a list of subprojects. If the list is empty, grab all the files.
+   * Also return the list of artifacts corresponding to the selected subprojects.
+   * Note that, upon return, "results" and "artifacts" contain only the items selected according to the
+   * "subprojs" list of subprojects; however, "metadata" contain the *full* project description, which
+   * includes the full list of modules, and the full list of ArtifactLocations.
+   */
+  protected def resolvePartialArtifacts[T](uuid: String, subprojs: Seq[String], remote: ReadableRepository)(f: (File, ArtifactSha) => T): ResolutionResult[T] = {
     val metadata =
       materializeProjectMetadata(uuid, remote)
     val fetch = if (subprojs.isEmpty) metadata.versions.results.map { _.subName } else {
@@ -207,9 +218,12 @@ object LocalRepoHelper {
       resolved = remote get key
     } yield f(resolved, artifactFile)
 
+    // TODO: artifacts should be associated with (be contained into) each ModuleInfo. Right now
+    // the list of ModuleInfos is only used while generating the index in DeployBuild, while
+    // artifacts are used everywhere else, hence the two need not be aligned in any manner.
     val artifacts = metadata.versions.results.filter { v => fetch.contains(v.subName) }.flatMap { _.artifacts }
-
-    (metadata, results, artifacts)
+    val moduleInfos = metadata.versions.results.filter { v => fetch.contains(v.subName) } map {_.moduleInfo}
+    ResolutionResult[T](metadata, results, artifacts, moduleInfos)
   }
 
   /**
@@ -230,7 +244,7 @@ object LocalRepoHelper {
    */
   def materializePartialProjectRepository(uuid: String, subprojs: Seq[String], remote: ReadableRepository,
     localRepo: File, debug: Boolean): (Seq[ArtifactLocation], Seq[String]) = {
-    val (meta, _, arts) = resolvePartialArtifacts(uuid, subprojs, remote) { (resolved, artifact) =>
+    val ResolutionResult(meta, _, arts, _) = resolvePartialArtifacts(uuid, subprojs, remote) { (resolved, artifact) =>
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
@@ -274,7 +288,7 @@ object LocalRepoHelper {
   /** Checks whether or not a given project (by UUID) is published. */
   def getPublishedDeps(uuid: String, remote: ReadableRepository, log: Logger): BuildArtifactsOut = {
     // We run this to ensure all artifacts are resolved correctly.
-    val (meta, results, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
+    val ResolutionResult(meta, results, _, _) = resolveArtifacts(uuid, remote) { (file, artifact) => () }
     log.info("Found cached project build, uuid " + uuid)
     meta.versions
   }

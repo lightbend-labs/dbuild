@@ -102,7 +102,7 @@ object LocalRepoHelper {
   def debugArtifactsInfo(extracted: BuildArtifactsOut, log: Logger) = {
     log.debug("Published files:")
     extracted.results foreach {
-      case BuildSubArtifactsOut(subproj, _, shas) =>
+      case BuildSubArtifactsOut(subproj, _, shas, _) =>
         if (subproj != "") log.debug("in subproject: " + subproj)
         shas foreach {
           case ArtifactSha(sha, location) =>
@@ -158,7 +158,8 @@ object LocalRepoHelper {
    */
   def publishArtifactsInfo(project: RepeatableProjectBuild, extracted: BuildArtifactsOut,
     localRepo: File, remote: Repository, log: Logger): ProjectArtifactInfo = {
-    extracted.results foreach { case BuildSubArtifactsOut(subproj, _, shas) => publishRawArtifacts(localRepo, subproj, shas, remote, log) }
+    extracted.results foreach { case BuildSubArtifactsOut(subproj, _, shas, _) =>
+      publishRawArtifacts(localRepo, subproj, shas, remote, log) }
     val info = ProjectArtifactInfo(project, extracted)
     publishArtifactsMetadata(info, remote, log)
     info

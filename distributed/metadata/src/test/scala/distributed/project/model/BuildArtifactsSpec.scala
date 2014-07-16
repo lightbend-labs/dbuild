@@ -13,7 +13,8 @@ object BuildArtifactsSpec extends Specification {
           Seq(BuildSubArtifactsOut("x",Seq(
               ArtifactLocation(ProjectRef("p3", "o2"), "1.0", "", None),
               ArtifactLocation(ProjectRef("p3", "o2"), "2.0", "", None)
-          ),Seq.empty))
+          ),Seq.empty, com.typesafe.reactiveplatform.manifest.ModuleInfo("a","b","1.0",
+              com.typesafe.reactiveplatform.manifest.CrossBuildProperties(None,None))))
         )
       val config = writeValue(data)
       (readValue[BuildArtifactsOut](config) 

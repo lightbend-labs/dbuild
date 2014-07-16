@@ -150,9 +150,15 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
 
     val localRepo = input.outRepo
     IvyMachinery.publishIvy(response, localRepo, rewrittenDeps, version, log)
+    val modulePluginInfo = pluginAttrs(module)
     val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("default-ivy-project",
       publishArts,
-      localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) })))
+      localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
+      com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = module.getOrganisation,
+        name = module.getName, version = version,
+        com.typesafe.reactiveplatform.manifest.CrossBuildProperties(modulePluginInfo map { _.scalaVersion }, modulePluginInfo map { _.sbtVersion })
+      )
+    )))
     log.debug(q.toString)
     q
   }

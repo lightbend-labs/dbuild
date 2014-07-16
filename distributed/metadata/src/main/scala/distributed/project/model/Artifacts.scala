@@ -64,7 +64,13 @@ case class BuildArtifactsInMulti(materialized: Seq /*Levels*/ [BuildArtifactsIn]
   def localRepo = materialized.head.localRepo
 }
 case class BuildArtifactsOut(results: Seq[BuildSubArtifactsOut])
-case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation], shas: Seq[ArtifactSha])
+// moduleInfo presents a view of the generated *modules*, while artifacts and shas refer to the
+// generated *artifacts* (files). The two are related, but not strictly: information like version
+// or name could differ, in theory. The two different views are carried around together as part
+// of a "BuildSubArtifactsOut", which also includes the name of the subproject that refers to these
+// artifacts and module info.
+case class BuildSubArtifactsOut(subName: String, artifacts: Seq[ArtifactLocation], shas: Seq[ArtifactSha],
+    moduleInfo: com.typesafe.reactiveplatform.manifest.ModuleInfo)
 
 /**
  * This represents general information every dbuild must know:

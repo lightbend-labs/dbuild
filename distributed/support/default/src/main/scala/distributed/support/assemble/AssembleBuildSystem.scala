@@ -272,7 +272,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.info("Retrieving artifacts")
     log.debug("into " + localRepo)
     val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository,
-        Seq(localRepo), Seq(uuids), Seq(""), buildData.debug) // retrieve only the base level, space "" (no external dependencies)
+      Seq(localRepo), Seq(uuids), Seq(""), buildData.debug) // retrieve only the base level, space "" (no external dependencies)
 
     // ------
     // ok. At this point, we have:
@@ -328,7 +328,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val artifactsMap = preCrossArtifactsMap map {
       case (projName, BuildArtifactsOut(subs)) => (projName, BuildArtifactsOut(
         subs map {
-          case BuildSubArtifactsOut(subProjName, artifacts, shas) =>
+          case BuildSubArtifactsOut(subProjName, artifacts, shas, moduleInfo) =>
             val renamedArtifacts = artifacts map { l =>
               if (isScalaCoreArt(l)) l else l.copy(crossSuffix = crossSuff)
             }
@@ -413,7 +413,8 @@ object AssembleBuildSystem extends BuildSystemCore {
                   sha
               }
             }
-            BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs)
+            BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs,
+              moduleInfo.copy(cross = moduleInfo.cross.copy(scalaVersion = scalaVersion))) // TODO: verify that scalaVersion is the right value here
         }))
     }
 
@@ -565,7 +566,18 @@ object AssembleBuildSystem extends BuildSystemCore {
     val out = BuildArtifactsOut(artifactsMap.map {
       case (project, arts) =>
         val modArtLocs = arts.results.flatMap { _.artifacts }
-        BuildSubArtifactsOut(project, modArtLocs, projSHAs(modArtLocs.map { _.info }, crossSuff))
+        BuildSubArtifactsOut(project, modArtLocs, projSHAs(modArtLocs.map { _.info }, crossSuff),
+          // There is not a unique "module" for each of the entire nested projects (each of which actually
+          // contains multiple modules). The current choice of having a fictitious "subproject" for each
+          // of the nested projects doesn't marry well with the need to encode modules info; that would
+          // fit better if the original subprojects were instead preserved as-is.
+            
+          // TODO: decide on some encoding that would work once the index file is consumed.
+
+          // Meanwhile, we synthesize modules using various bits of information, which may or may not be
+          // fit for purpose.
+          com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = arts.results.head.moduleInfo.organization,
+            name = project, version = arts.results.head.moduleInfo.version, com.typesafe.reactiveplatform.manifest.CrossBuildProperties(None, None)))
     })
     log.debug("out: " + writeValue(out))
     out

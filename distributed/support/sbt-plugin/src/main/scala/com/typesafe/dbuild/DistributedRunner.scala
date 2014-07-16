@@ -610,7 +610,12 @@ object DistributedRunner {
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
       val newFilesShas = currentFiles.diff(previousFiles).map { LocalRepoHelper.makeArtifactSha(_, localRepo) }
 
-      (state9, (currentFiles, BuildSubArtifactsOut(normalizedProjectName(ref, baseDirectory), artifacts, newFilesShas)))
+      // extraction of moduleInfo
+      val (state10, mi) = Project.extract(state9).runTask(moduleInfo in ref, state9)
+
+      (state10, (currentFiles,
+        BuildSubArtifactsOut(normalizedProjectName(ref, baseDirectory), artifacts, newFilesShas, mi)
+      ))
     }
 
     val (state3, (files, artifactsAndFiles)) = buildAggregate(buildTestPublish)
@@ -766,6 +771,7 @@ object DistributedRunner {
   def generateModuleInfo(organization: String, name: String, version: String, scalaVersion: String, scalaBinaryVersion: String,
     sbtVersion: String, sbtBinaryVersion: String, sbtPlugin: Boolean, crossVersion: sbt.CrossVersion): com.typesafe.reactiveplatform.manifest.ModuleInfo = {
     import com.typesafe.reactiveplatform.manifest._
+    // TODO: verify the ModuleInfo constructor again the exact specs, once they are known
     ModuleInfo(organization, name, version, CrossBuildProperties(Some(scalaVersion), Some(sbtVersion)))
   }
   

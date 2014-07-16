@@ -41,7 +41,11 @@ object TestBuildSystem extends BuildSystemCore {
     val rand = new java.util.Random
     if (rand.nextInt(3)==0) throw new Exception("You've been unlucky today..!")
     BuildArtifactsOut(meta.projects map {
-      proj => BuildSubArtifactsOut(proj.name,Seq.empty,Seq.empty)})
+      proj =>
+        BuildSubArtifactsOut(proj.name, Seq.empty, Seq.empty,
+          com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = proj.organization,
+            name = proj.name, version = version, com.typesafe.reactiveplatform.manifest.CrossBuildProperties(None, None)))
+    })
   }
 
   /** 

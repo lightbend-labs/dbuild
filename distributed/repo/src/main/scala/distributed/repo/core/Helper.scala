@@ -236,15 +236,15 @@ object LocalRepoHelper {
    *   @return The list of *versioned* artifacts that are now in the local repo,
    *   plus a log message as a sequence of strings.
    */
-  def materializeProjectRepository(uuid: String, remote: ReadableRepository, localRepo: File, debug: Boolean): (Seq[ArtifactLocation], Seq[String]) =
+  def materializeProjectRepository(uuid: String, remote: ReadableRepository, localRepo: File, debug: Boolean): (Seq[ArtifactLocation], Seq[com.typesafe.reactiveplatform.manifest.ModuleInfo], Seq[String]) =
     materializePartialProjectRepository(uuid, Seq.empty, remote, localRepo, debug)
 
   /* Materialize only parts of a given projects, and specifically
    * those specified by the given subproject list. If the list is empty, grab everything.
    */
   def materializePartialProjectRepository(uuid: String, subprojs: Seq[String], remote: ReadableRepository,
-    localRepo: File, debug: Boolean): (Seq[ArtifactLocation], Seq[String]) = {
-    val ResolutionResult(meta, _, arts, _) = resolvePartialArtifacts(uuid, subprojs, remote) { (resolved, artifact) =>
+    localRepo: File, debug: Boolean): (Seq[ArtifactLocation], Seq[com.typesafe.reactiveplatform.manifest.ModuleInfo], Seq[String]) = {
+    val ResolutionResult(meta, _, arts, modInfos) = resolvePartialArtifacts(uuid, subprojs, remote) { (resolved, artifact) =>
       val file = new File(localRepo, artifact.location)
       IO.copyFile(resolved, file, false)
     }
@@ -261,7 +261,8 @@ object LocalRepoHelper {
     val info2 = ": " + arts.length + " artifacts"
     val msg = if (subprojs.isEmpty) Seq(info1 + info2) else
       Seq(subprojs.mkString(info1 + ", subprojects ", ", ", info2))
-    (arts, msg)
+    // TODO: eventually, artifactLocations will be embedded as part of ModuleInfo
+    (arts, modInfos, msg)
   }
 
   // rematerialize artifacts. "uuid" is a sequence: each element represents group of artifacts that
@@ -275,7 +276,7 @@ object LocalRepoHelper {
           if (uuidGroups.length > 1 && uuids.length > 0) diagnostic("Resolving artifacts, level " + index + ", space: " + fromSpace)
           val artifacts = for {
             uuid <- uuids
-            (arts, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo, debug)
+            (arts, modInfos, msg) = LocalRepoHelper.materializeProjectRepository(uuid, repo, localRepo, debug)
             _ = msg foreach { diagnostic(_) }
             art <- arts
           } yield art

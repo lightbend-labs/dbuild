@@ -83,7 +83,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         // for build.uuid. We stage them in a temporary directory first,
         // to make sure all is in order
         try IO.withTemporaryDirectory { dir =>
-          val (good, goodArts, bad) = rematerialize(options.projects, outcome, build, dir, "deploy",
+          val (good, goodArts, goodModInfos, bad) = rematerialize(options.projects, outcome, build, dir, "deploy",
             msgGood = "Deploying: ",
             msgBad = "Cannot deploy: ",
             partialOK = true, log)

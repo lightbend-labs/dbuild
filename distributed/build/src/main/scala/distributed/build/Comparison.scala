@@ -57,9 +57,9 @@ class Comparison(options: GeneralOptions, log: logging.Logger) extends OptionTas
                 msgGood = c + ")  ",
                 msgBad = c + ")  Cannot compare, unavailable: ",
                 partialOK = false, log)
-            val (goodA, _, badA) = rematerializeComparison(check.a, dirA, "a")
+            val (goodA, _, _, badA) = rematerializeComparison(check.a, dirA, "a")
             if (badA.isEmpty) {
-              val (goodB, _, badB) = rematerializeComparison(check.b, dirB, "b")
+              val (goodB, _, _, badB) = rematerializeComparison(check.b, dirB, "b")
               if (badB.isEmpty) {
                 val logLimit = 10
                 // excellent! We just need to compare the jars in dirA and dirB

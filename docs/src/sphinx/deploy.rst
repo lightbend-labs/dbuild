@@ -191,8 +191,9 @@ family
   You may specify here a "family" information string; it will also be included as-is in the index file.
 
 date
-  This date will be included in the index file; it must be specified in the ISO-8601 format. The current
-  timestamp can be specified by using ``date: ${vars.auto.timestamp}``.
+  This date will be included in the index file; it must be specified in the ISO-8601 format, as in:
+  ``yyyy-MM-ddThh:mm:ss[.sss][Z|[+-]hh:mm]``. The final timezone, or a 'Z', is required.
+  The build time can be automatically used by specifying: ``date: ${vars.auto.timestamp}``.
 
 |
 

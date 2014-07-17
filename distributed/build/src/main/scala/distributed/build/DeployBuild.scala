@@ -22,7 +22,6 @@ import Creds.loadCreds
 import com.jcraft.jsch.{ IO => sshIO, _ }
 import java.util.Date
 import com.jcraft.jsch.ChannelSftp
-import com.fasterxml.jackson.databind.util.ISO8601DateFormat
 
 class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
@@ -131,15 +130,19 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         // We now need to prepare an index file, if requested
         options.index foreach { indexOptions =>
           try IO.withTemporaryDirectory { indexDir =>
+            import org.apache.commons.lang.time.DateUtils
             val indexFile = new File(indexDir, indexOptions.filename).getCanonicalFile
-            log.debug("I'm here. indexFile is : " + indexFile.getCanonicalPath())
             // sanity check, in case the supplied file name is something silly like "../xyz" or "/xyz/..."
             if (!(indexFile.getCanonicalPath().startsWith(indexDir.getCanonicalPath())))
               sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
+            // TODO: commons-lang should be upgraded to the new Apache commons-lang3
             // Date handling. Note that the date will still be serialized/deserialized as a timestamp.
             // Jackson has support for ISO-8601 format; we use it to parse the selected date, but it is
             // serialized as a simple timestamp (see http://wiki.fasterxml.com/JacksonFAQDateHandling for more details)
-            val date = new ISO8601DateFormat().parse(indexOptions.date)
+            // NB: com.fasterxml.jackson.databind.util.ISO8601DateFormat works ok, but is unable
+            // to parse ISO-8601 without separators, like "20140807T..."
+            val date = DateUtils.parseDate(indexOptions.date, Array("yyyy-MM-dd'T'HH:mm:ssZZ",
+              "yyyyMMdd'T'HHmmssZZ", "yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyyMMdd'T'HHmmss'Z'"))
             val platformInfo = com.typesafe.reactiveplatform.manifest.PlatformInfo(indexOptions.version, indexOptions.family, date)
             val index = com.typesafe.reactiveplatform.manifest.Manifest(platformInfo, moduleInfos.toSeq)
             IO.write(indexFile, Utils.writeValue(index))

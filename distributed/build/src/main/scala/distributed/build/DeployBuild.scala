@@ -124,7 +124,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
           goodModInfos
         } catch {
           case e =>
-            log.error("***ERROR*** Encountered an error while deploying to " + url(options.uri).host)
+            log.error("***ERROR*** Encountered an error while deploying to " + options.uri)
             throw e
         }
 
@@ -132,9 +132,10 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         options.index foreach { indexOptions =>
           try IO.withTemporaryDirectory { indexDir =>
             val indexFile = new File(indexDir, indexOptions.filename).getCanonicalFile
-           // sanity check, in case the supplied file name is something silly like "../xyz" or "/xyz/..."
-           if (!(indexFile.getCanonicalPath().startsWith(indexDir.getCanonicalPath())))
-             sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
+            log.debug("I'm here. indexFile is : " + indexFile.getCanonicalPath())
+            // sanity check, in case the supplied file name is something silly like "../xyz" or "/xyz/..."
+            if (!(indexFile.getCanonicalPath().startsWith(indexDir.getCanonicalPath())))
+              sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
             // Date handling. Note that the date will still be serialized/deserialized as a timestamp.
             // Jackson has support for ISO-8601 format; we use it to parse the selected date, but it is
             // serialized as a simple timestamp (see http://wiki.fasterxml.com/JacksonFAQDateHandling for more details)
@@ -146,7 +147,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
           }
           catch {
             case e =>
-              log.error("***ERROR*** Encountered an error while generating or deploying the index file to " + url(indexOptions.uri).host)
+              log.error("***ERROR*** Encountered an error while generating or deploying the index file to " + indexOptions.uri)
               throw e
           }
         }
@@ -171,7 +172,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         case "http" | "https" => new DeployHTTP
         case "ssh" => new DeploySSH
         case "s3" => new DeployS3
-        case s => sys.error("Unknown scheme in deploy uri: "+s)
+        case s => sys.error("Unknown scheme in deploy uri: " + s)
       }
       deployer.deploy(target, dir)
     }

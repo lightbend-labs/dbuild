@@ -414,8 +414,14 @@ object AssembleBuildSystem extends BuildSystemCore {
               }
             }
             BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs,
-              // TODO: verify that scalaVersion is the right value here, depending on the ModuleInfo content specification
-              moduleInfo.copy(cross = moduleInfo.cross.copy(scalaVersion = scalaVersion)))
+              moduleInfo.copy(cross = moduleInfo.cross.copy(scalaVersion =
+                if (isScalaCore(moduleInfo.name, moduleInfo.organization)) None else
+                  crossSuff match {
+                    case "" => None
+                    case s if s.startsWith("_") => Some(s.drop(1))
+                    case s => sys.error("Internal Error: crossSuff has unexpected format: \"" + s + "\". Please report.")
+                  }
+              )))
         }))
     }
 

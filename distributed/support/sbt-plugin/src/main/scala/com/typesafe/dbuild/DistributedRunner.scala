@@ -771,13 +771,24 @@ object DistributedRunner {
   def generateModuleInfo(organization: String, name: String, version: String, scalaVersion: String, scalaBinaryVersion: String,
     sbtVersion: String, sbtBinaryVersion: String, sbtPlugin: Boolean, crossVersion: sbt.CrossVersion): com.typesafe.reactiveplatform.manifest.ModuleInfo = {
     import com.typesafe.reactiveplatform.manifest._
-    // TODO: verify the ModuleInfo constructor again the exact specs, once they are known
-    ModuleInfo(organization, name, version, CrossBuildProperties(Some(scalaVersion), Some(sbtVersion)))
+    // according to the specificatin of CrossBuildProperties:
+    val someScala: Option[String] = crossVersion match {
+      case CrossVersion.Disabled => None
+      case x: CrossVersion.Binary => Some(scalaBinaryVersion)
+      case x: CrossVersion.Full => Some(scalaVersion)
+      case _ => sys.error("Internal error: unknown crossVersion in generateModuleInfo(). Please report.")
+    }
+    val cbp = if (sbtPlugin) {
+      CrossBuildProperties(someScala, Some(sbtBinaryVersion))
+    } else {
+      CrossBuildProperties(someScala, None)
+    }
+    ModuleInfo(organization, name, version, cbp)
   }
-  
+
   def projectSettings: Seq[Setting[_]] = Seq(
     extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
       Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations,
     moduleInfo <<= (Keys.organization, Keys.name, Keys.version, Keys.scalaVersion, Keys.scalaBinaryVersion,
-        Keys.sbtVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin, Keys.crossVersion) map generateModuleInfo)
+      Keys.sbtVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin, Keys.crossVersion) map generateModuleInfo)
 }

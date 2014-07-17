@@ -133,7 +133,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
           try IO.withTemporaryDirectory { indexDir =>
             val indexFile = new File(indexDir, indexOptions.filename).getCanonicalFile
            // sanity check, in case the supplied file name is something silly like "../xyz" or "/xyz/..."
-           if (!(indexFile.getAbsolutePath().startsWith(indexDir.getAbsolutePath())))
+           if (!(indexFile.getCanonicalPath().startsWith(indexDir.getCanonicalPath())))
              sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
             // Date handling. Note that the date will still be serialized/deserialized as a timestamp.
             // Jackson has support for ISO-8601 format; we use it to parse the selected date, but it is

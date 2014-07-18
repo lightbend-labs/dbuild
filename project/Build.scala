@@ -55,9 +55,13 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       dependsOnRemote(typesafeConfig)
     )
 
+  lazy val dindex = (
+      DmodProject("indexmeta")
+    )
+
   lazy val dmeta = (
       DmodProject("metadata")
-      dependsOn(graph, hashing)
+      dependsOn(graph, hashing, dindex)
       dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
     )
 

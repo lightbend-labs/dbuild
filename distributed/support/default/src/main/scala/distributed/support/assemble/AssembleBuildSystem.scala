@@ -163,12 +163,17 @@ object AssembleBuildSystem extends BuildSystemCore {
   // postprocess the list of subprojects obtained from the component projects, and
   // make them unique and recognizable when grouped together
   private def adaptSubProjects(projectsAndSubprojects: Seq[(String, Seq[String])]): Seq[(String, Seq[String])] = {
-    // in order to avoid ambiguities, prepend to all default-sbt-project subprojects the
-    // project name. Do that even if they are unique.
+    // in order to avoid ambiguities, replace "default-sbt-project" with the project name, or
+    // prepend to "default-sbt-project" the project name, in case the project name is already taken
+    // as a subproject name.
     val projectsAndSubprojects1 = projectsAndSubprojects.map {
       case (name, subs) => (name, subs.map { sub =>
-        if (sub == "default-sbt-project")
-          name + "-default-sbt-project" else sub
+        if (sub == "default-sbt-project") {
+          if (!subs.contains(name))
+            name // if we can use "name" alone, do so
+          else // else, make it (more) unique
+            name + "-default-sbt-project"
+        } else sub
       })
     }
     // finally, if any project names are duplicated, make them unique

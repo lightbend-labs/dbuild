@@ -74,7 +74,7 @@ object SbtBuildSystem {
   def projectDir(baseDir: _root_.java.io.File, ec: SbtExtraConfig): _root_.java.io.File = {
     val projectDir = if (ec.directory.isEmpty) baseDir else baseDir / ec.directory
     // sanity check, in case "directory" is something like "../xyz" or "/xyz/..."
-    if (!(projectDir.getAbsolutePath().startsWith(baseDir.getAbsolutePath())))
+    if (!(projectDir.getCanonicalPath().startsWith(baseDir.getCanonicalPath())))
       sys.error("The specified subdirectory \"" + ec.directory + "\" does not seem to be a subdir of the project directory")
     projectDir
   }

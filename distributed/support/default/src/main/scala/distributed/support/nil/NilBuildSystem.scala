@@ -38,7 +38,11 @@ object NilBuildSystem extends BuildSystemCore {
     buildData.log.info(meta.subproj.mkString("These subprojects will be built: ", ", ", ""))
 
     BuildArtifactsOut(meta.projects map {
-      proj => BuildSubArtifactsOut(proj.name,Seq.empty,Seq.empty)})
+      proj =>
+        BuildSubArtifactsOut(proj.name, Seq.empty, Seq.empty,
+          com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = proj.organization,
+            name = proj.name, version = version, com.typesafe.reactiveplatform.manifest.CrossBuildProperties(None, None)))
+    })
   }
 
   /** 

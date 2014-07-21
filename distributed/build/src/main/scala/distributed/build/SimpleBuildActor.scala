@@ -126,7 +126,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             Future(new BuildFailed(".", outcomes, msg) with TimedOut)
           }
 
-        val extractionOutcome = analyze(projects, log.newNestedLogger(hashing sha1 projects), options.debug)
+        val extractionOutcome = analyze(projects.sortBy(_.name.toLowerCase), log.newNestedLogger(hashing sha1 projects), options.debug)
         Future.firstCompletedOf(Seq(extractionWatchdog, extractionOutcome)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>

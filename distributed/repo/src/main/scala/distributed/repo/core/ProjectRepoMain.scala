@@ -3,6 +3,7 @@ package repo
 package core
 
 import project.model._
+import LocalRepoHelper.ResolutionResult
 import java.io.File
 import sbt.{RichFile, IO, Path}
 import Path._
@@ -93,7 +94,7 @@ object ProjectRepoMain {
   
   private def printProjects(uuids: Seq[String]): Unit = {
     val meta = uuids map { uuid =>
-      val (info, _, _) = getProjectInfo(uuid)
+      val ResolutionResult(info, _, _, _) = getProjectInfo(uuid)
       info
     }
     val names = padStrings(meta map (_.project.config.name))
@@ -114,14 +115,15 @@ object ProjectRepoMain {
   }
   
   def printProjectDependencies(uuid:String): Unit = {
-    val (meta, _, _) = getProjectInfo(uuid)
+    val ResolutionResult(meta, _, _, _) = getProjectInfo(uuid)
     println(" -- Dependencies --")
     for(uuid <- meta.project.depInfo flatMap (_.dependencyUUIDs))
       println("    * " + uuid)
   }
-  
+
+  // TODO: now that module information is available, we might print artifacts grouped by modules
   def printProjectArtifacts(uuid:String): Unit = {
-    val (meta, _, arts) = getProjectInfo(uuid)
+    val ResolutionResult(meta, _, arts, _) = getProjectInfo(uuid)
     println(" -- Artifacts -- ")
     val groups = padStrings(arts map (_.info.organization))
     val names = padStrings(arts map (_.info.name))
@@ -143,7 +145,7 @@ object ProjectRepoMain {
   }
   
   def printProjectFiles(uuid: String): Unit = {
-    val (_, artFiles,arts) = getProjectInfo(uuid)
+    val ResolutionResult(_, artFiles, arts, _) = getProjectInfo(uuid)
     println(" -- Files -- ")
     
     val groups = artFiles groupBy { x => x._2.location.take(x._2.location.lastIndexOf('/')) }

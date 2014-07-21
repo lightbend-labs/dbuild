@@ -20,6 +20,7 @@ of deploy records, with the following structure:
      "credentials" : <optional-credentials>,
      "projects"    : [<project1>,<project2>,...]
      "sign"        : <optional-sign-info>
+     "index"       : <optional-index-data>
     }, ...]
    }
 
@@ -79,6 +80,9 @@ certain repository only scala-library and scala-compiler, for example. The synta
 Only the projects that completed their build succesfully will be deployed; the failed ones
 will be skipped with an error message. If there is only one project in the list, either
 a string or a from/publish record, the square brackets in the list can be omitted.
+
+index
+  An optional descriptor for the generation of index data; a full description is below.
 
 sign
   If this optional section is included, the artifacts will be signed with the specified key
@@ -147,6 +151,49 @@ For example:
   not match the checksum that was calculated on the server during the deployment of the main file. Again, this
   may be the result of some unexpected build anomaly, or it may be caused by a failure while uploading the artifact
   files to the repository server.
+
+Index generation
+-----------------
+
+Optionally, dbuild can generate a file containing a summary of the modules whose artifacts have been deployed to
+each repository. You can just define the ``index`` field in the relevant deploy configuration (above), as follows:
+
+.. code-block:: javascript
+
+  {
+     "uri"         : <target-repository>,
+     "credentials" : <optional-credentials>,
+     "filename"    : <index-file-name>,
+     "version"     : <version-string>,
+     "family"      : <family-string>,
+     "date"        : <date-specification>
+  }
+
+The fields are as follows:
+
+uri
+  The target repository or directory where the index file will be stored; this can be either the same
+  uri as the one in the deploy block, or a different target. This field has the same format as the
+  uri in the deploy configuration section above.
+
+credentials
+  If the target for the index file requires credentials, please supply them here,
+  following the format described above.
+  // Specified in ISO-8601 format, parsed via com.fasterxml.jackson.databind.util.ISO8601DateFormat
+
+filename
+  This is the name of the index file that will be stored in the repository.
+
+version
+  You may specify here a version string, which will be included as-is in the index file.
+
+family
+  You may specify here a "family" information string; it will also be included as-is in the index file.
+
+date
+  This date will be included in the index file; it must be specified in the ISO-8601 format, as in:
+  ``yyyy-MM-ddThh:mm:ss[.sss][Z|[+-]hh:mm]``. The final timezone, or a 'Z', is required.
+  The build time can be automatically used by specifying: ``date: ${vars.auto.timestamp}``.
 
 |
 

@@ -34,6 +34,7 @@ object Recycling {
   def updateTimeStamp(dir: File) = {
     val dateFormat = new MailDateFormat()
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+    // TODO: Formats are not thread-safe
     val date = dateFormat.format(new Date())
     writeStringToFile(timeStampFile(dir), date + "\n", "UTF-8")
     successFile(dir).delete()

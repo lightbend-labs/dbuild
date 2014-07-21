@@ -130,6 +130,20 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.info("----------")
     log.info("Assembling dependencies...")
     val artifacts = allConfigAndExtracted.flatMap(_.extracted.projects.flatMap(_.artifacts))
+    // we create a list of subprojects using the lists of subprojects extracted from the
+    // component projects. The way in which said subprojects are created MUST match the
+    // equivalent logic in the runBuild() method, below.
+    // TODO: the alignment between subproject name, moduleinfo, and set of artifacts is
+    // rather lax in the code at the moment. It should be reinforced and made more systematic.
+    //
+    // first, associate the list of subprojects with each component project
+    val projectsAndSubprojects = allConfigAndExtracted.map { pce =>
+      val projMeta = pce.extracted.getHead
+      pce.config.name -> projMeta.subproj
+    }
+    // postprocessing of the subproject names
+    val adapted = adaptSubProjects(projectsAndSubprojects)
+
     val newMeta = ExtractedBuildMeta("0.0.0",
       allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>
         // remove all dependencies that are not already provided by this
@@ -141,11 +155,42 @@ object AssembleBuildSystem extends BuildSystemCore {
         }
         p.copy(dependencies = p.dependencies.diff(ignoredDeps))
       }),
-      partOutcomes.map { _.project })
+      adapted.flatMap(_._2))
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta
   }
 
+  // postprocess the list of subprojects obtained from the component projects, and
+  // make them unique and recognizable when grouped together
+  private def adaptSubProjects(projectsAndSubprojects: Seq[(String, Seq[String])]): Seq[(String, Seq[String])] = {
+    // in order to avoid ambiguities, replace "default-sbt-project" with the project name, or
+    // prepend to "default-sbt-project" the project name, in case the project name is already taken
+    // as a subproject name.
+    val projectsAndSubprojects1 = projectsAndSubprojects.map {
+      case (name, subs) => (name, subs.map { sub =>
+        if (sub == "default-sbt-project") {
+          if (!subs.contains(name))
+            name // if we can use "name" alone, do so
+          else // else, make it (more) unique
+            name + "-default-sbt-project"
+        } else sub
+      })
+    }
+    // finally, if any project names are duplicated, make them unique
+    val allSubProjects = projectsAndSubprojects1.flatMap { _._2 }
+    val nonUniqueSubProjs = allSubProjects.diff(allSubProjects.distinct).distinct
+    val projectsAndSubprojects2 = projectsAndSubprojects1.map {
+      case (proj, subs) => (proj, subs.map { sub =>
+        if (nonUniqueSubProjs.contains(sub)) proj + "-" + sub else sub
+      })
+    }
+    // here, projectsAndSubprojects2 contains the updated map from
+    // project names to the new list of subprojects, which is in
+    // the same order of the original list of subprojects and can
+    // be therefore used with a "zip" on data indexed by the original
+    // one, in order to perform a replacement (in BuildArtifactsOut).
+    projectsAndSubprojects2
+  }
   // runBuild() is called with the (empty) root source resolved, but the parts have not been checked out yet.
   // Therefore, we will call localBuildRunner.checkCacheThenBuild() on each part,
   // which will in turn resolve it and then build it (if not already in cache).
@@ -232,23 +277,24 @@ object AssembleBuildSystem extends BuildSystemCore {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)
         }
-        val artifactsSafe = BuildArtifactsOut(artifactsOut.results.map { sub =>
-          if (sub.subName == "default-sbt-project")
-            sub.copy(subName = p.name + "-default-sbt-project") else sub
-        })
-        val q = (p.name, artifactsSafe)
+        val q = (p.name, artifactsOut)
         log.debug("---> " + q)
         (q, repeatableProjectBuild)
       }
     }).unzip
 
-    // We might have duplicated subprojects. Make them unique if that is the case
-    val subProjects = preCrossPreDupsArtifactsMap.map { _._2 }.flatMap { _.results }.map { _.subName }
-    val nonUniqueSubProjs = subProjects.diff(subProjects.distinct).distinct
+    val projectsAndSubprojects = preCrossPreDupsArtifactsMap.map {
+      case (proj, bao) =>
+        proj -> bao.results.map { _.subName }
+    }
+    // postprocessing the subproject names, to make them unique
+    val adapted = adaptSubProjects(projectsAndSubprojects).toMap
     val preCrossArtifactsMap = preCrossPreDupsArtifactsMap.map {
-      case (proj, arts) =>
-        (proj, BuildArtifactsOut(arts.results.map { sub =>
-          if (nonUniqueSubProjs.contains(sub)) sub.copy(subName = proj + sub.subName) else sub
+      case (proj, bao) =>
+        val newSubProjs = adapted(proj)
+        (proj, bao.copy(results = (bao.results zip newSubProjs).map {
+          case (subArt, newSubName) =>
+            subArt.copy(subName = newSubName)
         }))
     }
 
@@ -272,7 +318,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.info("Retrieving artifacts")
     log.debug("into " + localRepo)
     val artifactLocations = LocalRepoHelper.getArtifactsFromUUIDs(log.info, localBuildRunner.repository,
-        Seq(localRepo), Seq(uuids), Seq(""), buildData.debug) // retrieve only the base level, space "" (no external dependencies)
+      Seq(localRepo), Seq(uuids), Seq(""), buildData.debug) // retrieve only the base level, space "" (no external dependencies)
 
     // ------
     // ok. At this point, we have:
@@ -328,7 +374,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val artifactsMap = preCrossArtifactsMap map {
       case (projName, BuildArtifactsOut(subs)) => (projName, BuildArtifactsOut(
         subs map {
-          case BuildSubArtifactsOut(subProjName, artifacts, shas) =>
+          case BuildSubArtifactsOut(subProjName, artifacts, shas, moduleInfo) =>
             val renamedArtifacts = artifacts map { l =>
               if (isScalaCoreArt(l)) l else l.copy(crossSuffix = crossSuff)
             }
@@ -413,7 +459,15 @@ object AssembleBuildSystem extends BuildSystemCore {
                   sha
               }
             }
-            BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs)
+            BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs,
+              moduleInfo.copy(cross = moduleInfo.cross.copy(scalaVersion =
+                if (isScalaCore(moduleInfo.name, moduleInfo.organization)) None else
+                  crossSuff match {
+                    case "" => None
+                    case s if s.startsWith("_") => Some(s.drop(1))
+                    case s => sys.error("Internal Error: crossSuff has unexpected format: \"" + s + "\". Please report.")
+                  }
+              )))
         }))
     }
 
@@ -561,12 +615,9 @@ object AssembleBuildSystem extends BuildSystemCore {
     }
 
     // dbuild SHAs must be re-computed (since the POM/Ivy files changed)
-    //
-    val out = BuildArtifactsOut(artifactsMap.map {
-      case (project, arts) =>
-        val modArtLocs = arts.results.flatMap { _.artifacts }
-        BuildSubArtifactsOut(project, modArtLocs, projSHAs(modArtLocs.map { _.info }, crossSuff))
-    })
+    // We preserve the list of original subprojects (and consequently modules),
+    // where the subproject names may be slightly renamed in order to avoid collisions.
+    val out = BuildArtifactsOut(artifactsMap flatMap { _._2.results })
     log.debug("out: " + writeValue(out))
     out
 

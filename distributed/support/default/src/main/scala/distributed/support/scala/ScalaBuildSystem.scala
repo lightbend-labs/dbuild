@@ -279,7 +279,10 @@ object ScalaBuildSystem extends BuildSystemCore {
           // The "None" in ArtifactLocation is the set of extraAttributes, which is only relevant in case
           // the artifact is an sbt plugin; we do not expect the Scala compiler to produce sbt plugins.
           BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, ver, cross, pluginAttrs = None) },
-            projSHAs(proj.artifacts, cross))
+            projSHAs(proj.artifacts, cross),
+            com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = proj.organization,
+              name = proj.name, version = version, com.typesafe.reactiveplatform.manifest.CrossBuildProperties(None, None))
+          )
       })
 
     val out = getScalaArtifactsOut()

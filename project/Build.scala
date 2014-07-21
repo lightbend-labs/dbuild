@@ -15,7 +15,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.9.1"
+  def MyVersion: String = "0.9.2-SNAPSHOT"
   
   lazy val root = (
     Project("root", file(".")) 
@@ -55,9 +55,13 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       dependsOnRemote(typesafeConfig)
     )
 
+  lazy val dindex = (
+      DmodProject("indexmeta")
+    )
+
   lazy val dmeta = (
       DmodProject("metadata")
-      dependsOn(graph, hashing)
+      dependsOn(graph, hashing, dindex)
       dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
     )
 
@@ -115,7 +119,7 @@ object Defaults {
   lazy val dbuild = (
       DmodProject("build")
       dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta)
-      dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop)
+      dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop, commonsLang)
       dependsOnSbt(sbtLaunchInt, sbtLauncher)
       settings(skip210:_*)
     )

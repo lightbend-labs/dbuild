@@ -97,19 +97,23 @@ abstract class OptionTask(log: Logger) {
     // if not partialOK:
     //   if bad is empty, then issue message for good and reload everything
     //   if bad is not empty, then issue message for bad and do nothing else
-    def reloadGood() = good map {
-      case (depl, proj) =>
-        val subprojs: Seq[String] = depl match {
-          case SelectorSubProjects(SubProjects(from, publish)) => publish
-          case SelectorProject(_) => Seq[String]()
-        }
-        val (arts, msg) = LocalRepoHelper.materializePartialProjectRepository(proj.uuid, subprojs, cache, dir, debug = false)
-        msg foreach { log.info(_) }
+    def reloadGood() = {
+      val seqArtsModInfos = good map {
+        case (depl, proj) =>
+          val subprojs: Seq[String] = depl match {
+            case SelectorSubProjects(SubProjects(from, publish)) => publish
+            case SelectorProject(_) => Seq[String]()
+          }
+          val (arts, modInfos, msg) = LocalRepoHelper.materializePartialProjectRepository(proj.uuid, subprojs, cache, dir, debug = false)
+          msg foreach { log.info(_) }
+          (arts, modInfos)
+      }
+      (seqArtsModInfos.flatMap(_._1), seqArtsModInfos.flatMap(_._2))
     }
     def issueMsg(set: Set[(SelectorElement, RepeatableProjectBuild)], msg: String, l: (=> String) => Unit) =
       if (set.nonEmpty) l(msg + (set.map(_._1.name).toSeq.sorted.mkString("", ", ", "")))
 
-    if (partialOK) {
+    val (goodArts,goodMods) = if (partialOK) {
       issueMsg(good, msgGood, log.info)
       issueMsg(bad, msgBad, log.warn)
       reloadGood()
@@ -119,8 +123,9 @@ abstract class OptionTask(log: Logger) {
         reloadGood()
       } else {
         issueMsg(bad, msgBad, log.warn)
+        (Set[ArtifactLocation](), Set[com.typesafe.reactiveplatform.manifest.ModuleInfo]())
       }
     }
-    (good, bad)
+    (good, goodArts, goodMods, bad)
   }
 }

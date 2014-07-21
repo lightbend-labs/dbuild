@@ -610,7 +610,12 @@ object DistributedRunner {
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
       val newFilesShas = currentFiles.diff(previousFiles).map { LocalRepoHelper.makeArtifactSha(_, localRepo) }
 
-      (state9, (currentFiles, BuildSubArtifactsOut(normalizedProjectName(ref, baseDirectory), artifacts, newFilesShas)))
+      // extraction of moduleInfo
+      val (state10, mi) = Project.extract(state9).runTask(moduleInfo in ref, state9)
+
+      (state10, (currentFiles,
+        BuildSubArtifactsOut(normalizedProjectName(ref, baseDirectory), artifacts, newFilesShas, mi)
+      ))
     }
 
     val (state3, (files, artifactsAndFiles)) = buildAggregate(buildTestPublish)
@@ -763,7 +768,27 @@ object DistributedRunner {
       version, if (isSbtPlugin) "" else crossSuffix, if (isSbtPlugin) Some(SbtPluginAttrs(sbtbv, sbv)) else None)
   }
 
+  def generateModuleInfo(organization: String, name: String, version: String, scalaVersion: String, scalaBinaryVersion: String,
+    sbtVersion: String, sbtBinaryVersion: String, sbtPlugin: Boolean, crossVersion: sbt.CrossVersion): com.typesafe.reactiveplatform.manifest.ModuleInfo = {
+    import com.typesafe.reactiveplatform.manifest._
+    // according to the specificatin of CrossBuildProperties:
+    val someScala: Option[String] = crossVersion match {
+      case CrossVersion.Disabled => None
+      case x: CrossVersion.Binary => Some(scalaBinaryVersion)
+      case x: CrossVersion.Full => Some(scalaVersion)
+      case _ => sys.error("Internal error: unknown crossVersion in generateModuleInfo(). Please report.")
+    }
+    val cbp = if (sbtPlugin) {
+      CrossBuildProperties(someScala, Some(sbtBinaryVersion))
+    } else {
+      CrossBuildProperties(someScala, None)
+    }
+    ModuleInfo(organization, name, version, cbp)
+  }
+
   def projectSettings: Seq[Setting[_]] = Seq(
     extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
-      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations)
+      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations,
+    moduleInfo <<= (Keys.organization, Keys.name, Keys.version, Keys.scalaVersion, Keys.scalaBinaryVersion,
+      Keys.sbtVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin, Keys.crossVersion) map generateModuleInfo)
 }

@@ -44,9 +44,7 @@ case class RepeatableProjectBuild(configAndExtracted: ProjectConfigAndExtracted,
   def config = configAndExtracted.config
 
   def extra[T](implicit m: Manifest[T]) = configAndExtracted.config.getExtra[T]
-  def getCommit = try Option((new java.net.URI(configAndExtracted.config.uri)).getFragment) catch {
-    case e: java.net.URISyntaxException => None
-  }
+  def getCommit = configAndExtracted.config.getCommit
 }
 
 /**

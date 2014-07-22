@@ -74,6 +74,10 @@ case class ProjectBuildConfig(name: String,
     copy(crossVersion = Some(cv), checkMissing = Some(cm), useJGit = Some(jg), space = Some(sp))
   }
 
+  def getCommit = try Option((new java.net.URI(uri)).getFragment) catch {
+    case e: java.net.URISyntaxException => None
+  }
+
   // sanity check on the project name
   Utils.testProjectName(name)
 }

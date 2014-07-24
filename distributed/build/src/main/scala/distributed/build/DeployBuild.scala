@@ -377,7 +377,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
   class DeployFiles extends Deploy[Unit] {
     def deploy[Unit](options: DeployTarget, dir: File) = {
       // copy to a local path
-      val target = (new _root_.java.net.URI(options.uri)).getPath
+      val target = (new _root_.java.net.URI(options.uri)).toURL.getPath
       log.info("Copying artifacts to " + target + "...")
       // Overwrite, and preserve timestamps
       IO.copyDirectory(dir, new File(target), true, true)

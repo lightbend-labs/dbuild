@@ -34,7 +34,7 @@ repository-uri
     The artifacts will be copied to the local file system. The directory will be created
     if it does not exist. Existing files in that directory with colliding names will be
     overwritten; the other files that were previously in the same directory will be left
-    untouched.
+    untouched. A relative path can be written like ``file:path``.
 
   ``http://hostname:port/path1/path2``
     A Maven or Ivy (or other) remote repository. It can also use the "https" scheme, and

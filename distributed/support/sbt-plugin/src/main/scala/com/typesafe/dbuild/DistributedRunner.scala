@@ -769,7 +769,7 @@ object DistributedRunner {
   }
 
   def generateModuleInfo(organization: String, name: String, version: String, scalaVersion: String, scalaBinaryVersion: String,
-    sbtVersion: String, sbtBinaryVersion: String, sbtPlugin: Boolean, crossVersion: sbt.CrossVersion): com.typesafe.reactiveplatform.manifest.ModuleInfo = {
+    sbtVersion: String, sbtBinaryVersion: String, isSbtPlugin: Boolean, crossVersion: sbt.CrossVersion): com.typesafe.reactiveplatform.manifest.ModuleInfo = {
     import com.typesafe.reactiveplatform.manifest._
     // according to the specificatin of CrossBuildProperties:
     val someScala: Option[String] = crossVersion match {
@@ -778,8 +778,8 @@ object DistributedRunner {
       case x: CrossVersion.Full => Some(scalaVersion)
       case _ => sys.error("Internal error: unknown crossVersion in generateModuleInfo(). Please report.")
     }
-    val cbp = if (sbtPlugin) {
-      CrossBuildProperties(someScala, Some(sbtBinaryVersion))
+    val cbp = if (isSbtPlugin) {
+      CrossBuildProperties(Some(scalaBinaryVersion), Some(sbtBinaryVersion))
     } else {
       CrossBuildProperties(someScala, None)
     }

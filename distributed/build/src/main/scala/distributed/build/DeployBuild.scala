@@ -26,9 +26,17 @@ import com.jcraft.jsch.ChannelSftp
 class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTask(log) {
   def id = "Deploy"
   def beforeBuild(projectNames: Seq[String]) = {
-    options.deploy foreach { d =>
-      // just a sanity check on the project list (we don't use the result)
-      val _ = d.projects.flattenAndCheckProjectList(projectNames.toSet)
+    IO.withTemporaryDirectory { indexDir =>
+      options.deploy foreach { d =>
+        // just a sanity check on the project list (we don't use the result)
+        val _ = d.projects.flattenAndCheckProjectList(projectNames.toSet)
+        d.index foreach { indexOptions =>
+          // sanity check, in case the supplied file name is something silly like "../xyz" or "/xyz/..."
+          val indexFile = new File(indexDir, indexOptions.filename).getCanonicalFile
+          if (!(indexFile.getCanonicalPath().startsWith(indexDir.getCanonicalPath())))
+            sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
+        }
+      }
     }
     checkDeployFullBuild(options.deploy)
   }
@@ -132,9 +140,6 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
           try IO.withTemporaryDirectory { indexDir =>
             import org.apache.commons.lang.time.DateUtils
             val indexFile = new File(indexDir, indexOptions.filename).getCanonicalFile
-            // sanity check, in case the supplied file name is something silly like "../xyz" or "/xyz/..."
-            if (!(indexFile.getCanonicalPath().startsWith(indexDir.getCanonicalPath())))
-              sys.error("The specified file name \"" + indexOptions.filename + "\" is illegal, as it refers to a location outside the target URI")
             // TODO: commons-lang should be upgraded to the new Apache commons-lang3
             // Date handling. Note that the date will still be serialized/deserialized as a timestamp.
             // Jackson has support for ISO-8601 format; we use it to parse the selected date, but it is
@@ -372,7 +377,7 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
   class DeployFiles extends Deploy[Unit] {
     def deploy[Unit](options: DeployTarget, dir: File) = {
       // copy to a local path
-      val target = (new _root_.java.net.URI(options.uri)).getPath
+      val target = (new _root_.java.net.URI(options.uri)).toURL.getPath
       log.info("Copying artifacts to " + target + "...")
       // Overwrite, and preserve timestamps
       IO.copyDirectory(dir, new File(target), true, true)

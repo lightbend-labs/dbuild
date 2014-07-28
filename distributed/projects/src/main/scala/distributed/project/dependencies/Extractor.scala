@@ -77,6 +77,7 @@ class Extractor(
       // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
       logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
       val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, dir, this, logger))
+      config.buildConfig.getCommit foreach { s: String => logger.info("Commit: " + s) }
       logger.debug("Repeatable Config: " + writeValue(config))
       val outcome = extractedResolvedWithCache(config, dir, logger, debug)
       outcome match {

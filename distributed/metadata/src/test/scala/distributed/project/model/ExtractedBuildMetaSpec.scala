@@ -13,7 +13,8 @@ object ExtractedBuildMetaSpec extends Specification {
       
       readValue[ExtractedBuildMeta](
 """{
-  version = "1.0", "proj-info" = [{
+  "proj-info" = [{
+  version = "1.0",
   projects = [{
           name = "p1"
           organization = "o1"

@@ -96,9 +96,10 @@ object Packaging {
  directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}
 
 [ivy]
-  ivy-home: ${user.home}/.dbuild/ivy/
+  ivy-home: ${dbuild.ivy.home-${user.home}/.ivy2/}
   checksums: ${sbt.checksums-sha1,md5}
   override-build-repos: ${sbt.override.build.repos-false}
+  repository-config: ${sbt.repository.config-${sbt.global.base-${user.home}/.sbt}/repositories}
 """ format(sv, name, v, clazz))
     tprops -> ("bin/d"+name+".properties")
   }

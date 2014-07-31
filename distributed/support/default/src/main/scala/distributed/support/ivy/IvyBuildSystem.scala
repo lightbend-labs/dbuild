@@ -156,12 +156,12 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
       com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = module.getOrganisation,
         name = fixName(module.getName), version = version, {
-          import com.typesafe.reactiveplatform.manifest.CrossBuildProperties
+          import com.typesafe.reactiveplatform.manifest.ModuleAttributes
           // We need to calculate CrossBuildProperties; that is made a bit complicated by the fact that
           // we specify the ivy module using the full crossversioned name. We need to reconstruct the rest
           // from the information available.
           if (modulePluginInfo.nonEmpty) { // it's a plugin
-            CrossBuildProperties(modulePluginInfo map { _.scalaVersion }, modulePluginInfo map { _.sbtVersion })
+            ModuleAttributes(modulePluginInfo map { _.scalaVersion }, modulePluginInfo map { _.sbtVersion })
           } else {
             // the cross suffix can be obtained by diffing name and fixname(name)
             val crossSuff = module.getName.drop(fixName(module.getName).length)
@@ -170,7 +170,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
               case s if s.startsWith("_") => Some(s.drop(1))
               case s => sys.error("Internal Error: crossSuff has unexpected format: \"" + s + "\". Please report.")
             }
-            CrossBuildProperties(someScala, None)
+            ModuleAttributes(someScala, None)
           }
         }
       )

@@ -138,18 +138,8 @@ class DeployBuild(options: GeneralOptions, log: logging.Logger) extends OptionTa
         // We now need to prepare an index file, if requested
         options.index foreach { indexOptions =>
           try IO.withTemporaryDirectory { indexDir =>
-            import org.apache.commons.lang.time.DateUtils
             val indexFile = new File(indexDir, indexOptions.filename).getCanonicalFile
-            // TODO: commons-lang should be upgraded to the new Apache commons-lang3
-            // Date handling. Note that the date will still be serialized/deserialized as a timestamp.
-            // Jackson has support for ISO-8601 format; we use it to parse the selected date, but it is
-            // serialized as a simple timestamp (see http://wiki.fasterxml.com/JacksonFAQDateHandling for more details)
-            // NB: com.fasterxml.jackson.databind.util.ISO8601DateFormat works ok, but is unable
-            // to parse ISO-8601 without separators, like "20140807T..."
-            val date = DateUtils.parseDate(indexOptions.date, Array("yyyy-MM-dd'T'HH:mm:ssZZ",
-              "yyyyMMdd'T'HHmmssZZ", "yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyyMMdd'T'HHmmss'Z'"))
-            val platformInfo = com.typesafe.reactiveplatform.manifest.PlatformInfo(indexOptions.version, indexOptions.family, date)
-            val index = com.typesafe.reactiveplatform.manifest.Manifest(platformInfo, moduleInfos.toSeq)
+            val index = com.typesafe.reactiveplatform.manifest.Index(moduleInfos.toSeq)
             IO.write(indexFile, Utils.writeValue(index))
             Deploy.deploy(target = indexOptions, indexDir)
           }

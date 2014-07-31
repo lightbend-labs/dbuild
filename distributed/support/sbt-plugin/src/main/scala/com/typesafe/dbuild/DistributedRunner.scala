@@ -779,9 +779,9 @@ object DistributedRunner {
       case _ => sys.error("Internal error: unknown crossVersion in generateModuleInfo(). Please report.")
     }
     val cbp = if (isSbtPlugin) {
-      CrossBuildProperties(Some(scalaBinaryVersion), Some(sbtBinaryVersion))
+      ModuleAttributes(Some(scalaBinaryVersion), Some(sbtBinaryVersion))
     } else {
-      CrossBuildProperties(someScala, None)
+      ModuleAttributes(someScala, None)
     }
     ModuleInfo(organization, name, version, cbp)
   }

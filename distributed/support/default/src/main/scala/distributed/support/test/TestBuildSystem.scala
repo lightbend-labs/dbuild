@@ -44,7 +44,7 @@ object TestBuildSystem extends BuildSystemCore {
       proj =>
         BuildSubArtifactsOut(proj.name, Seq.empty, Seq.empty,
           com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = proj.organization,
-            name = proj.name, version = version, com.typesafe.reactiveplatform.manifest.CrossBuildProperties(None, None)))
+            name = proj.name, version = version, com.typesafe.reactiveplatform.manifest.ModuleAttributes(None, None)))
     })
   }
 

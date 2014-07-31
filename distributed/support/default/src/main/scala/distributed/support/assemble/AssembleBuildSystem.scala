@@ -460,7 +460,7 @@ object AssembleBuildSystem extends BuildSystemCore {
               }
             }
             BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs,
-              moduleInfo.copy(cross = moduleInfo.cross.copy(scalaVersion =
+              moduleInfo.copy(attributes = moduleInfo.attributes.copy(scalaVersion =
                 if (isScalaCore(moduleInfo.name, moduleInfo.organization)) None else
                   crossSuff match {
                     case "" => None

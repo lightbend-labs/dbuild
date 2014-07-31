@@ -281,7 +281,7 @@ object ScalaBuildSystem extends BuildSystemCore {
           BuildSubArtifactsOut(proj.name, proj.artifacts map { ArtifactLocation(_, ver, cross, pluginAttrs = None) },
             projSHAs(proj.artifacts, cross),
             com.typesafe.reactiveplatform.manifest.ModuleInfo(organization = proj.organization,
-              name = proj.name, version = version, com.typesafe.reactiveplatform.manifest.CrossBuildProperties(None, None))
+              name = proj.name, version = version, com.typesafe.reactiveplatform.manifest.ModuleAttributes(None, None))
           )
       })
 

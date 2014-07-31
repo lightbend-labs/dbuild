@@ -524,11 +524,7 @@ case class IndexOptions(
   uri: String,
   /** path to the credentials file */
   credentials: Option[String],
-  filename: String,
-  version: String,
-  family: String,
-  // Specified in ISO-8601 format, parsed via com.fasterxml.jackson.databind.util.ISO8601DateFormat
-  date: String) extends DeployTarget
+  filename: String) extends DeployTarget
 
 /** Comparison information. */
 case class ComparisonOptions(

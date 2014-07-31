@@ -15,7 +15,7 @@ case class ModuleInfo(
   organization: String,
   name: String,
   version: String,
-  cross: CrossBuildProperties)
+  attributes: ModuleAttributes)
 
 /** This represents the cross-building components of modules which will be used during
 * resolution.
@@ -27,7 +27,7 @@ case class ModuleInfo(
 * - Libraries without cross versioning (e.g. JUnit) -
 * + The scalaVersion + sbtVersion should be "none"
 * - Libraries published to Maven/Ivy with "shaded" module name
-* + The scalaVersion string should *match* the version encoded in the module name.
+* + The scalaVersion string must match the version encoded in the module name.
 * e.g. akka_2.10 would have a scalaVersion set to Some("2.10"), while
 * akka_2.9.2 would have a scalaVersion set to Some("2.9.2")
 * - Sbt plugins, which use extra attributes (the right way) to store these versions,
@@ -40,4 +40,4 @@ case class ModuleInfo(
 * scalaVersion=Some("2.9.1"), sbtVersion=Some("0.11.3")
 *
 */
-case class CrossBuildProperties(scalaVersion: Option[String], sbtVersion: Option[String])
+case class ModuleAttributes(scalaVersion: Option[String], sbtVersion: Option[String])

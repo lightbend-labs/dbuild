@@ -164,9 +164,6 @@ each repository. You can just define the ``index`` field in the relevant deploy 
      "uri"         : <target-repository>,
      "credentials" : <optional-credentials>,
      "filename"    : <index-file-name>,
-     "version"     : <version-string>,
-     "family"      : <family-string>,
-     "date"        : <date-specification>
   }
 
 The fields are as follows:
@@ -183,17 +180,6 @@ credentials
 
 filename
   This is the name of the index file that will be stored in the repository.
-
-version
-  You may specify here a version string, which will be included as-is in the index file.
-
-family
-  You may specify here a "family" information string; it will also be included as-is in the index file.
-
-date
-  This date will be included in the index file; it must be specified in the ISO-8601 format, as in:
-  ``yyyy-MM-ddThh:mm:ss[.sss][Z|[+-]hh:mm]``. The final timezone, or a 'Z', is required.
-  The build time can be automatically used by specifying: ``date: ${vars.auto.timestamp}``.
 
 |
 

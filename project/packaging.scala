@@ -76,7 +76,7 @@ object Packaging {
   name: d-%s
   version: %s
   class: %s
-  cross-versioned: true
+  cross-versioned: binary
   components: xsbti
 
 [repositories]

@@ -88,7 +88,11 @@ object SbtBuilder {
     subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean], sbtSettings: Seq[Seq[String]],
     log: _root_.sbt.Logger, debug: Boolean): Unit = {
     // we do the rewiring on each level using onLoad; we generate the artifacts at the end
-    val levels = SbtRunner.buildLevels(projectDir)
+    // Note:  Because the user could configure settings/projects for build levels which do not have configuration,
+    //        we must figure out if there is configuration which will be written to a given build level.
+    // TODO - We may just need to check sbtSettings.size + the detected build levels...
+    val levels: Int =
+      Seq(SbtRunner.buildLevels(projectDir), subprojs.size, crossVers.size, checkMiss.size, sbtSettings.size).max
     // create the .dbuild dirs in each level (we will use it to store the ivy cache, and other info)
     SbtRunner.prepDBuildDirs(projectDir, levels)
 

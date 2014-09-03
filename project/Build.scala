@@ -54,6 +54,11 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       LibProject("hashing")
       dependsOnRemote(typesafeConfig)
     )
+  lazy val deploy = (
+      LibProject("deploy")
+      dependsOnRemote(jacks, jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO,  jsch)
+      dependsOnSbt(sbtLogging, sbtIo)
+    )
 
   lazy val dindex = (
       DmodProject("indexmeta")
@@ -61,7 +66,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   lazy val dmeta = (
       DmodProject("metadata")
-      dependsOn(graph, hashing, dindex)
+      dependsOn(graph, hashing, dindex, deploy)
       dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
     )
 
@@ -118,7 +123,7 @@ object Defaults {
   )
   lazy val dbuild = (
       DmodProject("build")
-      dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta)
+      dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta, deploy)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop, commonsLang)
       dependsOnSbt(sbtLaunchInt, sbtLauncher)
       settings(skip210:_*)

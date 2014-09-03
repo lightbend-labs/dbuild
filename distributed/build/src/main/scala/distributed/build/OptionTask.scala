@@ -2,7 +2,7 @@ package distributed.build
 
 import distributed.project.model._
 import distributed.logging.Logger
-import Creds.loadCreds
+import com.typesafe.dbuild.deploy.Creds.loadCreds
 import Logger.prepareLogMsg
 import distributed.project.model._
 import java.io.File

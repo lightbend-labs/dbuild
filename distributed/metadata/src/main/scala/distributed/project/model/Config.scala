@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ser.std.StringSerializer
 import com.fasterxml.jackson.databind.ser.impl.StringArraySerializer
 import collection.JavaConverters._
+import com.typesafe.dbuild.deploy.DeployTarget
 
 /**
  * Metadata about a build.  This is extracted from a config file and contains enough information
@@ -472,16 +473,6 @@ class SeqFlexSerializer[T](implicit m: Manifest[T]) extends JsonSerializer[Flex[
         vs.serialize(value.s.toArray, g, p)
     }
   }
-}
-
-/**
- * A generic (S3, http, https, etc) deploy target.
- * The uri refers to a remote directory or container, and
- * does not include the deployed file names.
- */
-abstract class DeployTarget {
-  def uri: String
-  def credentials: Option[String]
 }
 
 /** Deploy information. */

@@ -1,4 +1,4 @@
-package distributed.build
+package com.typesafe.dbuild.deploy
 
 import java.io.File
 

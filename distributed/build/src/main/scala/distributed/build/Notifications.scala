@@ -2,14 +2,13 @@ package distributed.build
 
 import distributed.project.model._
 import distributed.logging.Logger
-import Creds.loadCreds
 import java.util.Properties
 import java.util.Date
 import javax.mail._
 import internet._
 import Message.RecipientType
 import RecipientType._
-import Creds.loadCreds
+import com.typesafe.dbuild.deploy.Creds.loadCreds
 import distributed.project.model.TemplateFormatter
 import dispatch.classic.{ Logger => _, _ }
 

@@ -61,48 +61,48 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     )
 
   lazy val dindex = (
-      DmodProject("indexmeta")
+      Project("indexmeta")
     )
 
   lazy val dmeta = (
-      DmodProject("metadata")
+      Project("metadata")
       dependsOn(graph, hashing, dindex, deploy)
       dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
     )
 
   // Projects relating to distributed builds.
   lazy val logging = (
-      DmodProject("logging")
+      Project("logging")
       dependsOn(graph)
       dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
     )
   lazy val actorLogging = (
-      DmodProject("actorLogging")
+      Project("actorLogging")
       dependsOn(logging)
       dependsOnAkka()
       dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
       settings(skip210:_*)
     )
   lazy val dcore = (
-      DmodProject("core")
+      Project("core")
       dependsOnRemote(javaMail)
       dependsOn(dmeta, graph, hashing, logging, drepo)
       dependsOnSbt(sbtIo)
     )
   lazy val dprojects = (
-      DmodProject("projects")
+      Project("projects")
       dependsOn(dcore, drepo, logging)
       dependsOnRemote(javaMail, commonsIO)
       dependsOnSbt(sbtIo, sbtIvy)
     )
   lazy val dactorProjects = (
-      DmodProject("actorProjects")
+      Project("actorProjects")
       dependsOn(dcore, actorLogging, dprojects)
       dependsOnSbt(sbtIo, sbtIvy)
       settings(skip210:_*)
     )
   lazy val drepo = (
-    DmodProject("repo")
+    Project("repo")
     dependsOn(dmeta, logging)
     dependsOnRemote(mvnAether, aetherWagon, dispatch)
     dependsOnSbt(sbtIo, sbtLaunchInt)
@@ -122,7 +122,7 @@ object Defaults {
       })
   )
   lazy val dbuild = (
-      DmodProject("build")
+      Project("build")
       dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta, deploy)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop, commonsLang)
       dependsOnSbt(sbtLaunchInt, sbtLauncher)
@@ -131,7 +131,7 @@ object Defaults {
 
   // Projects relating to supporting various tools in distributed builds.
   lazy val defaultSupport = (
-      SupportProject("default") 
+      Project("support") 
       dependsOn(dcore, drepo, dmeta, dprojects)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
@@ -139,7 +139,7 @@ object Defaults {
     ) 
   // A separate support project for git/jgit
   lazy val gitSupport = (
-      SupportProject("git") 
+      Project("supportGit") 
       dependsOn(dcore, drepo, dmeta, dprojects, defaultSupport)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
@@ -149,7 +149,8 @@ object Defaults {
 
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (
-    SbtPluginProject("distributed-sbt-plugin", file("distributed/support/sbt-plugin")) 
+    Project("sbtPlugin") 
+    settings(sbtPlugin := true)
     dependsOn(defaultSupport, dmeta)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
         val file = dir / "Update.scala"
@@ -201,26 +202,9 @@ trait BuildHelper extends Build {
     publishMavenStyle := false
   )
 
-  // TODO - Aggregate into a single JAR if possible for easier resolution later...
-  def SbtPluginProject(name: String, file: File) = (
-      Project(name, file)
-      settings(sbtPlugin := true)
-      // TODO - Publish maven style, etc.
-      settings(defaultDSettings:_*)
-    )
-  
-  /** Create library projects. */
-  def LibProject(name: String) = (
+  /** Create a project. */
+  def Project(name: String) = (
       Project(name, file(name)) 
-      settings(defaultDSettings:_*)
-    )
-  /** Create distributed build modules */
-  def DmodProject(name: String) = (
-      Project("d-" + name, file("distributed/"+name))
-      settings(defaultDSettings:_*)
-    )
-  def SupportProject(name: String) = (
-      Project("support-" + name, file("distributed/support/"+name))
       settings(defaultDSettings:_*)
     )
   
@@ -232,7 +216,7 @@ trait BuildHelper extends Build {
     def dependsOnAkka(): Project = p.settings(libraryDependencies <+= (scalaVersion) {sv => if (sv.startsWith("2.9")) akkaActor29 else akkaActor210})
   }
 
-  lazy val ddocs = (Project("d-docs",file("docs"))
+  lazy val ddocs = (Project("docs",file("docs"))
     settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++
       ghpages.settings ++ Seq(
 //      enableOutput in generatePdf in Sphinx := true,

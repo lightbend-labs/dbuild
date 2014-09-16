@@ -18,8 +18,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   def MyVersion: String = "0.9.2-SNAPSHOT"
   
   lazy val root = (
-    Project("root", file(".")) 
-    aggregate(graph,hashing,logging,actorLogging,dprojects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, gitSupport, drepo, dmeta, ddocs, dist, dindex)
+    Proj("root") 
+    aggregate(graph,hashing,logging,actorLogging,Projects,dactorProjects,dcore,sbtSupportPlugin, dbuild, defaultSupport, gitSupport, drepo, dmeta, ddocs, dist, dindex)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
     settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
@@ -29,7 +29,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   )
 
   lazy val dist = (
-    Project("dist", file("dist")/*, eclipse plugin bombs if we do this: settings = Packaging.settings */) 
+    Proj("dist")
+    /*, eclipse plugin bombs if we do this: settings = Packaging.settings */
     settings(Packaging.settings:_*)
     settings(
       mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDbuildProps,
@@ -48,61 +49,61 @@ object DistributedBuilderBuild extends Build with BuildHelper {
 
   // The component projects...
   lazy val graph = (
-      LibProject("graph")
+      Proj("graph")
     )
   lazy val hashing = (
-      LibProject("hashing")
+      Proj("hashing")
       dependsOnRemote(typesafeConfig)
     )
   lazy val deploy = (
-      LibProject("deploy")
+      Proj("deploy")
       dependsOnRemote(jacks, jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO,  jsch)
       dependsOnSbt(sbtLogging, sbtIo)
     )
 
   lazy val dindex = (
-      Project("indexmeta")
+      Proj("indexmeta")
     )
 
   lazy val dmeta = (
-      Project("metadata")
+      Proj("metadata")
       dependsOn(graph, hashing, dindex, deploy)
       dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
     )
 
-  // Projects relating to distributed builds.
+  // Projs relating to distributed builds.
   lazy val logging = (
-      Project("logging")
+      Proj("logging")
       dependsOn(graph)
       dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
     )
   lazy val actorLogging = (
-      Project("actorLogging")
+      Proj("actorLogging")
       dependsOn(logging)
       dependsOnAkka()
       dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
       settings(skip210:_*)
     )
   lazy val dcore = (
-      Project("core")
+      Proj("core")
       dependsOnRemote(javaMail)
       dependsOn(dmeta, graph, hashing, logging, drepo)
       dependsOnSbt(sbtIo)
     )
-  lazy val dprojects = (
-      Project("projects")
+  lazy val Projects = (
+      Proj("projects")
       dependsOn(dcore, drepo, logging)
       dependsOnRemote(javaMail, commonsIO)
       dependsOnSbt(sbtIo, sbtIvy)
     )
   lazy val dactorProjects = (
-      Project("actorProjects")
-      dependsOn(dcore, actorLogging, dprojects)
+      Proj("actorProjects")
+      dependsOn(dcore, actorLogging, Projects)
       dependsOnSbt(sbtIo, sbtIvy)
       settings(skip210:_*)
     )
   lazy val drepo = (
-    Project("repo")
+    Proj("repo")
     dependsOn(dmeta, logging)
     dependsOnRemote(mvnAether, aetherWagon, dispatch)
     dependsOnSbt(sbtIo, sbtLaunchInt)
@@ -122,7 +123,7 @@ object Defaults {
       })
   )
   lazy val dbuild = (
-      Project("build")
+      Proj("build")
       dependsOn(dactorProjects, defaultSupport, gitSupport, drepo, dmeta, deploy)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop, commonsLang)
       dependsOnSbt(sbtLaunchInt, sbtLauncher)
@@ -131,16 +132,16 @@ object Defaults {
 
   // Projects relating to supporting various tools in distributed builds.
   lazy val defaultSupport = (
-      Project("support") 
-      dependsOn(dcore, drepo, dmeta, dprojects)
+      Proj("support") 
+      dependsOn(dcore, drepo, dmeta, Projects)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
     ) 
   // A separate support project for git/jgit
   lazy val gitSupport = (
-      Project("supportGit") 
-      dependsOn(dcore, drepo, dmeta, dprojects, defaultSupport)
+      Proj("supportGit") 
+      dependsOn(dcore, drepo, dmeta, Projects, defaultSupport)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
@@ -149,7 +150,7 @@ object Defaults {
 
   // Distributed SBT plugin
   lazy val sbtSupportPlugin = (
-    Project("sbtPlugin") 
+    Proj("sbtPlugin") 
     settings(sbtPlugin := true)
     dependsOn(defaultSupport, dmeta)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
@@ -203,8 +204,8 @@ trait BuildHelper extends Build {
   )
 
   /** Create a project. */
-  def Project(name: String) = (
-      Project(name, file(name)) 
+  def Proj(name: String) = (
+      Project(name, file(if (name=="root") "." else name))
       settings(defaultDSettings:_*)
     )
   

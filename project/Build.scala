@@ -112,7 +112,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
         if(!dir.isDirectory) dir.mkdirs()
         s.log.info("Generating \"Defaults.scala\" for sbt "+sbtVer(sv)+" and Scala "+sv)
         IO.write(file, """
-package distributed.repo.core
+package com.typesafe.dbuild.repo.core
 
 object Defaults {
   val version = "%s"
@@ -159,7 +159,7 @@ object Defaults {
         s.log.info("Generating \"Update.scala\" for sbt "+sbtVer(sv)+" and Scala "+sv)
         val where = if (sbtVer(sv).startsWith("0.12")) "Project" else "Def"
         IO.write(file, """
-package com.typesafe.dbuild
+package com.typesafe.dbuild.plugin
 object SbtUpdate {
 def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.update[T]
 }

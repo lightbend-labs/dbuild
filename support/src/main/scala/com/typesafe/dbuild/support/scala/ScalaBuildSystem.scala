@@ -105,7 +105,7 @@ object ScalaBuildSystem extends BuildSystemCore {
 
     // Let's see if we can fix up the compiler used to compile this compiler.
     // Were we able to rematerialize a previous scala compiler in our input repo?
-    // (TODO: consolidate the method below with the similar method in DistributedRunner)
+    // (TODO: consolidate the method below with the similar method in DBuildRunner)
     def findArtifact(arts: Seq[ArtifactLocation],
       name: String, org: String): Option[ArtifactLocation] =
       (for {

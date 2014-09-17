@@ -11,7 +11,7 @@ import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generate
 import com.typesafe.sbt.S3Plugin
 import net.virtualvoid.sbt.cross.CrossPlugin
 
-object DistributedBuilderBuild extends Build with BuildHelper {
+object DBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
@@ -20,7 +20,7 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val root = (
     Proj("root") 
     aggregate(graph, hashing, logging, actorLogging, proj, actorProj,
-      core, plugin, dbuild, support, supportGit, repo, metadata, docs, dist, indexmeta)
+      core, plugin, dbuild, support, supportGit, drepo, metadata, docs, dist, indexmeta)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
     settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
@@ -34,8 +34,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
     /*, eclipse plugin bombs if we do this: settings = Packaging.settings */
     settings(Packaging.settings:_*)
     settings(
-      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDbuildProps,
-      mappings in Universal <+= (target, sourceDirectory, scalaVersion in repo, version in repo) map Packaging.makeDRepoProps,
+      mappings in Universal <+= (target, sourceDirectory, scalaVersion in dbuild, version in dbuild) map Packaging.makeDBuildProps,
+      mappings in Universal <+= (target, sourceDirectory, scalaVersion in drepo, version in drepo) map Packaging.makeDRepoProps,
       version := MyVersion,
       selectScalaVersion,
       // disable the publication of artifacts in dist if 2.10
@@ -72,7 +72,6 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       dependsOnRemote(jacks, jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
     )
 
-  // Projs relating to distributed builds.
   lazy val logging = (
       Proj("logging")
       dependsOn(graph)
@@ -88,12 +87,12 @@ object DistributedBuilderBuild extends Build with BuildHelper {
   lazy val core = (
       Proj("core")
       dependsOnRemote(javaMail)
-      dependsOn(metadata, graph, hashing, logging, repo)
+      dependsOn(metadata, graph, hashing, logging, drepo)
       dependsOnSbt(sbtIo)
     )
   lazy val proj = (
       Proj("proj")
-      dependsOn(core, repo, logging)
+      dependsOn(core, drepo, logging)
       dependsOnRemote(javaMail, commonsIO)
       dependsOnSbt(sbtIo, sbtIvy)
     )
@@ -103,8 +102,8 @@ object DistributedBuilderBuild extends Build with BuildHelper {
       dependsOnSbt(sbtIo, sbtIvy)
       settings(skip210:_*)
     )
-  lazy val repo = (
-    Proj("repo")
+  lazy val drepo = (
+    Proj("drepo")
     dependsOn(metadata, logging)
     dependsOnRemote(mvnAether, aetherWagon, dispatch)
     dependsOnSbt(sbtIo, sbtLaunchInt)
@@ -125,16 +124,15 @@ object Defaults {
   )
   lazy val dbuild = (
       Proj("build")
-      dependsOn(actorProj, support, supportGit, repo, metadata, deploy)
+      dependsOn(actorProj, support, supportGit, drepo, metadata, deploy)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop, commonsLang)
       dependsOnSbt(sbtLaunchInt, sbtLauncher)
       settings(skip210:_*)
     )
 
-  // Projects relating to supporting various tools in distributed builds.
   lazy val support = (
       Proj("support") 
-      dependsOn(core, repo, metadata, proj)
+      dependsOn(core, drepo, metadata, proj)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
@@ -142,14 +140,14 @@ object Defaults {
   // A separate support project for git/jgit
   lazy val supportGit = (
       Proj("supportGit") 
-      dependsOn(core, repo, metadata, proj, support)
+      dependsOn(core, drepo, metadata, proj, support)
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
       settings(skip210:_*)
     ) 
 
-  // Distributed SBT plugin
+  // SBT plugin
   lazy val plugin = (
     Proj("plugin") 
     settings(sbtPlugin := true)
@@ -198,8 +196,8 @@ trait BuildHelper extends Build {
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-    resolvers += Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns),
-    publishTo := Some(Resolver.url("typesafe-dbuild-temp", new URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots/"))(Resolver.ivyStylePatterns)),
+    publishTo <<= isSnapshot { snap => Some(Resolver.url("dbuild-publish-to",
+      new URL("https://private-repo.typesafe.com/typesafe/ivy-" + (if (snap) "snapshots/" else "releases/")))(Resolver.ivyStylePatterns)) },
     publishArtifact in (Compile, packageSrc) := false,
     publishMavenStyle := false
   )
@@ -223,11 +221,11 @@ trait BuildHelper extends Build {
       ghpages.settings ++ Seq(
 //      enableOutput in generatePdf in Sphinx := true,
 //      enableOutput in generateEpub in Sphinx := true,
-        git.remoteRepo := "git@github.com:typesafehub/distributed-build.git",
-      GhPagesKeys.synchLocal <<= Docs.synchLocalImpl,
-      publish := (),
-      publishLocal := ()
-    ):_*))
+        git.remoteRepo := "git@github.com:typesafehub/dbuild.git",
+        GhPagesKeys.synchLocal <<= Docs.synchLocalImpl,
+        publish := (),
+        publishLocal := ()
+      ):_*))
 
 
     // based on the related sbt source code

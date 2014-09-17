@@ -190,7 +190,7 @@ class SpaceSerializer extends JsonSerializer[Space] {
  * affect other parts of the dbuild behavior.
  */
 case class DBuildConfiguration(
-  build: SeqDBC, // auto-wrapped Seq[DistributedBuildConfig]
+  build: SeqDBC, // auto-wrapped Seq[DBuildConfig]
   options: GeneralOptions = GeneralOptions(), // pick defaults if empty
   vars: Option[Vars] = Some(Vars()),
   /**
@@ -240,8 +240,8 @@ case class ExtractionConfig(buildConfig: ProjectBuildConfig) {
  * fill in the ProjectBuildConfig (like, for example, extraction-version).
  *
  * These options, however, can affect the building stage; a copy of the record is
- * included in the RepeatableDistributedBuild, and is then included in each RepeatableProjectBuild
- * obtained from the repeatableBuilds within the RepeatableDistributedBuild.
+ * included in the RepeatableDBuildConfig, and is then included in each RepeatableProjectBuild
+ * obtained from the repeatableBuilds within the RepeatableDBuildConfig.
  * Therefore *ONLY* place in this section the global options that affect the repeatability of the
  * builds!! Place other global options elsewhere, in other top-level sections. Similarly, do no place
  * options that do not impact on the repeatability of the build inside the projects section; instead,
@@ -275,7 +275,7 @@ case class ExtractionConfig(buildConfig: ProjectBuildConfig) {
  * This section also contains the sbt version that should be used by default (unless overridden in the individual
  * projects) to compile all the projects. If not specified, the string "0.12.4" is used.
  */
-case class DistributedBuildConfig(projects: Seq[ProjectBuildConfig],
+case class DBuildConfig(projects: Seq[ProjectBuildConfig],
   /* deprecated, see deserializer */
   options: Option[DeprecatedBuildOptions],
   @JsonProperty("cross-version") crossVersion: SeqString /*Levels*/ = Seq.empty, //all missing values will be "disabled"
@@ -364,17 +364,17 @@ object SeqBoolean {
 }
 
 /**
- * Similar to the above, but for DistributedBuildConfig elements:
+ * Similar to the above, but for DBuildConfig elements:
  * a single one in the config file will automatically be turned into an array.
  */
 @JsonSerialize(using = classOf[SeqDBCSerializer])
 @JsonDeserialize(using = classOf[SeqDBCDeserializer])
-case class SeqDBC(override val s: Seq[DistributedBuildConfig]) extends Flex[DistributedBuildConfig](s)
-class SeqDBCDeserializer extends SeqFlexDeserializer[DistributedBuildConfig, SeqDBC]
-class SeqDBCSerializer extends SeqFlexSerializer[DistributedBuildConfig]
+case class SeqDBC(override val s: Seq[DBuildConfig]) extends Flex[DBuildConfig](s)
+class SeqDBCDeserializer extends SeqFlexDeserializer[DBuildConfig, SeqDBC]
+class SeqDBCSerializer extends SeqFlexSerializer[DBuildConfig]
 object SeqDBC {
-  implicit def SeqToSeqDBC(s: Seq[DistributedBuildConfig]): SeqDBC = SeqDBC(s)
-  implicit def SeqDBCToSeq(a: SeqDBC): Seq[DistributedBuildConfig] = a.s
+  implicit def SeqToSeqDBC(s: Seq[DBuildConfig]): SeqDBC = SeqDBC(s)
+  implicit def SeqDBCToSeq(a: SeqDBC): Seq[DBuildConfig] = a.s
 }
 
 /**
@@ -779,7 +779,7 @@ object SeqNotification {
   implicit def SeqNotificationToSeq(a: SeqNotification): Seq[Notification] = a.s
 }
 
-/** see DistributedBuildConfig for details. */
+/** see DBuildConfig for details. */
 trait ExtraOptions {
   def sbtVersion: String
   def extractionVersion: String

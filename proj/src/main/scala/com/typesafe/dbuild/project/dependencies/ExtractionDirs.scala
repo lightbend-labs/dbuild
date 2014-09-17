@@ -4,8 +4,8 @@ import java.io.File
 
 /**
  * dbuild-specific file names used during extraction. Also
- * see distributed.project.build.BuildDirs, SbtRunner.SbtFileNames,
- * and distributed.repo.core.GlobalDirs.
+ * see com.typesafe.com.dbuild.project.build.BuildDirs, SbtRunner.SbtFileNames,
+ * and com.typesafe.com.dbuild.repo.core.GlobalDirs.
  */
 object ExtractionDirs {
   val projectExtractionDirName = "projects"

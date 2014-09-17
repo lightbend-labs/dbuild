@@ -55,7 +55,7 @@ html_context = {'home_site': home_site, 'site_search_base': site_search_base}
 # Issues role
 
 issuetracker = 'github'
-issuetracker_project = 'typesafehub/distributed-build'
+issuetracker_project = 'typesafehub/dbuild'
 issuetracker_plaintext_issues = True
 issuetracker_issue_pattern = r'\bgh-(\d+)\b'
 issuetracker_title_template = '#{issue.id}'
@@ -67,10 +67,10 @@ rst_epilog = """
 .. _tgz: %(dbuild_native_package_base)s/%(project)s/%(version)s/tgzs/%(project)s-%(version)s.tgz
 .. |version| replace:: %(version)s
 .. |sbtversion| replace:: %(sbtversion)s
-.. |addSbtplugin| replace:: addSbtPlugin(:s2:`"com.typesafe.dbuild"` %% :s2:`"distributed-sbt-plugin"` %% :s2:`"%(version)s"`)
+.. |addSbtplugin| replace:: addSbtPlugin(:s2:`"com.typesafe.dbuild"` %% :s2:`"plugin"` %% :s2:`"%(version)s"`)
 """ % {
    'sbtversion': sbt_version,
    'version': release,
    'project': project,
-   'dbuild_native_package_base': 'http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots/com.typesafe.dbuild',
+   'dbuild_native_package_base': 'http://repo.typesafe.com/typesafe/ivy-releases',
 }

@@ -64,7 +64,7 @@ object SbtBuilder {
     val dbuildSbtDir = projectDir / dbuildSbtDirName
     val topIvyCache = dbuildSbtDir / "topIvy" / "ivy2"
     // the top levels also do not get the repositories adjustment offered by FixResolvers2() in
-    // DistributedRunner. However, all levels rely on the "repositories" file written here:
+    // DBuildRunner. However, all levels rely on the "repositories" file written here:
     val repoFile = dbuildSbtDir / repositoriesFileName
     val baseRematerializedRepo = localRepos(projectDir).head
     SbtRunner.writeRepoFile(repos, repoFile, "build-local" -> baseRematerializedRepo.toURI.toASCIIString)
@@ -96,8 +96,8 @@ object SbtBuilder {
     SbtRunner.prepDBuildDirs(projectDir, levels)
 
     // preparation of the sbt files used to drive rewiring, via onLoad
-    val onlyMiddle = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad)")
-    val onlyFirst = SbtRunner.onLoad("com.typesafe.dbuild.DistributedRunner.rewire(state, previousOnLoad, fixPublishSettings=true)")
+    val onlyMiddle = SbtRunner.onLoad("com.typesafe.dbuild.plugin.DBuildRunner.rewire(state, previousOnLoad)")
+    val onlyFirst = SbtRunner.onLoad("com.typesafe.dbuild.plugin.DBuildRunner.rewire(state, previousOnLoad, fixPublishSettings=true)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
     val (first, middle, last) = (onlyFirst + all, onlyMiddle + allButFirst + all, allButFirst + all)

@@ -45,7 +45,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     case None => AssembleExtraConfig() // pick default values
     case Some(ec: AssembleExtraConfig) =>
       // perform the defaults substitution in turn on the nested projects
-      ec.copy(parts = Seq(DistributedBuildConfig(BuildSystem.expandDistributedBuildConfig(ec.parts, systems), None)))
+      ec.copy(parts = Seq(DBuildConfig(BuildSystem.expandDBuildConfig(ec.parts, systems), None)))
     case _ => throw new Exception("Internal error: Assemble build config options have the wrong type. Please report")
   }
 
@@ -69,7 +69,7 @@ object AssembleBuildSystem extends BuildSystemCore {
       case None => None
       case Some(extra: AssembleExtraConfig) =>
         val newParts = extra.parts map { nestedConf =>
-          val buildConfig = nestedConf // use expandDistributedBuildConfig !!!!!!
+          val buildConfig = nestedConf // use expandDBuildConfig !!!!!!
           val nestedResolvedProjects =
             buildConfig.projects.map { p =>
               val projDir = projectsDir(dir, p)
@@ -78,7 +78,7 @@ object AssembleBuildSystem extends BuildSystemCore {
               log.info("Resolving part: " + p.name)
               extractor.dependencyExtractor.resolve(p, projDir, extractor, log.newNestedLogger(p.name, p.name))
             }
-          DistributedBuildConfig(nestedResolvedProjects, buildConfig.options)
+          DBuildConfig(nestedResolvedProjects, buildConfig.options)
         }
         Some(extra.copy(parts = newParts))
       case _ => throw new Exception("Internal error: Assemble build config options are the wrong type in project \"" + config.name + "\". Please report")

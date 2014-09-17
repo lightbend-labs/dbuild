@@ -5,7 +5,7 @@ import com.typesafe.dbuild.model
 import com.typesafe.dbuild.plugin.StateHelpers._
 import com.typesafe.dbuild.support.sbt.ExtractionInput
 import com.typesafe.dbuild.support.NameFixer.fixName
-import DistributedRunner.{ getSortedProjects, verifySubProjects }
+import DBuildRunner.{ getSortedProjects, verifySubProjects }
 import com.typesafe.dbuild.model.Utils.{ writeValue, readValue }
 import org.apache.commons.io.FileUtils.writeStringToFile
 
@@ -45,7 +45,7 @@ object DependencyAnalysis {
         deps.distinct)
     }
 
-  // TODO: move to a different file; the two routines below are used both by DependencyAnalysis and by DistributedRunner
+  // TODO: move to a different file; the two routines below are used both by DependencyAnalysis and by DBuildRunner
   // Also move there verifySubProjects() and isValidProject().
 
   // Some additional hacks will be required, due to sbt's default projects. Such projects may take names like "default-b46525" (in 0.12 or 0.13),
@@ -76,7 +76,7 @@ object DependencyAnalysis {
   /** Do we need to use a specific Scala version during extraction? If so, set it now. */
   def fixExtractionScalaVersion2(opt: Option[String]): (Seq[Setting[_]], sbt.Logger) => Seq[Setting[_]] = opt match {
     case None => (a: Seq[Setting[_]], _) => a
-    case Some(v) => DistributedRunner.fixGeneric2(Keys.scalaVersion, "Setting extraction Scala version to " + v) { _ => v }
+    case Some(v) => DBuildRunner.fixGeneric2(Keys.scalaVersion, "Setting extraction Scala version to " + v) { _ => v }
   }
 
   /** Prints the dependencies to the given file. */
@@ -286,11 +286,11 @@ object DependencyAnalysis {
     def prepareExtractionSettings(oldSettings: Seq[Setting[_]]) = {
       Seq[(Seq[Setting[_]], Logger) => Seq[Setting[_]]](
         fixExtractionScalaVersion2(extractionInput.extractionScalaVersion),
-        DistributedRunner.restorePreviousOnLoad(previousOnLoad)) flatMap { _(oldSettings, log) }
+        DBuildRunner.restorePreviousOnLoad(previousOnLoad)) flatMap { _(oldSettings, log) }
     }
 
     saveLastMsg(lastMsgFile, printDependencies(_, extractionInput, resultFile,
-      log))(DistributedRunner.newState(state, extracted, prepareExtractionSettings))
+      log))(DBuildRunner.newState(state, extracted, prepareExtractionSettings))
   }
 
 }

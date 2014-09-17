@@ -169,7 +169,7 @@ object SbtRunner {
   }
 
   def writeDeps(file: File): Unit =
-    IO.write(file, """addSbtPlugin("com.typesafe.dbuild" % "distributed-sbt-plugin" % """ + '"' + Defaults.version + "\")")
+    IO.write(file, """addSbtPlugin("com.typesafe.dbuild" % "plugin" % """ + '"' + Defaults.version + "\")")
 
   def writeRepoFile(repos: List[xsbti.Repository], config: File, repositories: (String, String)*): Unit =
     Repositories.writeRepoFile(repos, config, repositories:_*)
@@ -210,7 +210,7 @@ object SbtRunner {
      * The name of the internal dir that, in each level, will contain the dbuild sbt plugin files.
      *  This need not be the same ".dbuild" dir name that is used during build to rematerialize
      *  artifacts and to collect the resulting artifacts, but it is convenient to reuse the same directory
-     *  (see distributed.project.build.FileNames.reloadedArtifactsDirName).
+     *  (see com.typesafe.dbuild.project.build.FileNames.reloadedArtifactsDirName).
      */
     val dbuildSbtDirName = ".dbuild"
 
@@ -338,7 +338,7 @@ object SbtRunner {
    * The string needed to load the dbuild plugin
    */
   val addDBuildPlugin =
-    """addSbtPlugin("com.typesafe.dbuild" % "distributed-sbt-plugin" % """ + '"' + Defaults.version + "\")\n\n"
+    """addSbtPlugin("com.typesafe.dbuild" % "plugin" % """ + '"' + Defaults.version + "\")\n\n"
 
   /**
    *  Perform a state transformation using onLoad()

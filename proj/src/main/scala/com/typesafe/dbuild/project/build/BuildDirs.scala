@@ -6,7 +6,7 @@ import sbt.Path._
 /**
  * dbuild-specific file names used during building.
  * These directory names are all relative to a build directory,
- * while the global directory names are in distributed.repo.core.GlobalDirs.
+ * while the global directory names are in com.typesafe.dbuild.repo.core.GlobalDirs.
  * DO NOT place sbt-specific filenames in here: the sbt build system has
  * a few sbt-specific names and dir handling methods, which you can find in SbtRunner.
  */

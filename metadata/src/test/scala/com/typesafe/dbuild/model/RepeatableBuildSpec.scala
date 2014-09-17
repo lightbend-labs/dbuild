@@ -6,12 +6,12 @@ import Utils.{writeValue,readValue}
 import com.lambdaworks.jacks._
 import JacksOption._
 
-object RepeatableDistributedBuildSpec extends Specification {
+object RepeatableDBuildConfigSpec extends Specification {
 
-  "RepeatableDistributedBuild" should {
+  "RepeatableDBuildConfigSpec" should {
     
     val defSpace = Some(new Space("default"))
-    val sample = RepeatableDistributedBuild(Seq(
+    val sample = RepeatableDBuildConfig(Seq(
           ProjectConfigAndExtracted(
               ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, None, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1", 
@@ -59,7 +59,7 @@ object RepeatableDistributedBuildSpec extends Specification {
                   ))))))
     ))
     
-    val sample2 = RepeatableDistributedBuild(Seq(
+    val sample2 = RepeatableDBuildConfig(Seq(
           ProjectConfigAndExtracted(
               ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, None, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1", 
@@ -91,7 +91,7 @@ object RepeatableDistributedBuildSpec extends Specification {
     
     
     "serialize/deserialize" in {
-      val result = readValue[RepeatableDistributedBuild](writeValue(sample))
+      val result = readValue[RepeatableDBuildConfig](writeValue(sample))
       result must equalTo(sample)
     }
     "Make unique project build UUID" in {

@@ -28,7 +28,7 @@ object Packaging {
      name in Universal <<= (name,version).apply((n,v) => (n+"-"+v)),
      rpmRelease := "1",
      rpmVendor := "typesafe",
-     rpmUrl := Some("http://github.com/typesafehub/distributed-build"),
+     rpmUrl := Some("http://github.com/typesafehub/dbuild"),
      rpmLicense := Some("BSD"),
 
      // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
@@ -59,8 +59,8 @@ object Packaging {
     addArtifact(artifact in (Universal, packageBin), packageBin in Universal)
 
 
-  def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"repo","distributed.repo.core.SbtRepoMain")
-  def makeDbuildProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"build","distributed.build.SbtBuildMain")
+  def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"repo","com.typesafe.dbuild.repo.core.SbtRepoMain")
+  def makeDBuildProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"build","com.typesafe.dbuild.build.SbtBuildMain")
 
   private def makeProps(t: File, src: File, sv: String, v: String, name:String, clazz:String): (File, String) = {
     val tdir = t / "generated-sources"
@@ -73,7 +73,7 @@ object Packaging {
 
 [app]
   org: com.typesafe.dbuild
-  name: d-%s
+  name: d%s
   version: %s
   class: %s
   cross-versioned: binary
@@ -85,12 +85,12 @@ object Packaging {
   sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots
   sonatype-releases: https://oss.sonatype.org/content/repositories/releases
   java-annoying-cla-shtuff: http://download.java.net/maven/2/
-  typesafe-releases: http://typesafe.artifactoryonline.com/typesafe/releases
-  typesafe-ivy-releases: http://typesafe.artifactoryonline.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  typesafe-releases: http://repo.typesafe.com/typesafe/releases
+  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  typesafe-ivy-snapshots: http://repo.typesafe.com/typesafe/ivy-snapshotss, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
   sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
   jgit-repo: http://download.eclipse.org/jgit/maven
-  scala-fresh-2.10.x: http://typesafe.artifactoryonline.com/typesafe/scala-fresh-2.10.x/
+  scala-fresh-2.10.x: http://repo.typesafe.com/typesafe/scala-fresh-2.10.x/
 
 [boot]
  directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}

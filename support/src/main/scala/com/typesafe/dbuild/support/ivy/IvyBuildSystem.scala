@@ -210,7 +210,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       log.info("All dependencies for project " + project.config.name + ":")
     deps flatMap {
       case (direct, optional, as) => as flatMap { a =>
-        // This is simplified version of the code in DistributedRunner
+        // This is simplified version of the code in DBuildRunner
         def findArt: Option[ArtifactLocation] =
           (for {
             artifact <- arts.view
@@ -235,7 +235,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
           if (direct) Some(PublishIvyInfo(da2, rewritten = true, optional = optional)) else None
         } getOrElse {
           printIvyDependency(None)
-          // TODO: this code is quite similar to the one in DistributedRunner, except this one only
+          // TODO: this code is quite similar to the one in DBuildRunner, except this one only
           // works on the base level (no plugins), and has been adapted to operate on Ivy Artifacts,
           // rather than Artifact locations. Still, the similarities means the two should probably
           // be somehow consolidated into common code. TODO: unify the two, in some manner

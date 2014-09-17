@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.dbuild.hashing
 
 /**
- * Information on how to build a project.  Consists of both distributed build
+ * Information on how to build a project.  Consists of both dbuild
  * configuration and extracted information.  Note: That the config in this case
  * should be the "repeatable" SCM uris and full information such that we can
  * generate repeatable builds from this information.
@@ -66,16 +66,16 @@ case class RepeatableDepInfo(
   // the two Seqs should probably be converted into a Seq[(String,String)].
 )
 
-object RepeatableDistributedBuild {
-  def fromExtractionOutcome(outcome: ExtractionOK) = RepeatableDistributedBuild(outcome.pces)
+object RepeatableDBuildConfig {
+  def fromExtractionOutcome(outcome: ExtractionOK) = RepeatableDBuildConfig(outcome.pces)
 }
 /**
- * A distributed build containing projects in *build order*
+ * A dbuild build config containing projects in *build order*
  *  Also known as the repeatable config. Note that notifications
  *  are not included, as they have no effect on builds.
  */
-case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
-  def repeatableBuildConfig = DistributedBuildConfig(builds map (_.config), options = None)
+case class RepeatableDBuildConfig(builds: Seq[ProjectConfigAndExtracted]) {
+  def repeatableBuildConfig = DBuildConfig(builds map (_.config), options = None)
   /** The unique SHA for this build. */
   def uuid: String = hashing sha1 (repeatableBuilds map (_.uuid))
 
@@ -155,6 +155,6 @@ case class RepeatableDistributedBuild(builds: Seq[ProjectConfigAndExtracted]) {
 }
 
 // This is the structure that is saved in meta/build
-case class SavedConfiguration(expandedDBuildConfig: DBuildConfiguration, fullBuild: RepeatableDistributedBuild) {
+case class SavedConfiguration(expandedDBuildConfig: DBuildConfiguration, fullBuild: RepeatableDBuildConfig) {
   def uuid = hashing sha1 this
 }

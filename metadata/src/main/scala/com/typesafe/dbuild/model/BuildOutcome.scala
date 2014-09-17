@@ -75,14 +75,14 @@ sealed abstract class ExtractionOutcome extends BuildBad {
 /** Extraction was OK, but we have not proceeded to the building stage yet.
  *  Returns the set of nested outcomes (in case extraction is done
  *  hierarchically, for example on multiple machines), and the
- *  set of successful RepeatableDistributedBuilds collected along the way. */
+ *  set of successful RepeatableDBuildConfigs collected along the way. */
 case class ExtractionOK(project: String, outcomes: Seq[BuildOutcome], pces: Seq[ProjectConfigAndExtracted]) extends ExtractionOutcome {
   def withOutcomes(os:Seq[BuildOutcome])=copy(outcomes=os)
   def status() = "EXTRACTION OK, but could not proceed"
   override def whenIDs: Seq[String] = "extraction-ok" +: super.whenIDs
 }
 /** Something went wrong during extraction (for instance, could not resolve).
- *  We do not bother collecting the RepeatableDistributedBuilds, since we
+ *  We do not bother collecting the RepeatableDBuildConfigs, since we
  *  cannot proceed anyway. */
 case class ExtractionFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends ExtractionOutcome {
   def withOutcomes(os:Seq[BuildOutcome])=copy(outcomes=os)

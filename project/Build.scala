@@ -132,10 +132,19 @@ object Defaults {
 
   lazy val support = (
       Proj("support") 
-      dependsOn(core, repo, metadata, proj)
+      dependsOn(core, repo, metadata, proj % "compile->compile;it->compile", logging % "it")
       dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
+      settings(
+        // We hook the testLoader of it to make sure all the it tasks have a legit sbt plugin to use.
+        // Technically, this just pushes every project.  We could outline just the plugin itself, but for now
+        // we don't care that much.
+        testLoader in IntegrationTest := {
+          val ignore = publishLocal.all(ScopeFilter(inAggregates(LocalRootProject, includeRoot=false))).value
+          (testLoader in IntegrationTest).value
+        }
+      )
     ) 
   // A separate support project for git/jgit
   lazy val supportGit = (
@@ -201,10 +210,11 @@ trait BuildHelper extends Build {
     publishArtifact in (Compile, packageSrc) := false,
     publishMavenStyle := false
   )
-
   /** Create a project. */
   def Proj(name: String) = (
       Project(name, file(if (name=="root") "." else name))
+      configs( IntegrationTest )
+      settings( Defaults.itSettings : _*)
       settings(defaultDSettings:_*)
     )
   
@@ -217,7 +227,7 @@ trait BuildHelper extends Build {
   }
 
   lazy val docs = (Proj("docs")
-    settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++
+      settings(defaultDSettings ++ site.settings ++ site.sphinxSupport() ++
       ghpages.settings ++ Seq(
 //      enableOutput in generatePdf in Sphinx := true,
 //      enableOutput in generateEpub in Sphinx := true,

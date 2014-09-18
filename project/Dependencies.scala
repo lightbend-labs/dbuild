@@ -14,7 +14,7 @@ object Dependencies {
 
 // 2.1.1 per 2.10, 1.12.4.1 per 2.9.x. 1.12.3 is the only common one
 //  val specs2         = "org.specs2" %% "specs2" % "2.1.1" % "test"
-  val specs2         = "org.specs2" %% "specs2" % "1.12.3" % "test"
+  val specs2         = "org.specs2" %% "specs2" % "1.12.3" % "it,test"
 
   val dispatch       = "net.databinder" %% "dispatch-http" % "0.8.10"
 

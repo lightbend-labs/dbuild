@@ -19,7 +19,11 @@ object SbtTestHarness {
       PredefRepo(xsbti.Predefined.MavenCentral),
       MvnRepo("typeasfe-mvn-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
       IvyRepo("typesafe-ivy-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
-      IvyRepo("dbuild-snapshots", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots"))
+      IvyRepo("dbuild-snapshots", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots")),
+      // Workaround for ivy having a different HOME when building, this ensures the locally published
+      // dbuild is used for unit tests.
+      // TODO - We should ensure this directory actually lines up with our current dbuild.
+      IvyRepo("old-local", new java.io.File(s"${sys.props("user.home")}/.ivy2/local").toURI.toURL)
     )
 
 
@@ -42,6 +46,9 @@ object SbtTestHarness {
 
   def writePluginsFile(dir: File, name: String = "plugins.sbt")(content: String): Unit =
     sbt.IO.write(new File(dir, "project/" + name), content)
+
+  def writeMetaPluginsFile(dir: File, name: String = "plugins.sbt")(content: String): Unit =
+    sbt.IO.write(new File(dir, "project/project/" + name), content)
 
   def writeBuildFile(dir: File, name: String = "build.sbt")(content: String): Unit =
     sbt.IO.write(new File(dir, name), content)

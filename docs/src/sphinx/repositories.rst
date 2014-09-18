@@ -30,15 +30,6 @@ with the following content:
    remote.user=...
    remote.password=...
 
-There is currently a Typesafe dbuild repository that can be used for testing at the address:
-
-.. code-block:: text
-
-   https://typesafe.artifactoryonline.com/typesafe/temp-distributed-builds
-
-The content of this particular repository may be purged without warning, as it is also used for
-the testing and development of the dbuild tool itself.
-
 .. Caution::
 
    If dbuild is interrupted prematurely manually during the build stage, and a remote repository

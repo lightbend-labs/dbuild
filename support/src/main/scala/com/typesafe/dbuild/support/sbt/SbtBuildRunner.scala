@@ -101,27 +101,34 @@ object SbtBuilder {
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
     val (first, middle, last) = (onlyFirst + all, onlyMiddle + allButFirst + all, allButFirst + all)
-    val sbtFiles = first +: Stream.fill(levels - 1)(middle) :+ last
+
+    val sbtFiles = first +: Stream.fill(levels - 2)(middle) :+ last
     // to each file, prepend the additional settings
     val settings = (sbtSettings.map { _.map { _ + "\n\n" }.mkString }).toStream ++ Stream.continually("")
     val finalSbtFiles = (settings zip sbtFiles) map { case (a, b) => a + b }
     SbtRunner.writeSbtFiles(projectDir, finalSbtFiles, log, debug)
 
     // now, let's prepare and place the input data to rewiring
-    val ins = artifacts.materialized
+    def defaultArtitfacts = Stream.fill(levels)(BuildArtifactsIn(Nil, "default", artifacts.localRepo))
+    val ins = artifacts.materialized ++ defaultArtitfacts.drop(artifacts.materialized.length)
     // The defaults are: "disabled","standard","standard"....
     val defaultCrossVersions = CrossVersionsDefaults.defaults
     val crossVersionStream = crossVers.toStream ++ defaultCrossVersions.drop(crossVers.length)
+
     val checkMissingStream = checkMiss.toStream ++ crossVersionStream.drop(checkMiss.length).map {
       // The default value for checkMissing is true, except if crossVersion is "standard", as
       // we are unable to perform the check in that case.
       _ != "standard"
     }
+    // This is a workaround for when we inject settings in a build we never extracted information from.
+    val subprojsAutofilled = subprojs ++ Seq.fill(levels - subprojs.size)(Nil)
+
     // .zipped works on three elements at most, hence the nesting
-    val inputDataAll = ((ins, subprojs).zipped, crossVersionStream, checkMissingStream).zipped map {
+    val inputDataAll = (((ins, subprojsAutofilled).zipped, crossVersionStream, checkMissingStream).zipped map {
       case ((in, subproj), cross, checkMissing) =>
         RewireInput(in, subproj, cross, checkMissing, debug)
-    }
-    SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll.toSeq, log, debug)
+    }).toSeq
+
+    SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll, log, debug)
   }
 }

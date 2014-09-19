@@ -13,17 +13,22 @@ object SbtTestHarness {
                              artifactPattern: String = defaultIvyPatterns,
                              mavenCompatible: Boolean = false) extends xsbti.IvyRepository
   private case class MvnRepo(id: String, url: URL) extends xsbti.MavenRepository
+  // TODO - we should pull in whatever local ~/.sbt/repositories specifies, or what the current sbt project is using,
+  // so we dont' have super slow integration tests.
   private val fallBackResolvers: List[xsbti.Repository] =
     List(
       PredefRepo(xsbti.Predefined.Local),
-      PredefRepo(xsbti.Predefined.MavenCentral),
-      MvnRepo("typeasfe-mvn-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
-      IvyRepo("typesafe-ivy-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
-      IvyRepo("dbuild-snapshots", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots")),
       // Workaround for ivy having a different HOME when building, this ensures the locally published
       // dbuild is used for unit tests.
       // TODO - We should ensure this directory actually lines up with our current dbuild.
-      IvyRepo("old-local", new java.io.File(s"${sys.props("user.home")}/.ivy2/local").toURI.toURL)
+      IvyRepo("old-local", new java.io.File(s"${sys.props("user.home")}/.ivy2/local").toURI.toURL),
+
+
+      PredefRepo(xsbti.Predefined.MavenCentral),
+
+      MvnRepo("typeasfe-mvn-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
+      IvyRepo("typesafe-ivy-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
+      IvyRepo("dbuild-snapshots", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots"))
     )
 
 

@@ -20,3 +20,9 @@ where command is one of compile, clean, test, publish, publish-local, etc.
 
 To create a full release, point publishTo and credentials to the appropriate
 values, then from the root project type "^release".
+
+
+## Get Involved
+
+dbuild has a [mailing list](http://groups.google.com/d/forum/dbuild) for help.  Additionally, issues can be
+reported to [github issue tracker](https://github.com/typesafehub/dbuild/issues).

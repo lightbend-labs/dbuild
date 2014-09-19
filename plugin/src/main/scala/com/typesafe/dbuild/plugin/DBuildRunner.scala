@@ -86,7 +86,11 @@ object DBuildRunner {
       if (notAvailable.nonEmpty)
         sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
           " Found: " + availableProjects.mkString("\"", "\", \"", "\". "))
-    } else sys.error("Internal error: subproject list is empty")
+    } else {
+      // TODO - Log a debug message that we won't be rewiring this build
+      // we no longer fail, as this shouldn't be an error case.
+      //sys.error("Internal error: subproject list is empty")
+    }
   }
 
   def getSortedProjects(projects: Seq[String], refs: Seq[ProjectRef], baseDirectory: File): Seq[ProjectRef] = {
@@ -571,7 +575,14 @@ object DBuildRunner {
       (y.state, y.value)
     }
 
+    val subprojs = config.info.subproj
+    // If the subprojects are empty, we don't need to do anything, this is probably the meta build, or something so we just return.
+    if(subprojs.isEmpty) {
+      printResults(resultFile, Seq(), config.info.outRepo)
+      return state2
+    }
     println(config.info.subproj.head.mkString("These subprojects will be built: ", ", ", ""))
+
     val buildAggregate = runAggregate[(Seq[File], Seq[BuildSubArtifactsOut]), (Seq[File], BuildSubArtifactsOut)](state2, config.info.subproj.head, (Seq.empty, Seq.empty)) {
       case ((oldFiles, oldArts), (newFiles, arts)) => (newFiles, oldArts :+ arts)
     } _

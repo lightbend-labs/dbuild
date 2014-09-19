@@ -55,7 +55,7 @@ object SbtExtractor {
     //
     // We need a suitable .sbt file in each directory. Some definitions go only in the first one,
     // some in all the middle ones, and some only in the last one.
-    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DependencyAnalysis.printCmd(state,previousOnLoad)")
+    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.plugin.DependencyAnalysis.printCmd(state,previousOnLoad)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
     // Create a tuple for (first, middle, last) possible contents 

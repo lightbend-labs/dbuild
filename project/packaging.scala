@@ -73,7 +73,7 @@ object Packaging {
 
 [app]
   org: com.typesafe.dbuild
-  name: d%s
+  name: %s
   version: %s
   class: %s
   cross-versioned: binary

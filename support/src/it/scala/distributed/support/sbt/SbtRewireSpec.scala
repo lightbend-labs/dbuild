@@ -17,6 +17,7 @@ object SbtRewireSpec extends Specification {
   "SbtBuildSystem" should {
     "inject into the meta-meta-build" in {
       withBuildSystem { case SbtTestConfig(buildSystem, projectDir) =>
+        val inRepo = new File(projectDir, "in-repo")
         val outRepo = new File(projectDir, "out-repo")
         val sbtVersion = "0.13.5"
         writeBuildProperties(projectDir, sbtVersion)
@@ -56,7 +57,9 @@ object SbtRewireSpec extends Specification {
         val data = BuildData(stdOutLogger, debug = true)
 
         val input = BuildInput(
-          artifacts = BuildArtifactsInMulti(Seq()),
+          artifacts = BuildArtifactsInMulti(Seq(
+            BuildArtifactsIn(Nil, "default-space", inRepo)
+          )),
           version = "",
           subproj= Seq[Seq[String]] (),
           outRepo = outRepo                                                   ,
@@ -70,8 +73,8 @@ object SbtRewireSpec extends Specification {
           EmptyLocalBuildRunner,
           data
         )
-        // TODO - test results
-        true must beFalse
+        // TODO - We expect no output, but we do expet a successfull run.
+        result must equalTo(BuildArtifactsOut(List()))
       }
     }
   }

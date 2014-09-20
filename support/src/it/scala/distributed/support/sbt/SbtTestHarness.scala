@@ -52,6 +52,9 @@ object SbtTestHarness {
   def writePluginsFile(dir: File, name: String = "plugins.sbt")(content: String): Unit =
     sbt.IO.write(new File(dir, "project/" + name), content)
 
+  def writeMetaPluginsFile(dir: File, name: String = "plugins.sbt")(content: String): Unit =
+    sbt.IO.write(new File(dir, "project/project/" + name), content)
+
   def writeBuildFile(dir: File, name: String = "build.sbt")(content: String): Unit =
     sbt.IO.write(new File(dir, name), content)
 }

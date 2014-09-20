@@ -48,7 +48,10 @@ object SbtExtractor {
     //
     // We know that projectDir exists, and that it contains no extraneous files (as per the resolve() contract)
     // So:
-    val levels = SbtRunner.buildLevels(projectDir)
+    val sbtSettings = extra.settings.expand
+    // We might have injected additional settings; they also contribute to the number of levels.
+    // This must be identical to the one in SbtBuilder.prepareRewireFilesAndDirs().
+    val levels = SbtRunner.buildLevels(projectDir) max sbtSettings.size
     log.debug("This sbt build has definitions on " + levels + " levels.")
     // create the .dbuild dirs
     SbtRunner.prepDBuildDirs(projectDir, levels)

@@ -21,12 +21,12 @@ object SbtTestHarness {
       // Workaround for ivy having a different HOME when building, this ensures the locally published
       // dbuild is used for unit tests.
       // TODO - We should ensure this directory actually lines up with our current dbuild.
-      IvyRepo("old-local", new java.io.File(s"${sys.props("user.home")}/.ivy2/local").toURI.toURL),
+      IvyRepo("old-local", new java.io.File(sys.props("user.home")+"/.ivy2/local").toURI.toURL),
 
 
       PredefRepo(xsbti.Predefined.MavenCentral),
 
-      MvnRepo("typeasfe-mvn-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
+      MvnRepo("typesafe-mvn-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
       IvyRepo("typesafe-ivy-releases", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/releases")),
       IvyRepo("dbuild-snapshots", new java.net.URL("http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots"))
     )

@@ -143,7 +143,8 @@ object Defaults {
         testLoader in IntegrationTest := {
           val ignore = publishLocal.all(ScopeFilter(inAggregates(LocalRootProject, includeRoot=false))).value
           (testLoader in IntegrationTest).value
-        }
+        },
+        parallelExecution in IntegrationTest := false
       )
     ) 
   // A separate support project for git/jgit

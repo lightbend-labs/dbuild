@@ -124,10 +124,21 @@ object Defaults {
   )
   lazy val build = (
       Proj("build")
-      dependsOn(actorProj, support, supportGit, repo, metadata, deploy)
+      dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
       dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop, commonsLang)
       dependsOnSbt(sbtLaunchInt, sbtLauncher)
       settings(skip210:_*)
+      settings(SbtSupport.settings:_*)
+      settings(
+        // We hook the testLoader of it to make sure all the it tasks have a legit sbt plugin to use.
+        // Technically, this just pushes every project.  We could outline just the plugin itself, but for now
+        // we don't care that much.
+        testLoader in IntegrationTest := {
+          val ignore = publishLocal.all(ScopeFilter(inAggregates(LocalRootProject, includeRoot=false))).value
+          (testLoader in IntegrationTest).value
+        },
+        parallelExecution in IntegrationTest := false
+      )
     )
 
   lazy val support = (

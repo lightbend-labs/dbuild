@@ -67,8 +67,6 @@ object Packaging {
     if(!tdir.exists) tdir.mkdirs()
     val tprops = tdir / ("d"+name+".properties")
     // TODO - better caching
-    // Note: the resolver "dbuild-snapshots" is only included because it contains the "cunei" fork of jacks, which has not been republished to an
-    // official repository yet. TODO: republish jacks, and remove
     if(!tprops.exists) IO.write(tprops, """
 [scala]
   version: %s
@@ -93,7 +91,6 @@ object Packaging {
   sbt-plugin-releases: http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
   jgit-repo: http://download.eclipse.org/jgit/maven
   scala-fresh-2.10.x: http://repo.typesafe.com/typesafe/scala-fresh-2.10.x/
-  dbuild-snapshots: http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
 
 [boot]
  directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}

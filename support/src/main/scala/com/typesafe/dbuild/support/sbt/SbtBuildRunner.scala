@@ -90,8 +90,10 @@ object SbtBuilder {
     // Note:  Because the user could configure settings/projects for build levels which do not have configuration,
     //        we must figure out if there is configuration which will be written to a given build level.
     // TODO - We may just need to check sbtSettings.size + the detected build levels...
-    val levels: Int =
-      Seq(SbtRunner.buildLevels(projectDir), subprojs.size, crossVers.size, checkMiss.size, sbtSettings.size).max
+
+    // We might have injected additional settings; they also contribute to the number of levels.
+    // This must be identical to the one in SbtExtractor.extractMetaData().
+    val levels = SbtRunner.buildLevels(projectDir) max sbtSettings.size
     // create the .dbuild dirs in each level (we will use it to store the ivy cache, and other info)
     SbtRunner.prepDBuildDirs(projectDir, levels)
 

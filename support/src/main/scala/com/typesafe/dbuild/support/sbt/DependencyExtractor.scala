@@ -48,14 +48,17 @@ object SbtExtractor {
     //
     // We know that projectDir exists, and that it contains no extraneous files (as per the resolve() contract)
     // So:
-    val levels = SbtRunner.buildLevels(projectDir)
+    val sbtSettings = extra.settings.expand
+    // We might have injected additional settings; they also contribute to the number of levels.
+    // This must be identical to the one in SbtBuilder.prepareRewireFilesAndDirs().
+    val levels = SbtRunner.buildLevels(projectDir) max sbtSettings.size
     log.debug("This sbt build has definitions on " + levels + " levels.")
     // create the .dbuild dirs
     SbtRunner.prepDBuildDirs(projectDir, levels)
     //
     // We need a suitable .sbt file in each directory. Some definitions go only in the first one,
     // some in all the middle ones, and some only in the last one.
-    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.DependencyAnalysis.printCmd(state,previousOnLoad)")
+    val allButLast = SbtRunner.onLoad("com.typesafe.dbuild.plugin.DependencyAnalysis.printCmd(state,previousOnLoad)")
     val allButFirst = SbtRunner.addDBuildPlugin
     val all = SbtRunner.ivyQuiet(debug)
     // Create a tuple for (first, middle, last) possible contents 

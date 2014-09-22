@@ -12,7 +12,7 @@ env:
 
 script:
   - sbt "^ test"
-  - sbt it:test
+  - sbt "^ it:test"
 
 notifications:
   email:

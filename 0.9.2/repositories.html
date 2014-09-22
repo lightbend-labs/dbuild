@@ -1,0 +1,215 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Repositories &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Known issues and caveats" href="caveats.html" />
+    <link rel="prev" title="Comparing artifacts" href="comparison.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/dbuild">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Repositories</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="caveats.html">Known issues and caveats</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="comparison.html">Comparing artifacts</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.2">Version 0.9.2</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="repositories">
+<h1>Repositories<a class="headerlink" href="#repositories" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="local-and-remote">
+<h2>Local and remote<a class="headerlink" href="#local-and-remote" title="Permalink to this headline">¶</a></h2>
+<p>The dbuild tool stores across runs some crucial build/project information, and its artifacts, in a special repository
+which has a custom layout. This particular repository is used as a cache, in order to minimize the need for recompilation.
+This special repository can be either local (typically in the <tt class="docutils literal"><span class="pre">~/.dbuild/cache</span></tt> directory), or remote (hosted in an Ivy
+repository with a custom layout).</p>
+<p>At this time, the typical usage of dbuild is with a local repository: this is the default configuration
+and no special setting is required.</p>
+<p>However, you may want to experiment with the remote metadata repositories support. The related code is still evolving,
+but should be functional at this time. That may be convenient if you would like to run
+dbuild on a Jenkins server, for instance, uploading the results to a shared repository: you can then fetch
+the configurations and artifacts automatically from that remote repository, while debugging using the
+dbuild sbt plugin, or using the <tt class="docutils literal"><span class="pre">drepo</span></tt> inspection tool, below.</p>
+</div>
+<div class="section" id="remote-repository-configuration">
+<h2>Remote repository configuration<a class="headerlink" href="#remote-repository-configuration" title="Permalink to this headline">¶</a></h2>
+<p>In order to use a remote repository, you will need to add a file called <tt class="docutils literal"><span class="pre">~/.dbuild/remote.cache.properties</span></tt>
+with the following content:</p>
+<div class="highlight-text"><div class="highlight"><pre>remote.url=https://somehost.com/path-to-your-dbuild-repository
+remote.user=...
+remote.password=...
+</pre></div>
+</div>
+<div class="admonition caution">
+<p class="first admonition-title">Caution</p>
+<p class="last">If dbuild is interrupted prematurely manually during the build stage, and a remote repository
+is being used, the build run may be erroneously marked as failed, and a subsequent run may not fix
+the situation. A more robust handling of this situation will be added in subsequent releases.</p>
+</div>
+</div>
+<div class="section" id="drepo">
+<span id="section-drepo"></span><h2>drepo<a class="headerlink" href="#drepo" title="Permalink to this headline">¶</a></h2>
+<p>Enclosed in the distribution archive is also a repository inspection tool, called <tt class="docutils literal"><span class="pre">drepo</span></tt>. You can
+invoke it as:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>bin/drepo &lt;options&gt;
+</pre></div>
+</div>
+<p>If no options are present, it will print a list of options and commands. The main ones are:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">drepo</span></tt> <tt class="docutils literal"><span class="pre">list-builds</span></tt></dt>
+<dd><p class="first">Lists all the dbuild builds whose information has been stored in the repository. Each build will be
+listed with its build ID, and with the list of projects and their IDs. Each project ID refers to a
+specific combination of project version, configuration, and dependencies, as listed below.</p>
+<p class="last">Please note that only the builds that are already in your local repository will be listed (not the
+remote ones).</p>
+</dd>
+<dt><tt class="docutils literal"><span class="pre">drepo</span></tt> <tt class="docutils literal"><span class="pre">build</span></tt> <tt class="docutils literal"><span class="pre">&lt;id&gt;</span></tt></dt>
+<dd><p class="first">Shows the details of one build, including an expanded build configuration that shows the exact version
+of the various software project that were used during that dbuild run. A typical output could be:</p>
+<pre class="highlight literal-block">
+<span class="nv">$</span> bin/drepo build 48baab8156458005cb2e0569e8e8c2c39221d56e
+--- RepeatableBuild: 48baab8156458005cb2e0569e8e8c2c39221d56e
+ = Projects =
+  - 26a265808a6abe8e8451a9f0b43d6dc02176ed16 scala
+  - 9fc2901cdc4f1e4ce4209bfad5dfbf02633fcd5f sperformance
+ = Repeatable Config =
+{&quot;projects&quot;:[{&quot;name&quot;:&quot;scala&quot;,&quot;system&quot;:&quot;scala&quot;,&quot;uri&quot;:&quot;git://github.com/scala/scala.git#2f3a7fa417f7ba92251fdae53e5548f081c2fd04&quot;,&quot;extra&quot;:{}},{&quot;name&quot;:&quot;sperformance&quot;,&quot;system&quot;:&quot;sbt&quot;,&quot;uri&quot;:&quot;git://github.com/jsuereth/sperformance.git#8c472f2a1ae8da817c43c873e3126c486aa79446&quot;,&quot;extra&quot;:{}}]}
+</pre>
+<p class="last">Notably, if the build ID that you specify refers to a build in the remote repository, the
+relevant information will be automatically fetched from the remote repository and copied to the
+local repository, which acts as a cache. You will then see it listed when using <tt class="docutils literal"><span class="pre">dbuild</span></tt> <tt class="docutils literal"><span class="pre">list-builds</span></tt>.</p>
+</dd>
+<dt><tt class="docutils literal"><span class="pre">drepo</span></tt> <tt class="docutils literal"><span class="pre">list-projects</span></tt></dt>
+<dd>Lists all of the known project that have been built by a dbuild build. Each project in this list is
+really a combination of version, configuration, and dependencies, and is identified by a unique project ID.
+Only the projects already in the local repository will be listed.</dd>
+<dt><tt class="docutils literal"><span class="pre">drepo</span></tt> <tt class="docutils literal"><span class="pre">project</span></tt> <tt class="docutils literal"><span class="pre">&lt;id&gt;</span></tt></dt>
+<dd><p class="first">Prints the details of that built project. An example (reformatted for clarity) is:</p>
+<pre class="highlight literal-block">
+<span class="nv">$</span> bin/drepo project 384bd35367f6ea7489007f5b550455ba791725e9
+--- Project Build: 384bd35367f6ea7489007f5b550455ba791725e9
+ -- Dependencies --
+    * d8bcebcdf6c21d4aa95b16ad17c6044c40d891ad
+    * ac54d173fb38755efeaaf69bccb8d875e1be7560
+    * 2865b37b10e2f62efa43568cc86eb7aa3a0cf283
+ -- Artifacts --
+  - org.scala-stm : scala-stm :         : pom : 0.7-384bd353....791725e9
+  - org.scala-stm : scala-stm :         : jar : 0.7-384bd353....791725e9
+  - org.scala-stm : scala-stm : sources : jar : 0.7-384bd353....791725e9
+  - org.scala-stm : scala-stm : javadoc : jar : 0.7-384bd353....791725e9
+ -- Files --
+  org/scala-stm/scala-stm/0.7-384bd35367f6ea7489007f5b550455ba791725e9
+    bdf43920...c2d642bc      40  scala-stm-0.7-384bd353...791725e9-javadoc.jar.sha1
+    9b705a28...fb1eae3e  909.4k  scala-stm-0.7-384bd353...791725e9-javadoc.jar
+    89e1f8db...e12bd6d1      40  scala-stm-0.7-384bd353...791725e9.pom.sha1
+    cfe25924...02005db4      32  scala-stm-0.7-384bd353...791725e9-javadoc.jar.md5
+    5c82c856...7e670c59      32  scala-stm-0.7-384bd353...791725e9-sources.jar.md5
+    28023b5b...ae7fc6d4      40  scala-stm-0.7-384bd353...791725e9-sources.jar.sha1
+    2d8f63d8...b48012b4  113.5k  scala-stm-0.7-384bd353...791725e9-sources.jar
+    f20cc5d8...1b43e1dd    2.6k  scala-stm-0.7-384bd353...791725e9.pom
+    46e8e6fe...b7811c0f      40  scala-stm-0.7-384bd353...791725e9.jar.sha1
+    1f5dd547...150639ff      32  scala-stm-0.7-384bd353...791725e9.pom.md5
+    2891f187...8094f1c2  635.2k  scala-stm-0.7-384bd353...791725e9.jar
+    5a9c7d83...aa311f26      32  scala-stm-0.7-384bd353...791725e9.jar.md5
+</pre>
+<p class="last">Again, if you specify the ID of a project in the remote repository, the relevant files will be copied
+to your local repository (both information and artifacts), and the project details will be displayed.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The internal layout of the repository may change in future versions of dbuild.</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="caveats.html"><em>Known issues and caveats</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Repositories</a><ul>
+<li><a class="reference internal" href="#local-and-remote">Local and remote</a></li>
+<li><a class="reference internal" href="#remote-repository-configuration">Remote repository configuration</a></li>
+<li><a class="reference internal" href="#drepo">drepo</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

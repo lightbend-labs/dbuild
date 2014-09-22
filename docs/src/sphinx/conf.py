@@ -72,5 +72,5 @@ rst_epilog = """
    'sbtversion': sbt_version,
    'version': release,
    'project': project,
-   'dbuild_native_package_base': 'http://repo.typesafe.com/typesafe/ivy-releases',
+   'dbuild_native_package_base': 'http://repo.typesafe.com/typesafe/ivy-releases/com.typesafe.dbuild',
 }

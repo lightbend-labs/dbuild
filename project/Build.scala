@@ -228,6 +228,9 @@ trait BuildHelper extends Build {
       configs( IntegrationTest )
       settings( Defaults.itSettings : _*)
       settings(defaultDSettings:_*)
+      settings(
+        licenses += ("Apache 2", url("http://www.apache.org/licenses/LICENSE-2.0"))
+      )
     )
   
   // DSL for adding remote deps like local deps.

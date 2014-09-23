@@ -95,11 +95,16 @@ abstract class IterativeDeploy[T] extends Deploy[T] {
    * Maven/Ivy repositories (Artifactory, in particular).
    */
   def deploy[T](options: DeployTarget, dir: File) {
-    val Some(credsFile) = options.credentials
+    val targetBaseURI = new java.net.URI(options.uri)
+    val credsFile = options.credentials match {
+      case Some(c) => c
+      case None =>
+        val host = Option(targetBaseURI.getHost) getOrElse ""
+        sys.error("No credentials supplied for host " + host)
+    }
     val credentials = loadCreds(credsFile)
     val handler = init(credentials)
     try {
-      val targetBaseURI = new java.net.URI(options.uri)
       //
       // We have to upload files in a certain order, in order to comply with
       // the requirements of Artifactory concerning the upload of -SNAPSHOT artifacts.

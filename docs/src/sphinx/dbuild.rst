@@ -329,10 +329,11 @@ sbt-version
   In case you need to build a project that requires the semantics of previous
   versions of sbt, the custom versions ``0.12.5-dbuild`` and ``0.13.3-dbuild`` are
   available, which are based on 0.12.4 and 0.13.2, respectively, and include the
-  necessary fix. These unsupported sbt versions are available from the same
-  repository that contains the other dbuild modules, and no additional
-  configuration is necessary to use them within dbuild: just set ``sbt-version``
-  to the required version number.
+  necessary fix. These unsupported sbt versions are available from the following
+  repository, which should be added to your list of resolvers or to your
+  Artifactory/Nexus proxy:
+
+  ``http://typesafe.artifactoryonline.com/typesafe/temp-distributed-build-snapshots``
 
 projects
   A sequence of strings (or a single string) that identifies a subset of the sbt

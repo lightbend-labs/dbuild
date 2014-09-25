@@ -19,15 +19,32 @@ import com.jcraft.jsch.ChannelSftp
 import com.lambdaworks.jacks.JacksMapper
 
 /**
- * A generic (S3, http, https, etc) deploy target.
+ * A generic (S3, http, https, etc) deploy location.
  * The uri refers to a remote directory or container, and
  * does not include the deployed file names.
+ * 
+ * If you are supplying host/user/pass directly, you
+ * can prepare a "Creds" record, and extend a
+ * DeployInfo.
  */
-abstract class DeployTarget {
+abstract class DeployInfo {
   def uri: String
-  def credentials: Option[String]
+  def creds: Option[Creds] // not all uris use credentials
 }
-
+/**
+ * if you are supplying host/user/pass via a file, you can use
+ * a DeployTarget.
+ */
+abstract class DeployTarget extends DeployInfo {
+  def uri: String
+  private val host = Option(new java.net.URI(uri).getHost) getOrElse ""
+  def credentials: Option[String]
+  val creds = credentials map loadCreds
+  creds foreach { c =>
+    if (c.host == host)
+      sys.error("The credentials supplied to Deploy refer to host \"" + c.host + "\" but the uri refers to \"" + host + "\"")
+  }
+}
 
 /**
  * This class describes some mechanism used to deploy a set of files, contained in the
@@ -35,14 +52,14 @@ abstract class DeployTarget {
  */
 abstract class Deploy[T] {
   def log: Logger
-  def deploy[T](options: DeployTarget, dir: File)
+  def deploy[T](options: DeployInfo, dir: File)
 }
 /**
  * Use Deploy.deploy(target,dir,log) to deploy a set of artifacts, contained in the directory "dir",
  * to some external target, logging the results to the logger "log".
  */
 object Deploy {
-  def deploy(target: DeployTarget, dir: File, log: Logger) = {
+  def deploy(target: DeployInfo, dir: File, log: Logger) = {
     val uri = new _root_.java.net.URI(target.uri)
     val deployer = uri.getScheme match {
       case "file" => new DeployFiles(log)
@@ -94,12 +111,11 @@ abstract class IterativeDeploy[T] extends Deploy[T] {
    * order, in order to comply with the peculiar requirements of
    * Maven/Ivy repositories (Artifactory, in particular).
    */
-  def deploy[T](options: DeployTarget, dir: File) {
-    val Some(credsFile) = options.credentials
-    val credentials = loadCreds(credsFile)
+  def deploy[T](options: DeployInfo, dir: File) {
+    val targetBaseURI = new java.net.URI(options.uri)
+    val credentials = options.creds getOrElse sys.error("No credentials supplied for uri " + options.uri)
     val handler = init(credentials)
     try {
-      val targetBaseURI = new java.net.URI(options.uri)
       //
       // We have to upload files in a certain order, in order to comply with
       // the requirements of Artifactory concerning the upload of -SNAPSHOT artifacts.
@@ -265,7 +281,7 @@ class DeployHTTP(val log: Logger) extends IterativeDeploy[Unit] {
 }
 
 class DeployFiles(val log: Logger) extends Deploy[Unit] {
-  def deploy[Unit](options: DeployTarget, dir: File) = {
+  def deploy[Unit](options: DeployInfo, dir: File) = {
     // copy to a local path
     val target = (new _root_.java.net.URI(options.uri)).toURL.getPath
     log.info("Copying artifacts to " + target + "...")

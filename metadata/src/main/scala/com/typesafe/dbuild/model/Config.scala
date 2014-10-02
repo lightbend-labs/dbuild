@@ -628,7 +628,6 @@ case class SbtExtraConfig(
   // None is interpreted as default: use build.sbt-version
   @JsonProperty("sbt-version") sbtVersion: Option[String] = None,
   directory: String = "",
-  @JsonProperty("measure-performance") measurePerformance: Boolean = false,
   @JsonProperty("run-tests") runTests: Boolean = true,
   options: SeqString = Seq.empty,
   // before rewiring, append these settings

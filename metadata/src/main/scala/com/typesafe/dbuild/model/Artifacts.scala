@@ -4,10 +4,8 @@ import java.io.File
 /**
  * This currently represents a "coordinate" of an artifact, the version you must
  * rewire to depend on, and the amount of time it took to build such an artifact.
- *
- * NOTE: Build time is only in here so we could hack some performance quickly.
  */
-case class ArtifactLocation(info: ProjectRef, version: String, crossSuffix: String, pluginAttrs: Option[SbtPluginAttrs], buildTime: Double = 0.0)
+case class ArtifactLocation(info: ProjectRef, version: String, crossSuffix: String, pluginAttrs: Option[SbtPluginAttrs])
 
 /**
  * If the artifact is an sbt plugin, it will have in its extraAttributes some additional information, that we will

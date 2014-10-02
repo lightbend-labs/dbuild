@@ -29,21 +29,6 @@ object DBuildRunner {
 
   val scalaOrgs = Seq("org.scala-lang", "org.scala-lang.modules", "org.scala-lang.plugins")
 
-  def timed[A](f: => Stated[A]): Stated[Long] = {
-    val start = java.lang.System.currentTimeMillis
-    val result = f
-    val end = java.lang.System.currentTimeMillis
-    result map (_ => (end - start))
-  }
-
-  def averageOf[A](n: Int)(state: Stated[A])(f: Stated[Long] => Stated[Long]): (Stated[Double]) = {
-    val result = (state.of(0L) /: (0 to n).toSeq) { (state, _) =>
-      val prev = state.value
-      timed(f(state)) map (_ + prev)
-    }
-    result map (_ / n.toDouble)
-  }
-
   // Pending weak references may lock in place classloaders,
   // leading to tens of thousands of unfinalized file descriptors,
   // and >1GB of PermGen in use.
@@ -553,19 +538,7 @@ object DBuildRunner {
     val refs = getProjectRefs(Project.extract(state2))
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state2).structure.data
 
-    def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
-      println("Running timed build: " + normalizedProjectName(ref, baseDirectory))
-      val x = Stated(state)
-      def cleanBuild(state: Stated[_]) = {
-        val cleaned = state runTask Keys.clean
-        timed(cleaned runTask (Keys.compile in Compile))
-      }
-      val perf = averageOf(10)(x)(cleanBuild)
-      val y = perf.runTask(extractArtifacts in ref)
-      val arts = y.value map (_.copy(buildTime = perf.value))
-      (y.state, arts)
-    }
-    def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
+    def buildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
       println("Running build: " + normalizedProjectName(ref, baseDirectory))
       val y = Stated(state).runTask(extractArtifacts in ref)
       (y.state, y.value)
@@ -575,9 +548,6 @@ object DBuildRunner {
     val buildAggregate = runAggregate[(Seq[File], Seq[BuildSubArtifactsOut]), (Seq[File], BuildSubArtifactsOut)](state2, config.info.subproj.head, (Seq.empty, Seq.empty)) {
       case ((oldFiles, oldArts), (newFiles, arts)) => (newFiles, oldArts :+ arts)
     } _
-
-    // If we're measuring, run the build several times.
-    val buildTask = if (config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
     def buildTestPublish(ref: ProjectRef, state6: State, previous: (Seq[File], Seq[BuildSubArtifactsOut])): (State, (Seq[File], BuildSubArtifactsOut)) = {
       println("----------------------")
@@ -589,7 +559,7 @@ object DBuildRunner {
       //      println("Project Resolver for project "+ref.project+":")
       //      println("   "+pRes)
 
-      val (state7, artifacts) = buildTask(ref, state6)
+      val (state7, artifacts) = buildProject(ref, state6)
       purge()
 
       val state8 = if (config.runTests) {

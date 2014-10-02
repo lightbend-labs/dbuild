@@ -538,12 +538,6 @@ object DBuildRunner {
     val refs = getProjectRefs(Project.extract(state2))
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state2).structure.data
 
-    def buildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
-      println("Running build: " + normalizedProjectName(ref, baseDirectory))
-      val y = Stated(state).runTask(extractArtifacts in ref)
-      (y.state, y.value)
-    }
-
     println(config.info.subproj.head.mkString("These subprojects will be built: ", ", ", ""))
     val buildAggregate = runAggregate[(Seq[File], Seq[BuildSubArtifactsOut]), (Seq[File], BuildSubArtifactsOut)](state2, config.info.subproj.head, (Seq.empty, Seq.empty)) {
       case ((oldFiles, oldArts), (newFiles, arts)) => (newFiles, oldArts :+ arts)
@@ -559,18 +553,21 @@ object DBuildRunner {
       //      println("Project Resolver for project "+ref.project+":")
       //      println("   "+pRes)
 
-      val (state7, artifacts) = buildProject(ref, state6)
+      def doTask[T](old: State, task: TaskKey[T], msg: String = "") = {
+        if (msg.nonEmpty)
+          println(msg + ": " + normalizedProjectName(ref, baseDirectory))
+        Project.extract(old).runTask(task in ref, old)
+      }
+
+      val (state7, artifacts) = doTask(state6, extractArtifacts, "Running build")
       purge()
 
       val state8 = if (config.runTests) {
-        println("Testing: " + normalizedProjectName(ref, baseDirectory))
-        Project.extract(state7).runTask(Keys.test in (ref, Test), state7)._1
+        doTask(state7, Keys.test, "Testing")._1
       } else state7
       purge()
 
-      println("Publishing: " + normalizedProjectName(ref, baseDirectory))
-      val (state9, _) =
-        Project.extract(state8).runTask(Keys.publish in ref, state8)
+      val state9 = doTask(state8, Keys.publish, "Publishing")._1
       purge()
 
       // We extract the set of files published during this step by checking the
@@ -582,7 +579,7 @@ object DBuildRunner {
       val newFilesShas = currentFiles.diff(previousFiles).map { LocalRepoHelper.makeArtifactSha(_, localRepo) }
 
       // extraction of moduleInfo
-      val (state10, mi) = Project.extract(state9).runTask(moduleInfo in ref, state9)
+      val (state10, mi) = doTask(state9, moduleInfo)
 
       (state10, (currentFiles,
         BuildSubArtifactsOut(normalizedProjectName(ref, baseDirectory), artifacts, newFilesShas, mi)

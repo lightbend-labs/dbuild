@@ -24,7 +24,11 @@ object Logger {
     val pw = new java.io.PrintWriter(errors)
     t.printStackTrace(pw)
     val errStack=errors.toString.split("\n")
-    (if (short) errStack.take(12) else errStack) foreach { log.error(_) }
+    if (short) {
+      errStack.take(12).foreach { log.error(_) }
+      // when short, only print the rest when debugging
+      errStack.drop(12).foreach { log.debug(_) }
+    } else errStack foreach { log.error(_) }
     val msg1 = t.getClass.getSimpleName + (Option(t.getMessage) map { ": " + _.split("\n")(0) } getOrElse "")
     if (msg1.length < 60) msg1 else msg1.take(57) + "..."
   }

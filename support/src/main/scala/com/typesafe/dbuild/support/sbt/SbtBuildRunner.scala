@@ -28,7 +28,8 @@ case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String],
 /**
  * Input to generateArtifacts()
  */
-case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean, debug: Boolean)
+case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean,
+    testTasks: Seq[String], debug: Boolean)
 
 object SbtBuilder {
 
@@ -53,6 +54,7 @@ object SbtBuilder {
     // This is for the first level only
     val buildIn = GenerateArtifactsInput(config.info,
       runTests = config.config.runTests,
+      testTasks = config.config.testTasks,
       debug = debug)
     SbtRunner.placeGenArtsInputFile(projectDir, buildIn)
 
@@ -79,7 +81,7 @@ object SbtBuilder {
       ),
       /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */
       extraArgs = config.config.options,
-      process = customProcess)(config.config.commands ++ targetCommands: _*)
+      process = customProcess)(config.config.commands ++ targetCommands ++ config.config.postCommands: _*)
   }
 
   def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,

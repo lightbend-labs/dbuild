@@ -299,6 +299,8 @@ case class DBuildConfig(projects: Seq[ProjectBuildConfig],
   @JsonProperty("sbt-settings") sbtSettings: SeqSeqString /* Levels */ = SeqSeqString(Seq(Seq.empty)),
   // commands for sbt-based builds
   @JsonProperty("sbt-commands") sbtCommands: SeqString = Seq.empty,
+  // commands for sbt-based builds, to be run after compilation and test
+  @JsonProperty("sbt-post-commands") sbtPostCommands: SeqString = Seq.empty,
   // Default space for regular project
   space: Space = new Space("default")) extends BuildOptions
 
@@ -629,11 +631,14 @@ case class SbtExtraConfig(
   @JsonProperty("sbt-version") sbtVersion: Option[String] = None,
   directory: String = "",
   @JsonProperty("run-tests") runTests: Boolean = true,
+  @JsonProperty("test-tasks") testTasks: SeqString = Seq("test"),
   options: SeqString = Seq.empty,
   // before rewiring, append these settings
   settings: SeqSeqString = SeqSeqString(Seq(Seq.empty)), /*Levels*/
   // before building, run these commands ("set" or others)
   commands: SeqString = Seq.empty,
+  // after building and testing, run these commands
+  @JsonProperty("post-commands") postCommands: SeqString = Seq.empty,
   projects: SeqString = Seq.empty, // if empty -> build all projects (default)
   exclude: SeqString = Seq.empty, // if empty -> exclude no projects (default)
   /**
@@ -784,6 +789,7 @@ trait ExtraOptions {
   def extractionVersion: String
   def sbtSettings: SeqSeqString /*Levels*/
   def sbtCommands: SeqString
+  def sbtPostCommands: SeqString
 }
 trait ProjectOptions {
   def crossVersion: SeqString /*Levels*/

@@ -1,3 +1,4 @@
+
 package com.typesafe.dbuild.plugin
 
 import sbt._
@@ -24,6 +25,7 @@ import com.typesafe.dbuild.support.sbt.SbtRunner.{ sbtIvyCache, rewireInputFile,
 import com.typesafe.dbuild.support.sbt.{ RewireInput, GenerateArtifactsInput }
 import com.typesafe.dbuild.support.SbtUtil.{ pluginAttrs, fixAttrs }
 import com.typesafe.dbuild.model.SbtPluginAttrs
+import scala.reflect.ClassManifest
 
 object DBuildRunner {
 
@@ -562,8 +564,37 @@ object DBuildRunner {
       val (state7, artifacts) = doTask(state6, extractArtifacts, "Running build")
       purge()
 
+      def doTestTask(old: State, taskAndConfig: String): State = {
+        val (task: String, config: String) = taskAndConfig.split(':') match {
+          case Array(t, c) => (t, c)
+          case Array(t) => (t, "test")
+          case _ => sys.error("Malformed task description: \"" + taskAndConfig + "\"")
+        }
+        val index = Project.extract(state7).structure.index.keyIndex
+        val sel = Project.extract(state7).structure.index.keyMap.get(task)
+        def toTaskKey[T](a: AttributeKey[Task[T]]) = TaskKey[T](a)
+
+        // sel is now an Option[sbt.AttributeKey[_]]. Since we don't know the
+        // inner type parameter, we cannot really build a matching TaskKey[_].
+        // However, we only need to call runTask() on it, and sbt.Extracted.runTask()
+        // doesn't need any manifest (there is one directly inside the AttributeKey).
+        // So, we should be safe by crudely casting.
+        val taskManifest = ClassManifest.fromClass(classOf[Task[_]]).erasure
+        sel match {
+          case None => sys.error("Task not found: " + task)
+          case Some(key) =>
+            // does this AttributeKey refer to a Task ?
+            if (key.manifest.erasure == taskManifest) { // select AttributeKey[Task[whatever]]
+              doTask(state7, toTaskKey(key.asInstanceOf[AttributeKey[Task[Any]]]) in
+                new ConfigKey(config), "Running \"" + task + "\" in")._1
+            } else {
+              sys.error("Not a task: " + task + ", (found: " + key.manifest + ")")
+            }
+        }
+      }
+
       val state8 = if (config.runTests) {
-        doTask(state7, Keys.test, "Testing")._1
+        config.testTasks.foldLeft(state7)((state:State,taskAndConfig:String) => doTestTask(state,taskAndConfig))
       } else state7
       purge()
 

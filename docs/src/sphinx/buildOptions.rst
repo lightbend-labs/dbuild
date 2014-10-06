@@ -16,6 +16,7 @@ default for all of the projects enclosed in the same section. The available opti
     check-missing       : <check-missing-flag>
     sbt-version         : <sbt-version>
     sbt-commands        : [<command1>,<command2>,...]
+    sbt-post-commands   : [<command1>,<command2>,...]
     sbt-settings        : [<setting1>,<setting2>,...]
     extraction-version  : <compiler-version-string>
     use-jgit            : <true-or-false>
@@ -103,6 +104,13 @@ sbt-commands
   be applied to all the contained projects. Notice that, if the "extra.commands" field
   of a project contains additional commands, they will not replace this default list,
   but they will be appended to it.
+
+sbt-post-commands
+  It can be either a single string, or an array of strings, each of which will be used
+  as a post-build and post-test sbt command in sbt-based builds. These commands will
+  be applied to all the contained projects. Notice that, if the "extra.post-commands"
+  field of a project contains additional commands, they will not replace this default
+  list, but they will be appended to it.
 
 sbt-settings
   It can be either a single string, or an array of strings, each of which will be used

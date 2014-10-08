@@ -33,10 +33,11 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
     sbtVersion: String,
     log: Logger,
     javaProps: Map[String, String] = Map.empty,
-    javaArgs: Seq[String] = SbtRunner.defaultJavaArgs,
+    javaArgs: Option[Seq[String]],
     extraArgs: Seq[String] = Seq.empty,
     process: Option[(File, Logger, File, Seq[String]) => Unit] = None)(args: String*): Unit = {
 
+    val fullJavaArgs: Seq[String] = javaArgs getOrElse SbtRunner.defaultJavaArgs
     val useSbtVersion = if (sbtVersion != "standard") {
       removeProjectBuild(projectDir, log)
       log.info("Using sbt version: " + sbtVersion)
@@ -67,7 +68,7 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
         defaultProps + ("dbuild.sbt-runner.last-msg" -> lastMsg.getCanonicalPath,
           "sbt.version" -> useSbtVersion),
         javaProps,
-        javaArgs,
+        fullJavaArgs,
         extraArgs)(args: _*)
 
       log.debug("Running: " + cmd.mkString("[", ",", "]"))

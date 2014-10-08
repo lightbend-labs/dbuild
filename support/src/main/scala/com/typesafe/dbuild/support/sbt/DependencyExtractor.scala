@@ -94,6 +94,7 @@ object SbtExtractor {
       projectDir = projectDir,
       sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,
+      javaArgs = extra.javaOptions map {_.s},
       javaProps = Map(
         // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
         "sbt.repository.config" -> repoFile.getCanonicalPath

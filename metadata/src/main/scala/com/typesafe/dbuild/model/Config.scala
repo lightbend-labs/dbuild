@@ -301,6 +301,8 @@ case class DBuildConfig(projects: Seq[ProjectBuildConfig],
   @JsonProperty("sbt-commands") sbtCommands: SeqString = Seq.empty,
   // commands for sbt-based builds, to be run after compilation and test
   @JsonProperty("sbt-post-commands") sbtPostCommands: SeqString = Seq.empty,
+  // see javaOptions in SbtExtraConfig
+  @JsonProperty("sbt-java-options") sbtJavaOptions: Option[SeqString] = None,
   // Default space for regular project
   space: Space = new Space("default")) extends BuildOptions
 
@@ -639,6 +641,9 @@ case class SbtExtraConfig(
   commands: SeqString = Seq.empty,
   // after building and testing, run these commands
   @JsonProperty("post-commands") postCommands: SeqString = Seq.empty,
+  // We cannot use directly SbtRunner.defaultJavaArgs as a default value,
+  // since it is in a dependent project. So we use None, and check later
+  @JsonProperty("java-options") javaOptions: Option[SeqString] = None,
   projects: SeqString = Seq.empty, // if empty -> build all projects (default)
   exclude: SeqString = Seq.empty, // if empty -> exclude no projects (default)
   /**
@@ -790,6 +795,7 @@ trait ExtraOptions {
   def sbtSettings: SeqSeqString /*Levels*/
   def sbtCommands: SeqString
   def sbtPostCommands: SeqString
+  def sbtJavaOptions: Option[SeqString]
 }
 trait ProjectOptions {
   def crossVersion: SeqString /*Levels*/

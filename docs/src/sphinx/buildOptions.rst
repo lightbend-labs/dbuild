@@ -18,6 +18,7 @@ default for all of the projects enclosed in the same section. The available opti
     sbt-commands        : [<command1>,<command2>,...]
     sbt-post-commands   : [<command1>,<command2>,...]
     sbt-settings        : [<setting1>,<setting2>,...]
+    sbt-java-options    : [<jopt1>,<jopt2>,...]
     extraction-version  : <compiler-version-string>
     use-jgit            : <true-or-false>
     space               : <space-definition>
@@ -118,6 +119,16 @@ sbt-settings
   be applied to all the contained projects. Notice that, if the "extra.settings" field
   of a project contains additional settings, they will not replace this default list,
   but they will be appended to it.
+
+sbt-java-options
+  Either a single string, or a possibly empty array of strings. It describes the
+  list of Java options used while invoking sbt, in case the default list needs to
+  be tuned. Please see the ``java-option`` entry in the sbt-specific options for
+  additional details. These settings will be applied to all the projects contained
+  in this build section. If ``sbt-java-options`` is specified for a group of projects,
+  and a specific project also contains the option ``java-options``, the
+  project-specific options will be appended at the end of the global ones, and will
+  not replace them.
 
 extraction-version
   Specifies the version of the compiler that should be used during dependency

@@ -27,6 +27,7 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
     case None => SbtExtraConfig(sbtVersion = Some(defaults.sbtVersion),
       extractionVersion = Some(defaults.extractionVersion),
       commands = defaults.sbtCommands,
+      postCommands = defaults.sbtPostCommands,
       settings = defaults.sbtSettings)
     // an 'extra' section is present. One or both of 'sbtVersion' and 'compiler' might be missing.
     case Some(ec: SbtExtraConfig) => {
@@ -40,13 +41,15 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
         case Some(c) => c
       }
       val allCommands = defaults.sbtCommands ++ ec.commands
+      val allPostCommands = defaults.sbtPostCommands ++ ec.postCommands
       // The two places in which settings can be found,
       // defaults.sbtSettings and ec.settings, are lists that may be of different sizes,
       // where each element corresponds to a level. The elements are lists, and we need
       // to concatenate pairwise the two lists, up to the max of the two sizes.
       val allSettings = defaults.sbtSettings.expand.zipAll(ec.settings.expand, Seq.empty, Seq.empty).
         map { case (a, b) => (a ++ b): SeqString }
-      ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer), commands = allCommands, settings = allSettings)
+      ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer), commands = allCommands,
+          postCommands = allPostCommands, settings = allSettings)
     }
     case _ => throw new Exception("Internal error: sbt build config options have the wrong type. Please report.")
   }

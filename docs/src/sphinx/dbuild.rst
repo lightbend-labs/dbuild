@@ -306,8 +306,10 @@ In this case the "extra" argument is a record with the following content:
     "projects"            : [ subproj1, subproj2,... ]
     "exclude"             : [ subproj1, subproj2,... ]
     "run-tests"           : <run-tests>
+    "test-tasks"          : [ task1, task2,... ]
     "options"             : [ opt1, opt2,... ]
     "commands"            : [ cmd1, cmd2,... ]
+    "post-commands"       : [ cmd1, cmd2,... ]
     "settings"            : [ setting1, setting2,... ]
     "extraction-version"  : <compiler-version-string>
    }
@@ -370,6 +372,14 @@ run-tests
   in case you would like to use the artifacts of a given project, even though its testing
   stage is currently failing for whatever reason.
 
+test-tasks
+  It is possible to customize the list of tasks that should be executed during the
+  testing stage. By default, its value is just ``test``, but it can be modified
+  in order to take into account different commands or configurations. This setting
+  can be either a single string or a list of strings; each element can be the name
+  of a task, like ``test``, or a configuration followed by a colon and a task name,
+  like ``it:test``.
+
 options
   A sequence of strings; they will be
   passed as-is as additional JVM options, while launching the sbt instance that is used
@@ -391,6 +401,17 @@ commands
   Prior to dbuild 0.9, commands were executed prior to dependency rewiring. If you
   were using commands like ``set libraryDependency ...``, you will need to move them
   to the "settings" section, instead.
+
+post-commands
+  An optional sequence of additional sbt commands. If present, these commands will
+  be run after building and testing.
+
+.. note::
+  It is possible to run arbitrary shell commands from either ``commands`` or
+  ``post-commands``, by using the ``eval`` command of sbt, in conjunction with
+  Scala's ``Process`` facility. For example, a valid sbt command is:
+
+  ``eval Process(Seq("ls","-l")).lines foreach println``
 
 settings
   A sequence of sbt settings, in the format in which they would normally be specified

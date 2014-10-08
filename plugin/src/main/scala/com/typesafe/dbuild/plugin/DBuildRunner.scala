@@ -1,3 +1,4 @@
+
 package com.typesafe.dbuild.plugin
 
 import sbt._
@@ -24,25 +25,11 @@ import com.typesafe.dbuild.support.sbt.SbtRunner.{ sbtIvyCache, rewireInputFile,
 import com.typesafe.dbuild.support.sbt.{ RewireInput, GenerateArtifactsInput }
 import com.typesafe.dbuild.support.SbtUtil.{ pluginAttrs, fixAttrs }
 import com.typesafe.dbuild.model.SbtPluginAttrs
+import scala.reflect.ClassManifest
 
 object DBuildRunner {
 
   val scalaOrgs = Seq("org.scala-lang", "org.scala-lang.modules", "org.scala-lang.plugins")
-
-  def timed[A](f: => Stated[A]): Stated[Long] = {
-    val start = java.lang.System.currentTimeMillis
-    val result = f
-    val end = java.lang.System.currentTimeMillis
-    result map (_ => (end - start))
-  }
-
-  def averageOf[A](n: Int)(state: Stated[A])(f: Stated[Long] => Stated[Long]): (Stated[Double]) = {
-    val result = (state.of(0L) /: (0 to n).toSeq) { (state, _) =>
-      val prev = state.value
-      timed(f(state)) map (_ + prev)
-    }
-    result map (_ / n.toDouble)
-  }
 
   // Pending weak references may lock in place classloaders,
   // leading to tens of thousands of unfinalized file descriptors,
@@ -553,31 +540,10 @@ object DBuildRunner {
     val refs = getProjectRefs(Project.extract(state2))
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get Project.extract(state2).structure.data
 
-    def timedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
-      println("Running timed build: " + normalizedProjectName(ref, baseDirectory))
-      val x = Stated(state)
-      def cleanBuild(state: Stated[_]) = {
-        val cleaned = state runTask Keys.clean
-        timed(cleaned runTask (Keys.compile in Compile))
-      }
-      val perf = averageOf(10)(x)(cleanBuild)
-      val y = perf.runTask(extractArtifacts in ref)
-      val arts = y.value map (_.copy(buildTime = perf.value))
-      (y.state, arts)
-    }
-    def untimedBuildProject(ref: ProjectRef, state: State): (State, ArtifactMap) = {
-      println("Running build: " + normalizedProjectName(ref, baseDirectory))
-      val y = Stated(state).runTask(extractArtifacts in ref)
-      (y.state, y.value)
-    }
-
     println(config.info.subproj.head.mkString("These subprojects will be built: ", ", ", ""))
     val buildAggregate = runAggregate[(Seq[File], Seq[BuildSubArtifactsOut]), (Seq[File], BuildSubArtifactsOut)](state2, config.info.subproj.head, (Seq.empty, Seq.empty)) {
       case ((oldFiles, oldArts), (newFiles, arts)) => (newFiles, oldArts :+ arts)
     } _
-
-    // If we're measuring, run the build several times.
-    val buildTask = if (config.measurePerformance) timedBuildProject _ else untimedBuildProject _
 
     def buildTestPublish(ref: ProjectRef, state6: State, previous: (Seq[File], Seq[BuildSubArtifactsOut])): (State, (Seq[File], BuildSubArtifactsOut)) = {
       println("----------------------")
@@ -589,18 +555,50 @@ object DBuildRunner {
       //      println("Project Resolver for project "+ref.project+":")
       //      println("   "+pRes)
 
-      val (state7, artifacts) = buildTask(ref, state6)
+      def doTask[T](old: State, task: TaskKey[T], msg: String = "") = {
+        if (msg.nonEmpty)
+          println(msg + ": " + normalizedProjectName(ref, baseDirectory))
+        Project.extract(old).runTask(task in ref, old)
+      }
+
+      val (state7, artifacts) = doTask(state6, extractArtifacts, "Running build")
       purge()
 
+      def doTestTask(old: State, taskAndConfig: String): State = {
+        val (task: String, config: String) = taskAndConfig.split(':') match {
+          case Array(t, c) => (t, c)
+          case Array(t) => (t, "test")
+          case _ => sys.error("Malformed task description: \"" + taskAndConfig + "\"")
+        }
+        val index = Project.extract(state7).structure.index.keyIndex
+        val sel = Project.extract(state7).structure.index.keyMap.get(task)
+        def toTaskKey[T](a: AttributeKey[Task[T]]) = TaskKey[T](a)
+
+        // sel is now an Option[sbt.AttributeKey[_]]. Since we don't know the
+        // inner type parameter, we cannot really build a matching TaskKey[_].
+        // However, we only need to call runTask() on it, and sbt.Extracted.runTask()
+        // doesn't need any manifest (there is one directly inside the AttributeKey).
+        // So, we should be safe by crudely casting.
+        val taskManifest = ClassManifest.fromClass(classOf[Task[_]]).erasure
+        sel match {
+          case None => sys.error("Task not found: " + task)
+          case Some(key) =>
+            // does this AttributeKey refer to a Task ?
+            if (key.manifest.erasure == taskManifest) { // select AttributeKey[Task[whatever]]
+              doTask(state7, toTaskKey(key.asInstanceOf[AttributeKey[Task[Any]]]) in
+                new ConfigKey(config), "Running \"" + task + "\" in")._1
+            } else {
+              sys.error("Not a task: " + task + ", (found: " + key.manifest + ")")
+            }
+        }
+      }
+
       val state8 = if (config.runTests) {
-        println("Testing: " + normalizedProjectName(ref, baseDirectory))
-        Project.extract(state7).runTask(Keys.test in (ref, Test), state7)._1
+        config.testTasks.foldLeft(state7)((state:State,taskAndConfig:String) => doTestTask(state,taskAndConfig))
       } else state7
       purge()
 
-      println("Publishing: " + normalizedProjectName(ref, baseDirectory))
-      val (state9, _) =
-        Project.extract(state8).runTask(Keys.publish in ref, state8)
+      val state9 = doTask(state8, Keys.publish, "Publishing")._1
       purge()
 
       // We extract the set of files published during this step by checking the
@@ -612,7 +610,7 @@ object DBuildRunner {
       val newFilesShas = currentFiles.diff(previousFiles).map { LocalRepoHelper.makeArtifactSha(_, localRepo) }
 
       // extraction of moduleInfo
-      val (state10, mi) = Project.extract(state9).runTask(moduleInfo in ref, state9)
+      val (state10, mi) = doTask(state9, moduleInfo)
 
       (state10, (currentFiles,
         BuildSubArtifactsOut(normalizedProjectName(ref, baseDirectory), artifacts, newFilesShas, mi)

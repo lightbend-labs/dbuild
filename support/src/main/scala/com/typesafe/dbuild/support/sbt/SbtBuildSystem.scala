@@ -28,6 +28,7 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
       extractionVersion = Some(defaults.extractionVersion),
       commands = defaults.sbtCommands,
       postCommands = defaults.sbtPostCommands,
+      javaOptions = defaults.sbtJavaOptions,
       settings = defaults.sbtSettings)
     // an 'extra' section is present. One or both of 'sbtVersion' and 'compiler' might be missing.
     case Some(ec: SbtExtraConfig) => {
@@ -35,10 +36,16 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
         case None => defaults.sbtVersion
         case Some(v) => v
       }
-
       val extrVer = ec.extractionVersion match {
         case None => defaults.extractionVersion
         case Some(c) => c
+      }
+      val javaOpts: Option[SeqString] = ec.javaOptions match {
+        case None => defaults.sbtJavaOptions
+        case l@Some(SeqString(local)) => defaults.sbtJavaOptions match {
+          case None => l
+          case Some(SeqString(global)) => Some(SeqString(global ++ local))
+        }
       }
       val allCommands = defaults.sbtCommands ++ ec.commands
       val allPostCommands = defaults.sbtPostCommands ++ ec.postCommands
@@ -49,7 +56,7 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
       val allSettings = defaults.sbtSettings.expand.zipAll(ec.settings.expand, Seq.empty, Seq.empty).
         map { case (a, b) => (a ++ b): SeqString }
       ec.copy(sbtVersion = Some(sbtVer), extractionVersion = Some(extrVer), commands = allCommands,
-          postCommands = allPostCommands, settings = allSettings)
+          javaOptions = javaOpts, postCommands = allPostCommands, settings = allSettings)
     }
     case _ => throw new Exception("Internal error: sbt build config options have the wrong type. Please report.")
   }

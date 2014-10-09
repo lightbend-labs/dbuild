@@ -312,9 +312,12 @@ In this case the "extra" argument is a record with the following content:
     "post-commands"       : [ cmd1, cmd2,... ]
     "settings"            : [ setting1, setting2,... ]
     "extraction-version"  : <compiler-version-string>
+    "java-options"        : [ jopt1, jopt2,... ]
    }
 
-Each of these fields is optional; their meaning is:
+All of these fields are optional, and if missing a reasonable default value
+will be used (listed below for each option). The meaning of the various
+options is:
 
 sbt-version
   A string that specifies the version of sbt that should be used to compile
@@ -465,6 +468,24 @@ extraction-version
   In general, it may be simple and effective to specify the extraction
   version just once, in the global build options, as shown in the example
   above.
+
+java-options
+  Normally, sbt will be invoked using a default list of common java options
+  that should be suitable in most cases. In case the list needs to be customized,
+  this option can be used to supply the relevant values. If you wish to apply
+  a certain list of java options to all the projects in a build section, you
+  can use the build option ``sbt-java-options``, described in a later page.
+  Please note that this option only applies while using the sbt build system.
+  The default value of java options used while invoking sbt is:
+
+.. code-block:: text
+    ["-XX:+CMSClassUnloadingEnabled",
+     "-XX:+DoEscapeAnalysis",
+     "-Xms1536m",
+     "-Xmx1536m",
+     "-Xss2m",
+     "-XX:MaxPermSize=640m",
+     "-XX:ReservedCodeCacheSize=192m"]
 
 Scala-specific options
 ----------------------

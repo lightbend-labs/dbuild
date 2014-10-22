@@ -378,6 +378,8 @@ object AssembleBuildSystem extends BuildSystemCore {
             val renamedArtifacts = artifacts map { l =>
               if (isScalaCoreArt(l)) l else l.copy(crossSuffix = crossSuff)
             }
+            // These newSHAs have the new *locations* but still the old sha hash value;
+            // those hashes are recomputed at the end, before returning.
             val newSHAs = shas map { sha =>
               val oldLocation = sha.location
               object OrgNameVerFilenamesuffix {
@@ -617,7 +619,25 @@ object AssembleBuildSystem extends BuildSystemCore {
     // dbuild SHAs must be re-computed (since the POM/Ivy files changed)
     // We preserve the list of original subprojects (and consequently modules),
     // where the subproject names may be slightly renamed in order to avoid collisions.
-    val out = BuildArtifactsOut(artifactsMap flatMap { _._2.results })
+
+    val out = BuildArtifactsOut(artifactsMap flatMap {
+      _._2.results map {
+        case sub @ BuildSubArtifactsOut(project, modArtLocs, shas, modInfo) =>
+          sub.copy(shas = sub.shas map {
+            case oldArtSha @ ArtifactSha(oldSha, location) =>
+              val path = IO.pathSplit(location)
+              val name = path.last
+              if (name.endsWith(".pom") || name == "ivy.xml") {
+                // Recalculate the actual sha hash from the new content of the file.
+                // (we only need to rescan poms and ivy.xml files, as the content of
+                // the other files is still the same)
+                val newSha = hashing.files sha1
+                  (path.foldLeft(localRepo) { _ / _ })
+                ArtifactSha(newSha, location)
+              } else oldArtSha
+          })
+      }
+    })
     log.debug("out: " + writeValue(out))
     out
 

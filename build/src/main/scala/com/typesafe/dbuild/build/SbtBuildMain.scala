@@ -21,6 +21,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import collection.JavaConverters._
+import scala.collection.JavaConversions._
+import com.typesafe.config.ConfigRenderOptions
 
 /**
  * These options are created by SbtBuildMain, and are propagated to most stages of building, as
@@ -176,6 +178,18 @@ class SbtBuildMain extends xsbti.AppMain {
                     })
                 }
               } else Map.empty)
+            if (debug) {
+//              println("System.getenv:")
+//              val environmentVars = System.getenv
+//              for ((k, v) <- environmentVars) println("key: " + k + ", value: " + v)
+//              println("System.getProperties:")
+//              val properties = System.getProperties
+//              for ((k, v) <- properties) println("key: " + k + ", value: " + v)
+              println("Complete \"vars\" section:")
+              try { // in case resolve() fails
+                println(endConfig.withOnlyPath("vars").resolve.root.render(ConfigRenderOptions.concise.setFormatted(true)))
+              } catch { case e: Exception => println("Unexpected while printing: " + e.getMessage()) }
+            }
             //
             // After deserialization, Vars is empty (see VarDeserializer)
             // Let's also empty the list of property files, which is now no longer needed

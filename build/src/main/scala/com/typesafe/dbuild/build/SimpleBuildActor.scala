@@ -270,10 +270,13 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     buildTarget match {
       case None => graph
       case Some(target) =>
-        graph.FilteredByNodesGraph(graph.subGraphFrom(graph.nodeForName(target) getOrElse
-          sys.error("The selected target project " + target + " was not found in this configuration file.")))
-      // if you want to extend buildTarget to make it a SeqString, just use this instead:
-      // graph.FilteredByNodesGraph(targets.toSet.flatMap { p: String => graph.subGraphFrom(graph.nodeForName(p)) })
+        // more than one target? Find the list:
+        val targets = target.split(",").toSeq
+        val targetNodes = targets map { t =>
+          graph.nodeForName(t) getOrElse
+            sys.error("The selected target project " + t + " was not found in this configuration file.")
+        }
+        graph.FilteredByNodesGraph(graph.subGraphFrom(targetNodes))
     }
   }
 

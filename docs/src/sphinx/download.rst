@@ -93,6 +93,8 @@ version 0.9.0, the options are:
      config-file (not required)   The name of the dbuild configuration file
      target (not required)        If a target project name is specified, dbuild will
                                   build only that project and its dependencies
+                                  Multiple targets are also possible, supplying a
+                                  comma separated list (with no blanks).
    
    Subcommand: checkout
    Use "dbuild checkout" to check out one project from a previously compiled

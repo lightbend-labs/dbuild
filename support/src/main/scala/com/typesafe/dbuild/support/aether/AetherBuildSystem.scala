@@ -169,7 +169,7 @@ class ConsoleTransferListener(log: Logger) extends AbstractTransferListener {
       pad(buffer, padLen)
       buffer.append('\r')
 
-      log.info(buffer.toString);
+      log.debug(buffer.toString);
     }
 
   private def toKB(bytes: Long): Long = (bytes + 1023) / 1024;
@@ -204,7 +204,7 @@ class ConsoleTransferListener(log: Logger) extends AbstractTransferListener {
     val buffer = new StringBuilder(64)
     pad(buffer, lastLength)
     buffer.append('\r')
-    log.info(buffer.toString);
+    log.debug(buffer.toString);
   }
 
   def dumpException(event: TransferEvent): Unit = {

@@ -21,6 +21,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import collection.JavaConverters._
+import scala.collection.JavaConversions._
+import com.typesafe.config.ConfigRenderOptions
 
 /**
  * These options are created by SbtBuildMain, and are propagated to most stages of building, as
@@ -86,7 +88,7 @@ class SbtBuildMain extends xsbti.AppMain {
       footer("\nFor more information: http://typesafehub.github.io/dbuild")
       val properties = props[String](descr = "One or more Java-style properties")
       val configFile = trailArg[String](required = false, descr = "The name of the dbuild configuration file")
-      val target = trailArg[String](required = false, descr = "If a target project name is specified, dbuild will build only that project and its dependencies")
+      val target = trailArg[String](required = false, descr = "If a target project name is specified, dbuild will build only that project and its dependencies. Multiple targets are also possible, supplying a comma separated list (with no blanks).")
       val debug = opt[Boolean](descr = "Print more debugging information")
       val noResolvers = opt[Boolean](short = 'r', descr = "Disable the parsing of the \"options.resolvers\" section from the dbuild configuration file: only use the resolvers defined in dbuild.properties")
       val noNotify = opt[Boolean](short = 'n', descr = "Disable the notifications defined in the configuration file, and only print a report on the console")
@@ -176,6 +178,18 @@ class SbtBuildMain extends xsbti.AppMain {
                     })
                 }
               } else Map.empty)
+            if (debug) {
+//              println("System.getenv:")
+//              val environmentVars = System.getenv
+//              for ((k, v) <- environmentVars) println("key: " + k + ", value: " + v)
+//              println("System.getProperties:")
+//              val properties = System.getProperties
+//              for ((k, v) <- properties) println("key: " + k + ", value: " + v)
+              println("Complete \"vars\" section:")
+              try { // in case resolve() fails
+                println(endConfig.withOnlyPath("vars").resolve.root.render(ConfigRenderOptions.concise.setFormatted(true)))
+              } catch { case e: Exception => println("Unexpected while printing: " + e.getMessage()) }
+            }
             //
             // After deserialization, Vars is empty (see VarDeserializer)
             // Let's also empty the list of property files, which is now no longer needed

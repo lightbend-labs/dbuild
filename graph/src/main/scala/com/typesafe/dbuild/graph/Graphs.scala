@@ -125,8 +125,9 @@ abstract class Graph[N, E] extends GraphCore[N, E] {
       sequence.toSeq
     }
 
-  def subGraphFrom(n: Node[N]): Set[Node[N]] = {
-    assert(nodes(n), "Node is not contained inside the graph.")
+  def subGraphFrom(n: Node[N]): Set[Node[N]] = subGraphFrom(Seq(n))
+  def subGraphFrom(set: Seq[Nd]): Set[Node[N]] = {
+    set foreach {n => assert(nodes(n), "Node is not contained inside the graph.")}
     def findNodes(current: Seq[Node[N]], found: Set[Node[N]]): Set[Node[N]] =
       if (current.isEmpty) found
       else {
@@ -135,7 +136,7 @@ abstract class Graph[N, E] extends GraphCore[N, E] {
         if (found contains head) findNodes(current.tail, found)
         else findNodes(current.tail ++ spans, found + head)
       }
-    findNodes(Seq(n), Set.empty)
+    findNodes(set, Set.empty)
   }
 
   /**

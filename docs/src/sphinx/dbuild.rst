@@ -868,6 +868,10 @@ an additional argument on the command line, for example:
 
    $ bin/dbuild config.dbuild project
 
+It is also possible to specify more than one target, by
+supplying a comma-separated list of projects (with no
+blanks in between).
+
 Automatic cleanup
 -----------------
 

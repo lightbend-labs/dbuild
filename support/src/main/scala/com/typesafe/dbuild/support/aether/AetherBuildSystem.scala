@@ -78,6 +78,10 @@ import org.eclipse.aether.transport.http.HttpTransporterFactory
 
 import org.eclipse.aether.AbstractRepositoryListener
 import org.eclipse.aether.RepositoryEvent
+import org.eclipse.aether.resolution.ArtifactRequest
+import org.eclipse.aether.graph.DependencyNode
+import org.eclipse.aether.resolution.ArtifactDescriptorRequest
+import org.eclipse.aether.resolution.ArtifactDescriptorResult
 
 class ConsoleRepositoryListener(log: Logger) extends AbstractRepositoryListener {
   override def artifactDeployed(event: RepositoryEvent): Unit =
@@ -253,47 +257,40 @@ object Booter {
 
   def newRepositorySystem(): RepositorySystem = {
     /*
-         * Aether's components implement org.eclipse.aether.spi.locator.Service to ease manual wiring and using the
-         * prepopulated DefaultServiceLocator, we only need to register the repository connector and transporter
-         * factories.
-         */
+    * Aether's components implement org.eclipse.aether.spi.locator.Service to ease manual wiring and using the
+    * prepopulated DefaultServiceLocator, we only need to register the repository connector and transporter
+    * factories.
+    */
     val locator = MavenRepositorySystemUtils.newServiceLocator()
     locator.addService(classOf[RepositoryConnectorFactory], classOf[BasicRepositoryConnectorFactory])
     locator.addService(classOf[TransporterFactory], classOf[FileTransporterFactory])
     locator.addService(classOf[TransporterFactory], classOf[HttpTransporterFactory])
-
     locator.setErrorHandler(new DefaultServiceLocator.ErrorHandler() {
       override def serviceCreationFailed(`type`: Class[_], impl: Class[_], exception: Throwable): Unit =
         {
           exception.printStackTrace();
         }
-    });
-
-    locator.getService(classOf[RepositorySystem]);
+    })
+    locator.getService(classOf[RepositorySystem])
   }
 
   def newRepositorySystemSession(system: RepositorySystem, log: Logger): DefaultRepositorySystemSession = {
-    val session = MavenRepositorySystemUtils.newSession();
-
-    val localRepo = new LocalRepository("target/local-repo");
-    session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepo));
-
-    session.setTransferListener(new ConsoleTransferListener(log));
-    session.setRepositoryListener(new ConsoleRepositoryListener(log));
-
+    val session = MavenRepositorySystemUtils.newSession()
+    val localRepo = new LocalRepository("target/local-repo")
+    session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepo))
+    session.setTransferListener(new ConsoleTransferListener(log))
+    session.setRepositoryListener(new ConsoleRepositoryListener(log))
     // uncomment to generate dirty trees
-    // session.setDependencyGraphTransformer( null );
-
-    session;
+    // session.setDependencyGraphTransformer( null )
+    session
   }
 
-  def newRepositories(system: RepositorySystem, session: RepositorySystemSession): Seq[RemoteRepository] = {
+  def newRepositories(system: RepositorySystem, session: RepositorySystemSession): Seq[RemoteRepository] =
     Seq(newCentralRepository())
-  }
 
-  def newCentralRepository(): RemoteRepository = {
+  def newCentralRepository(): RemoteRepository =
     new RemoteRepository.Builder("central", "default", "http://central.maven.org/maven2/").build();
-  }
+
 }
 
 /** Implementation of the Aether build system. workingDir is the "target" general dbuild dir */
@@ -309,6 +306,106 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     case _ => throw new Exception("Internal error: aether build config options have the wrong type. Please report")
   }
 
+  private def toMaven(repo: xsbti.Repository, log: Logger) = repo match {
+    case m: xsbti.MavenRepository => Some(new RemoteRepository.Builder(m.id, "default", m.url.toString).build())
+    case i: xsbti.IvyRepository =>
+      log.debug("Ivy repository " + i.id + " will be ignored."); None
+    case p: xsbti.PredefinedRepository => p.id match {
+      // "local" is made to point to the same ivyHome, but nothing is ever published there
+      case Local =>
+        log.debug("The predefined \"local\" Ivy repository will be ignored."); None
+      case MavenLocal => // use the global ~/.m2 as a read-only remote repository
+        // We are already pointing to a custom Local Repository, above, and we are not going to touch the
+        // global one. It would be something like:
+        Some(new RemoteRepository.Builder("Maven2 Local", "default", "file://" + System.getProperty("user.home") + "/.m2/repository/").build())
+      case MavenCentral =>
+        Some(new RemoteRepository.Builder("Maven Central", "default", "http://repo1.maven.org/maven2/").build())
+      case ScalaToolsReleases | SonatypeOSSReleases =>
+        Some(new RemoteRepository.Builder("Sonatype Releases Repository", "default", "https://oss.sonatype.org/content/repositories/releases").build())
+      case ScalaToolsSnapshots | SonatypeOSSSnapshots =>
+        Some(new RemoteRepository.Builder("Sonatype Snapshots Repository", "default", "https://oss.sonatype.org/content/repositories/snapshots").build())
+      // IMPORTANT: the Scala "snapshots" are currently published in a rather bizarre manner, using special version numbers and a
+      // "-SNAPSHOT" suffix. The historical explanation was that multiple versions from the same hash could be published, and in order
+      // to avoid granting the "overwrite" privilege a further "-SNAPSHOT" was appended. The result is that there is now (usually)
+      // only one (1) "SNAPSHOT" version in the Maven sense for each Scala "snapshot", and the repository handles them as "-SNAPSHOT",
+      // therefore replacing the suffix with a timestamp, even though there is actually nowadays a single published version for a
+      // given commit. For the exact pattern used in that particular case, check SnapshotPattern and scalaSnapshots() in IvyMachinery.
+      // We currently may be unable to resolve those special versions.
+    }
+  }
+
+  private def resolveAether(module: ModuleRevisionId, localRepo: java.io.File, getJar: Boolean, log: Logger) = {
+
+    import Booter._
+
+    // we resolve directly to the desired output location
+    val localRepository = new LocalRepository(localRepo)
+    val repositorySystem = Booter.newRepositorySystem()
+    val session: DefaultRepositorySystemSession = Booter.newRepositorySystemSession(repositorySystem, log)
+    session.setLocalRepositoryManager(repositorySystem.newLocalRepositoryManager(session, localRepository))
+
+    // It can be more complicated than this, see:
+    // http://sonatype.github.io/sonatype-aether/apidocs/org/sonatype/aether/util/artifact/DefaultArtifact.html
+    val artifact = new AetherDefaultArtifact(module.getOrganisation, module.getName, "", "jar", module.getRevision)
+
+    val mavenRepositories = repos.map(toMaven(_, log)).flatten
+    log.debug("Using Maven repositories:")
+    mavenRepositories foreach { repo =>
+      log.debug(repo.toString)
+    }
+
+    /*
+ * This is the code to grab recursively all the dependencies (unused, but interesting as a reference)
+ *
+    // This is where the actual artifact we want is prepared for resolution/downloading
+    val dependency = new Dependency(artifact, "runtime") // FIXME : customize the configuration (compile/test/whatever, compile by default
+
+    val collectRequest = new CollectRequest()
+    collectRequest.setRoot(dependency)
+    repos.map(toMaven).flatten.foreach { collectRequest.addRepository }
+
+    val dependencyRequest = new DependencyRequest()
+    dependencyRequest.setCollectRequest(collectRequest)
+
+    val rootNode = repositorySystem.resolveDependencies(session, dependencyRequest).getRoot()
+
+    // The result is made up of:
+    // - rootNode
+    // - resolvedFiles
+    // - resolvedClassPath
+    case class AetherResult(root: DependencyNode, resolvedFiles: Seq[java.io.File], resolvedClassPath: String)
+    def getResult(root: DependencyNode) = {
+      val nlg = new PreorderNodeListGenerator()
+      root.accept(nlg)
+      AetherResult(root, nlg.getFiles().toSeq, nlg.getClassPath());
+    }
+    
+    val result = getResult(rootNode)
+    log.info("Result: "+result)
+*/
+
+    def failure() = {
+      log.error("The artifact could not be resolved from any of:")
+      mavenRepositories foreach { r => log.error(r.toString) }
+      sys.error("The artifact could not be resolved")
+    }
+
+    val descriptorRequest = new ArtifactDescriptorRequest(artifact, mavenRepositories, null)
+    val descriptorResult = repositorySystem.readArtifactDescriptor(session, descriptorRequest)
+    val pomFile = descriptorResult.getArtifact().getFile
+    if (pomFile == null) failure()
+    // we can also use the resolved pom to grab very easily the direct dependencies:
+    // descriptorResult.getDependencies foreach { log.debug }
+    log.debug("The resolved pom is at: " + pomFile.getCanonicalFile)
+    if (getJar) {
+      val artifactRequest = new ArtifactRequest(artifact, mavenRepositories, null)
+      val artFile = repositorySystem.resolveArtifact(session, artifactRequest).getArtifact().getFile()
+      if (artFile == null) failure()
+      log.debug("The resolved file is at: " + artFile.getCanonicalFile)
+      // and of course we can resolve source, javadoc, etc. if needed
+    }
+    descriptorResult
+  }
   def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val config = extractionConfig.buildConfig
     // TODO: extract the dependencies for real using Aether. It should be easy to do, see:
@@ -342,17 +439,17 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     // 
     val modRevId = AetherBuildSystem.getProjectModuleID(project.config)
 
-    val module = modRevId
-
     val version = input.version
+    log.info("Resolving:")
+    log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + modRevId.getRevision)
     log.info("Will publish as:")
-    log.info("  " + module.getOrganisation + "#" + module.getName + ";" + version)
+    log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + version)
 
     // TODO: implement the rename and pom rewriting. That may be absolutely necessary, as we need a different
     // version number when bootstrapping the Scala compiler.
-    if (version != module.getRevision()) {
-      sys.error("Unsupported: we asked the mini-Maven build system to republish " + module.getOrganisation + "#" +
-        module.getName + ";" + module.getRevision +
+    if (version != modRevId.getRevision()) {
+      sys.error("Unsupported: we asked the mini-Maven build system to republish " + modRevId.getOrganisation + "#" +
+        modRevId.getName + ";" + modRevId.getRevision +
         " as version " + version + ", but the version change code has not been implemented yet.")
     }
     // this is transitive = false, only used to retrieve the jars that should be republished later
@@ -375,78 +472,43 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     //    val ivyRepo = baseDir / ".ivy2" / "cache"
 
     val localRepo = input.outRepo
-    val modulePluginInfo = pluginAttrs(module)
 
+    // FIXME: can I support plugins
+    val modulePluginInfo = pluginAttrs(modRevId)
     // TODO: use sbt's internals to transform a IVY plugin reference into a maven one (with double suffix), if applicable
 
-    import Booter._
+    resolveAether(modRevId, localRepo, getJar = true, log)
+    // at this point the downloaded pom is also in the localRepo. We can just save all of the resolved files,
+    // and we're good.
 
-    val localRepositoryDir = (baseDir / "aether-repo").getCanonicalPath
-    val localRepository = new LocalRepository(localRepositoryDir)
+    // Time to calculate the new version, and move about the files in order to keep the repository structure coherent
+    // We could be dealing with a Scala artifact (cross versioned or not), a plugin, a Java artifact, or with Scala core jars.
+    // We can ignore plugins for now.
 
-    val repositorySystem = Booter.newRepositorySystem()
-    val session: DefaultRepositorySystemSession = Booter.newRepositorySystemSession(repositorySystem, log)
-    session.setLocalRepositoryManager(repositorySystem.newLocalRepositoryManager(session, localRepository))
+    // Now, how do we cope with this mess?...
 
-    //////////
-    // This is where the actual artifact we want is prepared for resolution/downloading
-    val dependency =
-      new Dependency(new AetherDefaultArtifact(module.getOrganisation, module.getName, "", "jar", module.getRevision),
-        "runtime") // FIXME : customize the configuration (compile/test/whatever, compile by default
-    //////////
+    //    val scalaVersion = {
+    //      val allArts = preCrossArtifactsMap.map(_._2).flatMap(_.results).flatMap(_.artifacts)
+    //      allArts.find(l => l.info.organization == "org.scala-lang" && l.info.name == "scala-library").map(_.version)
+    //    }
+    //    
+    //    def getScalaVersion(crossLevel: String) = scalaVersion getOrElse
+    //      sys.error("In Assemble, the requested cross-version level is " + crossLevel + ", but no scala-library was found among the artifacts.")
+    //        val crossSuff = project.config.getCrossVersionHead match {
+    //      case "disabled" => ""
+    //      case l @ "full" => "_" + getScalaVersion(l)
+    //      case l @ "binary" => "_" + binary(getScalaVersion(l))
+    //      case l @ "standard" =>
+    //        val version = getScalaVersion(l)
+    //        "_" + (if (version.contains('-')) version else binary(version))
+    //      case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
+    //    }
+    //    def patchName(s: String) = fixName(s) + crossSuff
 
-    // repos: List[xsbti.Repository]
-    // TODO: grab the list of resolvers (Maven only), and use it here. Prepent the local rematerialized repo (even if
-    // (even if now it is empty, we might track the real dependencies at a later time)
+    // Excellent. Now we have to transform the resolved artifact and the pom, in order to convert it to the requested
+    // cross suffix and version. We reuse some of the logic from the "Assemble" build system (TODO: consolidate the
+    // rewriting in Assemble, Ivy, and Aether).
 
-    def toMaven(repo: xsbti.Repository) = repo match {
-      case m: xsbti.MavenRepository => Some(new RemoteRepository.Builder(m.id, "default", m.url.toString).build())
-      case i: xsbti.IvyRepository =>
-        log.info("Ivy repository " + i.id + " will be ignored."); None
-      case p: xsbti.PredefinedRepository => p.id match {
-        // "local" is made to point to the same ivyHome, but nothing is ever published there
-        case Local =>
-          log.info("The \"local\" predefined Ivy repository will be ignored."); None
-        case MavenLocal => // use the global ~/.m2 as a read-only remote repository
-        // We are already pointing to a custom Local Repository, above, and we are not going to touch the
-        // global one. It would be something like:
-          Some(new RemoteRepository.Builder("Maven2 Local", "default", "file://" + System.getProperty("user.home") + "/.m2/repository/").build())
-        case MavenCentral =>
-          Some(new RemoteRepository.Builder("Maven Central", "default", "http://repo1.maven.org/maven2/").build())
-        case ScalaToolsReleases | SonatypeOSSReleases =>
-          Some(new RemoteRepository.Builder("Sonatype Releases Repository", "default", "https://oss.sonatype.org/content/repositories/releases").build())
-        case ScalaToolsSnapshots | SonatypeOSSSnapshots =>
-          Some(new RemoteRepository.Builder("Sonatype Snapshots Repository", "default", "https://oss.sonatype.org/content/repositories/snapshots").build())
-        // IMPORTANT: the Scala "snapshots" are currently published in a rather bizarre manner, using special version numbers and a
-        // "-SNAPSHOT" suffix. The historical explanation was that multiple versions from the same hash could be published, and in order
-        // to avoid granting the "overwrite" privilege a further "-SNAPSHOT" was appended. The result is that there is now (usually)
-        // only one (1) "SNAPSHOT" version in the Maven sense for each Scala "snapshot", and the repository handles them as "-SNAPSHOT",
-        // therefore replacing the suffix with a timestamp, even though there is actually nowadays a single published version for a
-        // given commit. For the exact pattern used in that particular case, check SnapshotPattern and scalaSnapshots() in IvyMachinery.
-        // We currently may be unable to resolve those special versions.
-      }
-    }
-
-    val collectRequest = new CollectRequest()
-    collectRequest.setRoot(dependency)
-    repos.map(toMaven).flatten.foreach { collectRequest.addRepository }
-
-    val dependencyRequest = new DependencyRequest()
-    dependencyRequest.setCollectRequest(collectRequest)
-
-    val rootNode = repositorySystem.resolveDependencies(session, dependencyRequest).getRoot()
-    val nlg = new PreorderNodeListGenerator();
-    rootNode.accept(nlg);
-
-    // The result is made up of:
-    // - rootNode
-    // - resolvedFiles
-    // - resolvedClassPath
-    import org.eclipse.aether.graph.DependencyNode;
-    case class AetherResult(root: DependencyNode, resolvedFiles: Seq[java.io.File], resolvedClassPath: String)
-    val result = new AetherResult(rootNode, nlg.getFiles().toSeq, nlg.getClassPath());
-
-    log.info("Result: "+result)
     sys.error("Enough.")
 
     val q = BuildArtifactsOut(Seq.empty)

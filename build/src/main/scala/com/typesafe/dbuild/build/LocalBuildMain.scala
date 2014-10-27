@@ -25,14 +25,16 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
     new support.svn.SvnProjectResolver,
     new support.ivy.IvyProjectResolver(repos),
     new support.test.TestProjectResolver,
-    new support.nil.NilProjectResolver)
+    new support.nil.NilProjectResolver,
+    new support.aether.AetherProjectResolver(repos))
   val buildSystems: Seq[BuildSystemCore] =
     Seq(new support.sbt.SbtBuildSystem(repos, targetDir, options.debug),
       support.scala.ScalaBuildSystem,
       new support.ivy.IvyBuildSystem(repos, targetDir),
       support.assemble.AssembleBuildSystem,
       support.test.TestBuildSystem,
-      support.nil.NilBuildSystem)
+      support.nil.NilBuildSystem,
+      new support.aether.AetherBuildSystem(repos, targetDir))
 
   // Gymnastics for classloader madness
 

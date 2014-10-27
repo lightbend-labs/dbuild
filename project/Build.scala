@@ -105,7 +105,7 @@ object DBuilderBuild extends Build with BuildHelper {
   lazy val repo = (
     Proj("repo")
     dependsOn(metadata, logging)
-    dependsOnRemote(mvnAether, aetherWagon, dispatch)
+    dependsOnRemote(mvnAether, dispatch, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
     dependsOnSbt(sbtIo, sbtLaunchInt)
       settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, organization, scalaVersion, streams) map { (dir, version, org, sv, s) =>
         val file = dir / "Defaults.scala"
@@ -145,7 +145,7 @@ object Defaults {
   lazy val support = (
       Proj("support") 
       dependsOn(core, repo, metadata, proj % "compile->compile;it->compile", logging % "it")
-      dependsOnRemote(mvnEmbedder, mvnWagon, javaMail)
+      dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
       settings(

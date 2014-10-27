@@ -616,6 +616,12 @@ case class IvyExtraConfig(
   // Note: this field is not for use by end user.
   @JsonProperty("snapshot-marker") snapshotMarker: Option[String]) extends ExtraConfig
 
+case class AetherExtraConfig(
+  sources: Boolean = false,
+  javadoc: Boolean = false,
+  @JsonProperty("main-jar") mainJar: Boolean = true,
+  @JsonProperty("snapshot-marker") snapshotMarker: Option[String]) extends ExtraConfig
+
 case class IvyArtifact(
   classifier: String = "",
   @JsonProperty("type") typ: String = "jar",
@@ -656,6 +662,7 @@ object BuildSystemExtras {
     "scala" -> classOf[ScalaExtraConfig],
     "ivy" -> classOf[IvyExtraConfig],
     "assemble" -> classOf[AssembleExtraConfig],
+    "aether" -> classOf[AetherExtraConfig],
     "test" -> classOf[TestExtraConfig],
     "nil" -> classOf[NilExtraConfig])
 }

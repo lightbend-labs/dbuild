@@ -6,7 +6,8 @@ object Dependencies {
   val sbtVersion12 = "0.12.4"
   val sbtVersion13 = "0.13.0"
 
-  val mvnVersion = "3.0.4"
+  val mvnVersion = "3.2.3"
+  val aetherVersion = "1.0.0.v20140518"
 
   val typesafeConfig = "com.typesafe" % "config" % "1.0.2"
   val akkaActor29      = "com.typesafe.akka" % "akka-actor" % "2.0.5"
@@ -18,10 +19,17 @@ object Dependencies {
 
   val dispatch       = "net.databinder" %% "dispatch-http" % "0.8.10"
 
+  val aether         = "org.eclipse.aether" % "aether" % aetherVersion
+  val aetherApi      = "org.eclipse.aether" % "aether-api" % aetherVersion
+  val aetherSpi      = "org.eclipse.aether" % "aether-spi" % aetherVersion
+  val aetherUtil     = "org.eclipse.aether" % "aether-util" % aetherVersion
+  val aetherImpl     = "org.eclipse.aether" % "aether-impl" % aetherVersion
+  val aetherConnectorBasic = "org.eclipse.aether" % "aether-connector-basic" % aetherVersion
+  val aetherFile     = "org.eclipse.aether" % "aether-transport-file" % aetherVersion
+  val aetherHttp     = "org.eclipse.aether" % "aether-transport-http" % aetherVersion
+  val aetherWagon    = "org.eclipse.aether" % "aether-transport-wagon" % aetherVersion
 
-  //val aether         = "org.sonatype.aether" % "aether" % "1.13.1"
   val mvnAether      = "org.apache.maven" % "maven-aether-provider" % mvnVersion
-  val aetherWagon    = "org.sonatype.aether" % "aether-connector-wagon" % "1.13.1"
   val mvnWagon       = "org.apache.maven.wagon" % "wagon-http" % "2.2"
   val mvnEmbedder    = "org.apache.maven" % "maven-embedder" % mvnVersion
 

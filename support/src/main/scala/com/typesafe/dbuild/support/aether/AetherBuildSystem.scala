@@ -407,10 +407,10 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
         // "local" is made to point to the same ivyHome, but nothing is ever published there
         case Local =>
           log.info("The \"local\" predefined Ivy repository will be ignored."); None
-        case MavenLocal => None
+        case MavenLocal => // use the global ~/.m2 as a read-only remote repository
         // We are already pointing to a custom Local Repository, above, and we are not going to touch the
         // global one. It would be something like:
-        // "Maven2 Local", System.getProperty("user.home") + "/.m2/repository/"
+          Some(new RemoteRepository.Builder("Maven2 Local", "default", "file://" + System.getProperty("user.home") + "/.m2/repository/").build())
         case MavenCentral =>
           Some(new RemoteRepository.Builder("Maven Central", "default", "http://repo1.maven.org/maven2/").build())
         case ScalaToolsReleases | SonatypeOSSReleases =>

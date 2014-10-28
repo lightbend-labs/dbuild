@@ -479,6 +479,7 @@ java-options
   The default value of java options used while invoking sbt is:
 
 .. code-block:: text
+
     ["-XX:+CMSClassUnloadingEnabled",
      "-XX:+DoEscapeAnalysis",
      "-Xms1536m",

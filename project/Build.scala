@@ -145,7 +145,7 @@ object Defaults {
   lazy val support = (
       Proj("support") 
       dependsOn(core, repo, metadata, proj % "compile->compile;it->compile", logging % "it")
-      dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp)
+      dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple)
       dependsOnSbt(sbtLaunchInt, sbtIvy)
       settings(SbtSupport.settings:_*)
       settings(

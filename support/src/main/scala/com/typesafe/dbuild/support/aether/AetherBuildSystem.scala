@@ -28,7 +28,9 @@ import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
 import com.typesafe.dbuild.model.Utils.readValue
 import xsbti.Predefined._
-import scala.collection.JavaConversions._
+import collection.JavaConversions._
+import collection.JavaConverters._
+import _root_.java.io.{ FileReader, FileWriter }
 import org.apache.ivy
 import ivy.Ivy
 import ivy.plugins.resolver.{ BasicResolver, ChainResolver, FileSystemResolver, IBiblioResolver, URLResolver }
@@ -46,16 +48,20 @@ import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project.build.LocalBuildRunner
 import com.typesafe.dbuild.repo.core.GlobalDirs.dbuildHomeDir
 import com.typesafe.dbuild.support.SbtUtil.pluginAttrs
+import com.typesafe.dbuild.support.assemble.AssembleBuildSystem
+
+import org.apache.maven.model.{ Model, Dependency }
+import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 
 import org.eclipse.aether.DefaultRepositorySystemSession
 import org.eclipse.aether.RepositorySystem
 import org.eclipse.aether.RepositorySystemSession
-import org.eclipse.aether.artifact.Artifact
+import org.eclipse.aether.artifact.{ Artifact => AetherArtifact }
 import org.eclipse.aether.artifact.{ DefaultArtifact => AetherDefaultArtifact }
 import org.eclipse.aether.collection.CollectRequest
 import org.eclipse.aether.deployment.DeployRequest
 import org.eclipse.aether.deployment.DeploymentException
-import org.eclipse.aether.graph.Dependency
+import org.eclipse.aether.graph.{ Dependency => AetherDependency }
 import org.eclipse.aether.graph.DependencyNode
 import org.eclipse.aether.installation.InstallRequest
 import org.eclipse.aether.installation.InstallationException
@@ -66,6 +72,7 @@ import org.eclipse.aether.resolution.DependencyRequest
 import org.eclipse.aether.resolution.DependencyResolutionException
 import org.eclipse.aether.util.graph.visitor.PreorderNodeListGenerator
 import org.eclipse.aether.util.repository.AuthenticationBuilder
+import org.eclipse.aether.transfer.ArtifactNotFoundException
 
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils
 import org.eclipse.aether.RepositorySystem
@@ -85,56 +92,64 @@ import org.eclipse.aether.resolution.ArtifactDescriptorResult
 
 class ConsoleRepositoryListener(log: Logger) extends AbstractRepositoryListener {
   override def artifactDeployed(event: RepositoryEvent): Unit =
-    log.info("Deployed " + event.getArtifact() + " to " + event.getRepository());
+    log.debug("Deployed " + event.getArtifact() + " to " + event.getRepository())
 
   override def artifactDeploying(event: RepositoryEvent): Unit =
-    log.info("Deploying " + event.getArtifact() + " to " + event.getRepository());
+    log.debug("Deploying " + event.getArtifact() + " to " + event.getRepository())
 
   override def artifactDescriptorInvalid(event: RepositoryEvent): Unit =
-    log.info("Invalid artifact descriptor for " + event.getArtifact() + ": "
-      + event.getException().getMessage());
+    log.error("Invalid artifact descriptor for " + event.getArtifact() + ": "
+      + event.getException().getMessage())
 
   override def artifactDescriptorMissing(event: RepositoryEvent): Unit =
-    log.info("Missing artifact descriptor for " + event.getArtifact());
+    log.debug("Missing artifact descriptor for " + event.getArtifact())
 
   override def artifactInstalled(event: RepositoryEvent): Unit =
-    log.info("Installed " + event.getArtifact() + " to " + event.getFile());
+    log.debug("Installed " + event.getArtifact() + " to " + event.getFile())
 
   override def artifactInstalling(event: RepositoryEvent): Unit =
-    log.info("Installing " + event.getArtifact() + " to " + event.getFile());
+    log.debug("Installing " + event.getArtifact() + " to " + event.getFile())
 
   override def artifactResolved(event: RepositoryEvent): Unit =
-    log.info("Resolved artifact " + event.getArtifact() + " from " + event.getRepository());
+    diagnoseResolution(event, event.getArtifact, "artifact")
 
   override def artifactDownloading(event: RepositoryEvent): Unit =
-    log.info("Downloading artifact " + event.getArtifact() + " from " + event.getRepository());
+    log.debug("Downloading artifact " + event.getArtifact() + " from " + event.getRepository())
 
   override def artifactDownloaded(event: RepositoryEvent): Unit =
-    log.info("Downloaded artifact " + event.getArtifact() + " from " + event.getRepository());
+    log.debug("Downloaded artifact " + event.getArtifact() + " from " + event.getRepository())
 
   override def artifactResolving(event: RepositoryEvent): Unit =
-    log.info("Resolving artifact " + event.getArtifact());
+    log.info("Resolving artifact " + event.getArtifact())
 
   override def metadataDeployed(event: RepositoryEvent): Unit =
-    log.info("Deployed " + event.getMetadata() + " to " + event.getRepository());
+    log.debug("Deployed " + event.getMetadata() + " to " + event.getRepository())
 
   override def metadataDeploying(event: RepositoryEvent): Unit =
-    log.info("Deploying " + event.getMetadata() + " to " + event.getRepository());
+    log.debug("Deploying " + event.getMetadata() + " to " + event.getRepository())
 
   override def metadataInstalled(event: RepositoryEvent): Unit =
-    log.info("Installed " + event.getMetadata() + " to " + event.getFile());
+    log.debug("Installed " + event.getMetadata() + " to " + event.getFile())
 
   override def metadataInstalling(event: RepositoryEvent): Unit =
-    log.info("Installing " + event.getMetadata() + " to " + event.getFile());
+    log.debug("Installing " + event.getMetadata() + " to " + event.getFile())
 
   override def metadataInvalid(event: RepositoryEvent): Unit =
-    log.info("Invalid metadata " + event.getMetadata());
+    log.debug("Invalid metadata " + event.getMetadata())
 
   override def metadataResolved(event: RepositoryEvent): Unit =
-    log.info("Resolved metadata " + event.getMetadata() + " from " + event.getRepository());
+    diagnoseResolution(event, event.getMetadata, "metadata")
 
   override def metadataResolving(event: RepositoryEvent): Unit =
-    log.info("Resolving metadata " + event.getMetadata() + " from " + event.getRepository());
+    log.info("Resolving metadata " + event.getMetadata() + " from " + event.getRepository())
+
+  private def diagnoseResolution[T](event: RepositoryEvent, stuff: T, kind: String) = {
+    val repo = event.getRepository
+    if (repo == null)
+      log.info("Could not resolve " + kind + "!")
+    else
+      log.info("Resolved " + kind + " " + stuff + " from " + repo)
+  }
 }
 
 import org.eclipse.aether.transfer.AbstractTransferListener
@@ -147,110 +162,69 @@ import org.eclipse.aether.transfer.TransferResource
  */
 class ConsoleTransferListener(log: Logger) extends AbstractTransferListener {
   // we cannot use scala.collection.concurrent.Map (TrieMap), as this code must compile under 2.9 as well
-  private val downloads = new scala.collection.mutable.HashMap[TransferResource, Long] with scala.collection.mutable.SynchronizedMap[TransferResource, Long]
-
-  private var lastLength: Int = 0
+  private val downloads =
+    new scala.collection.mutable.HashMap[TransferResource, Long] with scala.collection.mutable.SynchronizedMap[TransferResource, Long]
 
   override def transferInitiated(event: TransferEvent): Unit = {
     val message = if (event.getRequestType() == TransferEvent.RequestType.PUT) "Uploading" else "Downloading"
-    log.info(message + ": " + event.getResource().getRepositoryUrl() + event.getResource().getResourceName());
+    log.debug(message + ": " + event.getResource().getRepositoryUrl() + event.getResource().getResourceName())
   }
 
-  override def transferProgressed(event: TransferEvent): Unit =
-    {
-      val resource = event.getResource()
-      downloads.put(resource, event.getTransferredBytes())
+  override def transferProgressed(event: TransferEvent): Unit = {
+    val resource = event.getResource()
+    downloads.put(resource, event.getTransferredBytes())
 
-      val buffer = new StringBuilder(64)
-
-      downloads.foreach {
-        case (total, complete) =>
-          buffer.append(getStatus(complete, total.getContentLength)).append("  ")
-      }
-
-      val padLen = lastLength - buffer.length
-      lastLength = buffer.length
-      pad(buffer, padLen)
-      buffer.append('\r')
-
-      log.debug(buffer.toString);
+    downloads.foreach {
+      case (total, complete) =>
+        log.debug(getStatus(complete, total.getContentLength))
     }
+  }
 
   private def toKB(bytes: Long): Long = (bytes + 1023) / 1024;
 
-  private def getStatus(complete: Long, total: Long): String =
-    {
-      if (total >= 1024) {
-        toKB(complete) + "/" + toKB(total) + " KB ";
-      } else if (total >= 0) {
-        complete + "/" + total + " B ";
-      } else if (complete >= 1024) {
-        toKB(complete) + " KB ";
-      } else {
-        complete + " B ";
-      }
-    }
-
-  // TODO: Scala-ize a bit better
-  private def pad(buffer: StringBuilder, inSpaces: Int): Unit = {
-    var spaces = inSpaces
-    val block = "                                        ";
-    while (spaces > 0) {
-      val n = Math.min(spaces, block.length)
-      buffer.append(block.toArray[Char], 0, n)
-      spaces = spaces - n
+  private def getStatus(complete: Long, total: Long): String = {
+    if (total >= 1024) {
+      toKB(complete) + "/" + toKB(total) + " KB ";
+    } else if (total >= 0) {
+      complete + "/" + total + " B ";
+    } else if (complete >= 1024) {
+      toKB(complete) + " KB ";
+    } else {
+      complete + " B ";
     }
   }
 
-  private def transferCompleted(event: TransferEvent): Unit = {
+  private def transferCompleted(event: TransferEvent): Unit =
     downloads.remove(event.getResource())
 
-    val buffer = new StringBuilder(64)
-    pad(buffer, lastLength)
-    buffer.append('\r')
-    log.debug(buffer.toString);
+  override def transferCorrupted(event: TransferEvent): Unit =
+    log.debug(event.getException.getMessage)
+
+  override def transferFailed(event: TransferEvent): Unit = {
+    transferCompleted(event)
+    log.debug(event.getException.getMessage)
   }
 
-  def dumpException(event: TransferEvent): Unit = {
-    val errors = new java.io.StringWriter
-    val pw = new java.io.PrintWriter(errors)
-    event.getException.printStackTrace(pw)
-    log.error(errors.toString)
+  override def transferSucceeded(event: TransferEvent): Unit = {
+    transferCompleted(event)
+    val resource = event.getResource()
+    val contentLength = event.getTransferredBytes()
+    if (contentLength >= 0) {
+      val typ = if (event.getRequestType() == TransferEvent.RequestType.PUT) "Uploaded" else "Downloaded"
+      val len = if (contentLength >= 1024) toKB(contentLength) + " KB" else contentLength + " B"
+
+      val duration = System.currentTimeMillis() - resource.getTransferStartTime()
+      val throughput = if (duration > 0) {
+        val bytes = contentLength - resource.getResumeOffset()
+        val format = new java.text.DecimalFormat("0.0", new java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH));
+        val kbPerSec = (bytes / 1024.0) / (duration / 1000.0);
+        " at " + format.format(kbPerSec) + " KB/sec";
+      } else ""
+
+      log.info(typ + ": " + resource.getRepositoryUrl() + resource.getResourceName() + " (" + len
+        + throughput + ")");
+    }
   }
-
-  override def transferCorrupted(event: TransferEvent): Unit = dumpException(event)
-
-  override def transferFailed(event: TransferEvent): Unit =
-    {
-      transferCompleted(event)
-      event.getException match {
-        case e: MetadataNotFoundException =>
-        case _ => dumpException(event)
-      }
-    }
-
-  override def transferSucceeded(event: TransferEvent): Unit =
-    {
-      transferCompleted(event)
-
-      val resource = event.getResource()
-      val contentLength = event.getTransferredBytes()
-      if (contentLength >= 0) {
-        val typ = if (event.getRequestType() == TransferEvent.RequestType.PUT) "Uploaded" else "Downloaded"
-        val len = if (contentLength >= 1024) toKB(contentLength) + " KB" else contentLength + " B"
-
-        val duration = System.currentTimeMillis() - resource.getTransferStartTime()
-        val throughput = if (duration > 0) {
-          val bytes = contentLength - resource.getResumeOffset()
-          val format = new java.text.DecimalFormat("0.0", new java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH));
-          val kbPerSec = (bytes / 1024.0) / (duration / 1000.0);
-          " at " + format.format(kbPerSec) + " KB/sec";
-        } else ""
-
-        log.info(typ + ": " + resource.getRepositoryUrl() + resource.getResourceName() + " (" + len
-          + throughput + ")");
-      }
-    }
 }
 
 object Booter {
@@ -307,7 +281,7 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
   }
 
   private def toMaven(repo: xsbti.Repository, log: Logger) = repo match {
-    case m: xsbti.MavenRepository => Some(new RemoteRepository.Builder(m.id, "default", m.url.toString).build())
+    case m: xsbti.MavenRepository => Some(new RemoteRepository.Builder(m.id, "default", m.url.toURI.toString).build())
     case i: xsbti.IvyRepository =>
       log.debug("Ivy repository " + i.id + " will be ignored."); None
     case p: xsbti.PredefinedRepository => p.id match {
@@ -334,7 +308,8 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     }
   }
 
-  private def resolveAether(module: ModuleRevisionId, localRepo: java.io.File, getJar: Boolean, log: Logger) = {
+  private def resolveAether(module: ModuleRevisionId, localRepo: File, getJar: Boolean,
+    rematerializedRepo: Option[File], log: Logger) = {
 
     import Booter._
 
@@ -344,11 +319,13 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     val session: DefaultRepositorySystemSession = Booter.newRepositorySystemSession(repositorySystem, log)
     session.setLocalRepositoryManager(repositorySystem.newLocalRepositoryManager(session, localRepository))
 
-    // It can be more complicated than this, see:
-    // http://sonatype.github.io/sonatype-aether/apidocs/org/sonatype/aether/util/artifact/DefaultArtifact.html
-    val artifact = new AetherDefaultArtifact(module.getOrganisation, module.getName, "", "jar", module.getRevision)
-
-    val mavenRepositories = repos.map(toMaven(_, log)).flatten
+    val definedMavenRepositories = repos.map(toMaven(_, log)).flatten
+    val mavenRepositories = rematerializedRepo match {
+      case None => definedMavenRepositories
+      case Some(repo) =>
+        // the dbuild-provided repository must always be in front
+        new RemoteRepository.Builder("dbuild-provided", "default", "file://" + repo.getCanonicalFile).build() +: definedMavenRepositories
+    }
     log.debug("Using Maven repositories:")
     mavenRepositories foreach { repo =>
       log.debug(repo.toString)
@@ -377,7 +354,7 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     def getResult(root: DependencyNode) = {
       val nlg = new PreorderNodeListGenerator()
       root.accept(nlg)
-      AetherResult(root, nlg.getFiles().toSeq, nlg.getClassPath());
+      AetherResult(root, nlg.getFiles().toSeq, nlg.getClassPath())
     }
     
     val result = getResult(rootNode)
@@ -390,39 +367,85 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
       sys.error("The artifact could not be resolved")
     }
 
-    val descriptorRequest = new ArtifactDescriptorRequest(artifact, mavenRepositories, null)
+    // It can be more complicated than this, see:
+    // http://sonatype.github.io/sonatype-aether/apidocs/org/sonatype/aether/util/artifact/DefaultArtifact.html
+    def getArtifact(kind: String) =
+      new AetherDefaultArtifact(module.getOrganisation, module.getName, "", kind, module.getRevision)
+
+    val pomArt = getArtifact("pom")
+    val jarArt = getArtifact("jar")
+
+    val descriptorRequest = new ArtifactDescriptorRequest(jarArt, mavenRepositories, null)
     val descriptorResult = repositorySystem.readArtifactDescriptor(session, descriptorRequest)
-    val pomFile = descriptorResult.getArtifact().getFile
-    if (pomFile == null) failure()
+    val pomOrigin = descriptorResult.getRepository // will be null if it didn't resolve
+    if (pomOrigin == null) failure()
     // we can also use the resolved pom to grab very easily the direct dependencies:
     // descriptorResult.getDependencies foreach { log.debug }
-    log.debug("The resolved pom is at: " + pomFile.getCanonicalFile)
-    if (getJar) {
-      val artifactRequest = new ArtifactRequest(artifact, mavenRepositories, null)
-      val artFile = repositorySystem.resolveArtifact(session, artifactRequest).getArtifact().getFile()
-      if (artFile == null) failure()
-      log.debug("The resolved file is at: " + artFile.getCanonicalFile)
+
+    val arts = if (getJar) {
+      def grab(inArt: AetherArtifact): AetherArtifact = {
+        val request = new ArtifactRequest(inArt, mavenRepositories, null)
+        val outArtifact = repositorySystem.resolveArtifact(session, request).getArtifact
+        val file = outArtifact.getFile
+        if (file == null) failure()
+        log.debug("The resolved " + inArt.getExtension + " is at: " + file.getCanonicalFile)
+        outArtifact
+      }
+      // If we are downloading artifacts, we would also like to grab the pom again as an artifact,
+      // so that we can determine its file location
+      val outPomArt = grab(pomArt)
+      val outJarArt = grab(jarArt)
       // and of course we can resolve source, javadoc, etc. if needed
-    }
-    descriptorResult
+      Seq(outPomArt, outJarArt)
+    } else Seq(pomArt, jarArt)
+
+    (descriptorResult, arts)
   }
   def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val config = extractionConfig.buildConfig
-    // TODO: extract the dependencies for real using Aether. It should be easy to do, see:
-    // http://git.eclipse.org/c/aether/aether-demo.git/tree/aether-demo-snippets/src/main/java/org/eclipse/aether/examples/GetDirectDependencies.java
-    // For now, let's pretend there are no further dependencies
     val module = config.uri.substring(7)
     val modRevId = ModuleRevisionId.parse(module)
+
+    // we grab the pom only, directly in the extraction dir
+    val (descriptorResult, arts) = resolveAether(modRevId, baseDir, getJar = false, None, log)
+    // only the direct dependencies
+    val dependencies = descriptorResult.getDependencies.toSeq
+    if (dependencies.isEmpty)
+      log.debug("There are no direct dependencies")
+    else {
+      log.debug("The direct dependencies are:")
+      dependencies foreach { d => log.debug(d.toString) }
+    }
+
+    def artToProjectRef(a: AetherArtifact) = {
+      ProjectRef(fixName(a.getArtifactId), a.getGroupId, a.getExtension, if (a.getClassifier != "jar") Some(a.getClassifier) else None)
+    }
+
     ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
     // (version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty)
     val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(modRevId.getName()), modRevId.getOrganisation(),
       //  artifacts: Seq[ProjectRef],
-      Seq.empty /*firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct */ ,
+      arts map artToProjectRef,
       //  dependencies: Seq[ProjectRef])
-      Seq.empty /* TODO: insert actual dependencies */ )))
+      dependencies map { d => artToProjectRef(d.getArtifact) })))
     log.debug(q.toString)
     q
   }
+
+  /*
+@Override public ModelSource resolveModel(String groupId,String artifactId,String version) throws UnresolvableModelException {
+  Artifact pomArtifact=new DefaultArtifact(groupId,artifactId,"","pom",version);
+  try {
+    ArtifactRequest request=new ArtifactRequest(pomArtifact,repositories,null);
+    pomArtifact=system.resolveArtifact(session,request).getArtifact();
+  }
+ catch (  ArtifactResolutionException ex) {
+    throw new UnresolvableModelException(ex.getMessage(),groupId,artifactId,version,ex);
+  }
+  File pomFile=pomArtifact.getFile();
+  return new FileModelSource(pomFile);
+}
+   */
 
   // TODO: the Aether build system ignores project.buildOptions.crossVersion!! It rather always republishes
   // using the same cross-versioning format of whatever it resolved.
@@ -440,18 +463,14 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     val modRevId = AetherBuildSystem.getProjectModuleID(project.config)
 
     val version = input.version
-    log.info("Resolving:")
-    log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + modRevId.getRevision)
-    log.info("Will publish as:")
-    log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + version)
 
     // TODO: implement the rename and pom rewriting. That may be absolutely necessary, as we need a different
     // version number when bootstrapping the Scala compiler.
-    if (version != modRevId.getRevision()) {
-      sys.error("Unsupported: we asked the mini-Maven build system to republish " + modRevId.getOrganisation + "#" +
-        modRevId.getName + ";" + modRevId.getRevision +
-        " as version " + version + ", but the version change code has not been implemented yet.")
-    }
+    //    if (version != modRevId.getRevision()) {
+    //      sys.error("Unsupported: we asked the mini-Maven build system to republish " + modRevId.getOrganisation + "#" +
+    //        modRevId.getName + ";" + modRevId.getRevision +
+    //        " as version " + version + ", but the version change code has not been implemented yet.")
+    //    }
     // this is transitive = false, only used to retrieve the jars that should be republished later
     //    val response = IvyMachinery.resolveIvy(newProjectConfig, baseDir, repos, log, transitive = false)
     //    def artifactToArtifactLocation(a: Artifact) = {
@@ -471,13 +490,57 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     //    val ivyArts = (firstNode.getAllArtifacts.toSeq map { _.getModuleRevisionId }).distinct.flatMap { report.getArtifactsReports(_) } map { _.getLocalFile }
     //    val ivyRepo = baseDir / ".ivy2" / "cache"
 
+    // Information on rematerialized artifacts (ground level only)
+    val availableArts = input.artifacts.artifacts
+    val availableRepo = input.artifacts.localRepo
+
     val localRepo = input.outRepo
 
-    // FIXME: can I support plugins
+    // TODO: rather than blindly resolving with the current version number, we should
+    // look into the availableArts if the same artifact has already been provided as a
+    // dependency by some other dbuild project. If so, we should change groupId (to adapt crossSuffix) and
+    // version number in order to make the current request match the available artifact.
+    // THEN we can resolve, which will grab the artifact from the availableRepo.
+    // We do not need to adjust the dependencies in the pom prior to resolution, since we do not grab the
+    // transitive dependencies, and we patch the pom after the fact, below.
+
+    // Right now, no rewiring on the original version/groupId/crossSuffix. FIXME
+
+    val republishArt = availableArts.find(a =>
+      modRevId.getOrganisation == a.info.organization &&
+        fixName(modRevId.getName) == a.info.name)
+
+    log.info("Requested:")
+    log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + modRevId.getRevision)
+    republishArt match {
+      case None => log.info("Not provided by dbuild: will be fetched from an external repository.")
+      case Some(art) =>
+        log.info("Will use this artifact, provided by dbuild:")
+        log.info("  " + art.info.organization + art.crossSuffix + "#" + art.info.name + ";" + art.version)
+    }
+    log.info("Will republish as:")
+    // FIXME : add cross suffix as requested to this org, below
+    log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + version)
+
+    val (descriptorResult, arts @ Seq(pom, jar)) = resolveAether(modRevId, localRepo, getJar = true, Some(availableRepo), log)
+    // DELETE from the resolved local repository all files called "_remote.repositories", which are aether temporary leftovers
+    localRepo.**(new sbt.ExactFilter("_remote.repositories")).get.foreach { IO.delete }
+
+    // TODO: add support for source/javadoc/etc jars, as well as plugins.
+
+    // We now have the pom and the jar; we need to adapt the version number and republish, thereby adapting as well
+    // the paths, the pom, and finally the sha/md5 checksums.
+    // First of all, we need move the files to their new place
+
+    // ??? Recycle the code from Assemble
+
+    // Now we can adapt the pom, rewriting the dependencies 
+    AssembleBuildSystem.patchPomDependencies(pom.getFile, availableArts)
+
+    // FIXME: can I support plugins?
     val modulePluginInfo = pluginAttrs(modRevId)
     // TODO: use sbt's internals to transform a IVY plugin reference into a maven one (with double suffix), if applicable
 
-    resolveAether(modRevId, localRepo, getJar = true, log)
     // at this point the downloaded pom is also in the localRepo. We can just save all of the resolved files,
     // and we're good.
 

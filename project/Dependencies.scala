@@ -48,6 +48,8 @@ object Dependencies {
 
   val jgit           = "org.eclipse.jgit" % "org.eclipse.jgit" % "3.1.0.201310021548-r"
 
+  val slf4jSimple    = "org.slf4j" % "slf4j-simple" % "1.7.7"
+
   def sbtIo(v:String)          = "org.scala-sbt" % "io" % v
   def sbtIvy(v:String)         = "org.scala-sbt" % "ivy" % v
   def sbtLogging(v:String)     = "org.scala-sbt" % "logging" % v

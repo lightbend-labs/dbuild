@@ -502,13 +502,13 @@ object AssembleBuildSystem extends BuildSystemCore {
       }
 
       val myRevID = model.getModuleRevisionId()
-      val NameExtractor = """[^/]*/([^/]*)/[^/]*/ivys/ivy.xml""".r
-      val NameExtractor(newArtifactId) = rel
+      val NameExtractor = """[^/]*/([^/]*)/([^/]*)/ivys/ivy.xml""".r
+      val NameExtractor(newArtifactId, newVersion) = rel
       val newRevID = org.apache.ivy.core.module.id.ModuleRevisionId.newInstance(
         myRevID.getOrganisation(),
         newArtifactId,
         myRevID.getBranch(),
-        myRevID.getRevision(),
+        newVersion,
         myRevID.getExtraAttributes())
       val newModel = new org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor(newRevID,
         model.getStatus(), model.getPublicationDate(), model.isDefault())
@@ -625,8 +625,9 @@ object AssembleBuildSystem extends BuildSystemCore {
     val newModel = model.clone
     // has the artifactId (aka the name) changed? If so, patch that as well.
     val NameExtractor = """.*/([^/]*)/([^/]*)/\1-[^/]*.pom""".r
-    val NameExtractor(newArtifactId, _) = pom.getCanonicalPath()
+    val NameExtractor(newArtifactId, newVersion) = pom.getCanonicalPath()
     newModel.setArtifactId(newArtifactId)
+    newModel.setVersion(newVersion)
     newModel.setDependencies(newDeps)
     // we overwrite in place, there should be no adverse effect at this point
     val writer = new MavenXpp3Writer

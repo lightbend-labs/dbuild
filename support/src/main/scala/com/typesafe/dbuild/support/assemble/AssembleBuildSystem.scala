@@ -382,51 +382,6 @@ object AssembleBuildSystem extends BuildSystemCore {
             // those hashes are recomputed at the end, before returning.
             val newSHAs = shas map { sha =>
               val oldLocation = sha.location
-              object OrgNameVerFilenamesuffix {
-                val MavenMatchPattern = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
-                val IvyXmlMatchPattern = """([^/]*)/([^/]*)/([^/]*)/(ivys)/([^/]*)""".r
-                val IvyMatchPattern = """([^/]*)/([^/]*)/([^/]*)/([^/]*)/\2([^/]*)""".r
-
-                // Returns: org, name, ver, suffix1, suffix2, isMaven, isIvyXml
-                // where:
-                // - for Maven:
-                //   isMaven is true
-                //   suffix1 is the part after the "name", for example in:
-                //     org/scala-lang/modules/scala-xml_2.11.0-M5/1.0-RC4/scala-xml_2.11.0-M5-1.0-RC4-sources.jar
-                //   suffix1 is "-1.0-RC4-sources.jar"
-                //   suffix2 is ignored
-                // - for Ivy, for things that are in an "ivys" directory:
-                //   isIvyXml is true
-                //   suffix1 is "ivys"
-                //   suffix2 is the filename. For example:
-                //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/ivys/ivy.xml.sha1
-                //     -> suffix2 is "ivy.xml.sha1"
-                // - for Ivy, for things that are not in an "ivys" directory:
-                //   isIvyXml is false
-                //   suffix1 is "docs", "jars", etc.
-                //   suffix2 is the portion of the filename after "name". For example:
-                //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/docs/scala-compiler-javadoc.jar
-                //     -> suffix1 is "docs"
-                //     -> suffix2 is "-javadoc.jar"
-                def unapply(s: String): Option[(String, String, String, String, String, Boolean, Boolean)] = {
-                  try {
-                    val MavenMatchPattern(org, name, ver, suffix) = s
-                    Some((org.replace('/', '.'), name, ver, suffix, "", true, false))
-                  } catch {
-                    case e: _root_.scala.MatchError => try {
-                      val IvyXmlMatchPattern(org, name, ver, suffix1, suffix2) = s
-                      Some((org, name, ver, suffix1, suffix2, false, true))
-                    } catch {
-                      case e: _root_.scala.MatchError => try {
-                        val IvyMatchPattern(org, name, ver, suffix1, suffix2) = s
-                        Some((org, name, ver, suffix1, suffix2, false, false))
-                      } catch {
-                        case e: _root_.scala.MatchError => None
-                      }
-                    }
-                  }
-                }
-              }
               try {
                 val OrgNameVerFilenamesuffix(org, oldName, ver, suffix1, suffix2, isMaven, isIvyXml) = oldLocation
                 if (isScalaCore(oldName, org)) sha else {
@@ -643,6 +598,55 @@ object AssembleBuildSystem extends BuildSystemCore {
       val checksumFile = new File(base.getCanonicalPath + "." + algorithm)
       if (checksumFile.exists) {
         FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(base, algorithm))
+      }
+    }
+  }
+
+  // A helper to detect versions and other info from an arbitrary set of files contained in a
+  // mixed Maven/Ivy local repository. It will parse a relative path and file name string, decomposing
+  // it into useful information (see below for details).
+  object OrgNameVerFilenamesuffix {
+    val MavenMatchPattern = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
+    val IvyXmlMatchPattern = """([^/]*)/([^/]*)/([^/]*)/(ivys)/([^/]*)""".r
+    val IvyMatchPattern = """([^/]*)/([^/]*)/([^/]*)/([^/]*)/\2([^/]*)""".r
+
+    // Returns: org, name, ver, suffix1, suffix2, isMaven, isIvyXml
+    // where:
+    // - for Maven:
+    //   isMaven is true
+    //   suffix1 is the part after the "name", for example in:
+    //     org/scala-lang/modules/scala-xml_2.11.0-M5/1.0-RC4/scala-xml_2.11.0-M5-1.0-RC4-sources.jar
+    //   suffix1 is "-1.0-RC4-sources.jar"
+    //   suffix2 is ignored
+    // - for Ivy, for things that are in an "ivys" directory:
+    //   isIvyXml is true
+    //   suffix1 is "ivys"
+    //   suffix2 is the filename. For example:
+    //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/ivys/ivy.xml.sha1
+    //     -> suffix2 is "ivy.xml.sha1"
+    // - for Ivy, for things that are not in an "ivys" directory:
+    //   isIvyXml is false
+    //   suffix1 is "docs", "jars", etc.
+    //   suffix2 is the portion of the filename after "name". For example:
+    //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/docs/scala-compiler-javadoc.jar
+    //     -> suffix1 is "docs"
+    //     -> suffix2 is "-javadoc.jar"
+    def unapply(s: String): Option[(String, String, String, String, String, Boolean, Boolean)] = {
+      try {
+        val MavenMatchPattern(org, name, ver, suffix) = s
+        Some((org.replace('/', '.'), name, ver, suffix, "", true, false))
+      } catch {
+        case e: _root_.scala.MatchError => try {
+          val IvyXmlMatchPattern(org, name, ver, suffix1, suffix2) = s
+          Some((org, name, ver, suffix1, suffix2, false, true))
+        } catch {
+          case e: _root_.scala.MatchError => try {
+            val IvyMatchPattern(org, name, ver, suffix1, suffix2) = s
+            Some((org, name, ver, suffix1, suffix2, false, false))
+          } catch {
+            case e: _root_.scala.MatchError => None
+          }
+        }
       }
     }
   }

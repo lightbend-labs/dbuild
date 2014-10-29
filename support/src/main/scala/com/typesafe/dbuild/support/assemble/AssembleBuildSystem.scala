@@ -437,102 +437,10 @@ object AssembleBuildSystem extends BuildSystemCore {
     val allArtifactsOut = artifactsMap.map { _._2 }
     val available = allArtifactsOut.flatMap { _.results }.flatMap { _.artifacts }
 
-    (localRepo.***.get).filter(_.getName.endsWith(".pom")).foreach {
-      pom => patchPomDependencies(pom, available)
-    }
+    (localRepo.***.get).filter(_.getName.endsWith(".pom")).foreach { patchPomDependencies(_, available) }
 
-    (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { file =>
-      import _root_.scala.collection.JavaConversions._
-      // ok, let's see what we can do with the ivy.xml
-      val settings = new ivy.core.settings.IvySettings()
-      val ivyHome = dir / ".ivy2" / "cache"
-      settings.setDefaultIvyUserDir(ivyHome)
-      val parser = ivy.plugins.parser.xml.XmlModuleDescriptorParser.getInstance()
-      val ivyFileRepo = new ivy.plugins.repository.file.FileRepository(localRepo.getAbsoluteFile())
-      val rel = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
-      val ivyFileResource = ivyFileRepo.getResource(rel)
-      val model = parser.parseDescriptor(settings, file.toURL(), ivyFileResource, true) match {
-        case m: ivy.core.module.descriptor.DefaultModuleDescriptor => m
-        case m => sys.error("Unknown Module Descriptor: " + m)
-      }
-
-      val myRevID = model.getModuleRevisionId()
-      val NameExtractor = """[^/]*/([^/]*)/([^/]*)/ivys/ivy.xml""".r
-      val NameExtractor(newArtifactId, newVersion) = rel
-      val newRevID = org.apache.ivy.core.module.id.ModuleRevisionId.newInstance(
-        myRevID.getOrganisation(),
-        newArtifactId,
-        myRevID.getBranch(),
-        newVersion,
-        myRevID.getExtraAttributes())
-      val newModel = new org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor(newRevID,
-        model.getStatus(), model.getPublicationDate(), model.isDefault())
-      newModel.setDescription(model.getDescription())
-      model.getConfigurations() foreach { c =>
-        newModel.addConfiguration(c)
-        val conf = c.getName
-        model.getArtifacts(conf) foreach { mArt =>
-          val newArt =
-            if (fixName(newArtifactId) != fixName(mArt.getName())) mArt else
-              ivy.core.module.descriptor.DefaultArtifact.cloneWithAnotherName(mArt, newArtifactId)
-          newModel.addArtifact(conf, newArt)
-        }
-      }
-      model.getAllExcludeRules() foreach { newModel.addExcludeRule }
-      model.getExtraAttributesNamespaces() foreach { case ns: (String, String) => newModel.addExtraAttributeNamespace(ns._1, ns._2) }
-      model.getExtraInfo() foreach { case ns: (String, String) => newModel.addExtraInfo(ns._1, ns._2) }
-      model.getLicenses() foreach { case l => newModel.addLicense(l) }
-      newModel.setHomePage(model.getHomePage())
-      newModel.setLastModified(model.getLastModified())
-      model.getDependencies() foreach { d =>
-        val dep = d match {
-          case t: ivy.core.module.descriptor.DefaultDependencyDescriptor => t
-          case t => sys.error("Unknown Dependency Descriptor: " + t)
-        }
-        val rid = dep.getDependencyRevisionId()
-        val newDep = available.find { artifact =>
-          artifact.info.organization == rid.getOrganisation() &&
-            artifact.info.name == fixName(rid.getName())
-        } map { art =>
-          val transformer = new ivy.plugins.namespace.NamespaceTransformer {
-            def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
-              ivy.core.module.id.ModuleRevisionId.newInstance(
-                revID.getOrganisation(),
-                art.info.name + art.crossSuffix,
-                revID.getBranch(),
-                art.version,
-                revID.getExtraAttributes())
-            }
-            def isIdentity() = false
-          }
-          val transformMrid = transformer.transform(dep.getDependencyRevisionId())
-          val transformDynamicMrid = transformer.transform(dep.getDynamicConstraintDependencyRevisionId())
-          val newdd = new ivy.core.module.descriptor.DefaultDependencyDescriptor(
-            null, transformMrid, transformDynamicMrid,
-            dep.isForce(), dep.isChanging(), dep.isTransitive())
-          val moduleConfs = dep.getModuleConfigurations()
-          moduleConfs foreach { conf =>
-            dep.getDependencyConfigurations(conf).foreach { newdd.addDependencyConfiguration(conf, _) }
-            dep.getExcludeRules(conf).foreach { newdd.addExcludeRule(conf, _) }
-            dep.getIncludeRules(conf).foreach { newdd.addIncludeRule(conf, _) }
-            dep.getDependencyArtifacts(conf).foreach { depArt =>
-              val newDepArt = if (art.info.name != fixName(depArt.getName())) depArt else {
-                val n = new ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(depArt.getDependencyDescriptor(),
-                  art.info.name + art.crossSuffix, depArt.getType(), depArt.getExt(), depArt.getUrl(), depArt.getExtraAttributes())
-                depArt.getConfigurations().foreach(n.addConfiguration)
-                n
-              }
-              newdd.addDependencyArtifact(conf, newDepArt)
-            }
-          }
-          newdd
-        } getOrElse dep
-
-        newModel.addDependency(newDep)
-      }
-      ivy.plugins.parser.xml.XmlModuleDescriptorWriter.write(newModel, file)
-      updateChecksumFiles(file)
-    }
+    val ivyHome = dir / ".ivy2" / "cache"
+    (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { patchIvyDependencies(_, available, ivyHome, localRepo) }
 
     // dbuild SHAs must be re-computed (since the POM/Ivy files changed)
     // We preserve the list of original subprojects (and consequently modules),
@@ -558,7 +466,99 @@ object AssembleBuildSystem extends BuildSystemCore {
     })
     log.debug("out: " + writeValue(out))
     out
+  }
 
+  def patchIvyDependencies(file: File, available: Seq[ArtifactLocation], ivyHome: File, localRepo: File) = {
+    import _root_.scala.collection.JavaConversions._
+    // ok, let's see what we can do with the ivy.xml
+    val settings = new ivy.core.settings.IvySettings()
+
+    settings.setDefaultIvyUserDir(ivyHome)
+    val parser = ivy.plugins.parser.xml.XmlModuleDescriptorParser.getInstance()
+    val ivyFileRepo = new ivy.plugins.repository.file.FileRepository(localRepo.getAbsoluteFile())
+    val rel = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
+    val ivyFileResource = ivyFileRepo.getResource(rel)
+    val model = parser.parseDescriptor(settings, file.toURL(), ivyFileResource, true) match {
+      case m: ivy.core.module.descriptor.DefaultModuleDescriptor => m
+      case m => sys.error("Unknown Module Descriptor: " + m)
+    }
+
+    val myRevID = model.getModuleRevisionId()
+    val NameExtractor = """[^/]*/([^/]*)/([^/]*)/ivys/ivy.xml""".r
+    val NameExtractor(newArtifactId, newVersion) = rel
+    val newRevID = org.apache.ivy.core.module.id.ModuleRevisionId.newInstance(
+      myRevID.getOrganisation(),
+      newArtifactId,
+      myRevID.getBranch(),
+      newVersion,
+      myRevID.getExtraAttributes())
+    val newModel = new org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor(newRevID,
+      model.getStatus(), model.getPublicationDate(), model.isDefault())
+    newModel.setDescription(model.getDescription())
+    model.getConfigurations() foreach { c =>
+      newModel.addConfiguration(c)
+      val conf = c.getName
+      model.getArtifacts(conf) foreach { mArt =>
+        val newArt =
+          if (fixName(newArtifactId) != fixName(mArt.getName())) mArt else
+            ivy.core.module.descriptor.DefaultArtifact.cloneWithAnotherName(mArt, newArtifactId)
+        newModel.addArtifact(conf, newArt)
+      }
+    }
+    model.getAllExcludeRules() foreach { newModel.addExcludeRule }
+    model.getExtraAttributesNamespaces() foreach { case ns: (String, String) => newModel.addExtraAttributeNamespace(ns._1, ns._2) }
+    model.getExtraInfo() foreach { case ns: (String, String) => newModel.addExtraInfo(ns._1, ns._2) }
+    model.getLicenses() foreach { case l => newModel.addLicense(l) }
+    newModel.setHomePage(model.getHomePage())
+    newModel.setLastModified(model.getLastModified())
+    model.getDependencies() foreach { d =>
+      val dep = d match {
+        case t: ivy.core.module.descriptor.DefaultDependencyDescriptor => t
+        case t => sys.error("Unknown Dependency Descriptor: " + t)
+      }
+      val rid = dep.getDependencyRevisionId()
+      val newDep = available.find { artifact =>
+        artifact.info.organization == rid.getOrganisation() &&
+          artifact.info.name == fixName(rid.getName())
+      } map { art =>
+        val transformer = new ivy.plugins.namespace.NamespaceTransformer {
+          def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
+            ivy.core.module.id.ModuleRevisionId.newInstance(
+              revID.getOrganisation(),
+              art.info.name + art.crossSuffix,
+              revID.getBranch(),
+              art.version,
+              revID.getExtraAttributes())
+          }
+          def isIdentity() = false
+        }
+        val transformMrid = transformer.transform(dep.getDependencyRevisionId())
+        val transformDynamicMrid = transformer.transform(dep.getDynamicConstraintDependencyRevisionId())
+        val newdd = new ivy.core.module.descriptor.DefaultDependencyDescriptor(
+          null, transformMrid, transformDynamicMrid,
+          dep.isForce(), dep.isChanging(), dep.isTransitive())
+        val moduleConfs = dep.getModuleConfigurations()
+        moduleConfs foreach { conf =>
+          dep.getDependencyConfigurations(conf).foreach { newdd.addDependencyConfiguration(conf, _) }
+          dep.getExcludeRules(conf).foreach { newdd.addExcludeRule(conf, _) }
+          dep.getIncludeRules(conf).foreach { newdd.addIncludeRule(conf, _) }
+          dep.getDependencyArtifacts(conf).foreach { depArt =>
+            val newDepArt = if (art.info.name != fixName(depArt.getName())) depArt else {
+              val n = new ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(depArt.getDependencyDescriptor(),
+                art.info.name + art.crossSuffix, depArt.getType(), depArt.getExt(), depArt.getUrl(), depArt.getExtraAttributes())
+              depArt.getConfigurations().foreach(n.addConfiguration)
+              n
+            }
+            newdd.addDependencyArtifact(conf, newDepArt)
+          }
+        }
+        newdd
+      } getOrElse dep
+
+      newModel.addDependency(newDep)
+    }
+    ivy.plugins.parser.xml.XmlModuleDescriptorWriter.write(newModel, file)
+    updateChecksumFiles(file)
   }
 
   def patchPomDependencies(pom: File, available: Seq[ArtifactLocation]) = {
@@ -588,8 +588,8 @@ object AssembleBuildSystem extends BuildSystemCore {
     val writer = new MavenXpp3Writer
     writer.write(new _root_.java.io.FileWriter(pom), newModel)
     updateChecksumFiles(pom)
-
   }
+
   def updateChecksumFiles(base: File) = {
     // We will also have to change the .sha1 and .md5 files
     // corresponding to this pom, if they exist, otherwise artifactory and ivy

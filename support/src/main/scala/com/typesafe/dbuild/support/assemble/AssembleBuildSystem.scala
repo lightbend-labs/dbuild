@@ -214,22 +214,6 @@ object AssembleBuildSystem extends BuildSystemCore {
     def ivyArtifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
       repoDir / ref.organization / (ref.name + crossSuffix)
 
-    // In order to detect the artifacts that belong to the scala core (non cross-versioned)
-    // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
-    // with cross versioning disabled (it's the default in dbuild). Our only option is going after
-    // the organization id "org.scala-lang".
-    def isScalaCore(name: String, org: String) = {
-      val fixedName = fixName(name)
-      (org == "org.scala-lang" && fixedName.startsWith("scala")) ||
-        (org == "org.scala-lang.plugins" && fixedName == "continuations")
-    }
-
-    def isScalaCoreRef(p: ProjectRef) =
-      isScalaCore(p.name, p.organization)
-
-    def isScalaCoreArt(l: ArtifactLocation) =
-      isScalaCoreRef(l.info)
-
     // Since we know the repository format, and the list of "subprojects", we grab
     // the files corresponding to each one of them right from the relevant subdirectory.
     // We then calculate the sha, and package each subproj's results as a BuildSubArtifactsOut.
@@ -579,6 +563,25 @@ object AssembleBuildSystem extends BuildSystemCore {
       }
     }
   }
+  
+  // general utilities:
+
+    // In order to detect the artifacts that belong to the scala core (non cross-versioned)
+    // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
+    // with cross versioning disabled (it's the default in dbuild). Our only option is going after
+    // the organization id "org.scala-lang".
+    def isScalaCore(name: String, org: String) = {
+      val fixedName = fixName(name)
+      (org == "org.scala-lang" && fixedName.startsWith("scala")) ||
+        (org == "org.scala-lang.plugins" && fixedName == "continuations")
+    }
+
+    def isScalaCoreRef(p: ProjectRef) =
+      isScalaCore(p.name, p.organization)
+
+    def isScalaCoreArt(l: ArtifactLocation) =
+      isScalaCoreRef(l.info)
+
 }
 
 // A helper to detect versions and other info from an arbitrary set of files contained in a
@@ -635,7 +638,7 @@ class NamePatcher(arts: Seq[ArtifactLocation], config: ProjectBuildConfig) {
   // our subprojects. If we cannot find it, then we have none.
   private val scalaVersion = arts.find(l => l.info.organization == "org.scala-lang" && l.info.name == "scala-library").map(_.version)
   private def getScalaVersion(newCrossLevel: String) = scalaVersion getOrElse
-    sys.error("The requested cross-version level is " + newCrossLevel + ", but no scala-library was found among the dependencies.")
+    sys.error("The requested cross-version level is " + newCrossLevel + ", but no scala-library was found among the dependencies (maybe you meant \"cross-version: disabled\"?).")
   private val Part = """(\d+\.\d+)(?:\..+)?""".r
   private def binary(s: String) = s match {
     case Part(z) => z

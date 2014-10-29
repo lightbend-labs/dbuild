@@ -40,6 +40,7 @@ import org.apache.ivy.plugins.parser.xml.XmlModuleDescriptorWriter
 import ivy.core.module.id.{ ModuleId, ModuleRevisionId }
 import ivy.core.resolve.{ ResolveEngine, ResolveOptions }
 import ivy.core.report.ResolveReport
+import org.apache.ivy.core.module.id.ModuleRevisionId
 import org.apache.ivy.core.resolve.IvyNode
 import com.typesafe.dbuild.support.NameFixer.fixName
 import org.apache.ivy.core.module.descriptor.DefaultArtifact
@@ -49,6 +50,10 @@ import com.typesafe.dbuild.project.build.LocalBuildRunner
 import com.typesafe.dbuild.repo.core.GlobalDirs.dbuildHomeDir
 import com.typesafe.dbuild.support.SbtUtil.pluginAttrs
 import com.typesafe.dbuild.support.assemble.AssembleBuildSystem
+import com.typesafe.dbuild.support.assemble.NamePatcher
+import com.typesafe.dbuild.support.assemble.OrgNameVerFilenamesuffix
+import com.typesafe.dbuild.manifest.ModuleAttributes
+import com.typesafe.dbuild.manifest.ModuleInfo
 
 import org.apache.maven.model.{ Model, Dependency }
 import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
@@ -174,10 +179,11 @@ class ConsoleTransferListener(log: Logger) extends AbstractTransferListener {
     val resource = event.getResource()
     downloads.put(resource, event.getTransferredBytes())
 
-    downloads.foreach {
-      case (total, complete) =>
-        log.debug(getStatus(complete, total.getContentLength))
-    }
+    // too much info
+    //    downloads.foreach {
+    //      case (total, complete) =>
+    //        log.debug(getStatus(complete, total.getContentLength))
+    //    }
   }
 
   private def toKB(bytes: Long): Long = (bytes + 1023) / 1024;
@@ -332,10 +338,10 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     }
 
     /*
- * This is the code to grab recursively all the dependencies (unused, but interesting as a reference)
- *
-    // This is where the actual artifact we want is prepared for resolution/downloading
-    val dependency = new Dependency(artifact, "runtime") // FIXME : customize the configuration (compile/test/whatever, compile by default
+    // This is the code to grab recursively all the dependencies (unused, but interesting as a reference)
+    //
+    // Here is where the actual artifact we want is prepared for resolution/downloading
+    val dependency = new Dependency(artifact, "runtime") // you can customize the configuration (compile/test/whatever), "compile" by default in sbt
 
     val collectRequest = new CollectRequest()
     collectRequest.setRoot(dependency)
@@ -399,6 +405,7 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
       Seq(outPomArt, outJarArt)
     } else Seq(pomArt, jarArt)
 
+    // keep the pom at the beginning, in arts
     (descriptorResult, arts)
   }
   def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
@@ -418,7 +425,8 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     }
 
     def artToProjectRef(a: AetherArtifact) = {
-      ProjectRef(fixName(a.getArtifactId), a.getGroupId, a.getExtension, if (a.getClassifier != "jar") Some(a.getClassifier) else None)
+      // careful about the classifier: Aether will return "" if no classifier, but we need None instead
+      ProjectRef(fixName(a.getArtifactId), a.getGroupId, a.getExtension, if (a.getClassifier != "jar" && a.getClassifier != "") Some(a.getClassifier) else None)
     }
 
     ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
@@ -432,173 +440,173 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     q
   }
 
-  /*
-@Override public ModelSource resolveModel(String groupId,String artifactId,String version) throws UnresolvableModelException {
-  Artifact pomArtifact=new DefaultArtifact(groupId,artifactId,"","pom",version);
-  try {
-    ArtifactRequest request=new ArtifactRequest(pomArtifact,repositories,null);
-    pomArtifact=system.resolveArtifact(session,request).getArtifact();
-  }
- catch (  ArtifactResolutionException ex) {
-    throw new UnresolvableModelException(ex.getMessage(),groupId,artifactId,version,ex);
-  }
-  File pomFile=pomArtifact.getFile();
-  return new FileModelSource(pomFile);
-}
-   */
-
-  // TODO: the Aether build system ignores project.buildOptions.crossVersion!! It rather always republishes
-  // using the same cross-versioning format of whatever it resolved.
-  // Adding support involves renaming the resolved artifacts, which is more or less what the Assemble
-  // build system is doing at this time
-
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
     buildData: BuildData): BuildArtifactsOut = {
     val log = buildData.log
     log.debug("BuildInput is: " + input)
 
-    // TODO: no knowledge or ability to deal with rewritten dependency is implemented at this time.
-    // Right now, we always pretend there are no dependencies, which is sub-optimal but sufficient for
-    // 
-    val modRevId = AetherBuildSystem.getProjectModuleID(project.config)
-
     val version = input.version
-
-    // TODO: implement the rename and pom rewriting. That may be absolutely necessary, as we need a different
-    // version number when bootstrapping the Scala compiler.
-    //    if (version != modRevId.getRevision()) {
-    //      sys.error("Unsupported: we asked the mini-Maven build system to republish " + modRevId.getOrganisation + "#" +
-    //        modRevId.getName + ";" + modRevId.getRevision +
-    //        " as version " + version + ", but the version change code has not been implemented yet.")
-    //    }
-    // this is transitive = false, only used to retrieve the jars that should be republished later
-    //    val response = IvyMachinery.resolveIvy(newProjectConfig, baseDir, repos, log, transitive = false)
-    //    def artifactToArtifactLocation(a: Artifact) = {
-    //      val mr = a.getModuleRevisionId
-    //      val m = mr.getModuleId
-    //      val name = a.getName
-    //      val trimName = fixName(name)
-    //      val cross = if (trimName != name) name.substring(trimName.length) else ""
-    //      val classifier = Option(a.getExtraAttributes.get("classifier").asInstanceOf[String])
-    //      ArtifactLocation(ProjectRef(trimName, m.getOrganisation, a.getExt, classifier), version /*mr.getRevision*/ , cross, pluginAttrs(mr))
-    //    }
-
-    //    val nodes = report.getDependencies().asInstanceOf[_root_.java.util.List[IvyNode]].toSeq
-    //    val firstNode = nodes(0)
-    //    val publishArts = firstNode.getAllArtifacts.map(artifactToArtifactLocation).distinct
-    //
-    //    val ivyArts = (firstNode.getAllArtifacts.toSeq map { _.getModuleRevisionId }).distinct.flatMap { report.getArtifactsReports(_) } map { _.getLocalFile }
-    //    val ivyRepo = baseDir / ".ivy2" / "cache"
+    val localRepo = input.outRepo
+    val modRevId = AetherBuildSystem.getProjectModuleID(project.config)
 
     // Information on rematerialized artifacts (ground level only)
     val availableArts = input.artifacts.artifacts
     val availableRepo = input.artifacts.localRepo
 
-    val localRepo = input.outRepo
-
-    // TODO: rather than blindly resolving with the current version number, we should
+    // Rather than blindly resolving with the current version number, we
     // look into the availableArts if the same artifact has already been provided as a
     // dependency by some other dbuild project. If so, we should change groupId (to adapt crossSuffix) and
     // version number in order to make the current request match the available artifact.
     // THEN we can resolve, which will grab the artifact from the availableRepo.
-    // We do not need to adjust the dependencies in the pom prior to resolution, since we do not grab the
-    // transitive dependencies, and we patch the pom after the fact, below.
+    // We do not need to adjust the dependencies in the pom prior to resolution since we do not grab the
+    // transitive dependencies; we patch the pom after the fact, below.
 
-    // Right now, no rewiring on the original version/groupId/crossSuffix. FIXME
+    log.debug("AvailableArts: " + availableArts)
 
-    val republishArt = availableArts.find(a =>
+    val availableArt = availableArts.find(a =>
       modRevId.getOrganisation == a.info.organization &&
         fixName(modRevId.getName) == a.info.name)
 
     log.info("Requested:")
     log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + modRevId.getRevision)
-    republishArt match {
-      case None => log.info("Not provided by dbuild: will be fetched from an external repository.")
+    val patcher = new NamePatcher(availableArts, project.config)
+    val download = availableArt match {
+      case None =>
+        log.info("Not provided by dbuild, will try to fetch from an external repository.")
+        modRevId
       case Some(art) =>
-        log.info("Will use this artifact, provided by dbuild:")
-        log.info("  " + art.info.organization + art.crossSuffix + "#" + art.info.name + ";" + art.version)
+        log.info("Will try to use this artifact, provided by dbuild:")
+        log.info("  " + art.info.organization + "#" + art.info.name + art.crossSuffix + ";" + art.version)
+        ModuleRevisionId.newInstance(
+          art.info.organization,
+          art.info.name + art.crossSuffix,
+          modRevId.getBranch,
+          art.version,
+          modRevId.getExtraAttributes)
     }
-    log.info("Will republish as:")
-    // FIXME : add cross suffix as requested to this org, below
-    log.info("  " + modRevId.getOrganisation + "#" + modRevId.getName + ";" + version)
 
-    val (descriptorResult, arts @ Seq(pom, jar)) = resolveAether(modRevId, localRepo, getJar = true, Some(availableRepo), log)
+    // We must: use fixname, and tack a new crosssuffix depending on the crossVersion selector
+    // and the external Scala version (if we have it as one of our (transitive) dependencies in the availableArts set,
+    // then append the new version number, above from input.version.
+    // We can recycle some logic from the Assemble build system.
+
+    // Careful: core scala artifacts are never cross-versioned; we do not try to detect them here, but
+    // rely on the user duly asking for cross-version: disabled. To see which ones they should be, check
+    // isScalaCore() in AssembleBuildSystem.
+
+    val finalModRevId = ModuleRevisionId.newInstance(
+      modRevId.getOrganisation,
+      patcher.patchName(modRevId.getName),
+      modRevId.getBranch,
+      version,
+      modRevId.getExtraAttributes)
+    log.info("It will be republished as:")
+    log.info("  " + finalModRevId.getOrganisation + "#" + finalModRevId.getName + ";" + finalModRevId.getRevision)
+
+    // the pom art will be the first one in "arts"
+    val (descriptorResult, arts) = resolveAether(download, localRepo, getJar = true, Some(availableRepo), log)
     // DELETE from the resolved local repository all files called "_remote.repositories", which are aether temporary leftovers
     localRepo.**(new sbt.ExactFilter("_remote.repositories")).get.foreach { IO.delete }
 
     // TODO: add support for source/javadoc/etc jars, as well as plugins.
 
+    def relative(file: File) = IO.relativize(localRepo, file) getOrElse
+      sys.error("Internal error while relativizing " + file.getCanonicalPath() + " against " + localRepo.getCanonicalPath())
+
     // We now have the pom and the jar; we need to adapt the version number and republish, thereby adapting as well
     // the paths, the pom, and finally the sha/md5 checksums.
-    // First of all, we need move the files to their new place
+    // First of all, we need move the files to their new place. (We will only have two of them, unless we start
+    // downloading sources, javadocs, classifiers, and whatnot)
 
-    // ??? Recycle the code from Assemble
+    // relocation associates the downloaded arts (org.eclipse.aether.artifact.Artifact) with the new relative file locations
+    val relocationMap = (arts map { art =>
+      val oldLocation = relative(art.getFile)
 
-    // Now we can adapt the pom, rewriting the dependencies 
-    AssembleBuildSystem.patchPomDependencies(pom.getFile, availableArts)
+      // use finalModRevId as a destination target reference
+      val OrgNameVerFilenamesuffix(org, oldName, oldVer, suffix1, _, isMaven, isIvyXml) = oldLocation
+      if (isIvyXml) sys.error("Unexpected internal error: ivy.xml found in an Aether download area")
 
-    // FIXME: can I support plugins?
-    val modulePluginInfo = pluginAttrs(modRevId)
-    // TODO: use sbt's internals to transform a IVY plugin reference into a maven one (with double suffix), if applicable
+      // TODO: consolidate better w/ Assemble
+      def fileDir(name: String, ver: String) = org.split('.').foldLeft(localRepo)(_ / _) / name / ver
+      def fileLoc(name: String, ver: String, suffix: String) = fileDir(name, ver) / (name + suffix)
 
-    // at this point the downloaded pom is also in the localRepo. We can just save all of the resolved files,
-    // and we're good.
+      if (art.getFile.getCanonicalPath() != fileLoc(oldName, oldVer, suffix1).getCanonicalPath())
+        sys.error("Internal error in fileLoc(), please report.") // sanity check
 
-    // Time to calculate the new version, and move about the files in order to keep the repository structure coherent
-    // We could be dealing with a Scala artifact (cross versioned or not), a plugin, a Java artifact, or with Scala core jars.
-    // We can ignore plugins for now.
+      val oldFile = art.getFile
+      // suffix1 still contains the old version. Change it to the new one
+      val oldVerSuffix = "-" + oldVer
+      if (!suffix1.startsWith(oldVerSuffix))
+        sys.error("Unexpected inconsistent file suffix: in file " + oldLocation + " the suffix does not start with " + oldVerSuffix)
+      val suffix2 = "-" + finalModRevId.getRevision + suffix1.drop(oldVerSuffix.length)
 
-    // Now, how do we cope with this mess?...
+      val newFile = fileLoc(finalModRevId.getName, finalModRevId.getRevision, suffix2) // we preserve whatever suffix was there (in case of classifiers)
+      val newLocation = relative(newFile)
+      log.debug("Will rename " + oldLocation + " to " + newLocation)
+      fileDir(finalModRevId.getName, finalModRevId.getRevision).mkdirs() // ignore if already present
+      if (!oldFile.renameTo(newFile))
+        sys.error("cannot rename " + oldLocation + " to " + newLocation + ".")
+      // were there also checksum files? if so, try to move them as well.
+      def tryMove(kind: String) =
+        new File(oldFile.getCanonicalPath + "." + kind).renameTo(new File(newFile.getCanonicalPath + "." + kind))
+      tryMove("sha1")
+      tryMove("md5")
+      (art, newFile)
+    })
 
-    //    val scalaVersion = {
-    //      val allArts = preCrossArtifactsMap.map(_._2).flatMap(_.results).flatMap(_.artifacts)
-    //      allArts.find(l => l.info.organization == "org.scala-lang" && l.info.name == "scala-library").map(_.version)
-    //    }
-    //    
-    //    def getScalaVersion(crossLevel: String) = scalaVersion getOrElse
-    //      sys.error("In Assemble, the requested cross-version level is " + crossLevel + ", but no scala-library was found among the artifacts.")
-    //        val crossSuff = project.config.getCrossVersionHead match {
-    //      case "disabled" => ""
-    //      case l @ "full" => "_" + getScalaVersion(l)
-    //      case l @ "binary" => "_" + binary(getScalaVersion(l))
-    //      case l @ "standard" =>
-    //        val version = getScalaVersion(l)
-    //        "_" + (if (version.contains('-')) version else binary(version))
-    //      case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
-    //    }
-    //    def patchName(s: String) = fixName(s) + crossSuff
+    log.debug("relocationMap says: ")
+    relocationMap foreach {
+      case (art, newFile) =>
+        log.debug("The artifact " + art)
+        log.debug("  is now at: " + relative(newFile))
+    }
+    log.debug("localRepo: " + localRepo.getCanonicalFile)
+    log.debug("")
 
-    // Excellent. Now we have to transform the resolved artifact and the pom, in order to convert it to the requested
-    // cross suffix and version. We reuse some of the logic from the "Assemble" build system (TODO: consolidate the
-    // rewriting in Assemble, Ivy, and Aether).
+    // We can now adapt the poms, rewriting the dependencies
+    // If we move the poms beforehand, patchPomDependencies() is also able to
+    // detect the new path, and derive the new org/name/version from it;
+    // it will then adjust the relevant data in the pom's module info data
+    // The pom is at the first place in the relocationMap Seq.
+    val newPomFile = relocationMap(0)._2
+    AssembleBuildSystem.patchPomDependencies(newPomFile, availableArts)
 
-    sys.error("Enough.")
+    // TODO: can I support sbt plugins?
+    val modulePluginInfo = pluginAttrs(modRevId) // if sbt plugin, handle appropriately the renaming,
+    // possibly using sbt's internals to deal with the double suffix stuff.
 
-    val q = BuildArtifactsOut(Seq.empty)
-    //    (BuildSubArtifactsOut("default-ivy-project",
-    //      publishArts,
-    //      localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
-    //      com.typesafe.dbuild.manifest.ModuleInfo(organization = module.getOrganisation,
-    //        name = fixName(module.getName), version = version, {
-    //          import com.typesafe.dbuild.manifest.ModuleAttributes
-    //          // We need to calculate CrossBuildProperties; that is made a bit complicated by the fact that
-    //          // we specify the ivy module using the full crossversioned name. We need to reconstruct the rest
-    //          // from the information available.
-    //          if (modulePluginInfo.nonEmpty) { // it's a plugin
-    //            ModuleAttributes(modulePluginInfo map { _.scalaVersion }, modulePluginInfo map { _.sbtVersion })
-    //          } else {
-    //            // the cross suffix can be obtained by diffing name and fixname(name)
-    //            val crossSuff = module.getName.drop(fixName(module.getName).length)
-    //            val someScala = crossSuff match {
-    //              case "" => None
-    //              case s if s.startsWith("_") => Some(s.drop(1))
-    //              case s => sys.error("Internal Error: crossSuff has unexpected format: \"" + s + "\". Please report.")
-    //            }
-    //            ModuleAttributes(someScala, None)
-    //          }
-    //        }
-    //      )
-    //    )))
+    val finalName = finalModRevId.getName
+    val trimName = fixName(finalName)
+    val crossSuff = if (trimName != finalName) finalName.substring(trimName.length) else ""
+    def aetherArtifactToArtifactLocation(a: AetherArtifact) = {
+      val classifier = if (a.getClassifier == "") None else Some(a.getClassifier)
+      ArtifactLocation(ProjectRef(trimName,
+        finalModRevId.getOrganisation,
+        a.getExtension,
+        classifier), finalModRevId.getRevision, crossSuff, pluginAttrs(finalModRevId) /* unsupported */ )
+    }
+    //BuildSubArtifactsOut(subProjName, artifacts, shas, moduleInfo)
+    val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("default-aether-project",
+      arts.map { aetherArtifactToArtifactLocation },
+      localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
+      ModuleInfo(organization = finalModRevId.getOrganisation,
+        name = trimName, version = finalModRevId.getRevision, {
+          // We need to calculate CrossBuildProperties; that is made a bit complicated by the fact that
+          // we specify the ivy module using the full crossversioned name. We need to reconstruct the rest
+          // from the information available.
+          if (modulePluginInfo.nonEmpty) { // it's a plugin
+            ModuleAttributes(modulePluginInfo map { _.scalaVersion }, modulePluginInfo map { _.sbtVersion })
+          } else {
+            val someScala = crossSuff match {
+              case "" => None
+              case s if s.startsWith("_") => Some(s.drop(1))
+              case s => sys.error("Internal Error: crossSuff has unexpected format: \"" + s + "\". Please report.")
+            }
+            ModuleAttributes(someScala, None)
+          }
+        }
+      ))))
+    log.debug("Result:")
     log.debug(q.toString)
     q
   }
@@ -608,7 +616,7 @@ object AetherBuildSystem {
   def getProjectModuleID(config: ProjectBuildConfig) = {
     if (!config.uri.startsWith("aether:"))
       sys.error("Fatal: the uri in Ivy project " + config.name + " does not start with \"aether:\"")
-    val module = config.uri.substring(7)
-    ModuleRevisionId.parse(module)
+    val modRevId = config.uri.substring(7)
+    ModuleRevisionId.parse(modRevId)
   }
 }

@@ -385,9 +385,6 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     val descriptorResult = repositorySystem.readArtifactDescriptor(session, descriptorRequest)
     val pomOrigin = descriptorResult.getRepository // will be null if it didn't resolve
     if (pomOrigin == null) failure()
-    // we can also use the resolved pom to grab very easily the direct dependencies:
-    // descriptorResult.getDependencies foreach { log.debug }
-
     val arts = if (getJar) {
       def grab(inArt: AetherArtifact): AetherArtifact = {
         val request = new ArtifactRequest(inArt, mavenRepositories, null)
@@ -509,6 +506,17 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     localRepo.**(new sbt.ExactFilter("_remote.repositories")).get.foreach { IO.delete }
 
     // TODO: add support for source/javadoc/etc jars, as well as plugins.
+
+    log.debug("List of dependencies from the pom file:")
+    descriptorResult.getDependencies foreach {
+      d => log.debug("  " + d.toString)
+      // TODO: inspect "checkMissing", and try to locate each dependency in
+      // the availableArts list. If the combination of crossVersion and checkMissing
+      // tells us all dependencies should be provided, stop if one is missing, or
+      // issue a warning where appropriate. Refer to the equivalent code in IvyBuildSystem,
+      // or try to factor out the common code
+    }
+    //sys.error("TODO: check missing dependencies")
 
     def relative(file: File) = IO.relativize(localRepo, file) getOrElse
       sys.error("Internal error while relativizing " + file.getCanonicalPath() + " against " + localRepo.getCanonicalPath())

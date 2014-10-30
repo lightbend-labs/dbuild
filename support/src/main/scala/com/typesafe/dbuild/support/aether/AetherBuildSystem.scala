@@ -314,7 +314,8 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     }
   }
 
-  private def resolveAether(module: ModuleRevisionId, localRepo: File, getJar: Boolean,
+  private def resolveAether(module: ModuleRevisionId, localRepo: File,
+    getJar: Boolean, getSource: Boolean, getJavadoc: Boolean,
     rematerializedRepo: Option[File], log: Logger) = {
 
     import Booter._
@@ -375,43 +376,50 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
 
     // It can be more complicated than this, see:
     // http://sonatype.github.io/sonatype-aether/apidocs/org/sonatype/aether/util/artifact/DefaultArtifact.html
-    def getArtifact(kind: String) =
-      new AetherDefaultArtifact(module.getOrganisation, module.getName, "", kind, module.getRevision)
+    def getArtifact(kind: String, classifier: String) =
+      new AetherDefaultArtifact(module.getOrganisation, module.getName, classifier, kind, module.getRevision)
 
-    val pomArt = getArtifact("pom")
-    val jarArt = getArtifact("jar")
+    val pomArt = getArtifact("pom", "")
+    val jarArt = getArtifact("jar", "")
+    val sourceArt = getArtifact("jar", "sources")
+    val javadocArt = getArtifact("jar", "javadoc")
 
     val descriptorRequest = new ArtifactDescriptorRequest(jarArt, mavenRepositories, null)
     val descriptorResult = repositorySystem.readArtifactDescriptor(session, descriptorRequest)
     val pomOrigin = descriptorResult.getRepository // will be null if it didn't resolve
     if (pomOrigin == null) failure()
-    val arts = if (getJar) {
-      def grab(inArt: AetherArtifact): AetherArtifact = {
+
+    def grab(doGrab: Boolean, inArt: AetherArtifact): Option[AetherArtifact] =
+      if (!doGrab) None else Some({
         val request = new ArtifactRequest(inArt, mavenRepositories, null)
         val outArtifact = repositorySystem.resolveArtifact(session, request).getArtifact
         val file = outArtifact.getFile
         if (file == null) failure()
         log.debug("The resolved " + inArt.getExtension + " is at: " + file.getCanonicalFile)
         outArtifact
-      }
-      // If we are downloading artifacts, we would also like to grab the pom again as an artifact,
-      // so that we can determine its file location
-      val outPomArt = grab(pomArt)
-      val outJarArt = grab(jarArt)
-      // and of course we can resolve source, javadoc, etc. if needed
-      Seq(outPomArt, outJarArt)
-    } else Seq(pomArt, jarArt)
+      })
+
+    // The descriptorResult is useful to grab our dependencies; however, we would also like to grab
+    // the pom again as an artifact, so that we can determine its file location.
+    // It will be still in the cache, so no further trip to resolution
+    val outPomArt = grab(true, pomArt)
+    val outJarArt = grab(getJar, jarArt)
+    val outSourceArt = grab(getSource, sourceArt)
+    val outJavadocArt = grab(getJavadoc, javadocArt)
 
     // keep the pom at the beginning, in arts
-    (descriptorResult, arts)
+    (descriptorResult, Seq(outPomArt, outJarArt, outSourceArt, outJavadocArt).flatten)
   }
   def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val config = extractionConfig.buildConfig
+    val extra = config.getExtra[AetherExtraConfig]
+    import extra._
+
     val module = config.uri.substring(7)
     val modRevId = ModuleRevisionId.parse(module)
 
     // we grab the pom only, directly in the extraction dir
-    val (descriptorResult, arts) = resolveAether(modRevId, baseDir, getJar = false, None, log)
+    val (descriptorResult, arts) = resolveAether(modRevId, baseDir, mainJar, sources, javadoc, None, log)
     // only the direct dependencies
     val dependencies = descriptorResult.getDependencies.toSeq
     if (dependencies.isEmpty)
@@ -423,7 +431,8 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
 
     def artToProjectRef(a: AetherArtifact) = {
       // careful about the classifier: Aether will return "" if no classifier, but we need None instead
-      ProjectRef(fixName(a.getArtifactId), a.getGroupId, a.getExtension, if (a.getClassifier != "jar" && a.getClassifier != "") Some(a.getClassifier) else None)
+      ProjectRef(fixName(a.getArtifactId), a.getGroupId, a.getExtension,
+        if (a.getClassifier != "jar" && a.getClassifier != "") Some(a.getClassifier) else None)
     }
 
     ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
@@ -439,6 +448,9 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
 
   def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
     buildData: BuildData): BuildArtifactsOut = {
+    val extra = project.config.getExtra[AetherExtraConfig]
+    import extra._
+
     val log = buildData.log
     log.debug("BuildInput is: " + input)
 
@@ -501,7 +513,7 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     log.info("  " + finalModRevId.getOrganisation + "#" + finalModRevId.getName + ";" + finalModRevId.getRevision)
 
     // the pom art will be the first one in "arts"
-    val (descriptorResult, arts) = resolveAether(download, localRepo, getJar = true, Some(availableRepo), log)
+    val (descriptorResult, arts) = resolveAether(download, localRepo, mainJar, sources, javadoc, Some(availableRepo), log)
     // DELETE from the resolved local repository all files called "_remote.repositories", which are aether temporary leftovers
     localRepo.**(new sbt.ExactFilter("_remote.repositories")).get.foreach { IO.delete }
 

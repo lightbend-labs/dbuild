@@ -119,10 +119,10 @@ class ConsoleRepositoryListener(log: Logger) extends AbstractRepositoryListener 
     diagnoseResolution(event, event.getArtifact, "artifact")
 
   override def artifactDownloading(event: RepositoryEvent): Unit =
-    log.debug("Downloading artifact " + event.getArtifact() + " from " + event.getRepository())
+    log.debug("Trying to obtain artifact " + event.getArtifact() + " from " + event.getRepository())
 
   override def artifactDownloaded(event: RepositoryEvent): Unit =
-    log.debug("Downloaded artifact " + event.getArtifact() + " from " + event.getRepository())
+    log.debug("Done with artifact " + event.getArtifact() + " from " + event.getRepository())
 
   override def artifactResolving(event: RepositoryEvent): Unit =
     log.info("Resolving artifact " + event.getArtifact())
@@ -171,7 +171,7 @@ class ConsoleTransferListener(log: Logger) extends AbstractTransferListener {
     new scala.collection.mutable.HashMap[TransferResource, Long] with scala.collection.mutable.SynchronizedMap[TransferResource, Long]
 
   override def transferInitiated(event: TransferEvent): Unit = {
-    val message = if (event.getRequestType() == TransferEvent.RequestType.PUT) "Uploading" else "Downloading"
+    val message = if (event.getRequestType() == TransferEvent.RequestType.PUT) "Trying to upload" else "Trying to download"
     log.debug(message + ": " + event.getResource().getRepositoryUrl() + event.getResource().getResourceName())
   }
 

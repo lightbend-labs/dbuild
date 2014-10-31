@@ -304,6 +304,7 @@ object DBuildRunner {
   // The combinations are:
   // "standard" -> 1 and 2 set to standard (nothing is done)
   // "full" -> 1 and 2 both set to full
+  // "binary" -> 1 set to binary
   // "disabled" -> 1 set to disabled, 2 set to full
   // "binaryFull" -> 2 set to full, 1 left alone (aka: it will publish full the projects that normally would
   //                 publish as binary; it will publish the others as they are; it will discover missing libs)
@@ -317,6 +318,10 @@ object DBuildRunner {
 
     crossVersion match {
       case "binaryFull" => scalaBinaryFull
+      // Assembly also supports this function, so we need to here as well.
+      case "binary" => { (s: Seq[Setting[_]], l: Logger) =>
+        fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => CrossVersion.binary }(s, l)
+      }
       case "standard" => { (_: Seq[Setting[_]], _: Logger) => Seq.empty }
       case "disabled" => { (s: Seq[Setting[_]], l: Logger) =>
         fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => CrossVersion.Disabled }(s, l) ++

@@ -15,7 +15,7 @@ import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project.build.LocalBuildRunner
 import com.typesafe.dbuild.project.BuildData
 import com.typesafe.dbuild.project.BuildSystem
-import com.typesafe.dbuild.support.BuildSystemCore
+import com.typesafe.dbuild.support.{CrossVersion, BuildSystemCore}
 import com.typesafe.dbuild.hashing
 import collection.JavaConverters._
 import org.apache.maven.model.{ Model, Dependency }
@@ -347,8 +347,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     // - full => full version string
     // - binaryFull => binaryScalaVersion
     // - standard => binary if stable, full otherwise
-    // For "standard" we rely on the simple 0.12 algorithm (contains "-"), as opposed to the
-    // algorithms detailed in sbt's pull request #600.
+    // We delegate to the CrossVersion helper for details.
     //
     // We have to patch both the list of BuildSubArtifactsOut, as well as the actual filenames
     // (including checksums, if any)
@@ -358,15 +357,16 @@ object AssembleBuildSystem extends BuildSystemCore {
       case Part(z) => z
       case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
     }
-    val crossSuff = project.config.getCrossVersionHead match {
-      case "disabled" => ""
-      case l @ "full" => "_" + getScalaVersion(l)
-      case l @ "binary" => "_" + binary(getScalaVersion(l))
-      case l @ "standard" =>
-        val version = getScalaVersion(l)
-        "_" + (if (version.contains('-')) version else binary(version))
-      case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
+    val crossSuff =  {
+      project.config.getCrossVersionHead match {
+          // We need to handle this specifically here because getScalaVersion fails if there is no scala.
+        case "disabled" => ""
+        case l => CrossVersion.artifactNameExtension(l, getScalaVersion(l))
+      }
+
+
     }
+
     def patchName(s: String) = fixName(s) + crossSuff
 
     // this is the renaming section: the artifacts are renamed according

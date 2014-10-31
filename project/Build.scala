@@ -117,8 +117,9 @@ package com.typesafe.dbuild.repo.core
 object Defaults {
   val version = "%s"
   val org = "%s"
+  val hash = "%s"
 }
-""" format (version, org))
+""" format (version, org, Process("git log --pretty=format:%H -n 1").lines.head))
         Seq(file)
       })
   )

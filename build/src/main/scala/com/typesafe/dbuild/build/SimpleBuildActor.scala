@@ -9,7 +9,6 @@ import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.hashing
 import com.typesafe.dbuild.graph
-import com.typesafe.dbuild.repo.PomHelper
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.pattern.{ ask, pipe }
 import akka.dispatch.{ Future, Futures, Promise }
@@ -249,17 +248,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     }
     log.info("---== End Dependency Information ===---")
   }
-
-  def logPoms(build: RepeatableDBuildConfig, arts: BuildArtifactsIn, log: Logger): Unit =
-    try {
-      log info "Printing Poms!"
-      val poms = PomHelper.makePomStrings(build, arts)
-      log info (poms mkString "----------")
-    } catch {
-      case e: Throwable =>
-        log trace e
-        throw e
-    }
 
   implicit val buildTimeout: Timeout = 4 hours
   type ProjectGraph = graph.Graph[ProjectConfigAndExtracted, EdgeData]

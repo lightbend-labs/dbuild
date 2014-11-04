@@ -30,7 +30,6 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
     Seq(new support.sbt.SbtBuildSystem(repos, targetDir, options.debug),
       support.scala.ScalaBuildSystem,
       new support.ivy.IvyBuildSystem(repos, targetDir),
-      support.mvn.MvnBuildSystem,
       support.assemble.AssembleBuildSystem,
       support.test.TestBuildSystem,
       support.nil.NilBuildSystem)

@@ -622,9 +622,6 @@ case class IvyArtifact(
   ext: String = "jar",
   configs: SeqString = Seq("default"))
 
-case class MavenExtraConfig(
-  directory: String = "") extends ExtraConfig
-
 /**
  * sbt-specific build parameters
  */
@@ -658,7 +655,6 @@ object BuildSystemExtras {
     "sbt" -> classOf[SbtExtraConfig],
     "scala" -> classOf[ScalaExtraConfig],
     "ivy" -> classOf[IvyExtraConfig],
-    "maven" -> classOf[MavenExtraConfig],
     "assemble" -> classOf[AssembleExtraConfig],
     "test" -> classOf[TestExtraConfig],
     "nil" -> classOf[NilExtraConfig])

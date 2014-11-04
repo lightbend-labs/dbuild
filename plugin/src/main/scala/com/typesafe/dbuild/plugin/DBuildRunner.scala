@@ -788,6 +788,6 @@ object DBuildRunner {
   def projectSettings: Seq[Setting[_]] = Seq(
     extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
       Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations,
-    moduleInfo <<= (Keys.organization, Keys.name, Keys.version, Keys.scalaVersion, Keys.scalaBinaryVersion,
+    moduleInfo <<= (Keys.organization, Keys.moduleName, Keys.version, Keys.scalaVersion, Keys.scalaBinaryVersion,
       Keys.sbtVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin, Keys.crossVersion) map generateModuleInfo)
 }

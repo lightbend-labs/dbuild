@@ -483,44 +483,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val available = allArtifactsOut.flatMap { _.results }.flatMap { _.artifacts }
 
     (localRepo.***.get).filter(_.getName.endsWith(".pom")).foreach {
-      pom =>
-        val reader = new MavenXpp3Reader()
-        val model = reader.read(new _root_.java.io.FileReader(pom))
-        // transform dependencies
-        val deps: Seq[Dependency] = model.getDependencies.asScala
-        val newDeps: _root_.java.util.List[Dependency] = (deps map { m =>
-          available.find { artifact =>
-            artifact.info.organization == m.getGroupId &&
-              artifact.info.name == fixName(m.getArtifactId)
-          } map { art =>
-            val m2 = m.clone
-            m2.setArtifactId(fixName(m.getArtifactId) + art.crossSuffix)
-            m2.setVersion(art.version)
-            m2
-          } getOrElse m
-        }).asJava
-        val newModel = model.clone
-        // has the artifactId (aka the name) changed? If so, patch that as well.
-        val NameExtractor = """.*/([^/]*)/([^/]*)/\1-[^/]*.pom""".r
-        val NameExtractor(newArtifactId, _) = pom.getCanonicalPath()
-        newModel.setArtifactId(newArtifactId)
-        newModel.setDependencies(newDeps)
-        // we overwrite in place, there should be no adverse effect at this point
-        val writer = new MavenXpp3Writer
-        writer.write(new _root_.java.io.FileWriter(pom), newModel)
-        updateChecksumFiles(pom)
-    }
-
-    def updateChecksumFiles(base: File) = {
-      // We will also have to change the .sha1 and .md5 files
-      // corresponding to this pom, if they exist, otherwise artifactory and ivy
-      // will refuse to use the pom in question.
-      Seq("md5", "sha1") foreach { algorithm =>
-        val checksumFile = new File(base.getCanonicalPath + "." + algorithm)
-        if (checksumFile.exists) {
-          FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(base, algorithm))
-        }
-      }
+      pom => patchPomDependencies(pom, available)
     }
 
     (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { file =>
@@ -641,5 +604,45 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.debug("out: " + writeValue(out))
     out
 
+  }
+
+  def patchPomDependencies(pom: File, available: Seq[ArtifactLocation]) = {
+    val reader = new MavenXpp3Reader()
+    val model = reader.read(new _root_.java.io.FileReader(pom))
+    // transform dependencies
+    val deps: Seq[Dependency] = model.getDependencies.asScala
+    val newDeps: _root_.java.util.List[Dependency] = (deps map { m =>
+      available.find { artifact =>
+        artifact.info.organization == m.getGroupId &&
+          artifact.info.name == fixName(m.getArtifactId)
+      } map { art =>
+        val m2 = m.clone
+        m2.setArtifactId(fixName(m.getArtifactId) + art.crossSuffix)
+        m2.setVersion(art.version)
+        m2
+      } getOrElse m
+    }).asJava
+    val newModel = model.clone
+    // has the artifactId (aka the name) changed? If so, patch that as well.
+    val NameExtractor = """.*/([^/]*)/([^/]*)/\1-[^/]*.pom""".r
+    val NameExtractor(newArtifactId, _) = pom.getCanonicalPath()
+    newModel.setArtifactId(newArtifactId)
+    newModel.setDependencies(newDeps)
+    // we overwrite in place, there should be no adverse effect at this point
+    val writer = new MavenXpp3Writer
+    writer.write(new _root_.java.io.FileWriter(pom), newModel)
+    updateChecksumFiles(pom)
+
+  }
+  def updateChecksumFiles(base: File) = {
+    // We will also have to change the .sha1 and .md5 files
+    // corresponding to this pom, if they exist, otherwise artifactory and ivy
+    // will refuse to use the pom in question.
+    Seq("md5", "sha1") foreach { algorithm =>
+      val checksumFile = new File(base.getCanonicalPath + "." + algorithm)
+      if (checksumFile.exists) {
+        FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(base, algorithm))
+      }
+    }
   }
 }

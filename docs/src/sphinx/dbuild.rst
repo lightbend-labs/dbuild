@@ -165,8 +165,8 @@ name
 
 system
   A string that describes the build system used by this software project. Possible values are
-  "scala" (specific to build the Scala project), "sbt", "ivy", and "assemble". Additional mechanisms
-  will be added soon (Maven support is in the works). If unspecified, "sbt" is used.
+  "scala" (specific to build the Scala project), "sbt", "ivy", "aether", and "assemble". Additional
+  mechanisms will be added soon (Maven support is in the works). If unspecified, "sbt" is used.
 
 uri
   A string pointing to the source repository for this project. It can be git-based (if the uri begins
@@ -648,6 +648,46 @@ the configuration ``default`` will be used. For example, the javadoc jar of a mo
 can also be obtained by specifying an artifact in which the classifier is
 "javadoc", the type is "doc", the file extension is "jar", and the configuration
 is "javadoc".
+
+Aether-specific options
+-----------------------
+
+The Aether build system is similar to the Ivy build system, but resolves its artifacts
+from a Maven repository using Aether. That means that the pom descriptor and the
+directory structure are not converted into Ivy format, but are kept as they were in
+the original Maven repository. This build system is also able to grab Maven-style
+artifacts produced by any other project in the same dbuild configuration file, and
+republish them with a different cross-version and version number; an example is
+supplied later in this guide, in the "Spaces" section.
+
+The ``uri`` field follows the syntax "aether:organization#name;revision". For example:
+
+.. code-block:: javascript
+
+  {
+    name:   test4
+    system: aether
+    uri:   "aether:org.scala-sbt#compiler-interface;0.12.4"
+  }
+
+If cross-versions are in use, the Scala version suffix must be explicitly added to the name,
+for example: "aether:org.specs2#specs2_2.10;1.12.3". The "extra" options are the following:
+
+.. code-block:: javascript
+
+   {
+    "main-jar"    : <true-or-false>
+    "sources"     : <true-or-false>
+    "javadoc"     : <true-or-false>
+   }
+
+The ``main-jar`` flag defaults to true, the other two to false.
+
+.. note::
+  Some aspects of the Aether build system are not yet fully implemented. In particular,
+  snapshots may not be resolved correctly; also, missing dependencies will not be
+  detected at this time (see ``check-missing``, above).
+
 
 Assemble-specific options
 -------------------------

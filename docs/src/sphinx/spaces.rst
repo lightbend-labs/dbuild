@@ -375,5 +375,58 @@ then define the three occurrences. For example:
   dependencies are not included is by design: it would be impossible to support bootstrap cycles
   otherwise.
 
+Republishing artifacts
+----------------------
+
+A further application of spaces is the opportunity to republish existing artifacts in a
+different space, changing in the process the cross-versioning suffix and the version number.
+That can be accomplished by using the Aether build system, for example. Consider the following
+configuration:
+
+.. code-block:: javascript
+
+  build.projects: [
+    {
+      name: lib, system: aether, set-version: "2.10.18"
+      uri: "aether:org.scala-lang#scala-library;2.10.2"
+    }
+    {
+      name: "gpg-republish"
+      space.to: source
+      system: aether
+      uri: "aether:com.jsuereth#gpg-library_2.10;0.8.3"
+      cross-version: full
+      set-version-suffix: "test"
+    }
+  ]
+
+In this example, an external artifact will be republished locally as ``com.jsuereth#gpg-library_2.10.18;0.8.3-test``.
+It is similarly possible to republish artifacts compiled by some other project. That requires a bit of attention, however.
+First, the version string specified in the uri must match that of an existing already published artifact. That is
+necessary since, during the initial extraction stage, dbuild needs to look somewhere in order to discover the
+project dependencies, and the source project has not been built yet at that point. Second, the project needs to be
+"injected" a dependency on itself. For example, let us consider the following project:
+
+.. code-block:: javascript
+
+  {
+    name: republishtest
+    space.from: source
+    space.to: dest
+    deps.inject: "com.jsuereth#gpg-library"
+    system: aether
+    uri: "aether:com.jsuereth#gpg-library_2.10;0.8.3"
+    cross-version: disabled
+    set-version-suffix: "fix"
+  }
+
+If we generated the ``gpg-library`` artifacts in the ``source`` space, either by downloading them or by generating
+them from source, they will now also be republished to the ``dest`` space with different cross-version suffix and
+version number. That may be useful in order to generate multiple copies of the same artifacts, with different
+version suffixes for example, in different spaces without the need to recompile them. In order to make sure that
+the projects are being republished correctly, you can check for the list of dependencies in the "Dependency
+Information" section of the log file.
+
+
 *Next:* :doc:`plugins`.
 

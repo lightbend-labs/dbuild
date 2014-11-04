@@ -48,6 +48,10 @@ cross-version
     recommended that this option is selected during the usual testing cycle, as it causes
     the option "check-missing" to become ineffective (see below).
 
+
+  binary
+    The project is forced to cross version using scala's binary version.
+
   full
     In this case the full Scala version string is used as a
     cross-version suffix while publishing (even for those projects that would normally

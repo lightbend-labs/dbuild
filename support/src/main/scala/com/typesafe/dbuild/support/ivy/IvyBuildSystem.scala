@@ -30,7 +30,7 @@ import com.typesafe.dbuild.project.build.LocalBuildRunner
 import com.typesafe.dbuild.repo.core.GlobalDirs.dbuildHomeDir
 import com.typesafe.dbuild.support.SbtUtil.pluginAttrs
 
-/** Implementation of the Scala  build system. workingDir is the "target" general dbuild dir */
+/** Implementation of the Ivy build system. workingDir is the "target" general dbuild dir */
 class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends BuildSystemCore {
 
   val name = "ivy"

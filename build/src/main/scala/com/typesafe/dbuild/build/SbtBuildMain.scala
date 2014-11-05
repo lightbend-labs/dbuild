@@ -79,7 +79,7 @@ class SbtBuildMain extends xsbti.AppMain {
     val args = configuration.arguments
     object conf extends ScallopConf(args.toList) {
       printedName = "dbuild"
-      version("Typesafe dbuild " + Defaults.version)
+      version("Typesafe dbuild " + Defaults.version + "   (" + Defaults.hash.take(12) + ")")
       banner("""Usage: dbuild [OPTIONS] config-file [target]
                |dbuild is a multi-project build tool that can verify the compatibility
                |of multiple related projects, by building each one on top of the others.

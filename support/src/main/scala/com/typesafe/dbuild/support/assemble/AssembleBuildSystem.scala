@@ -214,22 +214,6 @@ object AssembleBuildSystem extends BuildSystemCore {
     def ivyArtifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
       repoDir / ref.organization / (ref.name + crossSuffix)
 
-    // In order to detect the artifacts that belong to the scala core (non cross-versioned)
-    // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
-    // with cross versioning disabled (it's the default in dbuild). Our only option is going after
-    // the organization id "org.scala-lang".
-    def isScalaCore(name: String, org: String) = {
-      val fixedName = fixName(name)
-      (org == "org.scala-lang" && fixedName.startsWith("scala")) ||
-        (org == "org.scala-lang.plugins" && fixedName == "continuations")
-    }
-
-    def isScalaCoreRef(p: ProjectRef) =
-      isScalaCore(p.name, p.organization)
-
-    def isScalaCoreArt(l: ArtifactLocation) =
-      isScalaCoreRef(l.info)
-
     // Since we know the repository format, and the list of "subprojects", we grab
     // the files corresponding to each one of them right from the relevant subdirectory.
     // We then calculate the sha, and package each subproj's results as a BuildSubArtifactsOut.
@@ -302,14 +286,8 @@ object AssembleBuildSystem extends BuildSystemCore {
     log.info("----------")
     log.info("Assembling:")
 
-    // we also need the new scala version, which we take from the scala-library artifact, among
-    // our subprojects. If we cannot find it, then we have none.
-    val scalaVersion = {
-      val allArts = preCrossArtifactsMap.map(_._2).flatMap(_.results).flatMap(_.artifacts)
-      allArts.find(l => l.info.organization == "org.scala-lang" && l.info.name == "scala-library").map(_.version)
-    }
-    def getScalaVersion(crossLevel: String) = scalaVersion getOrElse
-      sys.error("In Assemble, the requested cross-version level is " + crossLevel + ", but no scala-library was found among the artifacts.")
+    val preCrossArtifacts = preCrossArtifactsMap.map(_._2).flatMap(_.results).flatMap(_.artifacts)
+    val patcher = new NamePatcher(preCrossArtifacts, project.config)
 
     // ------
     //
@@ -353,22 +331,6 @@ object AssembleBuildSystem extends BuildSystemCore {
     // We have to patch both the list of BuildSubArtifactsOut, as well as the actual filenames
     // (including checksums, if any)
 
-    val Part = """(\d+\.\d+)(?:\..+)?""".r
-    def binary(s: String) = s match {
-      case Part(z) => z
-      case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
-    }
-    val crossSuff = project.config.getCrossVersionHead match {
-      case "disabled" => ""
-      case l @ "full" => "_" + getScalaVersion(l)
-      case l @ "binary" => "_" + binary(getScalaVersion(l))
-      case l @ "standard" =>
-        val version = getScalaVersion(l)
-        "_" + (if (version.contains('-')) version else binary(version))
-      case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
-    }
-    def patchName(s: String) = fixName(s) + crossSuff
-
     // this is the renaming section: the artifacts are renamed according
     // to the crossSuffix selection
     val artifactsMap = preCrossArtifactsMap map {
@@ -376,61 +338,16 @@ object AssembleBuildSystem extends BuildSystemCore {
         subs map {
           case BuildSubArtifactsOut(subProjName, artifacts, shas, moduleInfo) =>
             val renamedArtifacts = artifacts map { l =>
-              if (isScalaCoreArt(l)) l else l.copy(crossSuffix = crossSuff)
+              if (isScalaCoreArt(l)) l else l.copy(crossSuffix = patcher.crossSuff)
             }
             // These newSHAs have the new *locations* but still the old sha hash value;
             // those hashes are recomputed at the end, before returning.
             val newSHAs = shas map { sha =>
               val oldLocation = sha.location
-              object OrgNameVerFilenamesuffix {
-                val MavenMatchPattern = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
-                val IvyXmlMatchPattern = """([^/]*)/([^/]*)/([^/]*)/(ivys)/([^/]*)""".r
-                val IvyMatchPattern = """([^/]*)/([^/]*)/([^/]*)/([^/]*)/\2([^/]*)""".r
-
-                // Returns: org, name, ver, suffix1, suffix2, isMaven, isIvyXml
-                // where:
-                // - for Maven:
-                //   isMaven is true
-                //   suffix1 is the part after the "name", for example in:
-                //     org/scala-lang/modules/scala-xml_2.11.0-M5/1.0-RC4/scala-xml_2.11.0-M5-1.0-RC4-sources.jar
-                //   suffix1 is "-1.0-RC4-sources.jar"
-                //   suffix2 is ignored
-                // - for Ivy, for things that are in an "ivys" directory:
-                //   isIvyXml is true
-                //   suffix1 is "ivys"
-                //   suffix2 is the filename. For example:
-                //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/ivys/ivy.xml.sha1
-                //     -> suffix2 is "ivy.xml.sha1"
-                // - for Ivy, for things that are not in an "ivys" directory:
-                //   isIvyXml is false
-                //   suffix1 is "docs", "jars", etc.
-                //   suffix2 is the portion of the filename after "name". For example:
-                //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/docs/scala-compiler-javadoc.jar
-                //     -> suffix1 is "docs"
-                //     -> suffix2 is "-javadoc.jar"
-                def unapply(s: String): Option[(String, String, String, String, String, Boolean, Boolean)] = {
-                  try {
-                    val MavenMatchPattern(org, name, ver, suffix) = s
-                    Some((org.replace('/', '.'), name, ver, suffix, "", true, false))
-                  } catch {
-                    case e: _root_.scala.MatchError => try {
-                      val IvyXmlMatchPattern(org, name, ver, suffix1, suffix2) = s
-                      Some((org, name, ver, suffix1, suffix2, false, true))
-                    } catch {
-                      case e: _root_.scala.MatchError => try {
-                        val IvyMatchPattern(org, name, ver, suffix1, suffix2) = s
-                        Some((org, name, ver, suffix1, suffix2, false, false))
-                      } catch {
-                        case e: _root_.scala.MatchError => None
-                      }
-                    }
-                  }
-                }
-              }
               try {
                 val OrgNameVerFilenamesuffix(org, oldName, ver, suffix1, suffix2, isMaven, isIvyXml) = oldLocation
                 if (isScalaCore(oldName, org)) sha else {
-                  val newName = patchName(oldName)
+                  val newName = patcher.patchName(oldName)
                   if (newName == oldName) sha else {
 
                     def fileDir(name: String) = if (isMaven)
@@ -464,7 +381,7 @@ object AssembleBuildSystem extends BuildSystemCore {
             BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs,
               moduleInfo.copy(attributes = moduleInfo.attributes.copy(scalaVersion =
                 if (isScalaCore(moduleInfo.name, moduleInfo.organization)) None else
-                  crossSuff match {
+                  patcher.crossSuff match {
                     case "" => None
                     case s if s.startsWith("_") => Some(s.drop(1))
                     case s => sys.error("Internal Error: crossSuff has unexpected format: \"" + s + "\". Please report.")
@@ -482,139 +399,10 @@ object AssembleBuildSystem extends BuildSystemCore {
     val allArtifactsOut = artifactsMap.map { _._2 }
     val available = allArtifactsOut.flatMap { _.results }.flatMap { _.artifacts }
 
-    (localRepo.***.get).filter(_.getName.endsWith(".pom")).foreach {
-      pom =>
-        val reader = new MavenXpp3Reader()
-        val model = reader.read(new _root_.java.io.FileReader(pom))
-        // transform dependencies
-        val deps: Seq[Dependency] = model.getDependencies.asScala
-        val newDeps: _root_.java.util.List[Dependency] = (deps map { m =>
-          available.find { artifact =>
-            artifact.info.organization == m.getGroupId &&
-              artifact.info.name == fixName(m.getArtifactId)
-          } map { art =>
-            val m2 = m.clone
-            m2.setArtifactId(fixName(m.getArtifactId) + art.crossSuffix)
-            m2.setVersion(art.version)
-            m2
-          } getOrElse m
-        }).asJava
-        val newModel = model.clone
-        // has the artifactId (aka the name) changed? If so, patch that as well.
-        val NameExtractor = """.*/([^/]*)/([^/]*)/\1-[^/]*.pom""".r
-        val NameExtractor(newArtifactId, _) = pom.getCanonicalPath()
-        newModel.setArtifactId(newArtifactId)
-        newModel.setDependencies(newDeps)
-        // we overwrite in place, there should be no adverse effect at this point
-        val writer = new MavenXpp3Writer
-        writer.write(new _root_.java.io.FileWriter(pom), newModel)
-        updateChecksumFiles(pom)
-    }
+    (localRepo.***.get).filter(_.getName.endsWith(".pom")).foreach { patchPomDependencies(_, available) }
 
-    def updateChecksumFiles(base: File) = {
-      // We will also have to change the .sha1 and .md5 files
-      // corresponding to this pom, if they exist, otherwise artifactory and ivy
-      // will refuse to use the pom in question.
-      Seq("md5", "sha1") foreach { algorithm =>
-        val checksumFile = new File(base.getCanonicalPath + "." + algorithm)
-        if (checksumFile.exists) {
-          FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(base, algorithm))
-        }
-      }
-    }
-
-    (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { file =>
-      import _root_.scala.collection.JavaConversions._
-      // ok, let's see what we can do with the ivy.xml
-      val settings = new ivy.core.settings.IvySettings()
-      val ivyHome = dir / ".ivy2" / "cache"
-      settings.setDefaultIvyUserDir(ivyHome)
-      val parser = ivy.plugins.parser.xml.XmlModuleDescriptorParser.getInstance()
-      val ivyFileRepo = new ivy.plugins.repository.file.FileRepository(localRepo.getAbsoluteFile())
-      val rel = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
-      val ivyFileResource = ivyFileRepo.getResource(rel)
-      val model = parser.parseDescriptor(settings, file.toURL(), ivyFileResource, true) match {
-        case m: ivy.core.module.descriptor.DefaultModuleDescriptor => m
-        case m => sys.error("Unknown Module Descriptor: " + m)
-      }
-
-      val myRevID = model.getModuleRevisionId()
-      val NameExtractor = """[^/]*/([^/]*)/[^/]*/ivys/ivy.xml""".r
-      val NameExtractor(newArtifactId) = rel
-      val newRevID = org.apache.ivy.core.module.id.ModuleRevisionId.newInstance(
-        myRevID.getOrganisation(),
-        newArtifactId,
-        myRevID.getBranch(),
-        myRevID.getRevision(),
-        myRevID.getExtraAttributes())
-      val newModel = new org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor(newRevID,
-        model.getStatus(), model.getPublicationDate(), model.isDefault())
-      newModel.setDescription(model.getDescription())
-      model.getConfigurations() foreach { c =>
-        newModel.addConfiguration(c)
-        val conf = c.getName
-        model.getArtifacts(conf) foreach { mArt =>
-          val newArt =
-            if (fixName(newArtifactId) != fixName(mArt.getName())) mArt else
-              ivy.core.module.descriptor.DefaultArtifact.cloneWithAnotherName(mArt, newArtifactId)
-          newModel.addArtifact(conf, newArt)
-        }
-      }
-      model.getAllExcludeRules() foreach { newModel.addExcludeRule }
-      model.getExtraAttributesNamespaces() foreach { case ns: (String, String) => newModel.addExtraAttributeNamespace(ns._1, ns._2) }
-      model.getExtraInfo() foreach { case ns: (String, String) => newModel.addExtraInfo(ns._1, ns._2) }
-      model.getLicenses() foreach { case l => newModel.addLicense(l) }
-      newModel.setHomePage(model.getHomePage())
-      newModel.setLastModified(model.getLastModified())
-      model.getDependencies() foreach { d =>
-        val dep = d match {
-          case t: ivy.core.module.descriptor.DefaultDependencyDescriptor => t
-          case t => sys.error("Unknown Dependency Descriptor: " + t)
-        }
-        val rid = dep.getDependencyRevisionId()
-        val newDep = available.find { artifact =>
-          artifact.info.organization == rid.getOrganisation() &&
-            artifact.info.name == fixName(rid.getName())
-        } map { art =>
-          val transformer = new ivy.plugins.namespace.NamespaceTransformer {
-            def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
-              ivy.core.module.id.ModuleRevisionId.newInstance(
-                revID.getOrganisation(),
-                art.info.name + art.crossSuffix,
-                revID.getBranch(),
-                art.version,
-                revID.getExtraAttributes())
-            }
-            def isIdentity() = false
-          }
-          val transformMrid = transformer.transform(dep.getDependencyRevisionId())
-          val transformDynamicMrid = transformer.transform(dep.getDynamicConstraintDependencyRevisionId())
-          val newdd = new ivy.core.module.descriptor.DefaultDependencyDescriptor(
-            null, transformMrid, transformDynamicMrid,
-            dep.isForce(), dep.isChanging(), dep.isTransitive())
-          val moduleConfs = dep.getModuleConfigurations()
-          moduleConfs foreach { conf =>
-            dep.getDependencyConfigurations(conf).foreach { newdd.addDependencyConfiguration(conf, _) }
-            dep.getExcludeRules(conf).foreach { newdd.addExcludeRule(conf, _) }
-            dep.getIncludeRules(conf).foreach { newdd.addIncludeRule(conf, _) }
-            dep.getDependencyArtifacts(conf).foreach { depArt =>
-              val newDepArt = if (art.info.name != fixName(depArt.getName())) depArt else {
-                val n = new ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(depArt.getDependencyDescriptor(),
-                  art.info.name + art.crossSuffix, depArt.getType(), depArt.getExt(), depArt.getUrl(), depArt.getExtraAttributes())
-                depArt.getConfigurations().foreach(n.addConfiguration)
-                n
-              }
-              newdd.addDependencyArtifact(conf, newDepArt)
-            }
-          }
-          newdd
-        } getOrElse dep
-
-        newModel.addDependency(newDep)
-      }
-      ivy.plugins.parser.xml.XmlModuleDescriptorWriter.write(newModel, file)
-      updateChecksumFiles(file)
-    }
+    val ivyHome = dir / ".ivy2" / "cache"
+    (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { patchIvyDependencies(_, available, ivyHome, localRepo) }
 
     // dbuild SHAs must be re-computed (since the POM/Ivy files changed)
     // We preserve the list of original subprojects (and consequently modules),
@@ -640,6 +428,231 @@ object AssembleBuildSystem extends BuildSystemCore {
     })
     log.debug("out: " + writeValue(out))
     out
+  }
 
+  def patchIvyDependencies(file: File, available: Seq[ArtifactLocation], ivyHome: File, localRepo: File) = {
+    import _root_.scala.collection.JavaConversions._
+    // ok, let's see what we can do with the ivy.xml
+    val settings = new ivy.core.settings.IvySettings()
+
+    settings.setDefaultIvyUserDir(ivyHome)
+    val parser = ivy.plugins.parser.xml.XmlModuleDescriptorParser.getInstance()
+    val ivyFileRepo = new ivy.plugins.repository.file.FileRepository(localRepo.getAbsoluteFile())
+    val rel = IO.relativize(localRepo, file) getOrElse sys.error("Internal error while relativizing")
+    val ivyFileResource = ivyFileRepo.getResource(rel)
+    val model = parser.parseDescriptor(settings, file.toURL(), ivyFileResource, true) match {
+      case m: ivy.core.module.descriptor.DefaultModuleDescriptor => m
+      case m => sys.error("Unknown Module Descriptor: " + m)
+    }
+
+    val myRevID = model.getModuleRevisionId()
+    val NameExtractor = """[^/]*/([^/]*)/([^/]*)/ivys/ivy.xml""".r
+    val NameExtractor(newArtifactId, newVersion) = rel
+    val newRevID = org.apache.ivy.core.module.id.ModuleRevisionId.newInstance(
+      myRevID.getOrganisation(),
+      newArtifactId,
+      myRevID.getBranch(),
+      newVersion,
+      myRevID.getExtraAttributes())
+    val newModel = new org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor(newRevID,
+      model.getStatus(), model.getPublicationDate(), model.isDefault())
+    newModel.setDescription(model.getDescription())
+    model.getConfigurations() foreach { c =>
+      newModel.addConfiguration(c)
+      val conf = c.getName
+      model.getArtifacts(conf) foreach { mArt =>
+        val newArt =
+          if (fixName(newArtifactId) != fixName(mArt.getName())) mArt else
+            ivy.core.module.descriptor.DefaultArtifact.cloneWithAnotherName(mArt, newArtifactId)
+        newModel.addArtifact(conf, newArt)
+      }
+    }
+    model.getAllExcludeRules() foreach { newModel.addExcludeRule }
+    model.getExtraAttributesNamespaces() foreach { case ns: (String, String) => newModel.addExtraAttributeNamespace(ns._1, ns._2) }
+    model.getExtraInfo() foreach { case ns: (String, String) => newModel.addExtraInfo(ns._1, ns._2) }
+    model.getLicenses() foreach { case l => newModel.addLicense(l) }
+    newModel.setHomePage(model.getHomePage())
+    newModel.setLastModified(model.getLastModified())
+    model.getDependencies() foreach { d =>
+      val dep = d match {
+        case t: ivy.core.module.descriptor.DefaultDependencyDescriptor => t
+        case t => sys.error("Unknown Dependency Descriptor: " + t)
+      }
+      val rid = dep.getDependencyRevisionId()
+      val newDep = available.find { artifact =>
+        artifact.info.organization == rid.getOrganisation() &&
+          artifact.info.name == fixName(rid.getName())
+      } map { art =>
+        val transformer = new ivy.plugins.namespace.NamespaceTransformer {
+          def transform(revID: ivy.core.module.id.ModuleRevisionId) = {
+            ivy.core.module.id.ModuleRevisionId.newInstance(
+              revID.getOrganisation(),
+              art.info.name + art.crossSuffix,
+              revID.getBranch(),
+              art.version,
+              revID.getExtraAttributes())
+          }
+          def isIdentity() = false
+        }
+        val transformMrid = transformer.transform(dep.getDependencyRevisionId())
+        val transformDynamicMrid = transformer.transform(dep.getDynamicConstraintDependencyRevisionId())
+        val newdd = new ivy.core.module.descriptor.DefaultDependencyDescriptor(
+          null, transformMrid, transformDynamicMrid,
+          dep.isForce(), dep.isChanging(), dep.isTransitive())
+        val moduleConfs = dep.getModuleConfigurations()
+        moduleConfs foreach { conf =>
+          dep.getDependencyConfigurations(conf).foreach { newdd.addDependencyConfiguration(conf, _) }
+          dep.getExcludeRules(conf).foreach { newdd.addExcludeRule(conf, _) }
+          dep.getIncludeRules(conf).foreach { newdd.addIncludeRule(conf, _) }
+          dep.getDependencyArtifacts(conf).foreach { depArt =>
+            val newDepArt = if (art.info.name != fixName(depArt.getName())) depArt else {
+              val n = new ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor(depArt.getDependencyDescriptor(),
+                art.info.name + art.crossSuffix, depArt.getType(), depArt.getExt(), depArt.getUrl(), depArt.getExtraAttributes())
+              depArt.getConfigurations().foreach(n.addConfiguration)
+              n
+            }
+            newdd.addDependencyArtifact(conf, newDepArt)
+          }
+        }
+        newdd
+      } getOrElse dep
+
+      newModel.addDependency(newDep)
+    }
+    ivy.plugins.parser.xml.XmlModuleDescriptorWriter.write(newModel, file)
+    updateChecksumFiles(file)
+  }
+
+  def patchPomDependencies(pom: File, available: Seq[ArtifactLocation]) = {
+    val reader = new MavenXpp3Reader()
+    val model = reader.read(new _root_.java.io.FileReader(pom))
+    // transform dependencies
+    val deps: Seq[Dependency] = model.getDependencies.asScala
+    val newDeps: _root_.java.util.List[Dependency] = (deps map { m =>
+      available.find { artifact =>
+        artifact.info.organization == m.getGroupId &&
+          artifact.info.name == fixName(m.getArtifactId)
+      } map { art =>
+        val m2 = m.clone
+        m2.setArtifactId(fixName(m.getArtifactId) + art.crossSuffix)
+        m2.setVersion(art.version)
+        m2
+      } getOrElse m
+    }).asJava
+    val newModel = model.clone
+    // has the artifactId (aka the name) changed? If so, patch that as well.
+    val NameExtractor = """.*/([^/]*)/([^/]*)/\1-[^/]*.pom""".r
+    val NameExtractor(newArtifactId, newVersion) = pom.getCanonicalPath()
+    newModel.setArtifactId(newArtifactId)
+    newModel.setVersion(newVersion)
+    newModel.setDependencies(newDeps)
+    // we overwrite in place, there should be no adverse effect at this point
+    val writer = new MavenXpp3Writer
+    writer.write(new _root_.java.io.FileWriter(pom), newModel)
+    updateChecksumFiles(pom)
+  }
+
+  def updateChecksumFiles(base: File) = {
+    // We will also have to change the .sha1 and .md5 files
+    // corresponding to this pom, if they exist, otherwise artifactory and ivy
+    // will refuse to use the pom in question.
+    Seq("md5", "sha1") foreach { algorithm =>
+      val checksumFile = new File(base.getCanonicalPath + "." + algorithm)
+      if (checksumFile.exists) {
+        FileUtils.writeStringToFile(checksumFile, ChecksumHelper.computeAsString(base, algorithm))
+      }
+    }
+  }
+  
+  // general utilities:
+
+    // In order to detect the artifacts that belong to the scala core (non cross-versioned)
+    // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
+    // with cross versioning disabled (it's the default in dbuild). Our only option is going after
+    // the organization id "org.scala-lang".
+    def isScalaCore(name: String, org: String) = {
+      val fixedName = fixName(name)
+      (org == "org.scala-lang" && fixedName.startsWith("scala")) ||
+        (org == "org.scala-lang.plugins" && fixedName == "continuations")
+    }
+
+    def isScalaCoreRef(p: ProjectRef) =
+      isScalaCore(p.name, p.organization)
+
+    def isScalaCoreArt(l: ArtifactLocation) =
+      isScalaCoreRef(l.info)
+
+}
+
+// A helper to detect versions and other info from an arbitrary set of files contained in a
+// mixed Maven/Ivy local repository. It will parse a relative path and file name string, decomposing
+// it into useful information (see below for details).
+object OrgNameVerFilenamesuffix {
+  val MavenMatchPattern = """(.*)/([^/]*)/([^/]*)/\2(-[^/]*)""".r
+  val IvyXmlMatchPattern = """([^/]*)/([^/]*)/([^/]*)/(ivys)/([^/]*)""".r
+  val IvyMatchPattern = """([^/]*)/([^/]*)/([^/]*)/([^/]*)/\2([^/]*)""".r
+
+  // Returns: org, name, ver, suffix1, suffix2, isMaven, isIvyXml
+  // where:
+  // - for Maven:
+  //   isMaven is true
+  //   suffix1 is the part after the "name", for example in:
+  //     org/scala-lang/modules/scala-xml_2.11.0-M5/1.0-RC4/scala-xml_2.11.0-M5-1.0-RC4-sources.jar
+  //   suffix1 is "-1.0-RC4-sources.jar"
+  //   suffix2 is ignored
+  // - for Ivy, for things that are in an "ivys" directory:
+  //   isIvyXml is true
+  //   suffix1 is "ivys"
+  //   suffix2 is the filename. For example:
+  //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/ivys/ivy.xml.sha1
+  //     -> suffix2 is "ivy.xml.sha1"
+  // - for Ivy, for things that are not in an "ivys" directory:
+  //   isIvyXml is false
+  //   suffix1 is "docs", "jars", etc.
+  //   suffix2 is the portion of the filename after "name". For example:
+  //     org.scala-lang/scala-compiler/2.10.2-dbuildx83bbe18c0407e30bbcf72be0eb1cfc9934528099/docs/scala-compiler-javadoc.jar
+  //     -> suffix1 is "docs"
+  //     -> suffix2 is "-javadoc.jar"
+  def unapply(s: String): Option[(String, String, String, String, String, Boolean, Boolean)] = {
+    try {
+      val MavenMatchPattern(org, name, ver, suffix) = s
+      Some((org.replace('/', '.'), name, ver, suffix, "", true, false))
+    } catch {
+      case e: _root_.scala.MatchError => try {
+        val IvyXmlMatchPattern(org, name, ver, suffix1, suffix2) = s
+        Some((org, name, ver, suffix1, suffix2, false, true))
+      } catch {
+        case e: _root_.scala.MatchError => try {
+          val IvyMatchPattern(org, name, ver, suffix1, suffix2) = s
+          Some((org, name, ver, suffix1, suffix2, false, false))
+        } catch {
+          case e: _root_.scala.MatchError => None
+        }
+      }
+    }
   }
 }
+
+class NamePatcher(arts: Seq[ArtifactLocation], config: ProjectBuildConfig) {
+  // we also need the new scala version, which we take from the scala-library artifact, among
+  // our subprojects. If we cannot find it, then we have none.
+  private val scalaVersion = arts.find(l => l.info.organization == "org.scala-lang" && l.info.name == "scala-library").map(_.version)
+  private def getScalaVersion(newCrossLevel: String) = scalaVersion getOrElse
+    sys.error("The requested cross-version level is " + newCrossLevel + ", but no scala-library was found among the dependencies (maybe you meant \"cross-version: disabled\"?).")
+  private val Part = """(\d+\.\d+)(?:\..+)?""".r
+  private def binary(s: String) = s match {
+    case Part(z) => z
+    case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
+  }
+  val crossSuff = config.getCrossVersionHead match {
+    case "disabled" => ""
+    case l @ "full" => "_" + getScalaVersion(l)
+    case l @ "binary" => "_" + binary(getScalaVersion(l))
+    case l @ "standard" =>
+      val version = getScalaVersion(l)
+      "_" + (if (version.contains('-')) version else binary(version))
+    case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
+  }
+  def patchName(s: String) = fixName(s) + crossSuff
+}
+

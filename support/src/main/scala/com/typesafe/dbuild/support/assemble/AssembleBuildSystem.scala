@@ -648,9 +648,8 @@ class NamePatcher(arts: Seq[ArtifactLocation], config: ProjectBuildConfig) {
     case "disabled" => ""
     case l @ "full" => "_" + getScalaVersion(l)
     case l @ "binary" => "_" + binary(getScalaVersion(l))
-    case l @ "standard" =>
-      val version = getScalaVersion(l)
-      "_" + (if (version.contains('-')) version else binary(version))
+    case l @ "standard" => sys.error("\"standard\" is not a supported cross-version selection for this build system. "+
+        "Please select one of \"disabled\", \"binary\", or \"full\" instead.")
     case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
   }
   def patchName(s: String) = fixName(s) + crossSuff

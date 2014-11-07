@@ -128,6 +128,17 @@ object ScalaBuildSystem extends BuildSystemCore {
       val customScalaVersion = findVersion(input.artifacts.artifacts, "org.scala-lang", "scala-library")
       // "starr.version" currently also applies to scala-compiler and scala-reflect
 
+      val Part = """(\d+\.\d+)(?:\..+)?""".r
+      def binary(s: String) = s match {
+        case Part(z) => z
+        case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
+      }
+      def getScalaBin(fullScalaVer: String) = project.config.getCrossVersionHead match {
+        case "full" =>  fullScalaVer
+        case "binary" => binary(fullScalaVer)
+        case level => sys.error("Requested cross-version level \""+level+"\" unsupported in the Scala build system; please use either full or binary (normally binary).")
+      }
+
       val scalaRewireOptions: Seq[String] = customScalaVersion.toSeq flatMap { sv =>
         log.info("*** Will compile using the Scala compiler version \"" + sv + "\"" + {
           project.config.space map (" (from space \"" + _.from + "\")") getOrElse ""
@@ -136,7 +147,7 @@ object ScalaBuildSystem extends BuildSystemCore {
         Seq("-Dextra.repo.url=\"file://" + input.artifacts.localRepo.getCanonicalPath + "\"",
           //    ... and the version, change starr.version, as in:
           //      https://github.com/scala/scala/blob/master/versions.properties
-          "-Dstarr.version=\"" + sv + "\"", "-Dscala.binary.version=\"" + sv + "\"")
+          "-Dstarr.version=\"" + sv + "\"", "-Dscala.binary.version=\"" + getScalaBin(version) + "\"")
       }
 
       val moduleData = Seq(

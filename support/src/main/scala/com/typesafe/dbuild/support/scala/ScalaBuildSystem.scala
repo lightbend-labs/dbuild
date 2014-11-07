@@ -133,21 +133,29 @@ object ScalaBuildSystem extends BuildSystemCore {
         case Part(z) => z
         case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
       }
-      def getScalaBin(fullScalaVer: String) = project.config.getCrossVersionHead match {
-        case "full" =>  fullScalaVer
-        case "binary" => binary(fullScalaVer)
-        case level => sys.error("Requested cross-version level \""+level+"\" unsupported in the Scala build system; please use either full or binary (normally binary).")
-      }
 
       val scalaRewireOptions: Seq[String] = customScalaVersion.toSeq flatMap { sv =>
         log.info("*** Will compile using the Scala compiler version \"" + sv + "\"" + {
           project.config.space map (" (from space \"" + _.from + "\")") getOrElse ""
         })
+        def setScalaBinProp(ver: String) = Seq("-Dscala.binary.version=\"" + ver + "\"")
+        val setScalaBin = project.config.getCrossVersionHead match {
+          case "full" => setScalaBinProp(version)
+          case "binary" => setScalaBinProp(binary(version))
+          // If "standard", it will pick scala.binary.version from the properties file
+          case "standard" =>
+            log.warn("The cross-version level is set to \"standard\". That will cause the resulting cross-version suffix to " +
+              "be picked from the scala.binary.version property in the version.properties file of the source tree. That " +
+              "suffix (aligned with the original version " + sv + ") may be incompatible with your selected version " + version)
+            Seq[String]()
+          case level => sys.error("Requested cross-version level \"" + level +
+            "\" unsupported in the Scala build system; please use either full, binary, or standard.")
+        }
         //    ... set the repo ptr...
         Seq("-Dextra.repo.url=\"file://" + input.artifacts.localRepo.getCanonicalPath + "\"",
           //    ... and the version, change starr.version, as in:
           //      https://github.com/scala/scala/blob/master/versions.properties
-          "-Dstarr.version=\"" + sv + "\"", "-Dscala.binary.version=\"" + getScalaBin(version) + "\"")
+          "-Dstarr.version=\"" + sv + "\"") ++ setScalaBin
       }
 
       val moduleData = Seq(

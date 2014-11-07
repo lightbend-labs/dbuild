@@ -125,6 +125,7 @@ class SbtBuildMain extends xsbti.AppMain {
         val debug = conf.debug()
         val buildTarget = conf.target.get
         if (debug) {
+          println("This is dbuild " + Defaults.version + ", commit " + Defaults.hash)
           println("Using configuration: " + configFile.getName)
           buildTarget foreach { t => println("Build target: " + t) }
         }

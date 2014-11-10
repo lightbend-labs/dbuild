@@ -180,15 +180,12 @@ class SbtBuildMain extends xsbti.AppMain {
                 }
               } else Map.empty)
             if (debug) {
-//              println("System.getenv:")
-//              val environmentVars = System.getenv
-//              for ((k, v) <- environmentVars) println("key: " + k + ", value: " + v)
-//              println("System.getProperties:")
-//              val properties = System.getProperties
-//              for ((k, v) <- properties) println("key: " + k + ", value: " + v)
-              println("Complete \"vars\" section:")
+              println("Content of the \"vars\" section:")
               try { // in case resolve() fails
-                println(endConfig.withOnlyPath("vars").resolve.root.render(ConfigRenderOptions.concise.setFormatted(true)))
+                val resolved = endConfig.withOnlyPath("vars").resolve
+                val entries = resolved.entrySet.toSeq.sortBy(_.getKey)
+                val opt = ConfigRenderOptions.concise.setFormatted(true)
+                entries foreach { entry => println(entry.getKey + ": " + entry.getValue.render(opt)) }
               } catch { case e: Exception => println("Unexpected while printing: " + e.getMessage()) }
             }
             //

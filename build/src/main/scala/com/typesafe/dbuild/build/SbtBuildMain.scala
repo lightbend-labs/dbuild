@@ -125,6 +125,7 @@ class SbtBuildMain extends xsbti.AppMain {
         val debug = conf.debug()
         val buildTarget = conf.target.get
         if (debug) {
+          println("This is dbuild " + Defaults.version + ", commit " + Defaults.hash)
           println("Using configuration: " + configFile.getName)
           buildTarget foreach { t => println("Build target: " + t) }
         }
@@ -179,15 +180,15 @@ class SbtBuildMain extends xsbti.AppMain {
                 }
               } else Map.empty)
             if (debug) {
-//              println("System.getenv:")
-//              val environmentVars = System.getenv
-//              for ((k, v) <- environmentVars) println("key: " + k + ", value: " + v)
-//              println("System.getProperties:")
-//              val properties = System.getProperties
-//              for ((k, v) <- properties) println("key: " + k + ", value: " + v)
-              println("Complete \"vars\" section:")
+              println("Environment variables:")
+              val environmentVars = System.getenv
+              for ((k, v) <- environmentVars) println(k + ": " + v)
+              println("\nContent of the \"vars\" section:")
               try { // in case resolve() fails
-                println(endConfig.withOnlyPath("vars").resolve.root.render(ConfigRenderOptions.concise.setFormatted(true)))
+                val resolved = endConfig.withOnlyPath("vars").resolve
+                val entries = resolved.entrySet.toSeq.sortBy(_.getKey)
+                val opt = ConfigRenderOptions.concise.setFormatted(true)
+                entries foreach { entry => println(entry.getKey + ": " + entry.getValue.render(opt)) }
               } catch { case e: Exception => println("Unexpected while printing: " + e.getMessage()) }
             }
             //

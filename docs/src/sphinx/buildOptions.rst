@@ -34,7 +34,7 @@ cross-version
   compiled artifacts are generated. It also, indirectly, affects dbuild's ability to
   detect missing dependencies, as explained in the documentation of "check-missing", below.
 
-  The possible values for the "cross-version" option are:
+  The possible values for the "cross-version" option in an sbt build are:
   
   disabled
     This is the default setting, and it will be used if a "build-options" section is not
@@ -59,6 +59,21 @@ cross-version
     however, the projects that publish without cross-version will remain unchanged.
     Missing dependent projects will be detected. This option exists mainly for testing,
     and is not intended for regular use.
+
+For some other build systems, notably Assemble, Aether and Scala, the possible values are
+"disabled", "full", and "binary", where:
+
+  binary
+    The Scala version string will always be truncated to the first two components,
+    regardless of suffixes or other conditions. Therefore, "2.11.0-xyz" would result
+    in the cross-version suffix "_2.11"/
+
+The Scala build system supports the levels "full", "binary", and "standard", where the
+latter will use the value of the property "scala.binary.version" from the file
+"version.properties" in the root of the Scala source tree. Note that this property may
+be misaligned with the new version number that you may have set using "set-version",
+and may lead therefore to incorrect pom files. If unsure, select "binary" for the
+Scala build system.
 
 check-missing
   This option can be true or false; the default is true. This option is only effective when

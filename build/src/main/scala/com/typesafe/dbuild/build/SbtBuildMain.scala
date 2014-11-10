@@ -180,7 +180,10 @@ class SbtBuildMain extends xsbti.AppMain {
                 }
               } else Map.empty)
             if (debug) {
-              println("Content of the \"vars\" section:")
+              println("Environment variables:")
+              val environmentVars = System.getenv
+              for ((k, v) <- environmentVars) println(k + ": " + v)
+              println("\nContent of the \"vars\" section:")
               try { // in case resolve() fails
                 val resolved = endConfig.withOnlyPath("vars").resolve
                 val entries = resolved.entrySet.toSeq.sortBy(_.getKey)

@@ -189,6 +189,10 @@ uri
   uri means that no source files are used. This options is normally always specified, but in
   case it should be missing, "nil:" will be used.
 
+  In order to specify private GitHub repositories, which need authentication, you may use
+  the ssh scheme, and configure your GitHub account with the necessary keys. The uri will
+  then have the form: ``ssh://git@github.com/account/project.git``
+
 set-version
   This component is optional, and normally not used. During compilation, dbuild automatically
   generates a special version string that is used while producing the various artifacts of each

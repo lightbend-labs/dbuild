@@ -637,16 +637,17 @@ case class SbtExtraConfig(
   directory: String = "",
   @JsonProperty("run-tests") runTests: Boolean = true,
   @JsonProperty("test-tasks") testTasks: SeqString = Seq("test"),
+  // For the difference between the build section's "javaOptions",
+  // the project-specific "options", and javaAllOptions (below),
+  // please refer to SbtBuildSystem.expandExtra()
   options: SeqString = Seq.empty,
+  @JsonProperty("project-specific-all-java-options-combined") javaAllOptions: SeqString = Seq.empty,
   // before rewiring, append these settings
   settings: SeqSeqString = SeqSeqString(Seq(Seq.empty)), /*Levels*/
   // before building, run these commands ("set" or others)
   commands: SeqString = Seq.empty,
   // after building and testing, run these commands
   @JsonProperty("post-commands") postCommands: SeqString = Seq.empty,
-  // We cannot use directly SbtRunner.defaultJavaArgs as a default value,
-  // since it is in a dependent project. So we use None, and check later
-  @JsonProperty("java-options") javaOptions: Option[SeqString] = None,
   projects: SeqString = Seq.empty, // if empty -> build all projects (default)
   exclude: SeqString = Seq.empty, // if empty -> exclude no projects (default)
   /**

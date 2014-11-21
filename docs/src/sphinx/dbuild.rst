@@ -189,6 +189,10 @@ uri
   uri means that no source files are used. This options is normally always specified, but in
   case it should be missing, "nil:" will be used.
 
+  In order to specify private GitHub repositories, which need authentication, you may use
+  the ssh scheme, and configure your GitHub account with the necessary keys. The uri will
+  then have the form: ``ssh://git@github.com/account/project.git``
+
 set-version
   This component is optional, and normally not used. During compilation, dbuild automatically
   generates a special version string that is used while producing the various artifacts of each
@@ -312,7 +316,6 @@ In this case the "extra" argument is a record with the following content:
     "post-commands"       : [ cmd1, cmd2,... ]
     "settings"            : [ setting1, setting2,... ]
     "extraction-version"  : <compiler-version-string>
-    "java-options"        : [ jopt1, jopt2,... ]
    }
 
 All of these fields are optional, and if missing a reasonable default value
@@ -384,8 +387,8 @@ test-tasks
   like ``it:test``.
 
 options
-  A sequence of strings; they will be
-  passed as-is as additional JVM options, while launching the sbt instance that is used
+  A sequence of strings; they will be passed as-is as additional JVM options,
+  appended to the default ones, while launching the sbt instance that is used
   to build this project.
 
 commands
@@ -468,25 +471,6 @@ extraction-version
   In general, it may be simple and effective to specify the extraction
   version just once, in the global build options, as shown in the example
   above.
-
-java-options
-  Normally, sbt will be invoked using a default list of common java options
-  that should be suitable in most cases. In case the list needs to be customized,
-  this option can be used to supply the relevant values. If you wish to apply
-  a certain list of java options to all the projects in a build section, you
-  can use the build option ``sbt-java-options``, described in a later page.
-  Please note that this option only applies while using the sbt build system.
-  The default value of java options used while invoking sbt is:
-
-.. code-block:: text
-
-    ["-XX:+CMSClassUnloadingEnabled",
-     "-XX:+DoEscapeAnalysis",
-     "-Xms1536m",
-     "-Xmx1536m",
-     "-Xss2m",
-     "-XX:MaxPermSize=640m",
-     "-XX:ReservedCodeCacheSize=192m"]
 
 Scala-specific options
 ----------------------

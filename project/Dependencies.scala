@@ -9,7 +9,7 @@ object Dependencies {
   val mvnVersion = "3.2.3"
   val aetherVersion = "1.0.0.v20140518"
 
-  val typesafeConfig = "com.typesafe" % "config" % "1.0.2"
+  val typesafeConfig = "com.typesafe" % "config" % "1.2.1"
   val akkaActor29      = "com.typesafe.akka" % "akka-actor" % "2.0.5"
   val akkaActor210     = "com.typesafe.akka" %% "akka-actor" % "2.1.4"
 

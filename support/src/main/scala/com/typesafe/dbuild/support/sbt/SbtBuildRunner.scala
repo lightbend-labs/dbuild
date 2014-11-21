@@ -79,9 +79,8 @@ object SbtBuilder {
         // "sbt.override.build.repos" is defined in the default runner props (see SbtRunner)
         "sbt.repository.config" -> repoFile.getCanonicalPath
       ),
-      javaArgs = config.config.javaOptions map {_.s},
       /* NOTE: New in dbuild 0.9: commands are run AFTER rewiring and BEFORE building. */
-      extraArgs = config.config.options,
+      extraArgs = config.config.javaAllOptions,
       process = customProcess)(config.config.commands ++ targetCommands ++ config.config.postCommands: _*)
   }
 

@@ -296,6 +296,12 @@ simply:
     projects: [...]
   ...
 
+.. note::
+  If you have a space specification in a specific project, it will completely override the general
+  one in the "build" section. Therefore, you will need to specify in the project *both* the
+  ``space.from`` and the ``space.to`` values: if you only specify one of the two, the other
+  will not be inherited from the general build space specification.
+  
 Hierarchical spaces
 --------------------
 

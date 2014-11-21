@@ -220,7 +220,6 @@ trait BuildHelper extends Build {
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishTo <<= isSnapshot { snap => Some(Resolver.url("dbuild-publish-to",
       new URL("https://private-repo.typesafe.com/typesafe/ivy-" + (if (snap) "snapshots/" else "releases/")))(Resolver.ivyStylePatterns)) },
-    publishArtifact in (Compile, packageSrc) := false,
     publishMavenStyle := false
   )
   /** Create a project. */

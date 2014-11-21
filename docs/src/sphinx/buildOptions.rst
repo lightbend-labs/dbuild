@@ -136,14 +136,22 @@ sbt-settings
   but they will be appended to it.
 
 sbt-java-options
-  Either a single string, or a possibly empty array of strings. It describes the
-  list of Java options used while invoking sbt, in case the default list needs to
-  be tuned. Please see the ``java-option`` entry in the sbt-specific options for
-  additional details. These settings will be applied to all the projects contained
-  in this build section. If ``sbt-java-options`` is specified for a group of projects,
-  and a specific project also contains the option ``java-options``, the
-  project-specific options will be appended at the end of the global ones, and will
-  not replace them.
+  Normally, sbt will be invoked using a default list of common java options
+  that should be suitable in most cases. In case the list needs to be customized,
+  this option can be used to supply the relevant values to all the projects
+  in this build section.
+  Please note that this option only applies while using the sbt build system.
+  The default value of java options used while invoking sbt is:
+
+.. code-block:: text
+
+    ["-XX:+CMSClassUnloadingEnabled",
+     "-XX:+DoEscapeAnalysis",
+     "-Xms1536m",
+     "-Xmx1536m",
+     "-Xss2m",
+     "-XX:MaxPermSize=640m",
+     "-XX:ReservedCodeCacheSize=192m"]
 
 extraction-version
   Specifies the version of the compiler that should be used during dependency

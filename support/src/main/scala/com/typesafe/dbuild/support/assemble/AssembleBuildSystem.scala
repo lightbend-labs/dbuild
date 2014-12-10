@@ -430,11 +430,111 @@ object AssembleBuildSystem extends BuildSystemCore {
     out
   }
 
+  // This lengthy wrapper is needed due to the peculiar definition style
+  // of some Ivy structures. There's no way to clone-and-patch a ModuleDescriptor,
+  // in particular removing the existing licenses, so the only alternatives are
+  // either to decompose and reconstruct *everything*, or to add a wrapper that
+  // forwards to the underlying structure everything, except the license information.
+  // This is a "dumb" wrapper that does not change behavior. You will need to create
+  // a subclass with the required overrides
+  abstract class ModuleDescriptorWrapper(m: ivy.core.module.descriptor.ModuleDescriptor) extends ivy.core.module.descriptor.ModuleDescriptor {
+    // Members declared in ivy.plugins.latest.ArtifactInfo
+    def getRevision(): String =
+      m.getRevision()
+    // Members declared in ivy.core.module.descriptor.DependencyDescriptorMediator
+    def mediate(x: ivy.core.module.descriptor.DependencyDescriptor): ivy.core.module.descriptor.DependencyDescriptor =
+      m.mediate(x)
+    // Members declared in ivy.util.extendable.ExtendableItem
+    def getAttribute(x: String): String =
+      m.getAttribute(x)
+    def getAttributes(): java.util.Map[_, _] =
+      m.getAttributes()
+    def getExtraAttribute(x: String): String =
+      m.getExtraAttribute(x)
+    def getExtraAttributes(): java.util.Map[_, _] =
+      m.getExtraAttributes()
+    def getQualifiedExtraAttributes(): java.util.Map[_, _] =
+      m.getQualifiedExtraAttributes()
+    // Members declared in ivy.core.module.descriptor.ModuleDescriptor
+    def canExclude(): Boolean =
+      m.canExclude()
+    def dependsOn(x: ivy.plugins.version.VersionMatcher, y: ivy.core.module.descriptor.ModuleDescriptor): Boolean =
+      m.dependsOn(x, y)
+    def doesExclude(x: Array[String], y: ivy.core.module.id.ArtifactId): Boolean =
+      m.doesExclude(x, y)
+    def getAllArtifacts(): Array[ivy.core.module.descriptor.Artifact] =
+      m.getAllArtifacts()
+    def getAllDependencyDescriptorMediators(): ivy.core.module.id.ModuleRules =
+      m.getAllDependencyDescriptorMediators()
+    def getAllExcludeRules(): Array[ivy.core.module.descriptor.ExcludeRule] =
+      m.getAllExcludeRules()
+    def getArtifacts(x: String): Array[ivy.core.module.descriptor.Artifact] =
+      m.getArtifacts(x)
+    def getConfiguration(x: String): ivy.core.module.descriptor.Configuration =
+      m.getConfiguration(x)
+    def getConfigurations(): Array[ivy.core.module.descriptor.Configuration] =
+      m.getConfigurations()
+    def getConfigurationsNames(): Array[String] =
+      m.getConfigurationsNames()
+    def getConflictManager(x: ivy.core.module.id.ModuleId): ivy.plugins.conflict.ConflictManager =
+      m.getConflictManager(x)
+    def getDependencies(): Array[ivy.core.module.descriptor.DependencyDescriptor] =
+      m.getDependencies()
+    def getDescription(): String =
+      m.getDescription()
+    def getExtraAttributesNamespaces(): java.util.Map[_, _] =
+      m.getExtraAttributesNamespaces()
+    def getExtraInfo(): java.util.Map[_, _] =
+      m.getExtraInfo()
+    def getHomePage(): String =
+      m.getHomePage()
+    def getInheritedDescriptors(): Array[ivy.core.module.descriptor.ExtendsDescriptor] =
+      m.getInheritedDescriptors()
+    def getLastModified(): Long =
+      m.getLastModified()
+    def getLicenses(): Array[ivy.core.module.descriptor.License] =
+      m.getLicenses()
+    def getMetadataArtifact(): ivy.core.module.descriptor.Artifact =
+      m.getMetadataArtifact()
+    def getModuleRevisionId(): ivy.core.module.id.ModuleRevisionId =
+      m.getModuleRevisionId()
+    def getParser(): ivy.plugins.parser.ModuleDescriptorParser =
+      m.getParser()
+    def getPublicConfigurationsNames(): Array[String] =
+      m.getPublicConfigurationsNames()
+    def getPublicationDate(): java.util.Date =
+      m.getPublicationDate()
+    def getResolvedModuleRevisionId(): ivy.core.module.id.ModuleRevisionId =
+      m.getResolvedModuleRevisionId()
+    def getResolvedPublicationDate(): java.util.Date =
+      m.getResolvedPublicationDate()
+    def getResource(): ivy.plugins.repository.Resource =
+      m.getResource()
+    def getStatus(): String =
+      m.getStatus()
+    def isDefault(): Boolean =
+      m.isDefault()
+    def setResolvedModuleRevisionId(x: ivy.core.module.id.ModuleRevisionId): Unit =
+      m.setResolvedModuleRevisionId(x)
+    def setResolvedPublicationDate(x: java.util.Date): Unit =
+      m.setResolvedPublicationDate(x)
+    def toIvyFile(x: java.io.File): Unit =
+      m.toIvyFile(x)
+  }
+
+  class NewDescriptorWrapper(m: ivy.core.module.descriptor.ModuleDescriptor,
+    newDependencies: Array[ivy.core.module.descriptor.DependencyDescriptor],
+    newRevId: ivy.core.module.id.ModuleRevisionId) extends ModuleDescriptorWrapper(m: ivy.core.module.descriptor.ModuleDescriptor) {
+    override def getDependencies(): Array[ivy.core.module.descriptor.DependencyDescriptor] = newDependencies
+    override def getResolvedModuleRevisionId(): ivy.core.module.id.ModuleRevisionId = newRevId
+    override def setResolvedModuleRevisionId(x: ivy.core.module.id.ModuleRevisionId) =
+      sys.error("Unexpected invocation of setResolvedModuleRevisionId(). Please report.")
+  }
+
   def patchIvyDependencies(file: File, available: Seq[ArtifactLocation], ivyHome: File, localRepo: File) = {
     import _root_.scala.collection.JavaConversions._
-    // ok, let's see what we can do with the ivy.xml
-    val settings = new ivy.core.settings.IvySettings()
 
+    val settings = new ivy.core.settings.IvySettings()
     settings.setDefaultIvyUserDir(ivyHome)
     val parser = ivy.plugins.parser.xml.XmlModuleDescriptorParser.getInstance()
     val ivyFileRepo = new ivy.plugins.repository.file.FileRepository(localRepo.getAbsoluteFile())
@@ -454,26 +554,8 @@ object AssembleBuildSystem extends BuildSystemCore {
       myRevID.getBranch(),
       newVersion,
       myRevID.getExtraAttributes())
-    val newModel = new org.apache.ivy.core.module.descriptor.DefaultModuleDescriptor(newRevID,
-      model.getStatus(), model.getPublicationDate(), model.isDefault())
-    newModel.setDescription(model.getDescription())
-    model.getConfigurations() foreach { c =>
-      newModel.addConfiguration(c)
-      val conf = c.getName
-      model.getArtifacts(conf) foreach { mArt =>
-        val newArt =
-          if (fixName(newArtifactId) != fixName(mArt.getName())) mArt else
-            ivy.core.module.descriptor.DefaultArtifact.cloneWithAnotherName(mArt, newArtifactId)
-        newModel.addArtifact(conf, newArt)
-      }
-    }
-    model.getAllExcludeRules() foreach { newModel.addExcludeRule }
-    model.getExtraAttributesNamespaces() foreach { case ns: (String, String) => newModel.addExtraAttributeNamespace(ns._1, ns._2) }
-    model.getExtraInfo() foreach { case ns: (String, String) => newModel.addExtraInfo(ns._1, ns._2) }
-    model.getLicenses() foreach { case l => newModel.addLicense(l) }
-    newModel.setHomePage(model.getHomePage())
-    newModel.setLastModified(model.getLastModified())
-    model.getDependencies() foreach { d =>
+
+    val newDeps = model.getDependencies() map { d =>
       val dep = d match {
         case t: ivy.core.module.descriptor.DefaultDependencyDescriptor => t
         case t => sys.error("Unknown Dependency Descriptor: " + t)
@@ -517,8 +599,10 @@ object AssembleBuildSystem extends BuildSystemCore {
         newdd
       } getOrElse dep
 
-      newModel.addDependency(newDep)
+      newDep: ivy.core.module.descriptor.DependencyDescriptor
     }
+
+    val newModel = new NewDescriptorWrapper(model, newDeps, newRevID)
     ivy.plugins.parser.xml.XmlModuleDescriptorWriter.write(newModel, file)
     updateChecksumFiles(file)
   }
@@ -563,24 +647,24 @@ object AssembleBuildSystem extends BuildSystemCore {
       }
     }
   }
-  
+
   // general utilities:
 
-    // In order to detect the artifacts that belong to the scala core (non cross-versioned)
-    // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
-    // with cross versioning disabled (it's the default in dbuild). Our only option is going after
-    // the organization id "org.scala-lang".
-    def isScalaCore(name: String, org: String) = {
-      val fixedName = fixName(name)
-      (org == "org.scala-lang" && fixedName.startsWith("scala")) ||
-        (org == "org.scala-lang.plugins" && fixedName == "continuations")
-    }
+  // In order to detect the artifacts that belong to the scala core (non cross-versioned)
+  // we cannot rely on the cross suffix, as the non-scala nested projects might also be published
+  // with cross versioning disabled (it's the default in dbuild). Our only option is going after
+  // the organization id "org.scala-lang".
+  def isScalaCore(name: String, org: String) = {
+    val fixedName = fixName(name)
+    (org == "org.scala-lang" && fixedName.startsWith("scala")) ||
+      (org == "org.scala-lang.plugins" && fixedName == "continuations")
+  }
 
-    def isScalaCoreRef(p: ProjectRef) =
-      isScalaCore(p.name, p.organization)
+  def isScalaCoreRef(p: ProjectRef) =
+    isScalaCore(p.name, p.organization)
 
-    def isScalaCoreArt(l: ArtifactLocation) =
-      isScalaCoreRef(l.info)
+  def isScalaCoreArt(l: ArtifactLocation) =
+    isScalaCoreRef(l.info)
 
 }
 
@@ -648,8 +732,8 @@ class NamePatcher(arts: Seq[ArtifactLocation], config: ProjectBuildConfig) {
     case "disabled" => ""
     case l @ "full" => "_" + getScalaVersion(l)
     case l @ "binary" => "_" + binary(getScalaVersion(l))
-    case l @ "standard" => sys.error("\"standard\" is not a supported cross-version selection for this build system. "+
-        "Please select one of \"disabled\", \"binary\", or \"full\" instead.")
+    case l @ "standard" => sys.error("\"standard\" is not a supported cross-version selection for this build system. " +
+      "Please select one of \"disabled\", \"binary\", or \"full\" instead.")
     case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
   }
   def patchName(s: String) = fixName(s) + crossSuff

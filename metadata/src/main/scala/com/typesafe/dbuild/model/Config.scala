@@ -493,7 +493,7 @@ case class DeployOptions(
   /** index generation options */
   index: Option[IndexOptions]) extends DeployTarget
 /** used to select subprojects from one project */
-case class SubProjects(from: String, publish: SeqString)
+case class SubProjects(from: String, subprojects: SeqString)
 
 /**
  * Signing options.
@@ -687,7 +687,7 @@ case class SelectorProject(a: String) extends SelectorElement {
   def name = a
 }
 case class SelectorSubProjects(info: SubProjects) extends SelectorElement {
-  override def toString() = info.from + " " + info.publish.mkString("(", ",", ")")
+  override def toString() = info.from + " " + info.subprojects.mkString("(", ",", ")")
   def name = info.from
 }
 
@@ -718,6 +718,12 @@ class SelectorElementDeserializer extends JsonDeserializer[SelectorElement] {
     if (generic.isTextual()) {
       SelectorProject(valueAs(classOf[String]))
     } else {
+      // We have renamed "publish" to "subprojects", which is a bit more generic;
+      // we can use SelectorElements in more contexts. So, in order to assist with
+      // the migration, let's see if a "publish" field was encountered.
+      if (generic.fieldNames.asScala.contains("publish")) {
+        sys.error("In the subproject selection, the field \"publish\" is now called \"subprojects\": please update your build file.")
+      }
       SelectorSubProjects(valueAs(classOf[SubProjects]))
     }
   }
@@ -753,7 +759,7 @@ case class SeqSelectorElement(override val s: Seq[SelectorElement]) extends Flex
 
     val fromRoot = if (projReqs.exists(_.name == ".")) allProjNames else Set[String]()
     // list of names of projects mentioned in subprojects from root
-    val fromDotSubs = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.publish }
+    val fromDotSubs = subProjReqs.filter(_.name == ".").flatMap { p: SelectorSubProjects => p.info.subprojects }
     // are you kidding me?
     if (fromDotSubs.contains(".")) sys.error("A from/publish defined '.' as a subproject of '.', which is impossible. Please amend.")
     // ok, this is the complete list of full project requests
@@ -763,7 +769,7 @@ case class SeqSelectorElement(override val s: Seq[SelectorElement]) extends Flex
     // and now we flatten together those with the same 'from'
     val allSubProjReqsMap = restSubProjReqs.filterNot(_.name == ".").groupBy(_.name).toSet
     val allSubProjReq: Set[SelectorElement] = allSubProjReqsMap map {
-      case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.publish }.flatten.toSeq))
+      case (name, seq) => SelectorSubProjects(SubProjects(name, seq.map { _.info.subprojects }.flatten.toSeq))
     }
     val reqs = allSubProjReq ++ allProjReqs
     val unknown = reqs.map(_.name).diff(allProjNames)

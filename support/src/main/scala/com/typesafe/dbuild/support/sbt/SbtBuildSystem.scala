@@ -53,7 +53,11 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
           case None => defaults.extractionVersion
           case Some(c) => c
         }
-        val javaAllOpts: SeqString = globalJavaOpts ++ ec.options
+        // It might already be non-empty in case we are re-building a repeatable config. In that case, take the existing value
+        val javaAllOpts: SeqString = if (ec.javaAllOptions.nonEmpty)
+          ec.javaAllOptions
+        else
+          globalJavaOpts ++ ec.options
         val allCommands = defaults.sbtCommands ++ ec.commands
         val allPostCommands = defaults.sbtPostCommands ++ ec.postCommands
         // The two places in which settings can be found,

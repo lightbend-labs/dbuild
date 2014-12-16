@@ -17,10 +17,15 @@ Notifications are controlled using the following description:
    {
     build: {projects:..., options:...}
 
-    notifications: {
-     send      : [<notification1>,<notification2>,...]
-     default   : [<recipient-pattern1>,<recipient-pattern2>,...]
-     templates : [<optional-template1>,
+    options: {
+
+     notifications: {
+      send      : [<notification1>,<notification2>,...]
+      default   : [<recipient-pattern1>,<recipient-pattern2>,...]
+      templates : [<optional-template1>,
+     }
+
+     ...
     }
    }
 

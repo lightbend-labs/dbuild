@@ -104,9 +104,10 @@ object LocalBuildRunner {
       case Some(v) => v
       case _ => {
         val value = build.depInfo.head.baseVersion // We only collect the artifacts from the base level, hence the "head"
-        val defaultVersion = (if (value endsWith "-SNAPSHOT") {
-          value replace ("-SNAPSHOT", "")
-        } else value) +
+        val Split = """^([\.0-9]+)(.*)$""".r
+        // we strip away the original suffix, if any
+        val Split(originalVersion, originalSuffix) = value
+        val defaultVersion = originalVersion +
           (build.config.setVersionSuffix match {
             case None => "-" + ("dbuildx" + build.uuid)
             case Some("") =>

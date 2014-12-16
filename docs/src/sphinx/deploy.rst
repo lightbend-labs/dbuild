@@ -15,13 +15,18 @@ of deploy records, with the following structure:
    {
     build: {projects:..., options:...}
     
-    deploy: [{
-     "uri"         : <repository-uri>,
-     "credentials" : <optional-credentials>,
-     "projects"    : [<project1>,<project2>,...]
-     "sign"        : <optional-sign-info>
-     "index"       : <optional-index-data>
-    }, ...]
+    options: {
+
+     deploy: [{
+      "uri"         : <repository-uri>,
+      "credentials" : <optional-credentials>,
+      "projects"    : [<project1>,<project2>,...]
+      "sign"        : <optional-sign-info>
+      "index"       : <optional-index-data>
+     }, ...]
+
+     ...
+    }
    }
 
 Within each record:

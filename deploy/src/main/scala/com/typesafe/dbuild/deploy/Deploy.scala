@@ -273,9 +273,13 @@ class DeployHTTP(val log: Logger) extends IterativeDeploy[Unit] {
     val response = (new Http with NoLogging)(sender >- { str =>
       Deploy.readSomePath[ArtifactoryResponse](str)
     })
-    if (response != None && response.get.path != None) {
-      val out = response.get.path.get.replaceFirst("^/", "")
-      if (out != relative) log.info("Deployed:  " + out)
+    try {
+      if (response != None && response.get.path != None && response.get.path.get != null) {
+        val out = response.get.path.get.replaceFirst("^/", "")
+        if (out != relative) log.info("Deployed:  " + out)
+      }
+    } catch {
+       case e: NullPointerException => log.info("Deployed:  Response: " + response)
     }
   }
 }

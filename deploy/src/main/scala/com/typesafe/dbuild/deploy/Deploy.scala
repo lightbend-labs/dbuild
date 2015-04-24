@@ -41,7 +41,7 @@ abstract class DeployTarget extends DeployInfo {
   def credentials: Option[String]
   val creds = credentials map loadCreds
   creds foreach { c =>
-    if (c.host == host)
+    if (c.host != host)
       sys.error("The credentials supplied to Deploy refer to host \"" + c.host + "\" but the uri refers to \"" + host + "\"")
   }
 }
@@ -163,7 +163,7 @@ abstract class IterativeDeploy[T] extends Deploy[T] {
       val ordered = newSeq ++ split._1 ++ split._2
 
       ordered foreach { file =>
-        val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error in relative paths creation during deployment. Please report.")
+        val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error relativizing "+ file +" from "+ dir +"during deployment. Please report.")
         message(relative)
         // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
         val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)

@@ -134,14 +134,13 @@ abstract class IterativeDeploy[T] extends Deploy[T] {
       // the files that are not in any pom-containing directory. Meanwhile, we accumulate
       // the snapshot files in the right order, for each pom
       val (remainder, newSeq) = poms.foldLeft((allFiles, Seq[File]())) {
-        case ((fileSeq, newSeq), pom) =>
-          val pomFile = pom.getCanonicalFile()
+        case ((fileSeq, newSeq), pomFile) =>
           val thisDir = pomFile.getParentFile()
           if (thisDir == null) sys.error("Unexpected: file has not parent in deploy")
           // select the files in this directory (but not in subdirectories)
-          val theseFiles = (thisDir.***).get.filter(f => !f.isDirectory && f.getCanonicalFile().getParentFile() == thisDir)
+          val theseFiles = (thisDir.***).get.filter(f => !f.isDirectory && f.getParentFile() == thisDir)
           // if there is a matching jar, upload the jar first
-          val jarFile = new java.io.File(pomFile.getCanonicalPath().replaceAll("\\.[^\\.]*$", ".jar"))
+          val jarFile = new java.io.File(pomFile.getPath().replaceAll("\\.[^\\.]*$", ".jar"))
           val thisSeq = if (theseFiles contains jarFile) {
             val rest = theseFiles.diff(Seq(jarFile, pomFile)).partition(f => isNotChecksum(f.getName))
             Seq(jarFile, pomFile) ++ rest._1 ++ rest._2

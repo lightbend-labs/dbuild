@@ -41,7 +41,7 @@ abstract class DeployTarget extends DeployInfo {
   def credentials: Option[String]
   val creds = credentials map loadCreds
   creds foreach { c =>
-    if (c.host == host)
+    if (c.host != host)
       sys.error("The credentials supplied to Deploy refer to host \"" + c.host + "\" but the uri refers to \"" + host + "\"")
   }
 }

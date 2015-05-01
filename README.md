@@ -18,8 +18,25 @@ To recompile, publish, etc., just type the following in the root project:
 
 where command is one of compile, clean, test, publish, publish-local, etc.
 
-To create a full release, point publishTo and credentials to the appropriate
-values, then from the root project type "^release".
+To create a release, point publishTo and credentials to the appropriate
+values, then from the root project type "^release". Please do not use "^publish",
+as some additional preparation is necessary.
+
+The command "^release" will deploy artifacts to the "typesafe/dbuild" Bintray
+repository, but will not issue the release; follow that with a "root/bintrayRelease"
+in order to actually publish the Bintray release. Publishing documentation
+needs to be done separately. If you would like to create a private release
+out of the typesafe organization, you will need to
+
+  set every bintrayOrganization := None
+
+In order to publish a snapshot, *do not* just issue "^release": snapshots
+should not go to Bintray. Instead, define beforehand:
+
+  set every publishTo := Some(Resolver.url("somelabel", new URL("http://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
+  set every credentials := Seq(Credentials(Path.userHome / "some" / "path" / "credentials-file"))
+
+Then, proceed with "^release" as usual to issue the snapshot to some Artifactory instance.
 
 
 ## Get Involved

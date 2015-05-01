@@ -233,7 +233,7 @@ trait BuildHelper extends Build {
       settings(
         bintrayReleaseOnPublish := false,
         licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
-        bintrayOrganization in bintray := None,
+        bintrayOrganization := Some("typesafe")
         bintrayRepository := "ivy-releases",
         bintrayPackage := "dbuild"
       )

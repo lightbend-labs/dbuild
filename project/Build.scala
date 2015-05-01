@@ -59,7 +59,7 @@ object DBuilderBuild extends Build with BuildHelper {
     )
   lazy val deploy = (
       Proj("deploy")
-      dependsOnRemote(jacks, jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO,  jsch)
+      dependsOnRemote(jacks, jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
       dependsOnSbt(sbtLogging, sbtIo)
     )
 

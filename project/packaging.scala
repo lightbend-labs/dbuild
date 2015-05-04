@@ -84,8 +84,7 @@ object Packaging {
   maven-central
   sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots
   sonatype-releases: https://oss.sonatype.org/content/repositories/releases
-  jcenter-mvn: http://jcenter.bintray.com/
-  jcenter-ivy: http://jcenter.bintray.com/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  jcenter: https://jcenter.bintray.com/
   java-annoying-cla-shtuff: http://download.java.net/maven/2/
   typesafe-releases: http://repo.typesafe.com/typesafe/releases
   typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]

@@ -63,6 +63,8 @@ repository-uri
     append to the uri the fragment "#release" if you wish a release to be published
     at the end of deploy; if the fragment is not present or is not "#release", the
     artifacts will be left pending in the Bintray repository.
+    The uri format above will work for both generic as well as for Maven-style bintray
+    repositories.
 
 credentials
   A properties file containing at least the properties "host", "user", and "password". The

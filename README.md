@@ -18,25 +18,32 @@ To recompile, publish, etc., just type the following in the root project:
 
 where command is one of compile, clean, test, publish, publish-local, etc.
 
-To create a release, point publishTo and credentials to the appropriate
-values, then from the root project type "^release". Please do not use "^publish",
-as some additional preparation is necessary.
+To create a dbuild release (if you belong to the Typesafe organization on Bintray):
 
-The command "^release" will deploy artifacts to the "typesafe/dbuild" Bintray
-repository, but will not issue the release; follow that with a "root/bintrayRelease"
-in order to actually publish the Bintray release. Publishing documentation
-needs to be done separately. If you would like to create a private release
-out of the typesafe organization, you will need to
+1. Type "^release"  (please do not use "^publish", as some additional preparation is necessary)
+2. Check https://bintray.com/typesafe/ivy-releases/dbuild/view to ensure files are as expected (Optional)
+3. Type "root/bintrayRelease" to make the release public
+
+*DO NOT* try to push snapshots to Bintray; instead, add your custom version
+suffix if necessary. The documentation pages on the dbuild website must be
+published separately (but only for final releases).
+
+If you are not part of the Typesafe organization on Bintray, use:
 
   set every bintrayOrganization := None
 
-In order to publish a snapshot, *do not* just issue "^release": snapshots
-should not go to Bintray. Instead, define beforehand:
+to publish to "ivy-releases/dbuild" in your own Bintray repository
+(or to a different repository by changing the settings described
+in the bintray-sbt plugin documentation pages).
+
+If you would like to publish instead to Artifactory, for instance if you
+you need to publish dbuild snapshots, or if you do not have an account on
+Bintray yet, you can use:
 
   set every publishTo := Some(Resolver.url("somelabel", new URL("http://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
   set every credentials := Seq(Credentials(Path.userHome / "some" / "path" / "credentials-file"))
 
-Then, proceed with "^release" as usual to issue the snapshot to some Artifactory instance.
+Then, proceed with "^release" as usual to issue the snapshot to your Artifactory server.
 
 
 ## Get Involved

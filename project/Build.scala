@@ -10,6 +10,7 @@ import com.typesafe.sbt.site.SphinxSupport
 import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
 import com.typesafe.sbt.S3Plugin
 import net.virtualvoid.sbt.cross.CrossPlugin
+import bintray.BintrayKeys._
 
 object DBuilderBuild extends Build with BuildHelper {
 
@@ -58,7 +59,7 @@ object DBuilderBuild extends Build with BuildHelper {
     )
   lazy val deploy = (
       Proj("deploy")
-      dependsOnRemote(jacks, jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO,  jsch)
+      dependsOnRemote(jacks, jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
       dependsOnSbt(sbtLogging, sbtIo)
     )
 
@@ -218,8 +219,6 @@ trait BuildHelper extends Build {
     libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-    publishTo <<= isSnapshot { snap => Some(Resolver.url("dbuild-publish-to",
-      new URL("https://private-repo.typesafe.com/typesafe/ivy-" + (if (snap) "snapshots/" else "releases/")))(Resolver.ivyStylePatterns)) },
     publishMavenStyle := false
   )
   /** Create a project. */
@@ -230,6 +229,13 @@ trait BuildHelper extends Build {
       settings(defaultDSettings:_*)
       settings(
         licenses += ("Apache 2", url("http://www.apache.org/licenses/LICENSE-2.0"))
+      )
+      settings(
+        bintrayReleaseOnPublish := false,
+        licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
+        bintrayOrganization := Some("typesafe"),
+        bintrayRepository := "ivy-releases",
+        bintrayPackage := "dbuild"
       )
     )
   

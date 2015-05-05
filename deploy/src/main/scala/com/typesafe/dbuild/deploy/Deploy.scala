@@ -41,7 +41,11 @@ abstract class DeployTarget extends DeployInfo {
   def credentials: Option[String]
   val creds = credentials map loadCreds
   creds foreach { c =>
-    if (c.host != host)
+    val scheme = new _root_.java.net.URI(uri).getScheme
+    if (scheme == "bintray") {
+      if (c.host != "api.bintray.com")
+        sys.error("The credentials supplied to Deploy refer to host \"" + c.host + "\", but it must be \"api.bintray.com\" to be usable with a bintray uri.")
+    } else if (c.host != host)
       sys.error("The credentials supplied to Deploy refer to host \"" + c.host + "\" but the uri refers to \"" + host + "\"")
   }
 }
@@ -50,9 +54,8 @@ abstract class DeployTarget extends DeployInfo {
  * This class describes some mechanism used to deploy a set of files, contained in the
  * given directory, to some remote (or local) target.
  */
-abstract class Deploy[T] {
-  def log: Logger
-  def deploy[T](options: DeployInfo, dir: File)
+abstract class Deploy[T](options: DeployInfo) {
+  def deploy[T](dir: File)
 }
 /**
  * Use Deploy.deploy(target,dir,log) to deploy a set of artifacts, contained in the directory "dir",
@@ -62,13 +65,14 @@ object Deploy {
   def deploy(target: DeployInfo, dir: File, log: Logger) = {
     val uri = new _root_.java.net.URI(target.uri)
     val deployer = uri.getScheme match {
-      case "file" => new DeployFiles(log)
-      case "http" | "https" => new DeployHTTP(log)
-      case "ssh" => new DeploySSH(log)
-      case "s3" => new DeployS3(log)
+      case "file" => new DeployFiles(log, target)
+      case "http" | "https" => new DeployHTTP(log, target)
+      case "bintray" => new DeployBintray(log, target)
+      case "ssh" => new DeploySSH(log, target)
+      case "s3" => new DeployS3(log, target)
       case s => sys.error("Unknown scheme in deploy uri: " + s)
     }
-    deployer.deploy(target, dir)
+    deployer.deploy(dir)
   }
   def isNotChecksum(path: String): Boolean = !(path.endsWith(".sha1") || path.endsWith(".md5"))
 
@@ -95,12 +99,14 @@ object Deploy {
  * special care is taken to deploy items in an order that is
  * compatible with Artifactory and the like.
  */
-abstract class IterativeDeploy[T] extends Deploy[T] {
+abstract class IterativeDeploy[T](options: DeployInfo) extends Deploy[T](options) {
   import Deploy.isNotChecksum
-  protected def init(credentials: Creds): T
+  protected def init(): T
   protected def message(relative: String)
-  protected def deployItem(handler: T, credentials: Creds, relative: String, file: File, targetURI: URI)
+  protected def deployItem(handler: T, relative: String, file: File, targetURI: URI)
   protected def close(handler: T) = ()
+
+  val credentials = options.creds getOrElse sys.error("No credentials supplied for uri " + options.uri)
 
   /**
    * Generic code that deploys to some repository. The subclasses provide
@@ -111,10 +117,9 @@ abstract class IterativeDeploy[T] extends Deploy[T] {
    * order, in order to comply with the peculiar requirements of
    * Maven/Ivy repositories (Artifactory, in particular).
    */
-  def deploy[T](options: DeployInfo, dir: File) {
+  def deploy[T](dir: File) {
     val targetBaseURI = new java.net.URI(options.uri)
-    val credentials = options.creds getOrElse sys.error("No credentials supplied for uri " + options.uri)
-    val handler = init(credentials)
+    val handler = init()
     try {
       //
       // We have to upload files in a certain order, in order to comply with
@@ -165,15 +170,15 @@ abstract class IterativeDeploy[T] extends Deploy[T] {
         val relative = IO.relativize(dir, file) getOrElse sys.error("Internal error relativizing "+ file +" from "+ dir +" during deployment. Please report.")
         message(relative)
         // see http://help.eclipse.org/indigo/topic/org.eclipse.platform.doc.isv/reference/api/org/eclipse/core/runtime/URIUtil.html#append(java.net.URI,%20java.lang.String)
-        val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative)
-        deployItem(handler, credentials, relative, file, targetURI)
+        val targetURI = org.eclipse.core.runtime.URIUtil.append(targetBaseURI, relative) // will append the fragment, if present in the base uri, to the result
+        deployItem(handler, relative, file, targetURI)
       }
     } finally { close(handler) }
   }
 }
 
-class DeploySSH(val log: Logger) extends IterativeDeploy[ChannelSftp] {
-  protected def init(credentials: Creds) = {
+class DeploySSH(log: Logger, options: DeployInfo) extends IterativeDeploy[ChannelSftp](options) {
+  protected def init() = {
     val jsch = new JSch()
     JSch.setConfig("StrictHostKeyChecking", "no")
     import log.{ debug => ld, info => li, warn => lw, error => le }
@@ -214,7 +219,7 @@ class DeploySSH(val log: Logger) extends IterativeDeploy[ChannelSftp] {
 
   protected def message(relative: String) = log.info("Deploying: " + relative)
 
-  protected def deployItem(sftp: ChannelSftp, credentials: Creds, relative: String, file: File, uri: URI) = {
+  protected def deployItem(sftp: ChannelSftp, relative: String, file: File, uri: URI) = {
     val path = uri.getPath
     def mkParents(s: String): Unit = {
       val l = s.lastIndexOf('/')
@@ -242,30 +247,32 @@ class DeploySSH(val log: Logger) extends IterativeDeploy[ChannelSftp] {
   }
 }
 
-class DeployS3(val log: Logger) extends IterativeDeploy[AmazonS3Client] {
+class DeployS3(log: Logger, options: DeployInfo) extends IterativeDeploy[AmazonS3Client](options) {
   import Deploy.isNotChecksum
-  protected def init(credentials: Creds) =
+  protected def init() = {
     new AmazonS3Client(new BasicAWSCredentials(credentials.user, credentials.pass),
       new ClientConfiguration().withProtocol(Protocol.HTTPS))
+  }
   protected def message(relative: String) = if (isNotChecksum(relative))
     log.info("Uploading: " + relative)
-  protected def deployItem(client: AmazonS3Client, credentials: Creds, relative: String, file: File, uri: URI) =
+  protected def deployItem(client: AmazonS3Client, relative: String, file: File, uri: URI) = {
     // putObject() will automatically calculate an MD5, upload, and compare with the response
     // from the server. Any upload failure results in an exception; so no need to process
     // the sha1/md5 here.
     if (isNotChecksum(uri.getPath))
       client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
+  }
 }
 
-class DeployHTTP(val log: Logger) extends IterativeDeploy[Unit] {
+class DeployHTTP(log: Logger, options: DeployInfo) extends IterativeDeploy[Unit](options) {
   import Deploy.isNotChecksum
-  protected def init(credentials: Creds) = ()
+  protected def init() = ()
   protected def message(relative: String) =
     if (isNotChecksum(relative))
       log.info("Deploying: " + relative)
     else
       log.info("Verifying checksum: " + relative)
-  protected def deployItem(handler: Unit, credentials: Creds, relative: String, file: File, uri: URI) = {
+  protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
     import dispatch._
     val sender =
       url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
@@ -278,13 +285,51 @@ class DeployHTTP(val log: Logger) extends IterativeDeploy[Unit] {
         if (out != relative) log.info("Deployed:  " + out)
       }
     } catch {
-       case e: NullPointerException => log.info("Deployed:  Response: " + response)
+       case e: NullPointerException => log.debug("Response: " + response)
     }
   }
 }
 
-class DeployFiles(val log: Logger) extends Deploy[Unit] {
-  def deploy[Unit](options: DeployInfo, dir: File) = {
+// (pass to the constructor the deploy target uri as well)
+class DeployBintray(log: Logger, options: DeployInfo) extends DeployHTTP(log, options) {
+  override protected def init() = {
+    val target = new java.net.URI(options.uri)
+    val path = target.getPath
+    val parts = (if (path.head == '/') path.tail else path).split("/")
+    if (parts.length != 4) sys.error("In a Bintray deploy section, the path must contain four elements")
+    log.debug("Deploying to Bintray")
+    log.debug("owner  : " + parts(0))
+    log.debug("repo   : " + parts(1))
+    log.debug("package: " + parts(2))
+    log.debug("version: " + parts(3))
+    Option(target.getFragment) match {
+      case Some("release") => log.debug("The uri fragment is \"release\", so we will release after deploy.")
+      case Some(fragment) => log.debug("The uri fragment is \""+fragment+"\", so we will not release after deploy (must be \"release\").")
+      case None => log.debug("There is no fragment, so we will not release after deploy.")
+    }
+  }
+  private val bintrayBase = "https://api.bintray.com/content/"
+  override protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
+    val path = uri.getPath
+    val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path) + "/" + relative)
+    super.deployItem(handler, relative, file, dest)
+  }
+  override protected def close(handler: Unit) = {
+    val target = new java.net.URI(options.uri)
+    if (Option(target.getFragment) == Some("release")) {
+      val path = target.getPath
+      val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path) + "/publish")
+      val sender =
+        url(dest.toString).POST.as(credentials.user, credentials.pass)
+      val response = (new Http with NoLogging)(sender >- { str =>
+        Deploy.readSomePath[ArtifactoryResponse](str)
+      })
+    }
+  }
+}
+
+class DeployFiles(log: Logger, options: DeployInfo) extends Deploy[Unit](options) {
+  def deploy[Unit](dir: File) = {
     // copy to a local path
     val target = (new _root_.java.net.URI(options.uri)).toURL.getPath
     log.info("Copying artifacts to " + target + "...")

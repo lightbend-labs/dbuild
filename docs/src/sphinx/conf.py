@@ -8,8 +8,8 @@ extensions = ['sphinxcontrib.issuetracker', 'sphinx.ext.extlinks', 'howto']
 # Project variables
 
 project = 'dbuild'
-version = '0.9.3'
-release = '0.9.3-SNAPSHOT'
+version = '0.9.4'
+release = '0.9.4-SNAPSHOT'
 sbt_version = '0.12.4'
 
 # General settings

@@ -1,0 +1,340 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Build options &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Spaces" href="spaces.html" />
+    <link rel="prev" title="Using dbuild" href="dbuild.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/dbuild">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Build options</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="spaces.html">Spaces</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="dbuild.html">Using dbuild</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.3">Version 0.9.3</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="build-options">
+<h1>Build options<a class="headerlink" href="#build-options" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-build-options-defaults">
+<span id="section-build-options"></span><h2>The build options defaults<a class="headerlink" href="#the-build-options-defaults" title="Permalink to this headline">¶</a></h2>
+<p>Some options can be specified just once, directly in the build section, and they will act as
+default for all of the projects enclosed in the same section. The available options are:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">build</span><span class="o">:</span> <span class="p">{</span>
+ <span class="nx">cross</span><span class="o">-</span><span class="nx">version</span>       <span class="o">:</span> <span class="o">&lt;</span><span class="nx">cross</span><span class="o">-</span><span class="nx">version</span><span class="o">-</span><span class="nx">level</span><span class="o">&gt;</span>
+ <span class="nx">check</span><span class="o">-</span><span class="nx">missing</span>       <span class="o">:</span> <span class="o">&lt;</span><span class="nx">check</span><span class="o">-</span><span class="nx">missing</span><span class="o">-</span><span class="nx">flag</span><span class="o">&gt;</span>
+ <span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span>         <span class="o">:</span> <span class="o">&lt;</span><span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span><span class="o">&gt;</span>
+ <span class="nx">sbt</span><span class="o">-</span><span class="nx">commands</span>        <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">command1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">command2</span><span class="o">&gt;</span><span class="p">,...]</span>
+ <span class="nx">sbt</span><span class="o">-</span><span class="nx">post</span><span class="o">-</span><span class="nx">commands</span>   <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">command1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">command2</span><span class="o">&gt;</span><span class="p">,...]</span>
+ <span class="nx">sbt</span><span class="o">-</span><span class="nx">settings</span>        <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">setting1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">setting2</span><span class="o">&gt;</span><span class="p">,...]</span>
+ <span class="nx">sbt</span><span class="o">-</span><span class="nx">java</span><span class="o">-</span><span class="nx">options</span>    <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">jopt1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">jopt2</span><span class="o">&gt;</span><span class="p">,...]</span>
+ <span class="nx">extraction</span><span class="o">-</span><span class="nx">version</span>  <span class="o">:</span> <span class="o">&lt;</span><span class="nx">compiler</span><span class="o">-</span><span class="nx">version</span><span class="o">-</span><span class="nx">string</span><span class="o">&gt;</span>
+ <span class="nx">use</span><span class="o">-</span><span class="nx">jgit</span>            <span class="o">:</span> <span class="o">&lt;</span><span class="kc">true</span><span class="o">-</span><span class="nx">or</span><span class="o">-</span><span class="kc">false</span><span class="o">&gt;</span>
+ <span class="nx">space</span>               <span class="o">:</span> <span class="o">&lt;</span><span class="nx">space</span><span class="o">-</span><span class="nx">definition</span><span class="o">&gt;</span>
+
+ <span class="nx">projects</span><span class="o">:</span> <span class="p">[...]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Each of the listed options is optional (the defaults are listed below). Further, each of
+them can be again overridden individually in each of the projects. Some examples are below.</p>
+<dl class="docutils">
+<dt>cross-version</dt>
+<dd><p class="first">This options controls the way in which sbt's cross-version suffixes are used when the
+compiled artifacts are generated. It also, indirectly, affects dbuild's ability to
+detect missing dependencies, as explained in the documentation of &quot;check-missing&quot;, below.</p>
+<p>The possible values for the &quot;cross-version&quot; option in an sbt build are:</p>
+<dl class="last docutils">
+<dt>disabled</dt>
+<dd>This is the default setting, and it will be used if a &quot;build-options&quot; section is not
+specified. The cross-version suffixes are disabled, and each project is published
+using just plain name, organization, and version.</dd>
+<dt>standard</dt>
+<dd>Each project will compile with its own natural cross-version suffix.
+This setting is necessary when releasing, usually in conjunction with &quot;set-version&quot;,
+in order to make sure that the standard suffix is used while publishing. It is not
+recommended that this option is selected during the usual testing cycle, as it causes
+the option &quot;check-missing&quot; to become ineffective (see below).</dd>
+<dt>full</dt>
+<dd>In this case the full Scala version string is used as a
+cross-version suffix while publishing (even for those projects that would normally
+have cross-version disabled).</dd>
+<dt>binaryFull</dt>
+<dd>The sbt projects that publish artifacts using the &quot;Binary&quot; cross-version setting are
+forced to use the full Scala version string in place of a shortened version (&quot;_2.10&quot;);
+however, the projects that publish without cross-version will remain unchanged.
+Missing dependent projects will be detected. This option exists mainly for testing,
+and is not intended for regular use.</dd>
+</dl>
+</dd>
+</dl>
+<p>For some other build systems, notably Assemble, Aether and Scala, the possible values are
+&quot;disabled&quot;, &quot;full&quot;, and &quot;binary&quot;, where:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>binary</dt>
+<dd>The Scala version string will always be truncated to the first two components,
+regardless of suffixes or other conditions. Therefore, &quot;2.11.0-xyz&quot; would result
+in the cross-version suffix &quot;_2.11&quot;/</dd>
+</dl>
+</div></blockquote>
+<p>The Scala build system supports the levels &quot;full&quot;, &quot;binary&quot;, and &quot;standard&quot;, where the
+latter will use the value of the property &quot;scala.binary.version&quot; from the file
+&quot;version.properties&quot; in the root of the Scala source tree. Note that this property may
+be misaligned with the new version number that you may have set using &quot;set-version&quot;,
+and may lead therefore to incorrect pom files. If unsure, select &quot;binary&quot; for the
+Scala build system.</p>
+<dl class="docutils">
+<dt>check-missing</dt>
+<dd><p class="first">This option can be true or false; the default is true. This option is only effective when
+&quot;cross-version&quot; is set to &quot;disable&quot; or &quot;full&quot;.</p>
+<p>Consider the case in which a dbuild configuration file contains a selection of projects.
+Each of the projects will have their own set of dependencies. The ones that are supplied
+by other projects in the same file will be used automatically, but for the ones that
+are not available, sbt will try to resolve those dependencies against an external
+Maven repository. In this case, dbuild has no control over the resolution process:
+different projects may use different versions of the same libraries, or in certain
+cases versions that have been compiled against different Scala versions.</p>
+<p>In order to avoid that case, the option &quot;check-missing&quot; can be used. When enabled, dbuild
+will inspect the dependencies of each project, and will try to detect which Scala-based
+dependencies are missing from the configuration file. If any are found, a message
+will be printed with detailed information.</p>
+<p>This option works by comparing the cross-version suffix of the requested dependencies
+against the cross-version suffix used within each project. Because of this reason,
+the option &quot;check-missing&quot; is only effective when &quot;cross-version&quot; is set to &quot;disable&quot;
+or to &quot;full&quot;. Also, in the unlikely case in which a Scala project uses a pure Java
+library, and that Java library uses a Scala library, dbuild will no longer be able
+to detect the missing transitive Scala dependency, which may manifest itself with
+an sbt error message about conflicting cross version suffixes. These errors can
+be solved by explicitly including the transitive dependencies as well
+in the build configuration file. That may require manual inspection of the Ivy
+resolution reports, in order to identify which Scala project is being pulled in
+by the Java project; however, those cases should be fairly rare.</p>
+<p class="last">As previously mentioned, if dbuild is used to issue a release, the option &quot;cross-version&quot;
+will normally be set to &quot;standard&quot; in order to generate artifacts that contain the
+correct cross-version suffix. However, the option &quot;cross-version&quot; should normally
+be omitted during normal use, as the use of &quot;cross-version:standard&quot; will cause
+the missing dependencies check to become ineffective.</p>
+</dd>
+<dt>sbt-version</dt>
+<dd>You can optionally specify here the sbt version that should be used to compile
+all the sbt-based projects. If not specified, sbt 0.12.4 will be used.</dd>
+<dt>sbt-commands</dt>
+<dd>It can be either a single string, or an array of strings, each of which will be used
+as a pre-build sbt command in sbt-based builds. These commands will
+be applied to all the contained projects. Notice that, if the &quot;extra.commands&quot; field
+of a project contains additional commands, they will not replace this default list,
+but they will be appended to it.</dd>
+<dt>sbt-post-commands</dt>
+<dd>It can be either a single string, or an array of strings, each of which will be used
+as a post-build and post-test sbt command in sbt-based builds. These commands will
+be applied to all the contained projects. Notice that, if the &quot;extra.post-commands&quot;
+field of a project contains additional commands, they will not replace this default
+list, but they will be appended to it.</dd>
+<dt>sbt-settings</dt>
+<dd>It can be either a single string, or an array of strings, each of which will be used
+as an additional sbt setting in the project. These settings will
+be applied to all the contained projects. Notice that, if the &quot;extra.settings&quot; field
+of a project contains additional settings, they will not replace this default list,
+but they will be appended to it.</dd>
+<dt>sbt-java-options</dt>
+<dd>Normally, sbt will be invoked using a default list of common java options
+that should be suitable in most cases. In case the list needs to be customized,
+this option can be used to supply the relevant values to all the projects
+in this build section.
+Please note that this option only applies while using the sbt build system.
+The default value of java options used while invoking sbt is:</dd>
+</dl>
+<div class="highlight-text"><div class="highlight"><pre>[&quot;-XX:+CMSClassUnloadingEnabled&quot;,
+ &quot;-XX:+DoEscapeAnalysis&quot;,
+ &quot;-Xms1536m&quot;,
+ &quot;-Xmx1536m&quot;,
+ &quot;-Xss2m&quot;,
+ &quot;-XX:MaxPermSize=640m&quot;,
+ &quot;-XX:ReservedCodeCacheSize=192m&quot;]
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>extraction-version</dt>
+<dd>Specifies the version of the compiler that should be used during dependency
+extraction; please refer to the section <a class="reference internal" href="dbuild.html#sbt-options"><em>sbt-specific options</em></a>.</dd>
+<dt>use-jgit</dt>
+<dd>The default is false: dbuild will normally invoke the regular git command in
+order to resolve a git repository. As an alternative, a jgit-based implementation
+can also be selected by setting this flag to true. Be aware that, due to the
+lack of hard-linking in jgit, more disk space will be necessary in order to
+compile the projects.</dd>
+<dt>space-definition</dt>
+<dd>This option specifies the space that will be used to build the contained projects;
+the &quot;spaces&quot; feature will be introduced shortly, in the following section of this guide.
+If unspecified, the space &quot;default&quot; is used.</dd>
+</dl>
+</div>
+<div class="section" id="organizing-defaults">
+<h2>Organizing defaults<a class="headerlink" href="#organizing-defaults" title="Permalink to this headline">¶</a></h2>
+<p>This is an example of the way in which common defaults can be defined
+for multiple projects:</p>
+<div class="highlight-text"><div class="highlight"><pre>build: {
+  sbt-version: &quot;0.13.0&quot;
+  projects: [
+    {
+      name: a, ...
+    },{
+      name: b, ...
+    },{
+      name: c, ...
+    }
+  ]
+}
+</pre></div>
+</div>
+<p>In the example above, the selected sbt version will be applied to all of the projects.
+Let's assume that we have a long list of projects, but we want to use a different
+value for just one of them. We can write:</p>
+<div class="highlight-text"><div class="highlight"><pre>build: {
+  sbt-version: &quot;0.13.0&quot;
+  projects: [
+    {
+      name: a, ...
+    },{
+      name: b, ...
+      sbt-version: &quot;0.12.4&quot;
+    },{
+      name: c, ...
+    }
+  ]
+}
+</pre></div>
+</div>
+<p>Here, sbt 0.13.0 will be selected for all of the projects, except for b, which
+will use sbt 0.12.4, instead.</p>
+<p>If the configuration file is long and complex, and logically structured into
+sections, it is also possible to split the list of projects into multiple blocks,
+applying different defaults. That is done just by using an array of records,
+rather than a single one. For example:</p>
+<div class="highlight-text"><div class="highlight"><pre>build: [{
+  sbt-version: &quot;0.13.0&quot;
+  projects: [
+    {
+      name: a, ...
+    },{
+      name: b, ...
+      sbt-version: &quot;0.13.1&quot;
+    },{
+      ...
+    }
+  ]
+},{
+  sbt-version: &quot;0.12.4&quot;
+  projects: [
+    {
+      name: c, ...
+    },{
+      name: d, ...
+    },{
+      ...
+    }
+  ]
+}]
+</pre></div>
+</div>
+<p>In this case, we used an array for the &quot;build&quot; section. Each of the two lists
+of projects can use a different set of defaults, which can again be overridden
+inside each project.</p>
+<p>Note that for some selected options the general default and the project-specific
+value may combine in a slightly different manner. That is currently the case only
+for the list of sbt commands: the supplied default and the project-specific value
+will be concatenated together, and all of the resulting commands will be used.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="spaces.html"><em>Spaces</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Build options</a><ul>
+<li><a class="reference internal" href="#the-build-options-defaults">The build options defaults</a></li>
+<li><a class="reference internal" href="#organizing-defaults">Organizing defaults</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

@@ -581,7 +581,7 @@ object DBuildRunner {
         // So, we should be safe by crudely casting.
         val taskManifest = ClassManifest.fromClass(classOf[Task[_]]).erasure
         sel match {
-          case None => sys.error("Task not found: " + task)
+          case None => sys.error("You asked dbuild to test using the task \"" + task + "\", but the task is unknown in this project.")
           case Some(key) =>
             // does this AttributeKey refer to a Task ?
             if (key.manifest.erasure == taskManifest) { // select AttributeKey[Task[whatever]]

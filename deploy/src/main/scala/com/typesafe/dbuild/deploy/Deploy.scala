@@ -70,6 +70,7 @@ object Deploy {
       case "bintray" => new DeployBintray(log, target)
       case "ssh" => new DeploySSH(log, target)
       case "s3" => new DeployS3(log, target)
+      case "null" => new DeployNull(log, target)
       case s => sys.error("Unknown scheme in deploy uri: " + s)
     }
     deployer.deploy(dir)
@@ -262,6 +263,15 @@ class DeployS3(log: Logger, options: DeployInfo) extends IterativeDeploy[AmazonS
     if (isNotChecksum(uri.getPath))
       client.putObject(new PutObjectRequest(credentials.host, uri.getPath.replaceFirst("^/", ""), file))
   }
+}
+
+class DeployNull(log: Logger, options: DeployInfo) extends
+  // fake creds, so that we can reuse IterativeDeploy
+    IterativeDeploy[Unit](new DeployInfo { def creds = Some(Creds("","","")); def uri = options.uri }) {
+  import Deploy.isNotChecksum
+  protected def init() = ()
+  protected def message(relative: String) = log.debug("Ignoring: " + relative)
+  protected def deployItem(nothing: Unit, relative: String, file: File, uri: URI) = {}
 }
 
 class DeployHTTP(log: Logger, options: DeployInfo) extends IterativeDeploy[Unit](options) {

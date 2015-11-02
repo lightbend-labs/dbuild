@@ -468,7 +468,7 @@ object DBuildRunner {
           art.info.name + ". Please report.")
       if (!mavenFile.isFile && !ivyFile.isFile)
         sys.error("Unexpected error: no artifact file found, for the artifact " +
-          art.info.name + ". Please report.")
+          art.info.name + ". We looked for: " + mavenFile.getPath + " and " + ivyFile.getPath + ". Please report.")
       if (mavenFile.isFile)
         retrieveJarFile(mavenFile, scalaHome, name)
       if (ivyFile.isFile)

@@ -1,5 +1,16 @@
 # dbuild release notes
 
+### 0.9.4
+
+- Added release notes to the repository
+- Updated default repo list, replacing outdated addresses
+- Clearer message when a test task is unknown
+- Tweaked dependency on	sbt-native-packager, to avoid slf4j issues
+- Added the "null:null" deploy scheme, in order to allow indexes to
+  be generated without having to upload artifacts as well
+- Implemented the "standard" cross-versioning level for the Aether
+  and Assemble build systems
+
 ### 0.9.3
 
 - More checks on the credentials used in Deploy

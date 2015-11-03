@@ -468,7 +468,7 @@ object DBuildRunner {
           art.info.name + ". Please report.")
       if (!mavenFile.isFile && !ivyFile.isFile)
         sys.error("Unexpected error: no artifact file found, for the artifact " +
-          art.info.name + ". Please report.")
+          art.info.name + ". We looked for: " + mavenFile.getPath + " and " + ivyFile.getPath + ". Please report.")
       if (mavenFile.isFile)
         retrieveJarFile(mavenFile, scalaHome, name)
       if (ivyFile.isFile)
@@ -581,7 +581,7 @@ object DBuildRunner {
         // So, we should be safe by crudely casting.
         val taskManifest = ClassManifest.fromClass(classOf[Task[_]]).erasure
         sel match {
-          case None => sys.error("Task not found: " + task)
+          case None => sys.error("You asked dbuild to test using the task \"" + task + "\", but the task is unknown in this project.")
           case Some(key) =>
             // does this AttributeKey refer to a Task ?
             if (key.manifest.erasure == taskManifest) { // select AttributeKey[Task[whatever]]

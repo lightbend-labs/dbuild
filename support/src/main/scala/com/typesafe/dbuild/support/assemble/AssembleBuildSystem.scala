@@ -316,18 +316,16 @@ object AssembleBuildSystem extends BuildSystemCore {
     // no scala-library, however, we can't change the suffixes at all, so we stop.
     // If cross-version is "full", the parts will have a cross suffix like
     // "_2.11.0-M5"; we should replace that with the new full Scala version.
-    // For "standard" it may be either "_2.11.0-M5" or "_2.11", depending on what each part
-    // decides. For binaryFull, it will be "_2.11" even for milestones.
+    // In cross-version is "standard", then the Assemble build system will try to locate within
+    // the assembly a Scala library. If it cannot find it, then all cross-version suffixes are
+    // retained as-is. If a Scala library is found, then the suffix is rearranged in order to
+    // conform the the binary/full scheme of each artifact, while using the new version number.
+    // For instance, if the new Scala library version is "2.13.29", then a suffix of "_2.11"
+    // will become "_2.13", while a suffix of "_2.11.7" will become "_2.13.29", depending on the
+    // original format of each of the artifacts in the assembly.
+    // For "binaryFull", the suffix will be "_2.11" even for milestones.
     // The cross suffix for the parts depends on their own cross-version selection.
     // 
-    // We change that in conformance to project.crossVersion, so that:
-    // - disabled => no suffix
-    // - full => full version string
-    // - binaryFull => binaryScalaVersion
-    // - standard => binary if stable, full otherwise
-    // For "standard" we rely on the simple 0.12 algorithm (contains "-"), as opposed to the
-    // algorithms detailed in sbt's pull request #600.
-    //
     // We have to patch both the list of BuildSubArtifactsOut, as well as the actual filenames
     // (including checksums, if any)
 
@@ -338,7 +336,8 @@ object AssembleBuildSystem extends BuildSystemCore {
         subs map {
           case BuildSubArtifactsOut(subProjName, artifacts, shas, moduleInfo) =>
             val renamedArtifacts = artifacts map { l =>
-              if (isScalaCoreArt(l)) l else l.copy(crossSuffix = patcher.crossSuff)
+              // note that the argument to getCrossSuff is only used if the level is "standard"
+              if (isScalaCoreArt(l)) l else l.copy(crossSuffix = patcher.getCrossSuff(l.info.name+l.crossSuffix))
             }
             // These newSHAs have the new *locations* but still the old sha hash value;
             // those hashes are recomputed at the end, before returning.
@@ -380,12 +379,21 @@ object AssembleBuildSystem extends BuildSystemCore {
             }
             BuildSubArtifactsOut(subProjName, renamedArtifacts, newSHAs,
               moduleInfo.copy(attributes = moduleInfo.attributes.copy(scalaVersion =
-                if (isScalaCore(moduleInfo.name, moduleInfo.organization)) None else
-                  patcher.crossSuff match {
+                if (isScalaCore(moduleInfo.name, moduleInfo.organization)) None else {
+                  // getCrossSuff() is tricky. In the case of the cross levels "binary", "full", or "disabled",
+                  // the cross suffix is unique for all of the artifacts in preCrossArtifactsMap (in fact, it is
+                  // unique for the whole patcher).
+                  // When "standard" is in use, however, each artifact is handled separately. It is a reasonable
+                  // assumption, however, that all the artifacts within a certain module will have the same cross
+                  // suffix. Therefore, we pick the first one (at random) in the "renamedArtifacts" list, and obtain
+                  // from that artifact name the cross suffix that applies to the whole module.
+                  val newCross = (renamedArtifacts.lift(0).map{l => patcher.getCrossSuff(l.info.name+l.crossSuffix)} getOrElse "") match {
                     case "" => None
                     case s if s.startsWith("_") => Some(s.drop(1))
                     case s => sys.error("Internal Error: crossSuff has unexpected format: \"" + s + "\". Please report.")
                   }
+                  newCross
+                }
               )))
         }))
     }
@@ -717,25 +725,49 @@ object OrgNameVerFilenamesuffix {
   }
 }
 
+
+// Important note: NamePatcher is also used by the Aether build system. Specifically, in the case of
+// the "standard" cross-versioning level, the operation is equivalent to selecting an assembly in which
+// only a single artifact is present; therefore, in the case of the Aether build system, "standard"
+// means that the result is identical to the original suffix.
 class NamePatcher(arts: Seq[ArtifactLocation], config: ProjectBuildConfig) {
   // we also need the new scala version, which we take from the scala-library artifact, among
   // our subprojects. If we cannot find it, then we have none.
   private val scalaVersion = arts.find(l => l.info.organization == "org.scala-lang" && l.info.name == "scala-library").map(_.version)
   private def getScalaVersion(newCrossLevel: String) = scalaVersion getOrElse
-    sys.error("The requested cross-version level is " + newCrossLevel + ", but no scala-library was found among the dependencies (maybe you meant \"cross-version: disabled\"?).")
+    sys.error("The requested cross-version level is " + newCrossLevel +
+              ", but no scala-library was found among the dependencies (maybe you meant \"cross-version: disabled\"?).")
   private val Part = """(\d+\.\d+)(?:\..+)?""".r
   private def binary(s: String) = s match {
     case Part(z) => z
     case _ => sys.error("Fatal: cannot extract Scala binary version from string \"" + s + "\"")
   }
-  val crossSuff = config.getCrossVersionHead match {
+  // in the "standard" case, "crossSuff" should not be used at all. By making it lazy, we can
+  // trigger a sys.error() only in the case in which it is ever used while the level is "standard".
+  private lazy val crossSuff = config.getCrossVersionHead match {
     case "disabled" => ""
     case l @ "full" => "_" + getScalaVersion(l)
     case l @ "binary" => "_" + binary(getScalaVersion(l))
-    case l @ "standard" => sys.error("\"standard\" is not a supported cross-version selection for this build system. " +
-      "Please select one of \"disabled\", \"binary\", or \"full\" instead.")
+    case l @ "standard" => sys.error("Internal error: crossSuff has been used while the cross versioning "+
+      "level was \"standard\". Please report this error to the developers.")
     case cv => sys.error("Fatal: unrecognized cross-version option \"" + cv + "\"")
   }
-  def patchName(s: String) = fixName(s) + crossSuff
+  def getCrossSuff(s:String):String = {
+    val cs = if (config.getCrossVersionHead != "standard") crossSuff else s.drop(fixName(s).length)
+    cs
+  }
+  def patchName(s: String):String = if (config.getCrossVersionHead == "standard") {
+    // in this case there will not be a single crossSuffix for the whole assemble; we need to check each time
+    // it is not very efficient to go through the list of arts each time, but the set size is very small after all
+    val nativeSuffix1 = getCrossSuff(s)
+    val nativeSuffix = if (nativeSuffix1.startsWith("_")) nativeSuffix1.tail else nativeSuffix1
+    // now: is it "", is it binary, or is it something else?
+    // we preserve the same format, but replace the suffix with the current Scala library version
+    if (scalaVersion.isEmpty || nativeSuffix == "") s else {
+      if (binary(nativeSuffix) == nativeSuffix)
+        fixName(s) + "_" + binary(getScalaVersion("standard"))
+      else
+        fixName(s) + "_" + getScalaVersion("standard")
+    }
+  } else fixName(s) + crossSuff
 }
-

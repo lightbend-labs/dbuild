@@ -56,7 +56,7 @@ class DeployBuild(options: GeneralOptions, log: Logger) extends OptionTask(log) 
     optionsSeq foreach { options =>
       val uri = new _root_.java.net.URI(options.uri)
       uri.getScheme match {
-        case "file" =>
+        case "file" | "null" =>
           if (options.credentials != None) log.warn("Credentials will be ignored while deploying to " + uri)
         case "ssh" | "http" | "https" | "s3" =>
           options.credentials match {

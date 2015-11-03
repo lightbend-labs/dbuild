@@ -66,6 +66,12 @@ repository-uri
     The uri format above will work for both generic as well as for Maven-style bintray
     repositories.
 
+  ``null:null``
+    The artifacts will be ignored, without actually being uploaded anywhere. This
+    option can be used in conjunction with the index generation facility, described
+    below. By using the ``null:null`` scheme, it is possible to generate an index corresponding
+    to a given subset of artifacts, without having to upload the given artifacts at the same time.
+
 credentials
   A properties file containing at least the properties "host", "user", and "password". The
   value of the "host" property must match the hostname or the bucket name. In the case of

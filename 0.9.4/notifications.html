@@ -1,0 +1,559 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Notifications &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Comparing artifacts" href="comparison.html" />
+    <link rel="prev" title="Deploying" href="deploy.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/dbuild">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Notifications</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="comparison.html">Comparing artifacts</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="deploy.html">Deploying</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.4">Version 0.9.4</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="notifications">
+<h1>Notifications<a class="headerlink" href="#notifications" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-notifications-section">
+<span id="section-notifications"></span><h2>The <tt class="docutils literal"><span class="pre">notifications</span></tt> section<a class="headerlink" href="#the-notifications-section" title="Permalink to this headline">¶</a></h2>
+<p>Another task that dbuild can automatically take care of, after the build, is notifying users
+and maintainers about the outcomes of the various compilations, using of a rather
+flexible notification system.</p>
+<p>Notifications are controlled using the following description:</p>
+<div class="highlight-text"><div class="highlight"><pre>{
+ build: {projects:..., options:...}
+
+ options: {
+
+  notifications: {
+   send      : [&lt;notification1&gt;,&lt;notification2&gt;,...]
+   default   : [&lt;recipient-pattern1&gt;,&lt;recipient-pattern2&gt;,...]
+   templates : [&lt;optional-template1&gt;,
+  }
+
+  ...
+ }
+}
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>send</dt>
+<dd>Is a list of notifications. Each notification specifies when and where to send
+a message, the kind of the message, and the kind of report that should be sent.
+The text of each notification is built using message templates, described below.</dd>
+<dt>default</dt>
+<dd>Multiple notifications may use common information; for example,
+in the case of email messages, many notifications may use the same mail server,
+or may all have a common &quot;CC&quot; recipient. The &quot;default&quot; list allows you to specify just once
+some defaults that will be inherited by all the notifications, which
+will then be able to override them individually. See below for a useful example.
+The list of defaults is optional.</dd>
+<dt>template</dt>
+<dd>By default, the text of messages is generated using some standard templates,
+depending on the kind of message. As an additional facility it is possible to
+define custom templates in order to personalize the message for one or multiple
+notification.
+The templating facility is still preliminary and some details may change in future
+versions. In normal usage, this section can just be omitted in order to use the
+standard templates.</dd>
+</dl>
+<p>The &quot;send&quot; and &quot;default&quot; fields, in addition to a list, will also accept a single
+notification; in that case, the square brackets can be omitted. That,
+combined with the extended JSON syntax of the
+<a class="reference external" href="http://github.com/typesafehub/config">config library</a>, makes for a practical
+shortened syntax. An example can be found later on this page.</p>
+<p>If the list of notifications is empty, by default a short report will be printed to
+the console.</p>
+<p>If you are working on a build configuration file that is normally deployed elsewhere,
+for instance on a remote Jenkins server, and you want to test it locally without
+having notifications sent out, just append the flag <tt class="docutils literal"><span class="pre">--no-notify</span></tt> (or <tt class="docutils literal"><span class="pre">-n</span></tt>) to
+your command line. Use <tt class="docutils literal"><span class="pre">dbuild</span> <span class="pre">--help</span></tt> to find out further details and options.</p>
+</div>
+<div class="section" id="id1">
+<h2>Notifications<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>Each notification has the following structure:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+ <span class="nx">kind</span>     <span class="o">:</span> <span class="o">&lt;</span><span class="nx">notification</span><span class="o">-</span><span class="nx">kind</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="nx">when</span>     <span class="o">:</span> <span class="o">&lt;</span><span class="nx">when</span><span class="o">-</span><span class="nx">selector</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="nx">send</span>     <span class="o">:</span> <span class="o">&lt;</span><span class="nx">message</span><span class="o">-</span><span class="nx">recipients</span><span class="o">&gt;</span><span class="p">,</span>
+ <span class="nx">projects</span> <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">project1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">project2</span><span class="o">&gt;</span><span class="p">,...]</span>
+ <span class="nx">template</span> <span class="o">:</span> <span class="o">&lt;</span><span class="nx">optional</span><span class="o">-</span><span class="nx">template</span><span class="o">-</span><span class="nx">selector</span><span class="o">&gt;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>kind</dt>
+<dd>The &quot;kind&quot; of a notification refers to the mechanism that is used to deliver the
+message. The notification infrastructure has been designed to be very easily
+extendable with further notification systems, like tweets, posts, etc. The
+notification kinds available at this time are &quot;email&quot;, &quot;flowdock&quot;, and &quot;console&quot;.
+If &quot;kind&quot; is not specified, it will be assumed to be &quot;email&quot;.</dd>
+<dt>when</dt>
+<dd>There are several possible outcomes from a dbuild run. For example, it could be
+that the dependency
+extraction phase was unsuccessful, or the build of one or more projects failed.
+Maybe deployment failed, or rather everything was ok. The &quot;when&quot; selector allows
+you to select exactly when the notification should be sent out. It can be a
+single identifier, or a list of identifiers. The list will be matched against the
+outcome of a project, and the message will be sent out only if there is a match.
+The list of possible outcomes is described below.</dd>
+<dt>send</dt>
+<dd>This is a kind-specific description of the intended recipients of the notification.
+The exact details depend on the notification kind, and are listed further down
+on this page.</dd>
+<dt>projects</dt>
+<dd>This is a list of projects to which the notification applies. Within the same
+notification, a separate message will be sent for each of the listed projects.
+If you use the string &quot;.&quot;, a message will be sent for the outcome of the entire
+dbuild run. Each report will be especially
+tailored for that project, with its specific dependencies, etc. However, each
+report will be sent only if the outcome of that project matches the &quot;when&quot;
+selector of the notification.</dd>
+<dt>template</dt>
+<dd>The optional string &quot;template&quot; can be used to select one of the custom or standard
+templates. There are three predefined templates: &quot;email&quot;, &quot;flowdock&quot;, and &quot;console&quot;. If the template
+is not specified, the template with the same name as the kind will be used. However,
+you could in theory send an email using the console template, or print onscreen the
+text of an email. If you want to use a custom template, just define it in the
+&quot;templates&quot; section, and refer to it here by using its identifier.
+You can also override the standard template for all the
+email messages by defining in the templates section a template called &quot;email&quot;,
+which will override the standard one.</dd>
+</dl>
+</div>
+<div class="section" id="outcomes-and-when">
+<h2>Outcomes and &quot;when&quot;<a class="headerlink" href="#outcomes-and-when" title="Permalink to this headline">¶</a></h2>
+<p>A notification will be processed for a project only when the outcome of the project
+matches the &quot;when&quot; selector. The possible outcomes are arranged in a tree, as follows:</p>
+<div class="highlight-text"><div class="highlight"><pre>always
+|
++----- good +---- success
+|           |
+|           +---- unchanged
+|
++------ bad +---- failed
+            |
+            +---- dep-broken
+            |
+            |
+            +---- extraction +---- extraction-ok
+            |                |
+            |                +---- extraction-failed
+            |
+            +---- task-failed
+            |
+            |
+            +---- unexpected
+</pre></div>
+</div>
+<p>The result for each project, as well as for dbuild as a whole, will always be one
+of these outcomes. Since outcomes are hierarchical, each of them will be selected
+when the parent is selected. For example, let's assume that the &quot;when&quot; clause is
+<tt class="docutils literal"><span class="pre">&quot;bad&quot;</span></tt>. The notification will be sent if it is &quot;bad&quot;, or &quot;failed&quot;, or &quot;dep-broken&quot;,
+or any other bad condition. If the &quot;when&quot; clause is <tt class="docutils literal"><span class="pre">[&quot;bad&quot;,&quot;success&quot;]</span></tt>, then a
+message is sent upon a build's first success, or when something bad happened.</p>
+<p>The outcomes are the following:</p>
+<dl class="docutils">
+<dt>always</dt>
+<dd>Not a real possible outcome; use &quot;always&quot; when you want a notification to be
+generated at each run, regardless of the result.</dd>
+<dt>good</dt>
+<dd>The &quot;good&quot; outcome groups all of the successful results of a dbuild or project run.</dd>
+<dt>bad</dt>
+<dd>Something went wrong, either when extracting dependencies, or while building,
+or while running some accessory task.</dd>
+<dt>success</dt>
+<dd>This outcome means that the project or the whole dbuild had a successful test run.
+For a project, it means that there was some change in either its own source
+code, or that there was a change in one of its dependencies. Therefore, the project
+had to be recompiled, and the compilation completed successfully. For dbuild as a
+whole (project &quot;.&quot;), it means that there was a good run and nothing failed.</dd>
+<dt>unchanged</dt>
+<dd>It means that a project was not rebuilt, since nothing changed in its code
+or in any of its dependencies: its cached artifacts were used. The main
+dbuild (project &quot;.&quot;) is always executed, therefore its outcome cannot
+be &quot;unchanged&quot;: if all its projects are unchanged and all the accessory tasks
+completed successfully, its final outcome will be &quot;success&quot;.</dd>
+<dt>failed</dt>
+<dd>This outcome means that dbuild reached the point in which the actual project
+compilation started, but some error occurred while compiling.</dd>
+<dt>dep-broken</dt>
+<dd>It may happen that the first stage, project dependencies extraction, completed
+successfully for all projects. However, when we reached the compilation stage,
+one of the projects that this project depends on failed to build. As a result,
+its dependent projects cannot be built: the status &quot;dep-broken&quot; means that
+we cannot build this project until some other project has been fixed.</dd>
+<dt>extraction</dt>
+<dd>It means that we were unable to proceed to the building
+stage, and stopped right after dependency extraction; it is used to group
+extraction-ok and extraction-failed.</dd>
+<dt>extraction-ok</dt>
+<dd>This outcome is generated if dependency extraction for this particular project
+succeeded (but we could not proceed to further stages).</dd>
+<dt>extraction-failed</dt>
+<dd>It means that this project failed during the very first stage, while inspecting
+the project in order to find which other projects it depends on. It could be
+that the project build file is broken, or that we were unable to check out its
+source code.</dd>
+<dt>task-failed</dt>
+<dd>This is a &quot;combo&quot; status, in the sense that it also encapsulates a further
+outcome. This error is generated when one of the accessory tasks of dbuild
+somehow failed to run. For instance, it may mean that we could not deploy
+the generated artifacts to a repository, or that we could not sign them, or
+somethings similar. Since it is generated after dbuild has already accumulated
+a build/extraction outcome, the initial outcome is preserved inside it;
+the corresponding diagnostic message will print both.</dd>
+<dt>unexpected</dt>
+<dd>As a very special case, &quot;unexpected&quot; could possibly be generated in extreme
+and exceptional circumstances, for instance as a result of an internal error.
+During normal
+operation, all of the possible error conditions and exceptions that are
+generated while building, deploying, etc, will lead instead to one of the other
+outcomes. Being only a truly unexpected occurrence, the generation of this
+outcome bypasses the notifications system, and cannot be captured.</dd>
+</dl>
+<p>If the &quot;when&quot; clause is omitted, the default is <tt class="docutils literal"><span class="pre">[&quot;bad&quot;,&quot;success&quot;]</span></tt>, meaning that
+a message is sent when something is wrong, or upon the first successful recompilation
+of a project, when changes occur.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Technically, the notifications stage run as a post-build task. However, it
+cannot report about errors that happen during notification itself.
+The outcomes that the
+notifications task will observe, therefore, is the one available after building, and after
+running all the other tasks; notifications come last. Should anything go
+wrong during notification, a diagnostic message will just be printed onscreen,
+and an error will be returned (which can be captured by Jenkins, for example).
+A further, last-resort error handler may be added in the future.</p>
+</div>
+</div>
+<div class="section" id="the-send-clause">
+<h2>The &quot;send&quot; clause<a class="headerlink" href="#the-send-clause" title="Permalink to this headline">¶</a></h2>
+<p>Each notification kind may need further information concerning exactly where to
+address the resulting messages. For the predefined kind &quot;console&quot; at this time
+there is no further information needed. For the kind &quot;email&quot;, the &quot;send&quot;
+clause is the following:</p>
+<div class="highlight-text"><div class="highlight"><pre>{
+ to     : [&lt;addr1&gt;,&lt;addr2&gt;,...]
+ cc     : [&lt;addr1&gt;,&lt;addr2&gt;,...]
+ bcc    : [&lt;addr1&gt;,&lt;addr2&gt;,...]
+ from   : &lt;addr&gt;
+ smtp   : &lt;server-parameters&gt;
+}
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>to, cc, bcc</dt>
+<dd>They can be either a single string, or a list of strings, each specifying an email
+address in the usual format. They can be in the format <tt class="docutils literal"><span class="pre">user&#64;host</span></tt>, or in the format
+<tt class="docutils literal"><span class="pre">Name</span> <span class="pre">&lt;user&#64;host&gt;</span></tt>, according to the RFC 822 specification.</dd>
+<dt>from</dt>
+<dd>The sender that will appear in the messages. If not specified, dbuild will assemble
+an email address using the current user name and the host name of the current machine.</dd>
+<dt>smtp</dt>
+<dd>A specification of the email server to which the messages will be sent to (see below).
+If missing, dbuild will try to contact the smtp server running on localhost, port 25,
+no encryption. The smtp record is:</dd>
+</dl>
+<div class="highlight-text"><div class="highlight"><pre>{
+ server            : &lt;host&gt;
+ encryption        : &lt;auth-mechanism&gt;
+ credentials       : &lt;filename&gt;
+ check-certificate : &lt;true-or-false&gt;
+}
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>server</dt>
+<dd>It is the SMTP server used to relay messages. If missing, it is assumed to be localhost.</dd>
+<dt>encryption</dt>
+<dd>The encryption mechanism. It can be: &quot;none&quot; (port 25, no encryption), &quot;ssl&quot; (port 465,
+encryption required), &quot;starttls&quot; (port 25, encryption required), or &quot;submission&quot; (port 587,
+encryption required). Please note that encryption is unrelated to authentication: you can
+have an SSL-encrypted session on port 465 also with a server that does not require
+authentication.</dd>
+<dt>credentials</dt>
+<dd>If authentication is required, you can specify here the pathname of a properties file, which
+should contain at least the properties &quot;host&quot;, &quot;user&quot;, and &quot;password&quot;. The value of the &quot;host&quot;
+property must match the smtp server name. The &quot;user&quot; property is the name used during
+authentication; it can be &quot;name&quot;, or &quot;<a class="reference external" href="mailto:name&#37;&#52;&#48;somehost">name<span>&#64;</span>somehost</a>&quot;, depending on the providers.</dd>
+<dt>check-certificate</dt>
+<dd>When connecting using encryption, the validity of the SSL certificates is usually verified,
+and the connection denied if verification fails. However, in case of self signed or test
+certificates, it may be necessary to skip the certificate validation. The field
+check-certificate is by default true, but you can explicitly set it to &quot;false&quot; in order to
+bypass SSL certificate verification.</dd>
+</dl>
+</div>
+<div class="section" id="flowdock">
+<h2>Flowdock<a class="headerlink" href="#flowdock" title="Permalink to this headline">¶</a></h2>
+<p>For Flowdock notifications, the &quot;send&quot; clause is:</p>
+<div class="highlight-text"><div class="highlight"><pre>{
+ token     : &lt;api-token&gt;
+ detail    : &lt;summary-or-short-or-long&gt;
+ sender    : &lt;sender-name&gt;
+ tags      : &lt;optional-tags&gt;
+}
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>token</dt>
+<dd>This is the Flowdock API token for the desired flow (it can be obtained from the
+Flowdock interface, clicking on the settings gear)</dd>
+<dt>detail</dt>
+<dd>Optional, it can be one of &quot;summary&quot;, &quot;short&quot; (default), or &quot;long&quot;. It selects
+the detail level of the notification text, with summary being a one-line message,
+and long being a full report of all subprojects. For instance, in order to reduce
+visual clutter, different notifications can be used together with different detail
+levels: &quot;when: bad, detail: long&quot; and &quot;when: good, detail: summary&quot;.</dd>
+<dt>sender</dt>
+<dd>The name that Flowdock will display within the flow as the message sender. It need
+not match any existing user in the system.</dd>
+<dt>tags</dt>
+<dd>An optional list of tags, which will be used by Flowdock to categorize the message.</dd>
+</dl>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Using the extended JSON syntax supported by the Typesafe config library, and the list
+of defaults, the notifications can be expressed in a compact manner. For example, consider
+the following example:</p>
+<div class="highlight-text"><div class="highlight"><pre>build.projects:[{...}]
+options.notifications.send:[{
+    projects: aabb
+    send.to: &quot;user1@typesafe.com&quot;
+   },{
+    projects: [ccdd,eeff]
+    send.to: &quot;user2@typesafe.com&quot;
+   },{
+    projects: &quot;.&quot;
+    send.to: &quot;user3@typesafe.com&quot;
+    when: [good, task-failed]
+   },{
+    projects: &quot;.&quot;
+    kind: console
+    when: always
+}]
+options.notifications.default.send:{
+ from: &quot;your dbuild &lt;dbuild@server.com&gt;&quot;
+ smtp:{
+  server: &quot;smtp.server.com&quot;
+  encryption:  &quot;ssl&quot;
+  credentials: &quot;/home/user/.credentials-server&quot;
+}}
+</pre></div>
+</div>
+<p>The meaning is fairly obvious: a report about project aabb
+is sent by email to user1 each time the build fails or succeeds for the first time (the default
+is [&quot;bad&quot;,&quot;success&quot;]). The same applies for projects ccdd and eeff and user2. A report is sent to user3
+with a report for the entire dbuild run in certain cases, and a short report is always printed
+to the console. All of the email notifications, by default, will use the settings specified in
+the default section, unless overridden.</p>
+<p>This example uses a number of shortcuts. To begin with, the dot-notation is used to simplify
+the structure of the configuration file: <tt class="docutils literal"><span class="pre">build.projects</span></tt> is equivalent to <tt class="docutils literal"><span class="pre">build:{projects:{</span></tt>.
+The double quotes have been omitted from most strings and labels, as well as commas. Then,
+single strings have been used where a list was expected. Also, in the default list, we wrote
+<tt class="docutils literal"><span class="pre">options.notifications.default.wrote</span></tt>. That is equivalent to having a single notification, used
+in place of a list for the defaults, in which the default kind is &quot;email&quot; and in which
+we specify the email default arguments for all the other email notifications. The defaults
+section is therefore equivalent to the somewhat more verbose:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="s2">&quot;options&quot;</span><span class="o">:</span><span class="p">{</span>
+  <span class="s2">&quot;notifications&quot;</span><span class="o">:</span><span class="p">{</span>
+    <span class="s2">&quot;default&quot;</span><span class="o">:</span><span class="p">[{</span>
+       <span class="s2">&quot;kind&quot;</span>  <span class="o">:</span> <span class="s2">&quot;email&quot;</span><span class="p">,</span>
+       <span class="s2">&quot;send&quot;</span> <span class="o">:</span><span class="p">{</span>
+         <span class="s2">&quot;from&quot;</span><span class="o">:</span> <span class="s2">&quot;your dbuild &lt;dbuild@server.com&gt;&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;smtp&quot;</span><span class="o">:</span><span class="p">{</span>
+           <span class="s2">&quot;server&quot;</span><span class="o">:</span> <span class="s2">&quot;smtp.server.com&quot;</span><span class="p">,</span>
+           <span class="s2">&quot;auth&quot;</span>  <span class="o">:</span> <span class="s2">&quot;ssl&quot;</span><span class="p">,</span>
+           <span class="s2">&quot;credentials&quot;</span><span class="o">:</span> <span class="s2">&quot;/home/user/.credentials-server&quot;</span>
+         <span class="p">}</span>
+       <span class="p">}</span>
+     <span class="p">}</span>
+    <span class="p">}]</span>
+    <span class="s2">&quot;send&quot;</span><span class="o">:</span> <span class="p">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="templates">
+<h2>Templates<a class="headerlink" href="#templates" title="Permalink to this headline">¶</a></h2>
+<p>In order to customize the way in which reports are generated, it is
+possible to create custom report templates, which are then used by
+specifying their name in the notifications.
+It is also possible to redefine the standard
+templates &quot;console&quot; and &quot;email&quot;, which will then be used for all of
+the corresponding reports.</p>
+<p>A template is defined as:</p>
+<div class="highlight-text"><div class="highlight"><pre>options.notifications.templates: [{
+  id      : &lt;template-name&gt;
+  summary : &lt;summary-string&gt;
+  short   : &lt;short-string&gt;
+  long    : &lt;long-string&gt;
+},...]
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>id</dt>
+<dd>The id of the template; it is then referred to from the field &quot;template&quot;
+of the notifications.</dd>
+<dt>summary</dt>
+<dd>A summary should be &lt;50 characters, with a short message informing of what went wrong.
+It is a required field in the template, and should be suitable, for example,
+for a short console report or as an email subject line.</dd>
+<dt>short</dt>
+<dd>A slightly longer short summary (&lt;110 characters), suitable for SMS, Tweets, etc.
+It should be self-contained in terms of information. Defaults to the short summary.</dd>
+<dt>long</dt>
+<dd>A long body with a more complete description. Defaults to the short message. Do not
+terminate any of the three descriptions with a <tt class="docutils literal"><span class="pre">\n</span></tt>. A newline will be added by the
+notification system only if it is required in that specific case.</dd>
+</dl>
+<p>Once a notification is ready to send a message, and the project outcome is available, the
+final message will be created by using the template, the outcome, the environment variables,
+and some template variables prepared by dbuild.</p>
+<p>The environment variables can be substituted into the template using <tt class="docutils literal"><span class="pre">${VARIABLE}</span></tt>.
+All of the Jenkins variables are also available, and
+can be used to build informative messages. The dbuild-specific
+variables (properties) are the following (this list is subject to adjustments
+and changes):</p>
+<div class="highlight-text"><div class="highlight"><pre>${dbuild.template-vars.project-name}
+${dbuild.template-vars.status}
+${dbuild.template-vars.subprojects-report}
+${dbuild.template-vars.project-description}
+${dbuild.template-vars.padded-project-description}
+${dbuild.template-vars.config-name}
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>${dbuild.template-vars.project-name}</dt>
+<dd>The name of the project we are sending a report about, or &quot;.&quot; for the root build.</dd>
+<dt>${dbuild.template-vars.status}</dt>
+<dd>A short status string from the outcome. It can be, for instance:
+<tt class="docutils literal"><span class="pre">EXTRACTION</span> <span class="pre">FAILED</span> <span class="pre">(Exception:</span> <span class="pre">Couldn't</span> <span class="pre">resolve)</span></tt>.</dd>
+<dt>${dbuild.template-vars.subprojects-report}</dt>
+<dd>A compact report of the name and status of all of the projects that are
+our dependencies; useful to determine the cause a broken dependencies status.
+The variant &quot;subprojects-report-tabs&quot; prepends each line with a tab
+character (used in Flowdock notifications).</dd>
+<dt>${dbuild.template-vars.project-description}</dt>
+<dd>The name of the project, preformatted as eithed &quot;project &lt;name&gt;&quot;, or &quot;dbuild&quot; for the root.</dd>
+<dt>${dbuild.template-vars.padded-project-description}</dt>
+<dd>As above, but padded to the left with &quot;-&quot; characters to a predetermined length.</dd>
+<dt>${dbuild.template-vars.config-name}</dt>
+<dd>The name of the configuration file that was passed as a parameter to dbuild.</dd>
+</dl>
+<p>In addition, as mentioned, if dbuild runs under Jenkins its environment variables are also
+available; for example <tt class="docutils literal"><span class="pre">${BUILD_URL}</span></tt>, <tt class="docutils literal"><span class="pre">${JOB_NAME}</span></tt>, and <tt class="docutils literal"><span class="pre">${NODE_NAME}</span></tt>.</p>
+<p>For example, the long format of the standard &quot;email&quot; template is:</p>
+<div class="highlight-text"><div class="highlight"><pre>This is a test report for ${dbuild.template-vars.project-description} in the dbuild configuration &quot;${dbuild.template-vars.config-name}&quot;
+running under the Jenkins job &quot;${JOB_NAME}&quot; on ${NODE_NAME}.
+
+${dbuild.template-vars.subprojects-report}
+** The current status of ${dbuild.template-vars.project-description} is:
+${dbuild.template-vars.status}
+
+
+A more detailed report of this dbuild run is available at:
+${BUILD_URL}console
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="comparison.html"><em>Comparing artifacts</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Notifications</a><ul>
+<li><a class="reference internal" href="#the-notifications-section">The <tt class="docutils literal"><span class="pre">notifications</span></tt> section</a></li>
+<li><a class="reference internal" href="#id1">Notifications</a></li>
+<li><a class="reference internal" href="#outcomes-and-when">Outcomes and &quot;when&quot;</a></li>
+<li><a class="reference internal" href="#the-send-clause">The &quot;send&quot; clause</a></li>
+<li><a class="reference internal" href="#flowdock">Flowdock</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+<li><a class="reference internal" href="#templates">Templates</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

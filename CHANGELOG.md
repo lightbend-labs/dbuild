@@ -1,5 +1,11 @@
 # dbuild release notes
 
+### 0.9.5
+
+- The local Git clones cache was moved to the "~/.dbuild/"
+  directory, but is now configurable via the "dbuild.clones.dir"
+  property.
+
 ### 0.9.4
 
 - Added release notes to the repository

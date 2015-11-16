@@ -35,7 +35,7 @@ object GlobalDirs {
   /**
    * The name of the subdir used to store Git clones
    */
-  val clonesDirName = "clones"
+  val clonesBaseDirName = "clones"
   /**
    * Name of the subdirectory that contains log files
    */
@@ -53,7 +53,8 @@ object GlobalDirs {
   val baseDir = new File(".")
   val targetDirName = targetBaseDirName + "-" + Defaults.version
   val targetDir = new File(baseDir, targetDirName)
-  val clonesDir = new File(targetDir, clonesDirName)
+  val clonesDir = sys.props.get("dbuild.clones.dir").map(new File(_)).
+    getOrElse(new File(dbuildHomeDir, clonesBaseDirName + "-" + Defaults.version))
   val userhome = new File(sys.props("user.home"))
   val dbuildHomeDir = new File(userhome, dbuildHomeDirName)
   val userCacheDirName = userCacheDirBaseName + "-" + Defaults.version

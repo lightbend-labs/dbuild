@@ -4,6 +4,8 @@ import collection.JavaConverters._
 import java.nio.ByteBuffer
 package object hashing {
 
+  private lazy val javaSpecificationVersion = System.getProperty("java.specification.version")
+
   def sha1(t: Any): String =
     messageDigestHex(java.security.MessageDigest.getInstance("SHA-1"))(t)
 
@@ -49,6 +51,7 @@ package object hashing {
         
     }
     addBytes(t)
+    addBytes(javaSpecificationVersion)
     convertToHex(md.digest)
   }
   

@@ -1,0 +1,124 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Known issues and caveats &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="prev" title="Repositories" href="repositories.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/typesafehub/dbuild">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Known issues and caveats</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="repositories.html">Repositories</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.5">Version 0.9.5</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="known-issues-and-caveats">
+<h1>Known issues and caveats<a class="headerlink" href="#known-issues-and-caveats" title="Permalink to this headline">¶</a></h1>
+<p>dbuild is still in development, and certain known issues or limitations are present; they will be resolved
+in further upcoming releases. The main ones are listed here.</p>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>There is no locking. If you run more than one dbuild instance at the same time on the same machine,
+rather bad things may happen. Running two dbuild instances under different accounts is safe, as long
+as the builds take place in different directories.</li>
+<li>dbuild does not cleans up all the generated files: the &quot;~/.dbuild/cache-{ver}&quot; directory, containing
+the generated artifacts and some metadata, will grow indefinitely. Usually the size is rather modest,
+but you may want to keep it in check. The much larger directories containing the actual build files,
+located in &quot;./target-{ver}&quot;, are instead cleaned automatically.</li>
+</ul>
+<div class="highlight-text"><div class="highlight"><pre>$ git clone git://github.com/etorreborre/specs2.git specs-dir
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>(back to <a class="reference internal" href="index.html"><em>the index</em></a>)</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Known issues and caveats</a><ul>
+<li><a class="reference internal" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

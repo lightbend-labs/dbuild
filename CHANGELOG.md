@@ -2,6 +2,10 @@
 
 ### 0.9.5
 
+- It is now possible to use different versions of the JDK on the
+  within the same dbuild setup: the compiled data and metadata
+  will be kept separate for the different versions of the Java
+  language specification.
 - The local Git clones cache was moved to the "~/.dbuild/"
   directory, but is now configurable via the "dbuild.clones.dir"
   property.

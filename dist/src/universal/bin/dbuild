@@ -1,6 +1,19 @@
 #!/bin/bash
 
-SCRIPT_DIR=$(dirname $0)
+get_script_path () {
+  local path="$1"
+  [[ -L "$path" ]] || { echo "$path" ; return; }
+
+  local target="$(readlink "$path")"
+  if [[ "${target:0:1}" == "/" ]]; then
+    echo "$target"
+  else
+    echo "${path%/*}/$target"
+  fi
+}
+
+declare -r SCRIPT_PATH="$(get_script_path "$BASH_SOURCE")"
+declare -r SCRIPT_DIR="$(dirname $SCRIPT_PATH)"
 
 java \
   -Dsbt.boot.properties=$SCRIPT_DIR/dbuild.properties \

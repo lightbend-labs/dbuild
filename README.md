@@ -14,9 +14,9 @@ You can find the complete dbuild documentation at the
 
 To recompile, publish, etc., just type the following in the root project:
 
-  ^command
+    ^command
 
-where command is one of compile, clean, test, publish, publish-local, etc.
+where command is one of compile, clean, test, publish, publishLocal, etc.
 
 To create a dbuild release (if you belong to the Typesafe organization on Bintray):
 
@@ -30,7 +30,7 @@ published separately (but only for final releases).
 
 If you are not part of the Typesafe organization on Bintray, use:
 
-  set every bintrayOrganization := None
+    set every bintrayOrganization := None
 
 to publish to "ivy-releases/dbuild" in your own Bintray repository
 (or to a different repository by changing the settings described
@@ -40,8 +40,8 @@ If you would like to publish instead to Artifactory, for instance if you
 you need to publish dbuild snapshots, or if you do not have an account on
 Bintray yet, you can use:
 
-  set every publishTo := Some(Resolver.url("somelabel", new URL("http://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
-  set every credentials := Seq(Credentials(Path.userHome / "some" / "path" / "credentials-file"))
+    set every publishTo := Some(Resolver.url("somelabel", new URL("http://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
+    set every credentials := Seq(Credentials(Path.userHome / "some" / "path" / "credentials-file"))
 
 Then, proceed with "^release" as usual to issue the snapshot to your Artifactory server.
 

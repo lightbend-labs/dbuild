@@ -1,10 +1,11 @@
 import sbt._
 import Keys._
+import sbt.io.syntax._
 
 object SbtSupport {
   val sbtLaunchJarUrl = SettingKey[String]("sbt-launch-jar-url")
   val sbtLaunchJarLocation = SettingKey[File]("sbt-launch-jar-location")  
-  val sbtLaunchJar = TaskKey[File]("sbt-launch-jar", "Resolves SBT launch jar")
+  val sbtLaunchJar = TaskKey[Seq[java.io.File]]("sbt-launch-jar", "Resolves SBT launch jar")
 
   def currentDownloadUrl(v: String) = "http://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/"+v+"/sbt-launch.jar"
   def oldDownloadUrl(v: String) = "http://repo.typesafe.com/typesafe/ivy-releases/org.scala-tools.sbt/sbt-launch/"+v+"/sbt-launch.jar"
@@ -15,7 +16,7 @@ object SbtSupport {
     case _                             => oldDownloadUrl(v)
   }
 
-  def downloadFile(uri: String, file: File): File = {
+  def downloadFile(uri: String, file: File): Seq[File] = {
     import dispatch.classic._
     if(!file.exists) {
        // oddly, some places require us to create the file before writing...
@@ -25,7 +26,7 @@ object SbtSupport {
        finally writer.close()
     }
     // TODO - GPG Trust validation.
-    file
+    Seq(file)
   }
 
   val buildSettings: Seq[Setting[_]] = Seq(
@@ -36,6 +37,6 @@ object SbtSupport {
   )
 
   val settings: Seq[Setting[_]] = Seq(
-    resourceGenerators in Compile <+= (sbtLaunchJar.task map (Seq apply _))
+    resourceGenerators in sbt.syntax.Compile += sbtLaunchJar.taskValue
   )
 }

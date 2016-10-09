@@ -1,10 +1,11 @@
 import sbt._
-
+import sbt.syntax._
 
 object Dependencies {
 
   val sbtVersion12 = "0.12.4"
   val sbtVersion13 = "0.13.0"
+  val sbtVersion100 = "1.0.0-M4"
 
   val mvnVersion = "3.2.3"
   val aetherVersion = "1.0.0.v20140518"

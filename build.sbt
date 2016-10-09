@@ -29,3 +29,23 @@ class RemoteDepHelper(p: Project) {
 }
 
 SbtSupport.buildSettings
+
+
+
+
+def skip210 =
+  Seq(skip in compile <<= scalaVersion.map(v => v.startsWith("2.10") || v.startsWith("2.11")),
+      sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
+        if(s) List() else c ) )
+
+def selectScalaVersion =
+  scalaVersion <<= (sbtVersion in sbtPlugin).apply( sb => if (sb.startsWith("0.12")) "2.9.2" else if (sb.startsWith("0.13"))
+     "2.10.6" else "2.11.8" )
+
+def sbtVer(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) sbtVersion12 else
+  if(scalaVersion.startsWith("2.10")) sbtVersion13 else sbtVersion100
+
+lazy val graph = (
+  Proj("graph")
+)
+

@@ -1,9 +1,9 @@
 package com.typesafe.dbuild.logging
 
-import sbt.{ Logger => SbtLogger, LogEvent }
 import sys.process.ProcessLogger
-import sbt.Level._
 import com.typesafe.dbuild.graph
+import LoggingInterface.{Logger=>SbtLogger,BasicLogger=>SbtBasicLogger,_}
+import LoggingInterface.Level._
 
 trait Logger extends SbtLogger with ProcessLogger {
   def newNestedLogger(name: String, projName: String = ""): Logger
@@ -41,11 +41,12 @@ object ConsoleLogger {
   def apply(debug: Boolean): Logger = new StreamLogger(System.out, debug)
 }
 
+
 //
 //  Below this line, unused code
 //
 
-abstract class BasicLogger extends sbt.BasicLogger with Logger
+abstract class BasicLogger extends SbtBasicLogger with Logger
 
 /** Logs to an output stream. */
 class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger {
@@ -56,7 +57,7 @@ class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger
   def trace(t: => Throwable): Unit =
     out.synchronized {
       val traceLevel = getTrace
-      if (traceLevel >= 0) out.print(sbt.StackTrace.trimmed(t, traceLevel))
+      if (traceLevel >= 0) out.print(StackTrace.trimmed(t, traceLevel))
     }
   def success(message: => String): Unit =
     if (successEnabled) log(SuccessLabel, message)
@@ -66,11 +67,11 @@ class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger
 
   def out(s: => String): Unit =
     log(Info.toString, s)
-  def control(event: sbt.ControlEvent.Value, message: => String): Unit =
+  def control(event: ControlEvent.Value, message: => String): Unit =
     log(Info.toString, message)
   def logAll(events: Seq[LogEvent]) = out.synchronized { events foreach log }
 
-  def log(level: sbt.Level.Value, message: => String): Unit =
+  def log(level: Level.Value, message: => String): Unit =
     if (atLevel(level)) log(level.toString, message)
   private def log(label: String, message: String): Unit =
     out.synchronized {
@@ -83,3 +84,4 @@ class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger
       }
     }
 }
+

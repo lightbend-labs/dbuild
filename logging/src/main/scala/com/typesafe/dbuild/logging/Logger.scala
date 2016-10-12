@@ -41,15 +41,10 @@ object ConsoleLogger {
   def apply(debug: Boolean): Logger = new StreamLogger(System.out, debug)
 }
 
-
-//
-//  Below this line, unused code
-//
-
 abstract class BasicLogger extends SbtBasicLogger with Logger
 
 /** Logs to an output stream. */
-class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger {
+abstract class StreamLoggerBase(out: java.io.PrintStream, debug: Boolean) extends BasicLogger {
 
   if (debug) setLevel(Debug)
 
@@ -62,18 +57,14 @@ class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger
   def success(message: => String): Unit =
     if (successEnabled) log(SuccessLabel, message)
   def buffer[T](t: => T): T = t
-  def err(s: => String): Unit =
-    log(Error, s)
 
-  def out(s: => String): Unit =
-    log(Info.toString, s)
   def control(event: ControlEvent.Value, message: => String): Unit =
     log(Info.toString, message)
   def logAll(events: Seq[LogEvent]) = out.synchronized { events foreach log }
 
   def log(level: Level.Value, message: => String): Unit =
     if (atLevel(level)) log(level.toString, message)
-  private def log(label: String, message: String): Unit =
+  protected def log(label: String, message: String): Unit =
     out.synchronized {
       for (line <- message.split("""\n""")) {
         out.print("[")

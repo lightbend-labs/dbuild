@@ -67,7 +67,7 @@ lazy val logging = (
     if(!dir.isDirectory) dir.mkdirs()
 //    s.log.info("Generating \"" + fileName + "\" for sbt " + v + " and Scala " + sv)
     val (where1,where2) = if (v.startsWith("1.0")) ("sbt.util","sbt.internal.util") else ("sbt","sbt")
-    IO.write(file, """
+    IO.write(file, ("""
 package com.typesafe.dbuild.logging
 object LoggingInterface {
   val Level = %s.Level
@@ -77,7 +77,12 @@ object LoggingInterface {
   val StackTrace = %s.StackTrace
   type BasicLogger = %s.BasicLogger
 }
-""" format (where1, where1, where1, where1, where2, where2))
+import LoggingInterface.Level._
+final class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends StreamLoggerBase(out, debug) {
+""" + (if (!v.startsWith("1.0")) """
+  def err(s: => String): Unit = log(Error, s)
+  def out(s: => String): Unit = log(Info.toString, s)
+}""" else "}")) format (where1, where1, where1, where1, where2, where2))
     Seq(file) }
   )
 )

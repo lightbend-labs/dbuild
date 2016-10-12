@@ -1,6 +1,7 @@
 import sbt._
 import Keys._
-import sbt.io.syntax._
+import SyntaxAdapter.syntaxio._
+import SyntaxAdapter.{syntaxCompile=>Compile}
 
 object SbtSupport {
   val sbtLaunchJarUrl = SettingKey[String]("sbt-launch-jar-url")
@@ -37,6 +38,6 @@ object SbtSupport {
   )
 
   val settings: Seq[Setting[_]] = Seq(
-    resourceGenerators in sbt.syntax.Compile += sbtLaunchJar.taskValue
+    resourceGenerators in Compile += sbtLaunchJar.taskValue
   )
 }

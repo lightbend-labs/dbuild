@@ -1,5 +1,5 @@
 import sbt._
-import sbt.syntax._
+import SyntaxAdapter.syntax._
 
 object Dependencies {
 
@@ -56,18 +56,16 @@ object Dependencies {
 
   val slf4jSimple    = "org.slf4j" % "slf4j-simple" % "1.7.7"
 
-  def sbtModule(v:String, sv:String, org:String, name:String, moduleVer:String) = if (sv.startsWith("2.11"))
-                                              (org %% name % moduleVer)
-                                            else
-                                              (org % name % v)
-
-  def sbtIo(v:String, sv:String)          = sbtModule(v, sv, "org.scala-sbt", "io", "1.0.0-M6")
+  def sbtIo(v:String, sv:String)          =  if (sv.startsWith("2.11")) "org.scala-sbt" %% "io" % "1.0.0-M6"
+                                               else "org.scala-sbt" % "io" % v
   def sbtIvy(v:String, sv:String)         = "org.scala-sbt" % "ivy" % v
   def sbtLogging(v:String, sv:String)     = if (sv.startsWith("2.11")) "org.scala-sbt" %% "util-logging" % "0.1.0-M14"
                                               else "org.scala-sbt" % "logging" % v
-  def sbtLaunchInt(v:String, sv:String)   = "org.scala-sbt" % "launcher-interface" % v % "provided"
+  def sbtLaunchInt(v:String, sv:String)   = if (sv.startsWith("2.11")) "org.scala-sbt" % "launcher" % "1.0.0" % "provided"
+                                              else "org.scala-sbt" % "launcher" % v % "provided"
 //  def sbtCollections(v:String, sv:String)     = "org.scala-sbt" % "collections" % v
-  def sbtLauncher(v:String, sv:String)    = "org.scala-sbt" % "launcher" % v
+  def sbtLauncher(v:String, sv:String)    = if (sv.startsWith("2.11")) "org.scala-sbt" % "launcher" % "1.0.0"
+                                              else "org.scala-sbt" % "launcher" % v
 
 
 }

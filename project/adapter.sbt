@@ -13,8 +13,7 @@ object SyntaxAdapter {
   val syntaxCompile = sbt.syntax.Compile
 }""" else """
 object SyntaxAdapter {
-  class Empty {}
-  val syntax = new Empty
+  val syntax = new {}
   val syntaxio = syntax
   val syntaxCompile = sbt.Compile
 }

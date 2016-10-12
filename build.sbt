@@ -61,11 +61,9 @@ lazy val logging = (
     val dir = (sourceManaged in Compile).value
     val fileName = "LoggingInterface.scala"
     val file = dir / fileName
-//    val s = streams.value
     val sv = scalaVersion.value
     val v = sbtVersion.value
     if(!dir.isDirectory) dir.mkdirs()
-//    s.log.info("Generating \"" + fileName + "\" for sbt " + v + " and Scala " + sv)
     val (where1,where2) = if (v.startsWith("1.0")) ("sbt.util","sbt.internal.util") else ("sbt","sbt")
     IO.write(file, ("""
 package com.typesafe.dbuild.logging
@@ -95,16 +93,54 @@ lazy val actorLogging = (
   settings(skip210:_*)
 )
 
+lazy val deploy = (
+  Proj("deploy")
+  dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
+  settings(libraryDependencies += jacks(scalaVersion.value))
+  dependsOnSbt(sbtLogging, sbtIo)
+)
+
+lazy val metadata = (
+  Proj("metadata")
+  dependsOn(graph, hashing, indexmeta, deploy)
+  dependsOnRemote(jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
+  settings(libraryDependencies += jacks(scalaVersion.value))
+)
+
+lazy val repo = (
+  Proj("repo")
+  dependsOn(metadata, logging)
+  dependsOnRemote(mvnAether, dispatch, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
+  dependsOnSbt(sbtIo, sbtLaunchInt)
+  settings(sourceGenerators in Compile += task {
+    val dir = (sourceManaged in Compile).value
+    val fileName = "Defaults.scala"
+    val file = dir / fileName
+    if(!dir.isDirectory) dir.mkdirs()
+    IO.write(file, """
+package com.typesafe.dbuild.repo.core
+
+object Defaults {
+  val version = "%s"
+  val org = "%s"
+  val hash = "%s"
+}
+""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
+    Seq(file) }
+  )
+)
+
+
+
+
 /*
-  settings(sourceGenerators in Compile := (sourceGenerators in Compile).value :+ {
+  settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Update.scala"
     val file = dir / fileName
-    val s = streams.value
     val sv = scalaVersion.value
     val v = sbtVersion.value
     if(!dir.isDirectory) dir.mkdirs()
-    s.log.info("Generating \"" + fileName + "\" for sbt " + v + " and Scala " + sv)
     val where = if (v.startsWith("0.12")) "Project" else "Def"
     IO.write(file, """
 package com.typesafe.dbuild.plugin

@@ -209,7 +209,7 @@ case class DBuildConfiguration(
  * empty record.
  */
 @JsonDeserialize(using = classOf[VarDeserializer])
-case class Vars
+case class Vars()
 class VarDeserializer extends JsonDeserializer[Vars] {
   override def deserialize(p: JsonParser, ctx: DeserializationContext): Vars = {
     val tf = ctx.getConfig.getTypeFactory()
@@ -543,7 +543,7 @@ class ExtraSerializer extends JsonSerializer[ExtraConfig] {
     ScalaTypeSig(cfg.getTypeFactory, jt) match {
       case Some(sts) if sts.isCaseClass =>
         // the "true" below is for options.caseClassSkipNulls
-        (new CaseClassSerializer(jt, sts.annotatedAccessors, true)).serialize(value.asInstanceOf[Product], g, p)
+        (new CaseClassSerializer(jt, sts.annotatedAccessors(cfg), true)).serialize(value.asInstanceOf[Product], g, p)
       case _ => throw new Exception("Internal error while serializing build system config. Please report.")
     }
   }
@@ -702,7 +702,7 @@ class SelectorElementSerializer extends JsonSerializer[SelectorElement] {
         val jt = tf.constructType(classOf[SubProjects])
         val Some(sts) = ScalaTypeSig(cfg.getTypeFactory, jt)
         // the "true" below is for options.caseClassSkipNulls
-        (new CaseClassSerializer(jt, sts.annotatedAccessors, true)).serialize(d, g, p)
+        (new CaseClassSerializer(jt, sts.annotatedAccessors(cfg), true)).serialize(d, g, p)
       case _ => throw new Exception("Internal error while serializing deploy projects. Please report.")
     }
   }
@@ -968,7 +968,7 @@ class NotificationKindSerializer extends JsonSerializer[NotificationKind] {
     ScalaTypeSig(cfg.getTypeFactory, jt) match {
       case Some(sts) if sts.isCaseClass =>
         // the "true" below is for options.caseClassSkipNulls
-        (new CaseClassSerializer(jt, sts.annotatedAccessors, true)).serialize(value.asInstanceOf[Product], g, p)
+        (new CaseClassSerializer(jt, sts.annotatedAccessors(cfg), true)).serialize(value.asInstanceOf[Product], g, p)
       case _ => throw new Exception("Internal error while serializing NotificationKind. Please report.")
     }
   }

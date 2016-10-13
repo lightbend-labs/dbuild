@@ -305,6 +305,7 @@ class DeployBintray(log: Logger, options: DeployInfo) extends DeployHTTP(log, op
   override protected def init() = {
     val target = new java.net.URI(options.uri)
     val path = target.getPath
+    if (Option(path) == None) sys.error("In a Bintray deploy section, the uri path must begin with a '/' character")
     val parts = (if (path.head == '/') path.tail else path).split("/")
     if (parts.length != 4) sys.error("In a Bintray deploy section, the path must contain four elements")
     log.debug("Deploying to Bintray")
@@ -321,7 +322,7 @@ class DeployBintray(log: Logger, options: DeployInfo) extends DeployHTTP(log, op
   private val bintrayBase = "https://api.bintray.com/content/"
   override protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
     val path = uri.getPath
-    val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path) + "/" + relative)
+    val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path))
     super.deployItem(handler, relative, file, dest)
   }
   override protected def close(handler: Unit) = {

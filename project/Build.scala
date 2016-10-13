@@ -16,7 +16,7 @@ object DBuilderBuild extends Build with BuildHelper {
 
   override def settings = super.settings ++ SbtSupport.buildSettings
 
-  def MyVersion: String = "0.9.6-SNAPSHOT"
+  def MyVersion: String = "0.9.6"
   
   lazy val root = (
     Proj("root") 

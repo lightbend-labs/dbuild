@@ -2,15 +2,15 @@ import sbt._
 import Keys._
 
 import Dependencies._
-import com.typesafe.sbt.SbtNativePackager.Universal  
-import com.typesafe.sbt.SbtSite.site
-import com.typesafe.sbt.SbtGhPages.{ghpages, GhPagesKeys}
-import com.typesafe.sbt.SbtGit.{git, GitKeys}
-import com.typesafe.sbt.site.SphinxSupport
-import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
-import com.typesafe.sbt.S3Plugin
-import net.virtualvoid.sbt.cross.CrossPlugin
-import bintray.BintrayKeys._
+//import com.typesafe.sbt.SbtNativePackager.Universal  
+//import com.typesafe.sbt.SbtSite.site
+//import com.typesafe.sbt.SbtGhPages.{ghpages, GhPagesKeys}
+//import com.typesafe.sbt.SbtGit.{git, GitKeys}
+//import com.typesafe.sbt.site.SphinxSupport
+//import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub, generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
+//import com.typesafe.sbt.S3Plugin
+//import net.virtualvoid.sbt.cross.CrossPlugin
+//import bintray.BintrayKeys._
 
 object DBuilderBuild extends Build with BuildHelper {
 
@@ -24,7 +24,7 @@ object DBuilderBuild extends Build with BuildHelper {
       core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
     settings(publish := (), publishLocal := (), version := MyVersion)
     settings(CrossPlugin.crossBuildingSettings:_*)
-    settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13"), selectScalaVersion)
+    settings(CrossBuilding.crossSbtVersions := Seq("0.12","0.13","1.0.0-M4"), selectScalaVersion)
     settings(commands += Command.command("release") { state =>
       "clean" :: "publish" :: state
     })
@@ -45,7 +45,7 @@ object DBuilderBuild extends Build with BuildHelper {
       // This is a pretty ugly hack, but it is quite difficult to prevent sbt from
       // skipping publishing completely (including the ivy file) upon a given condition.
       publishConfiguration <<= (publishConfiguration,scalaVersion) map { (p,sv) => 
-        if (sv.startsWith("2.10")) new sbt.PublishConfiguration(None,p.resolverName,Map.empty,Seq.empty,p.logging) else p}
+        if (sv.startsWith("2.10") || sv.startsWith("2.11")) new sbt.PublishConfiguration(None,p.resolverName,Map.empty,Seq.empty,p.logging) else p}
     )
   )
 
@@ -188,7 +188,7 @@ def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.u
 """ format (where, where, where))
         Seq(file)
      },
-     CrossBuilding.crossSbtVersions := Seq("0.12","0.13")
+     CrossBuilding.crossSbtVersions := Seq("0.12","0.13","1.0.0-M4")
    )
    settings(CrossPlugin.crossBuildingSettings:_*)
   )
@@ -202,15 +202,17 @@ trait BuildHelper extends Build {
   def MyVersion: String
 
   // for dependencies
-  def sbtVer(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) sbtVersion12 else sbtVersion13
+  def sbtVer(scalaVersion:String) = if (scalaVersion.startsWith("2.9")) sbtVersion12 else
+    if(scalaVersion.startsWith("2.10")) sbtVersion13 else sbtVersion100
 
   def selectScalaVersion =
-    scalaVersion <<= (sbtVersion in sbtPlugin).apply( sb => if (sb.startsWith("0.12")) "2.9.2" else "2.10.2" )
+    scalaVersion <<= (sbtVersion in sbtPlugin).apply( sb => if (sb.startsWith("0.12")) "2.9.2" else if (sb.startsWith("0.13"))
+       "2.10.2" else "2.11.6" )
 
-  def skip210: Seq[Setting[_]] = Seq.empty
-//    Seq(skip in compile <<= scalaVersion.map(_.startsWith("2.10")),
-//        sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
-//          if(s) List() else c ) )
+  def skip210 = 
+    Seq(skip in compile <<= scalaVersion.map(v => v.startsWith("2.10") || v.startsWith("2.11")),
+        sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
+          if(s) List() else c ) )
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,

@@ -5,8 +5,10 @@ import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.repo.core.LocalArtifactMissingException
 import java.io.File
-import sbt.Path._
-import sbt.IO
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO,allPaths}
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -153,7 +155,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val modulePluginInfo = pluginAttrs(module)
     val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("default-ivy-project",
       publishArts,
-      localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
+      allPaths(localRepo).get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
       com.typesafe.dbuild.manifest.ModuleInfo(organization = module.getOrganisation,
         name = fixName(module.getName), version = version, {
           import com.typesafe.dbuild.manifest.ModuleAttributes

@@ -1,7 +1,9 @@
 package com.typesafe.dbuild.support.svn
 
-import _root_.sbt.Path._
-import _root_.sbt.IO
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.IO
+import Adapter.syntaxio._
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.project.resolve.ProjectResolver

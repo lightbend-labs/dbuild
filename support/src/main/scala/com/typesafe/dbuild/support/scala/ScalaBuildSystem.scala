@@ -5,9 +5,11 @@ import com.typesafe.dbuild.support.BuildSystemCore
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.FileUtils
 import _root_.java.io.File
-import _root_.sbt.Path._
-import _root_.sbt.IO
-import _root_.sbt.IO.relativize
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO,NameFilter,allPaths}
+import Adapter.IO.relativize
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -21,7 +23,6 @@ import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import com.typesafe.dbuild.support.NameFixer.fixName
-import _root_.sbt.NameFilter
 import com.typesafe.dbuild.project.build.BuildDirs.dbuildDirName
 
 /** Implementation of the Scala  build system. */
@@ -245,7 +246,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       // let's look for var/nameWithCross-ver.pom
       val SearchPattern = """([^/]*)/([^/]*)-\1.pom""".r
       val crossSuffixesAndVers = potentialDirs.flatMap { d =>
-        d.***.get.filterNot(file => file.isDirectory).map { f =>
+        allPaths(d).get.filterNot(file => file.isDirectory).map { f =>
           val relative = relativize(d, f) getOrElse sys.error("Internal error in relative paths creation. Please report.")
           relative match {
             case SearchPattern(ver, nameAndCross) =>
@@ -277,7 +278,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       // use the list of artifacts as a hint as to which directories should be looked up,
       // but actually scan the dirs rather than using the list of artifacts (there may be
       // additional files like checksums, for instance).
-      artifacts.map(artifactDir(localRepo, _, crossSuffix)).distinct.flatMap { _.***.get }.
+      artifacts.map(artifactDir(localRepo, _, crossSuffix)).distinct.flatMap { allPaths(_).get }.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map(f)
     }
 

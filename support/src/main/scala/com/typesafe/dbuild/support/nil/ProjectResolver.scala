@@ -4,8 +4,10 @@ import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import java.io.File
-import sbt.IO
-import sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.IO
+import Adapter.Path._
+import Adapter.syntaxio._
 
 /**
  * The nil resolver does absolutely nothing.

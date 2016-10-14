@@ -2,11 +2,13 @@ package com.typesafe.dbuild.support.sbt
 
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.support.BuildSystemCore
-import _root_.sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter.Path._
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.model.SbtExtraConfig
 import _root_.java.io.File
-import com.typesafe.dbuild.repo.core.{ Defaults, GlobalDirs }
+import com.typesafe.dbuild.adapter.Defaults
+import com.typesafe.dbuild.adapter.Adapter.syntaxio._
+import com.typesafe.dbuild.repo.core.GlobalDirs
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project.build.LocalBuildRunner
 import com.typesafe.dbuild.project.{ BuildSystem, BuildData }

@@ -46,7 +46,7 @@ SbtSupport.buildSettings
 // the source file to sbt 0.12/0.13/1.0
 lazy val adapter = (
   SubProj("adapter")
-  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
+  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Adapter.scala"
@@ -75,9 +75,14 @@ object Adapter {
   type RichFile = sbt.io.RichFile
   type FileFilter = sbt.io.FileFilter
   val DirectoryFilter = sbt.io.DirectoryFilter
+  type ExactFilter = sbt.io.ExactFilter
+  type NameFilter = sbt.io.NameFilter
+  type FileRepository = sbt.librarymanagement.FileRepository
   type Logger = sbt.util.Logger
   def allPaths(f:java.io.File) = sbt.io.PathFinder(f).allPaths
   val syntaxio = sbt.io.syntax
+  type ModuleID = sbt.librarymanagement.ModuleID
+  type Artifact = sbt.librarymanagement.Artifact
 }
 """ else """
 package com.typesafe.dbuild.adapter
@@ -105,10 +110,15 @@ object Adapter {
   type RichFile = sbt.RichFile
   type FileFilter = sbt.FileFilter
   val DirectoryFilter = sbt.DirectoryFilter
+  type ExactFilter = sbt.ExactFilter
+  type NameFilter = sbt.NameFilter
+  type FileRepository = sbt.FileRepository
   type Logger = sbt.Logger
   import Path._
   def allPaths(f:java.io.File) = sbt.PathFinder(f).***
   val syntaxio = new {}
+  type ModuleID = sbt.ModuleID
+  type Artifact = sbt.Artifact
 }
 """)+("""
 object Defaults {
@@ -191,6 +201,25 @@ lazy val actorProj = (
   dependsOnSbt(sbtIo, sbtIvy)
   settings(skip210:_*)
 )
+
+lazy val support = (
+  SubProj("support") 
+  dependsOn(core, repo, metadata, proj % "compile->compile;it->compile", logging % "it")
+  dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple)
+  dependsOnSbt(sbtLaunchInt, sbtIvy)
+  settings(SbtSupport.buildSettings:_*)
+  settings(SbtSupport.settings:_*)
+  settings(
+    // We hook the testLoader of it to make sure all the it tasks have a legit sbt plugin to use.
+    // Technically, this just pushes every project.  We could outline just the plugin itself, but for now
+    // we don't care that much.
+    testLoader in IntegrationTest := {
+      val ignore = publishLocal.all(ScopeFilter(inAggregates(LocalRootProject, includeRoot=false))).value
+      (testLoader in IntegrationTest).value
+    },
+    parallelExecution in IntegrationTest := false
+  )
+) 
 
 
 

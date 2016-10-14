@@ -4,9 +4,11 @@ import com.typesafe.dbuild.model._
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.FileUtils
 import _root_.java.io.File
-import _root_.sbt.Path._
-import _root_.sbt.IO
-import _root_.sbt.IO.relativize
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO,NameFilter,allPaths}
+import Adapter.IO.relativize
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -23,7 +25,6 @@ import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import com.typesafe.dbuild.support.NameFixer.fixName
-import _root_.sbt.NameFilter
 import org.apache.ivy
 import com.typesafe.dbuild.project.build.BuildDirs.localRepos
 
@@ -225,7 +226,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         val artCross = if (isScalaCoreRef(art)) "" else crossSuffix
         Seq(mavenArtifactDir(localRepo, art, artCross),
           ivyArtifactDir(localRepo, art, artCross))
-      }.distinct.flatMap { _.***.get }.
+      }.distinct.flatMap { allPaths(_).get }.
         // Since this may be a real local maven repo, it also contains
         // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map(f)
@@ -407,10 +408,10 @@ object AssembleBuildSystem extends BuildSystemCore {
     val allArtifactsOut = artifactsMap.map { _._2 }
     val available = allArtifactsOut.flatMap { _.results }.flatMap { _.artifacts }
 
-    (localRepo.***.get).filter(_.getName.endsWith(".pom")).foreach { patchPomDependencies(_, available) }
+    (allPaths(localRepo).get).filter(_.getName.endsWith(".pom")).foreach { patchPomDependencies(_, available) }
 
     val ivyHome = dir / ".ivy2" / "cache"
-    (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { patchIvyDependencies(_, available, ivyHome, localRepo) }
+    (allPaths(localRepo).get).filter(_.getName == "ivy.xml").foreach { patchIvyDependencies(_, available, ivyHome, localRepo) }
 
     // dbuild SHAs must be re-computed (since the POM/Ivy files changed)
     // We preserve the list of original subprojects (and consequently modules),

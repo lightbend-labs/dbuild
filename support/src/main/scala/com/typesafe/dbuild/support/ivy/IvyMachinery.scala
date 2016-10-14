@@ -3,8 +3,12 @@ package com.typesafe.dbuild.support.ivy
 import com.typesafe.dbuild.project.BuildSystem
 import com.typesafe.dbuild.model._
 import java.io.File
-import sbt.Path._
-import sbt.IO.relativize
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.FileRepository
+import Adapter.Path._
+import Adapter.{IO,allPaths}
+import Adapter.IO.relativize
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -19,7 +23,6 @@ import org.apache.ivy.plugins.parser.xml.XmlModuleDescriptorWriter
 import ivy.core.module.id.{ ModuleId, ModuleRevisionId }
 import ivy.core.resolve.{ ResolveEngine, ResolveOptions }
 import ivy.core.report.ResolveReport
-import sbt.FileRepository
 import org.apache.ivy.core.retrieve.RetrieveOptions
 import org.apache.ivy.core.deliver.DeliverOptions
 import com.typesafe.dbuild.support.sbt.Repositories.ivyPattern
@@ -59,7 +62,7 @@ object IvyMachinery {
     val cache = settings.getDefaultCache()
     val theIvy = Ivy.newInstance(settings)
     theIvy.getLoggerEngine.pushLogger(new IvyLoggerInterface(log))
-    sbt.IO.withTemporaryFile("ivy", ".xml") { ivyFile =>
+    IO.withTemporaryFile("ivy", ".xml") { ivyFile =>
       val outer = ModuleRevisionId.newInstance("dbuild-ivy", "dbuild-ivy", "working")
       val md = new DefaultModuleDescriptor(outer, "integration", new java.util.Date())
       md.addExtraAttributeNamespace("m", "http://ant.apache.org/ivy/maven")
@@ -240,7 +243,7 @@ object IvyMachinery {
     deo.setConfs(md2.getConfigurations() map { _.getName() })
     deo.setPubdate(new java.util.Date())
     theIvy.deliver(modRevIdpublish, modRevIdpublish.getRevision, (ivyxmlDir / ivyPattern).getCanonicalPath, deo)
-    ivyxmlDir.***.get.foreach {
+    allPaths(ivyxmlDir).get.foreach {
       f =>
         if (f.getName == "ivy.xml")
           scala.io.Source.fromFile(f).getLines foreach { s => log.debug(s) }

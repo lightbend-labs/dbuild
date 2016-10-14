@@ -3,7 +3,7 @@ package com.typesafe.dbuild.support.svn
 import sys.process._
 import _root_.java.io.File
 import _root_.java.net.URI
-import _root_.sbt.IO
+import com.typesafe.dbuild.adapter.Adapter.IO
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.support.UriUtil
 import com.typesafe.dbuild.support.OS._

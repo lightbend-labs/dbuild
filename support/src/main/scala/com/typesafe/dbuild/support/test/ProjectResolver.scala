@@ -5,8 +5,10 @@ import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import java.io.File
 import _root_.java.net.URI
-import sbt.IO
-import sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.IO
+import Adapter.Path._
+import Adapter.syntaxio._
 
 /**
  * The test resolver does absolutely nothing; however, it fails every now and then (for testing).

@@ -2,7 +2,9 @@ package com.typesafe.dbuild.support.sbt
 
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
-import _root_.sbt.{ IO, Path, PathExtra }
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{ IO, Path, Logger => SbtLogger }
+import Adapter.syntaxio._
 import Path._
 import _root_.java.io.File
 import sys.process.Process
@@ -86,7 +88,7 @@ object SbtBuilder {
 
   def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
     subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean], sbtSettings: Seq[Seq[String]],
-    log: _root_.sbt.Logger, debug: Boolean): Unit = {
+    log: SbtLogger, debug: Boolean): Unit = {
     // we do the rewiring on each level using onLoad; we generate the artifacts at the end
     // Note:  Because the user could configure settings/projects for build levels which do not have configuration,
     //        we must figure out if there is configuration which will be written to a given build level.

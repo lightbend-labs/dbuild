@@ -1,12 +1,13 @@
 package com.typesafe.dbuild.support.sbt
 
 import _root_.java.io.File
-import _root_.sbt.{ IO, Path }
+import com.typesafe.dbuild.adapter.{Adapter,Defaults}
+import Adapter.{ IO, Path, Logger => SbtLogger }
+import Adapter.syntaxio._
 import Path._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.model.ExtraConfig
-import com.typesafe.dbuild.repo.core.Defaults
 import org.apache.commons.io.FileUtils.readFileToString
 import com.typesafe.dbuild.model.Utils.{ readValue, writeValue }
 import org.apache.commons.io.FileUtils.writeStringToFile
@@ -276,7 +277,7 @@ object SbtRunner {
    * Place each element of "contents" in the subsequent directories
    * dir, dir/project, dir/project/project, and so on.
    */
-  def writeSbtFiles(mainDir: File, contents: Seq[String], log: _root_.sbt.Logger, debug: Boolean) =
+  def writeSbtFiles(mainDir: File, contents: Seq[String], log: SbtLogger, debug: Boolean) =
     placeFiles(mainDir, contents, dbuildSbtFileName, None, s => if (debug) log.debug("Adding dbuild .sbt file to " + s))
 
   /**
@@ -284,7 +285,7 @@ object SbtRunner {
    * in dir/.dbuild, the second in dir/project/.dbuild, the dir/project/project/.dbuild,
    * and so on.
    */
-  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: _root_.sbt.Logger, debug: Boolean)(implicit m: Manifest[T]) =
+  def placeInputFiles[T](mainDir: File, fileName: String, data: Seq[T], log: SbtLogger, debug: Boolean)(implicit m: Manifest[T]) =
     placeFiles(mainDir, data.map { writeValue(_) }, fileName, Some(dbuildSbtDirName), s => if (debug) log.debug("Placing one input file in " + s))
 
   def rewireInputFile(dir: File) = dir / dbuildSbtDirName / rewireInputFileName

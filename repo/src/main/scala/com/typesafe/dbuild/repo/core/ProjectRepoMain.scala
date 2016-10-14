@@ -3,6 +3,7 @@ package com.typesafe.dbuild.repo.core
 import com.typesafe.dbuild.model._
 import LocalRepoHelper.ResolutionResult
 import java.io.File
+import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{ RichFile, IO, Path }
 import Adapter.syntaxio._
 import Path._

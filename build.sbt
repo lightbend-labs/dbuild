@@ -69,12 +69,14 @@ object LoggingInterface {
 
 trait StreamLoggerAdapter
 
-import java.io.File
 object Adapter {
   val IO = sbt.io.IO
   val Path = sbt.io.Path
+  type RichFile = sbt.io.RichFile
+  type FileFilter = sbt.io.FileFilter
+  val DirectoryFilter = sbt.io.DirectoryFilter
   type Logger = sbt.util.Logger
-  def allPaths(f:File) = sbt.io.PathFinder(f).allPaths
+  def allPaths(f:java.io.File) = sbt.io.PathFinder(f).allPaths
   val syntaxio = sbt.io.syntax
 }
 """ else """
@@ -97,16 +99,25 @@ trait StreamLoggerAdapter {
   def out(s: => String): Unit = log(Info.toString, s)
 }
 
-import java.io.File
 object Adapter {
-val IO = sbt.IO
-val Path = sbt.Path
-type Logger = sbt.Logger
-import Path._
-def allPaths(f:File) = sbt.PathFinder(f).***
-val syntaxio = new {}
+  val IO = sbt.IO
+  val Path = sbt.Path
+  type RichFile = sbt.RichFile
+  type FileFilter = sbt.FileFilter
+  val DirectoryFilter = sbt.DirectoryFilter
+  type Logger = sbt.Logger
+  import Path._
+  def allPaths(f:java.io.File) = sbt.PathFinder(f).***
+  val syntaxio = new {}
 }
-"""))
+""")+("""
+object Defaults {
+  val version = "%s"
+  val org = "%s"
+  val hash = "%s"
+}""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
+
+)
     Seq(file)
   })
 )
@@ -155,46 +166,9 @@ lazy val metadata = (
 
 lazy val repo = (
   SubProj("repo")
-  dependsOn(metadata, logging)
+  dependsOn(adapter, metadata, logging)
   dependsOnRemote(mvnAether, dispatch, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
   dependsOnSbt(sbtIo, sbtLaunchInt)
-  settings(sourceGenerators in Compile += task {
-    val dir = (sourceManaged in Compile).value
-    val fileName = "Defaults.scala"
-    val file = dir / fileName
-    val v = sbtVersion.value
-    if(!dir.isDirectory) dir.mkdirs()
-    IO.write(file, """
-package com.typesafe.dbuild.repo.core
-
-object Defaults {
-  val version = "%s"
-  val org = "%s"
-  val hash = "%s"
-}
-
-object Adapter {
-""" + (if (v.startsWith("1.0"))
-"""
-val IO = sbt.io.IO
-val Path = sbt.io.Path
-type RichFile = sbt.io.RichFile
-type FileFilter = sbt.io.FileFilter
-val DirectoryFilter = sbt.io.DirectoryFilter
-val syntaxio = sbt.io.syntax
-}"""
-else
-"""
-val IO = sbt.IO
-val Path = sbt.Path
-type RichFile = sbt.RichFile
-type FileFilter = sbt.FileFilter
-val DirectoryFilter = sbt.DirectoryFilter
-val syntaxio = new {}
-}""")
-  format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
-    Seq(file) }
-  )
 )
 
 lazy val core = (

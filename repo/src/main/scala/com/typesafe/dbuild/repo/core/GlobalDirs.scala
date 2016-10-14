@@ -2,6 +2,7 @@ package com.typesafe.dbuild.repo.core
 
 import com.typesafe.dbuild.model._
 import java.io.File
+import com.typesafe.dbuild.adapter.{Adapter,Defaults}
 import Adapter.Path._
 
 // TODO - Locally configured area for projects

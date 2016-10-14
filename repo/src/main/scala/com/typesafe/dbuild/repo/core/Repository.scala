@@ -1,6 +1,7 @@
 package com.typesafe.dbuild.repo.core
 
 import java.io.File
+import com.typesafe.dbuild.adapter.Adapter
 import Adapter.IO
 import Adapter.Path._
 

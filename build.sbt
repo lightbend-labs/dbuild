@@ -68,6 +68,15 @@ object LoggingInterface {
 }
 
 trait StreamLoggerAdapter
+
+import java.io.File
+object Adapter {
+  val IO = sbt.io.IO
+  val Path = sbt.io.Path
+  type Logger = sbt.util.Logger
+  def allPaths(f:File) = sbt.io.PathFinder(f).allPaths
+  val syntaxio = sbt.io.syntax
+}
 """ else """
 package com.typesafe.dbuild.adapter
 
@@ -86,6 +95,16 @@ trait StreamLoggerAdapter {
   def log(label: String, message: String): Unit
   def err(s: => String): Unit = log(Error, s)
   def out(s: => String): Unit = log(Info.toString, s)
+}
+
+import java.io.File
+object Adapter {
+val IO = sbt.IO
+val Path = sbt.Path
+type Logger = sbt.Logger
+import Path._
+def allPaths(f:File) = sbt.PathFinder(f).***
+val syntaxio = new {}
 }
 """))
     Seq(file)
@@ -121,41 +140,10 @@ lazy val actorLogging = (
 
 lazy val deploy = (
   Proj("deploy")
+  dependsOn(adapter)
   dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
   settings(libraryDependencies += jacks(scalaVersion.value))
   dependsOnSbt(sbtLogging, sbtIo)
-  settings(sourceGenerators in Compile += task {
-    val dir = (sourceManaged in Compile).value
-    val fileName = "IOAdapter.scala"
-    val file = dir / fileName
-    val sv = scalaVersion.value
-    val v = sbtVersion.value
-    if(!dir.isDirectory) dir.mkdirs()
-    val content =
-"""
-package com.typesafe.dbuild.deploy
-import java.io.File
-object IOAdapter {
-""" + (if (v.startsWith("1.0"))
-"""
-val IO = sbt.io.IO
-val Path = sbt.io.Path
-type Logger = sbt.util.Logger
-def allPaths(f:File) = sbt.io.PathFinder(f).allPaths
-val syntaxio = sbt.io.syntax
-}"""
-else
-"""
-val IO = sbt.IO
-val Path = sbt.Path
-type Logger = sbt.Logger
-import Path._
-def allPaths(f:File) = sbt.PathFinder(f).***
-val syntaxio = new {}
-}""")
-    IO.write(file, content)
-    Seq(file)
-  })
 )
 
 lazy val metadata = (

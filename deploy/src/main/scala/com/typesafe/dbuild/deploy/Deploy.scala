@@ -14,10 +14,10 @@ import Creds.loadCreds
 import com.jcraft.jsch.{ IO => sshIO, Logger => _, _ }
 import java.util.Date
 import com.jcraft.jsch.ChannelSftp
-import IOAdapter.{IO,Logger}
-import IOAdapter.Path._
-import IOAdapter.allPaths
-import IOAdapter.syntaxio._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{IO,Logger,allPaths}
+import Adapter.Path._
+import Adapter.syntaxio._
 import com.lambdaworks.jacks.JacksMapper
 
 /**

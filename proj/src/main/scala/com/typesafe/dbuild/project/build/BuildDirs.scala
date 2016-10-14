@@ -1,7 +1,8 @@
 package com.typesafe.dbuild.project.build
 import java.io.File
 import com.typesafe.dbuild.repo.core.GlobalDirs.buildDir
-import sbt.Path._
+import Adapter.Path._
+import Adapter.syntaxio._
 
 /**
  * dbuild-specific file names used during building.

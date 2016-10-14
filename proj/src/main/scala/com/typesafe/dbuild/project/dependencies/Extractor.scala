@@ -1,7 +1,7 @@
 package com.typesafe.dbuild.project.dependencies
 
-import sbt.IO
-import sbt.Path._
+import com.typesafe.dbuild.project.build.Adapter.IO
+import com.typesafe.dbuild.project.build.Adapter.Path._
 import java.io.File
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import com.typesafe.dbuild.model.{ ProjectConfigAndExtracted, ProjectBuildConfig, ExtractedBuildMeta, SeqDepsModifiers }

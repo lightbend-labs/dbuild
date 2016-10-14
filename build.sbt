@@ -148,6 +148,7 @@ lazy val repo = (
     val dir = (sourceManaged in Compile).value
     val fileName = "Defaults.scala"
     val file = dir / fileName
+    val v = sbtVersion.value
     if(!dir.isDirectory) dir.mkdirs()
     IO.write(file, """
 package com.typesafe.dbuild.repo.core
@@ -157,11 +158,68 @@ object Defaults {
   val org = "%s"
   val hash = "%s"
 }
-""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
+
+object Adapter {
+""" + (if (v.startsWith("1.0"))
+"""
+val IO = sbt.io.IO
+val Path = sbt.io.Path
+type RichFile = sbt.io.RichFile
+type FileFilter = sbt.io.FileFilter
+val DirectoryFilter = sbt.io.DirectoryFilter
+val syntaxio = sbt.io.syntax
+}"""
+else
+"""
+val IO = sbt.IO
+val Path = sbt.Path
+type RichFile = sbt.RichFile
+type FileFilter = sbt.FileFilter
+val DirectoryFilter = sbt.DirectoryFilter
+val syntaxio = new {}
+}""")
+  format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
     Seq(file) }
   )
 )
 
+lazy val core = (
+  Proj("core")
+  dependsOnRemote(javaMail)
+  dependsOn(metadata, graph, hashing, logging, repo)
+  dependsOnSbt(sbtIo)
+  settings(sourceGenerators in Compile += task {
+    val dir = (sourceManaged in Compile).value
+    val fileName = "Adapter.scala"
+    val file = dir / fileName
+    val v = sbtVersion.value
+    if(!dir.isDirectory) dir.mkdirs()
+    IO.write(file, """
+package com.typesafe.dbuild.project
+
+object Adapter {
+""" + (if (v.startsWith("1.0"))
+"""
+val IO = sbt.io.IO
+val Path = sbt.io.Path
+type RichFile = sbt.io.RichFile
+type FileFilter = sbt.io.FileFilter
+val DirectoryFilter = sbt.io.DirectoryFilter
+val syntaxio = sbt.io.syntax
+}"""
+else
+"""
+val IO = sbt.IO
+val Path = sbt.Path
+type RichFile = sbt.RichFile
+type FileFilter = sbt.FileFilter
+val DirectoryFilter = sbt.DirectoryFilter
+val syntaxio = new {}
+}""")
+  format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
+    Seq(file) }
+  )
+)
 
 
 

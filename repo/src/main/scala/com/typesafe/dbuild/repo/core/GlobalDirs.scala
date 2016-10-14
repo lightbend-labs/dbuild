@@ -2,7 +2,7 @@ package com.typesafe.dbuild.repo.core
 
 import com.typesafe.dbuild.model._
 import java.io.File
-import sbt.Path._
+import Adapter.Path._
 
 // TODO - Locally configured area for projects
 // With some kind of locking to prevent more than one 
@@ -70,7 +70,8 @@ object GlobalDirs {
 
   def checkForObsoleteDirs(f: (=> String) => Unit) = {
     def issueWarnings(root: File, baseDirName: String, dirName: String) = {
-      import sbt.{ FileFilter => FF, DirectoryFilter => DF }
+      import Adapter.{ FileFilter => FF, DirectoryFilter => DF }
+      import Adapter.syntaxio._
       root.*(DF && ((baseDirName: FF) || baseDirName + "-*") && -(dirName: FF)).get.foreach { z =>
         f("WARNING: This directory is not in use: " + z.getCanonicalPath)
       }

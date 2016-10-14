@@ -3,7 +3,8 @@ package com.typesafe.dbuild.repo.core
 import com.typesafe.dbuild.model._
 import LocalRepoHelper.ResolutionResult
 import java.io.File
-import sbt.{RichFile, IO, Path}
+import Adapter.{ RichFile, IO, Path }
+import Adapter.syntaxio._
 import Path._
 import com.typesafe.dbuild.model.Utils.writeValue
 

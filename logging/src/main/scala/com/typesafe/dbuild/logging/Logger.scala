@@ -2,6 +2,7 @@ package com.typesafe.dbuild.logging
 
 import sys.process.ProcessLogger
 import com.typesafe.dbuild.graph
+import com.typesafe.dbuild.adapter.{LoggingInterface,StreamLoggerAdapter}
 import LoggingInterface.{Logger=>SbtLogger,BasicLogger=>SbtBasicLogger,_}
 import LoggingInterface.Level._
 
@@ -44,7 +45,7 @@ object ConsoleLogger {
 abstract class BasicLogger extends SbtBasicLogger with Logger
 
 /** Logs to an output stream. */
-abstract class StreamLoggerBase(out: java.io.PrintStream, debug: Boolean) extends BasicLogger {
+final class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends BasicLogger with StreamLoggerAdapter {
 
   if (debug) setLevel(Debug)
 
@@ -64,7 +65,9 @@ abstract class StreamLoggerBase(out: java.io.PrintStream, debug: Boolean) extend
 
   def log(level: Level.Value, message: => String): Unit =
     if (atLevel(level)) log(level.toString, message)
-  protected def log(label: String, message: String): Unit =
+  // The log(String,String) version should be protected or private,
+  // but we cannot make it such because of the Adapter trait mix-in
+  def log(label: String, message: String): Unit =
     out.synchronized {
       for (line <- message.split("""\n""")) {
         out.print("[")
@@ -75,4 +78,3 @@ abstract class StreamLoggerBase(out: java.io.PrintStream, debug: Boolean) extend
       }
     }
 }
-

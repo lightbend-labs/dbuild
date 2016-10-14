@@ -40,6 +40,58 @@ def selectScalaVersion =
 
 SbtSupport.buildSettings
 
+
+// This subproject only has dynamically
+// generated source files, used to adapt
+// the source file to sbt 0.12/0.13/1.0
+lazy val adapter = (
+  Proj("adapter")
+  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
+  settings(sourceGenerators in Compile += task {
+    val dir = (sourceManaged in Compile).value
+    val fileName = "Adapter.scala"
+    val file = dir / fileName
+    val sv = scalaVersion.value
+    val v = sbtVersion.value
+    if(!dir.isDirectory) dir.mkdirs()
+    IO.write(file, (
+if (v.startsWith("1.0")) """
+package com.typesafe.dbuild.adapter
+
+object LoggingInterface {
+  val Level = sbt.util.Level
+  type Logger = sbt.util.Logger
+  type LogEvent = sbt.util.LogEvent
+  val ControlEvent = sbt.util.ControlEvent
+  val StackTrace = sbt.internal.util.StackTrace
+  type BasicLogger = sbt.internal.util.BasicLogger
+}
+
+trait StreamLoggerAdapter
+""" else """
+package com.typesafe.dbuild.adapter
+
+object LoggingInterface {
+  val Level = sbt.Level
+  type Logger = sbt.Logger
+  type LogEvent = sbt.LogEvent
+  val ControlEvent = sbt.ControlEvent
+  val StackTrace = sbt.StackTrace
+  type BasicLogger = sbt.BasicLogger
+}
+
+import LoggingInterface.Level._
+trait StreamLoggerAdapter {
+  def log(level: Value, message: => String): Unit
+  def log(label: String, message: String): Unit
+  def err(s: => String): Unit = log(Error, s)
+  def out(s: => String): Unit = log(Info.toString, s)
+}
+"""))
+    Seq(file)
+  })
+)
+
 lazy val graph = (
   Proj("graph")
 )
@@ -55,34 +107,8 @@ lazy val indexmeta = (
 
 lazy val logging = (
   Proj("logging")
-  dependsOn(graph)
+  dependsOn(adapter,graph)
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
-  settings(sourceGenerators in Compile += task {
-    val dir = (sourceManaged in Compile).value
-    val fileName = "LoggingInterface.scala"
-    val file = dir / fileName
-    val sv = scalaVersion.value
-    val v = sbtVersion.value
-    if(!dir.isDirectory) dir.mkdirs()
-    val (where1,where2) = if (v.startsWith("1.0")) ("sbt.util","sbt.internal.util") else ("sbt","sbt")
-    IO.write(file, ("""
-package com.typesafe.dbuild.logging
-object LoggingInterface {
-  val Level = %s.Level
-  type Logger = %s.Logger
-  type LogEvent = %s.LogEvent
-  val ControlEvent = %s.ControlEvent
-  val StackTrace = %s.StackTrace
-  type BasicLogger = %s.BasicLogger
-}
-import LoggingInterface.Level._
-final class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends StreamLoggerBase(out, debug) {
-""" + (if (!v.startsWith("1.0")) """
-  def err(s: => String): Unit = log(Error, s)
-  def out(s: => String): Unit = log(Info.toString, s)
-}""" else "}")) format (where1, where1, where1, where1, where2, where2))
-    Seq(file) }
-  )
 )
 
 lazy val actorLogging = (

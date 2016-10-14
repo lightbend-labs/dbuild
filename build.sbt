@@ -221,6 +221,17 @@ lazy val support = (
   )
 ) 
 
+// A separate support project for git/jgit
+lazy val supportGit = (
+    SubProj("supportGit") 
+    dependsOn(core, repo, metadata, proj, support)
+    dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
+    dependsOnSbt(sbtLaunchInt, sbtIvy)
+    settings(SbtSupport.buildSettings:_*)
+    settings(SbtSupport.settings:_*)
+    settings(skip210:_*)
+)
+
 
 
 /*

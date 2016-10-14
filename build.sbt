@@ -185,6 +185,14 @@ lazy val proj = (
   dependsOnSbt(sbtIo, sbtIvy)
 )
 
+lazy val actorProj = (
+  SubProj("actorProj")
+  dependsOn(core, actorLogging, proj)
+  dependsOnSbt(sbtIo, sbtIvy)
+  settings(skip210:_*)
+)
+
+
 
 /*
   settings(sourceGenerators in Compile += task {

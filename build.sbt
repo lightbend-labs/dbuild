@@ -174,28 +174,8 @@ lazy val repo = (
 lazy val core = (
   SubProj("core")
   dependsOnRemote(javaMail)
-  dependsOn(metadata, graph, hashing, logging, repo)
+  dependsOn(adapter,metadata, graph, hashing, logging, repo)
   dependsOnSbt(sbtIo)
-  settings(sourceGenerators in Compile += task {
-    val dir = (sourceManaged in Compile).value
-    val fileName = "Adapter.scala"
-    val file = dir / fileName
-    val v = sbtVersion.value
-    if(!dir.isDirectory) dir.mkdirs()
-    IO.write(file, """
-package com.typesafe.dbuild.project
-
-object Adapter {
-""" + (if (v.startsWith("1.0"))
-"""
-val Path = sbt.io.Path
-}"""
-else
-"""
-val Path = sbt.Path
-}"""))
-    Seq(file) }
-  )
 )
 
 

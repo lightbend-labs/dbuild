@@ -2,7 +2,7 @@ import Dependencies._
 
 def MyVersion: String = "0.9.6-SNAPSHOT"
 
-def Proj(name: String) = (
+def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
   configs( IntegrationTest )
   settings( Defaults.itSettings : _*)
@@ -45,7 +45,7 @@ SbtSupport.buildSettings
 // generated source files, used to adapt
 // the source file to sbt 0.12/0.13/1.0
 lazy val adapter = (
-  Proj("adapter")
+  SubProj("adapter")
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
@@ -112,26 +112,26 @@ val syntaxio = new {}
 )
 
 lazy val graph = (
-  Proj("graph")
+  SubProj("graph")
 )
 
 lazy val hashing = (
-  Proj("hashing")
+  SubProj("hashing")
   dependsOnRemote(typesafeConfig)
 )
 
 lazy val indexmeta = (
-  Proj("indexmeta")
+  SubProj("indexmeta")
 )
 
 lazy val logging = (
-  Proj("logging")
+  SubProj("logging")
   dependsOn(adapter,graph)
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
 )
 
 lazy val actorLogging = (
-  Proj("actorLogging")
+  SubProj("actorLogging")
   dependsOn(logging)
   dependsOnAkka()
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
@@ -139,7 +139,7 @@ lazy val actorLogging = (
 )
 
 lazy val deploy = (
-  Proj("deploy")
+  SubProj("deploy")
   dependsOn(adapter)
   dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
   settings(libraryDependencies += jacks(scalaVersion.value))
@@ -147,14 +147,14 @@ lazy val deploy = (
 )
 
 lazy val metadata = (
-  Proj("metadata")
+  SubProj("metadata")
   dependsOn(graph, hashing, indexmeta, deploy)
   dependsOnRemote(jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
   settings(libraryDependencies += jacks(scalaVersion.value))
 )
 
 lazy val repo = (
-  Proj("repo")
+  SubProj("repo")
   dependsOn(metadata, logging)
   dependsOnRemote(mvnAether, dispatch, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
   dependsOnSbt(sbtIo, sbtLaunchInt)
@@ -198,7 +198,7 @@ val syntaxio = new {}
 )
 
 lazy val core = (
-  Proj("core")
+  SubProj("core")
   dependsOnRemote(javaMail)
   dependsOn(metadata, graph, hashing, logging, repo)
   dependsOnSbt(sbtIo)
@@ -226,7 +226,7 @@ val Path = sbt.Path
 
 
 lazy val proj = (
-  Proj("proj")
+  SubProj("proj")
   dependsOn(core, repo, logging)
   dependsOnRemote(javaMail, commonsIO)
   dependsOnSbt(sbtIo, sbtIvy)

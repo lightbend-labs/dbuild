@@ -1,6 +1,7 @@
 package com.typesafe.dbuild.project.build
 import java.io.File
 import com.typesafe.dbuild.repo.core.GlobalDirs.buildDir
+import com.typesafe.dbuild.adapter.Adapter
 import Adapter.Path._
 import Adapter.syntaxio._
 

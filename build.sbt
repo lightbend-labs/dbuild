@@ -178,36 +178,11 @@ lazy val core = (
   dependsOnSbt(sbtIo)
 )
 
-
 lazy val proj = (
   SubProj("proj")
   dependsOn(core, repo, logging)
   dependsOnRemote(javaMail, commonsIO)
   dependsOnSbt(sbtIo, sbtIvy)
-  settings(sourceGenerators in Compile += task {
-    val dir = (sourceManaged in Compile).value
-    val fileName = "Adapter.scala"
-    val file = dir / fileName
-    val v = sbtVersion.value
-    if(!dir.isDirectory) dir.mkdirs()
-    IO.write(file, """
-package com.typesafe.dbuild.project.build
-
-object Adapter {
-""" + (if (v.startsWith("1.0"))
-"""
-val Path = sbt.io.Path
-val IO = sbt.io.IO
-val syntaxio = sbt.io.syntax
-}"""
-else
-"""
-val Path = sbt.Path
-val IO = sbt.IO
-val syntaxio = new {}
-}"""))
-    Seq(file) }
-  )
 )
 
 

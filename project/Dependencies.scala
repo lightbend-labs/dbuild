@@ -66,5 +66,6 @@ object Dependencies {
                                               else "org.scala-sbt" % "launcher" % v % "provided"
   def sbtLauncher(v:String, sv:String)    = if (sv.startsWith("2.11")) "org.scala-sbt" % "launcher" % "1.0.0"
                                               else "org.scala-sbt" % "launcher" % v
-
+  def zincIf211(v:String) = "org.scala-sbt" %% "zinc" % "1.0.0-X1"
+  def sbtIf211(v:String)  = "org.scala-sbt" % "sbt" % v
 }

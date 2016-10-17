@@ -47,6 +47,7 @@ SbtSupport.buildSettings
 lazy val adapter = (
   SubProj("adapter")
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy)
+  dependsIf211(zincIf211,sbtIf211)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Adapter.scala"
@@ -56,7 +57,12 @@ lazy val adapter = (
     if(!dir.isDirectory) dir.mkdirs()
     IO.write(file, (
 if (v.startsWith("1.0")) """
-package com.typesafe.dbuild.adapter
+package sbt.dbuild.hack {
+object DbuildHack {
+  val Load = sbt.internal.Load
+}
+}
+package com.typesafe.dbuild.adapter {
 
 object LoggingInterface {
   val Level = sbt.util.Level
@@ -83,9 +89,13 @@ object Adapter {
   val syntaxio = sbt.io.syntax
   type ModuleID = sbt.librarymanagement.ModuleID
   type Artifact = sbt.librarymanagement.Artifact
+  type ProjectResolver = sbt.internal.librarymanagement.ProjectResolver
+  type ScalaInstance = sbt.internal.inc.ScalaInstance
+  val ScalaInstance = sbt.internal.inc.ScalaInstance
+  val Load = sbt.dbuild.hack.DbuildHack.Load
 }
 """ else """
-package com.typesafe.dbuild.adapter
+package com.typesafe.dbuild.adapter {
 
 object LoggingInterface {
   val Level = sbt.Level
@@ -119,12 +129,17 @@ object Adapter {
   val syntaxio = new {}
   type ModuleID = sbt.ModuleID
   type Artifact = sbt.Artifact
+  type ProjectResolver = sbt.ProjectResolver
+  type ScalaInstance = sbt.ScalaInstance
+  val ScalaInstance = sbt.ScalaInstance
+  val Load = sbt.Load
 }
 """)+("""
 object Defaults {
   val version = "%s"
   val org = "%s"
   val hash = "%s"
+}
 }""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
 
 )
@@ -238,7 +253,8 @@ lazy val supportGit = (
 lazy val plugin = (
   SubProj("plugin") 
   settings(sbtPlugin := true)
-  dependsOn(support, metadata)
+  dependsOn(adapter, support, metadata)
+  dependsOnSbt(sbtIo)
   settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
     val file = dir / "Update.scala"
     if(!dir.isDirectory) dir.mkdirs()

@@ -2,6 +2,10 @@
 package com.typesafe.dbuild.plugin
 
 import sbt._
+import syntax._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{ProjectResolver,ScalaInstance,allPaths,Load}
+import Adapter.syntaxio._
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -605,7 +609,7 @@ object DBuildRunner {
       // current set of files in the repository against the files we had previously
       val previousFiles = previous._1
       val localRepo = config.info.outRepo.getAbsoluteFile
-      val currentFiles = (localRepo.***).get.
+      val currentFiles = (allPaths(localRepo)).get.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
       val newFilesShas = currentFiles.diff(previousFiles).map { LocalRepoHelper.makeArtifactSha(_, localRepo) }
 

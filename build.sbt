@@ -60,6 +60,8 @@ if (v.startsWith("1.0")) """
 package sbt.dbuild.hack {
 object DbuildHack {
   val Load = sbt.internal.Load
+  val applyCross: (String, Option[String => String]) => String =
+   sbt.librarymanagement.CrossVersion.applyCross
 }
 }
 package com.typesafe.dbuild.adapter {
@@ -87,12 +89,14 @@ object Adapter {
   type Logger = sbt.util.Logger
   def allPaths(f:java.io.File) = sbt.io.PathFinder(f).allPaths
   val syntaxio = sbt.io.syntax
+  val syntax = sbt.syntax
   type ModuleID = sbt.librarymanagement.ModuleID
   type Artifact = sbt.librarymanagement.Artifact
   type ProjectResolver = sbt.internal.librarymanagement.ProjectResolver
   type ScalaInstance = sbt.internal.inc.ScalaInstance
   val ScalaInstance = sbt.internal.inc.ScalaInstance
   val Load = sbt.dbuild.hack.DbuildHack.Load
+  val applyCross = sbt.dbuild.hack.DbuildHack.applyCross
 }
 """ else """
 package com.typesafe.dbuild.adapter {
@@ -126,13 +130,16 @@ object Adapter {
   type Logger = sbt.Logger
   import Path._
   def allPaths(f:java.io.File) = sbt.PathFinder(f).***
-  val syntaxio = new {}
+  val syntax = new {}
+  val syntaxio = syntax
   type ModuleID = sbt.ModuleID
   type Artifact = sbt.Artifact
   type ProjectResolver = sbt.ProjectResolver
   type ScalaInstance = sbt.ScalaInstance
   val ScalaInstance = sbt.ScalaInstance
   val Load = sbt.Load
+  val applyCross: (String, Option[String => String]) => String =
+   sbt.CrossVersion.applyCross
 }
 """)+("""
 object Defaults {

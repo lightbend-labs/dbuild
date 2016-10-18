@@ -2,10 +2,9 @@
 package com.typesafe.dbuild.plugin
 
 import sbt._
-import syntax._
 import com.typesafe.dbuild.adapter.Adapter
-import Adapter.{ProjectResolver,ScalaInstance,allPaths,Load}
-import Adapter.syntaxio._
+import Adapter.{ProjectResolver,ScalaInstance,allPaths,Load,applyCross}
+import Adapter.syntax._
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -761,7 +760,7 @@ object DBuildRunner {
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
     cross: CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
-    val crossSuffix = CrossVersion.applyCross("", CrossVersion(cross, sv, sbv))
+    val crossSuffix = applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
     } yield model.ArtifactLocation(

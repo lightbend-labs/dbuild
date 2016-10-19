@@ -3,8 +3,9 @@ package com.typesafe.dbuild.plugin
 
 import sbt._
 import com.typesafe.dbuild.adapter.Adapter
-import Adapter.{ProjectResolver,ScalaInstance,allPaths,Load,applyCross}
+import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross}
 import Adapter.syntax._
+import sbt.internal.inc.ScalaInstance
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -443,7 +444,7 @@ object DBuildRunner {
           val sc = s.key.scope
           Keys.scalaInstance in sc <<= Keys.appConfiguration in sc map { app =>
             val launcher = app.provider.scalaProvider.launcher
-            ScalaInstance(libraryJar(scalaHome), compilerJar(scalaHome), launcher, allJars(scalaHome): _*)
+            scalaInstance(libraryJar(scalaHome), compilerJar(scalaHome), launcher, allJars(scalaHome): _*)
           }
         }("Setting Scala instance")(oldSettings, log)
     }

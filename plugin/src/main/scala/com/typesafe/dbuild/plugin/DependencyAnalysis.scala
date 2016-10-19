@@ -3,6 +3,7 @@ package com.typesafe.dbuild.plugin
 import sbt._
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.syntaxio._
+import Adapter.defaultID
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.plugin.StateHelpers._
 import com.typesafe.dbuild.support.sbt.ExtractionInput
@@ -65,7 +66,7 @@ object DependencyAnalysis {
     // we only cover the most common cases. The full logic for 0.13 may involve Load.scala (autoID) and the def default* in Build.scala
     // This "toLowerCase" etc comes from the long deprecated "StringUtilities.normalize()"
     val base = baseDirectory.getName.toLowerCase(java.util.Locale.ENGLISH).replaceAll("""\W+""", "-")
-    val defaultIDs = Seq(Build.defaultID(baseDirectory), "root-" + base, base)
+    val defaultIDs = Seq(defaultID(baseDirectory), "root-" + base, base)
     val defaultName = "default-sbt-project"
     if (defaultIDs contains name) defaultName else {
       if (name.endsWith("-build") && base == "project" && normalizedProjectNameString(name.dropRight(6), baseDirectory.getParentFile) == defaultName)

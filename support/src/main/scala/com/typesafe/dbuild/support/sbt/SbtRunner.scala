@@ -336,11 +336,9 @@ object SbtRunner {
   val addDBuildPlugin =
     """addSbtPlugin("com.typesafe.dbuild" % "plugin" % """ + '"' + Defaults.version + "\")\n\n"
 
-  /**
-   *  Perform a state transformation using onLoad()
-   */
+  /** Perform a state transformation using onLoad() */
   def onLoad(activity: String) = {
-    "onLoad in Global <<= (onLoad in Global) { previousOnLoad => previousOnLoad andThen { state => { " + activity + " } }}\n\n"
+    "onLoad in Global ~= (previousOnLoad => previousOnLoad andThen (state => { " + activity + " }))\n\n"
   }
 
   // stuff related to generateArtifacts()

@@ -11,8 +11,9 @@ import com.typesafe.dbuild.hashing
 import com.typesafe.dbuild.graph
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.pattern.{ ask, pipe }
-import akka.dispatch.{ Future, Futures, Promise }
-import akka.util.duration._
+import scala.concurrent.duration._
+import scala.concurrent.{ Future, Promise, ExecutionContext }
+import ExecutionContext.Implicits.global
 import akka.util.Timeout
 import com.typesafe.dbuild.project.build.ActorPatterns.forwardingErrorsToFutures
 import sbt.Path._

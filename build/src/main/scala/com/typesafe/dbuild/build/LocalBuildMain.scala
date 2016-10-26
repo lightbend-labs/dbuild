@@ -2,9 +2,9 @@ package com.typesafe.dbuild.build
 
 import java.io.File
 import akka.actor.{ ActorSystem, Props }
-import akka.dispatch.Await
+import scala.concurrent.Await
 import akka.util.Timeout
-import akka.util.duration._
+import scala.concurrent.duration._
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.model.Utils.{ readValue, writeValue }
 import com.typesafe.dbuild.repo.core._
@@ -12,7 +12,6 @@ import com.typesafe.dbuild.model.ClassLoaderMadness
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.support.BuildSystemCore
 import akka.pattern.ask
-import akka.util.duration._
 import com.typesafe.dbuild.repo.core.GlobalDirs.checkForObsoleteDirs
 import com.typesafe.dbuild.support
 import com.typesafe.dbuild.logging
@@ -55,11 +54,11 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
   def build(conf: DBuildConfiguration, confName: String, buildTarget: Option[String]): BuildOutcome = {
     implicit val timeout: Timeout = Timeouts.dbuildTimeout
     val result = builder ? RunLocalBuild(conf, confName, buildTarget)
-    Await.result(result.mapTo[BuildOutcome], akka.util.Duration.Inf)
+    Await.result(result.mapTo[BuildOutcome], Duration.Inf)
   }
   def dispose(): Unit = {
     implicit val timeout: Timeout = 5.minutes
-    Await.result((logMgr ? "exit").mapTo[String], akka.util.Duration.Inf)
+    Await.result((logMgr ? "exit").mapTo[String], Duration.Inf)
     system.shutdown() // pro forma, as all loggers should already be stopped at this point
     try {
       system.awaitTermination(4.minute)

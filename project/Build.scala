@@ -207,10 +207,10 @@ trait BuildHelper extends Build {
   def selectScalaVersion =
     scalaVersion <<= (sbtVersion in sbtPlugin).apply( sb => if (sb.startsWith("0.12")) "2.9.2" else "2.10.2" )
 
-  def skip210 = 
-    Seq(skip in compile <<= scalaVersion.map(_.startsWith("2.10")),
-        sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
-          if(s) List() else c ) )
+  def skip210: Seq[Setting[_]] = Seq.empty
+//    Seq(skip in compile <<= scalaVersion.map(_.startsWith("2.10")),
+//        sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
+//          if(s) List() else c ) )
   
   def defaultDSettings: Seq[Setting[_]] = Seq(
     version := MyVersion,

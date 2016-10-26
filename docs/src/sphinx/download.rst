@@ -21,7 +21,6 @@ The archive contains the following files:
    ./bin/drepo
    ./bin/drepo.properties
    ./bin/sbt-launch.jar
-   ./samples/[...]
 
 Where ``dbuild`` is the build tool, and ``dbuild.properties`` is its configuration file. The ``bin`` directory also contains
 the ``drepo`` repository inspection tool, together with its configuration file; you can find more information in the

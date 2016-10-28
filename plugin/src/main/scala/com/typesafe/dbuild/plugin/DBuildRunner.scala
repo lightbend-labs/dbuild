@@ -3,7 +3,7 @@ package com.typesafe.dbuild.plugin
 
 import sbt._
 import com.typesafe.dbuild.adapter.Adapter
-import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross}
+import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross,ScalaInstance}
 import Adapter.syntax._
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig

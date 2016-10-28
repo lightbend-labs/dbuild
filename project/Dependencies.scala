@@ -39,7 +39,6 @@ object Dependencies {
   val aws            = "com.amazonaws" % "aws-java-sdk" % "1.3.29"
   val uriutil        = "org.eclipse.equinox" % "org.eclipse.equinox.common" % "3.6.0.v20100503"
 
-  val gpgLib         = "com.jsuereth" %% "gpg-library" % "0.8.2"
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
   val commonsLang    = "commons-lang" % "commons-lang" % "2.6"
   val commonsIO      = "commons-io" % "commons-io" % "2.4"
@@ -61,6 +60,7 @@ object Dependencies {
                                               else "org.scala-sbt" % "launcher" % v % "provided"
   def sbtLauncher(v:String, sv:String)    = if (sv.startsWith("2.11")) "org.scala-sbt" % "launcher" % "1.0.0"
                                               else "org.scala-sbt" % "launcher" % v
-  def zincIf211(v:String) = "org.scala-sbt" %% "zinc" % "1.0.0-X1"
+  def zincIf211(v:String)      = "org.scala-sbt" %% "zinc" % "1.0.0-X1"
+  def gpgLibIf210(v:String)    = "com.jsuereth" %% "gpg-library" % "0.8.2"
   def sbtSbt(v:String, sv:String)         = "org.scala-sbt" % "sbt" % v
 }

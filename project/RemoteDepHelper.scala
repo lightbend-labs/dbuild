@@ -16,11 +16,13 @@ class RemoteDepHelper(p: Project) {
       val sv = scalaVersion.value
       if (sv.startsWith("2.10")) akkaActor210 else akkaActor211
     })
-  def dependsIf211(ms: (String => ModuleID)*): Project = p.settings(libraryDependencies ++= {
+  def dependsIfVersion(ver:String,ms: (String => ModuleID)*): Project = p.settings(libraryDependencies ++= {
     val sv = scalaVersion.value
     val v = sbtVersion.value
-    if (sv.startsWith("2.11")) ms map {_(v)} else Seq.empty
+    if (sv.startsWith(ver)) ms map {_(v)} else Seq.empty
   })
+  def dependsIf211(ms: (String => ModuleID)*): Project = dependsIfVersion("2.11",ms:_*)
+  def dependsIf210(ms: (String => ModuleID)*): Project = dependsIfVersion("2.10",ms:_*)
 }
 object RemoteDepHelper {
   implicit def p2remote(p: Project): RemoteDepHelper = new RemoteDepHelper(p)

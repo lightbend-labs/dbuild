@@ -93,6 +93,7 @@ object Adapter {
   val Path = sbt.io.Path
   type RichFile = sbt.io.RichFile
   type FileFilter = sbt.io.FileFilter
+  def toFF = sbt.io.FileFilter.globFilter _
   val DirectoryFilter = sbt.io.DirectoryFilter
   type ExactFilter = sbt.io.ExactFilter
   type NameFilter = sbt.io.NameFilter
@@ -180,6 +181,7 @@ object Adapter {
   val Path = sbt.Path
   type RichFile = sbt.RichFile
   type FileFilter = sbt.FileFilter
+  def toFF = sbt.FileFilter.globFilter _
   val DirectoryFilter = sbt.DirectoryFilter
   type ExactFilter = sbt.ExactFilter
   type NameFilter = sbt.NameFilter

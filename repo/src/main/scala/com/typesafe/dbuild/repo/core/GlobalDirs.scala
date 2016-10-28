@@ -71,9 +71,9 @@ object GlobalDirs {
 
   def checkForObsoleteDirs(f: (=> String) => Unit) = {
     def issueWarnings(root: File, baseDirName: String, dirName: String) = {
-      import Adapter.{ FileFilter => FF, DirectoryFilter => DF }
+      import Adapter.{ FileFilter => FF, DirectoryFilter => DF, toFF }
       import Adapter.syntaxio._
-      root.*(DF && ((baseDirName: FF) || baseDirName + "-*") && -(dirName: FF)).get.foreach { z =>
+      root.*(DF && ((toFF(baseDirName)) || toFF(baseDirName + "-*")) && -(toFF(dirName))).get.foreach { z =>
         f("WARNING: This directory is not in use: " + z.getCanonicalPath)
       }
     }

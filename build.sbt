@@ -28,26 +28,37 @@ def SubProj(name: String) = (
 
 import RemoteDepHelper._
 
-def skip210 =
-  Seq(skip in compile <<= scalaVersion.map(v => v.startsWith("2.10") || v.startsWith("2.11")),
-      sources in doc in Compile <<= (sources in doc in Compile,skip in compile).map( (c,s) =>
-        if(s) List() else c ) )
+def skip211 = Seq(
+      skip in compile := scalaVersion.value.startsWith("2.11"),
+      sources in doc in Compile :=
+        { if((skip in compile).value) List() else (sources in doc in Compile).value }
+     )
 
 def selectScalaVersion =
-  scalaVersion <<= (sbtVersion in sbtPlugin).apply( sb => if (sb.startsWith("0.12")) "2.9.2" else if (sb.startsWith("0.13"))
-     "2.10.6" else "2.11.8" )
+  scalaVersion := {
+    val sb = (sbtVersion in sbtPlugin).value
+    if (sb.startsWith("0.13")) "2.10.6" else "2.11.8"
+  }
 
-
-SbtSupport.buildSettings
-
+lazy val root = (
+  SubProj("root")
+  aggregate(graph, hashing, logging, actorLogging, proj, actorProj, deploy,
+            core, plugin, build, support, supportGit, repo, metadata, /*docs, dist,*/ indexmeta)
+  settings(publish := (), publishLocal := (), version := MyVersion)
+  //settings(CrossPlugin.crossBuildingSettings:_*)
+  //settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M4"), selectScalaVersion)
+  settings(commands += Command.command("release") { state =>
+    "clean" :: "publish" :: state
+  })
+)
 
 // This subproject only has dynamically
 // generated source files, used to adapt
-// the source file to sbt 0.12/0.13/1.0
+// the source file to sbt 0.13/1.0
 lazy val adapter = (
   SubProj("adapter")
-  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy)
-  dependsIf211(zincIf211,sbtIf211)
+  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy, sbtSbt)
+  dependsIf211(zincIf211)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Adapter.scala"
@@ -142,6 +153,11 @@ object Adapter {
   }
 }
 """ else """
+package sbt.dbuild.hack {
+object DbuildHack {
+  val Load = sbt.Load
+}
+}
 package com.typesafe.dbuild.adapter {
 import java.io.File
 
@@ -181,7 +197,7 @@ object Adapter {
   type ProjectResolver = sbt.ProjectResolver
   type ScalaInstance = sbt.ScalaInstance
   val ScalaInstance = sbt.ScalaInstance
-  val Load = sbt.Load
+  val Load = sbt.dbuild.hack.DbuildHack.Load
   val applyCross: (String, Option[String => String]) => String =
    sbt.CrossVersion.applyCross
   def defaultID(base: File, prefix: String = "default") =
@@ -226,15 +242,7 @@ lazy val actorLogging = (
   dependsOn(logging)
   dependsOnAkka()
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
-  settings(skip210:_*)
-)
-
-lazy val deploy = (
-  SubProj("deploy")
-  dependsOn(adapter)
-  dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
-  settings(libraryDependencies += jacks(scalaVersion.value))
-  dependsOnSbt(sbtLogging, sbtIo)
+  settings(skip211:_*)
 )
 
 lazy val metadata = (
@@ -269,13 +277,14 @@ lazy val actorProj = (
   SubProj("actorProj")
   dependsOn(core, actorLogging, proj)
   dependsOnSbt(sbtIo, sbtIvy)
-  settings(skip210:_*)
+  settings(skip211:_*)
 )
 
 lazy val support = (
-  SubProj("support") 
+  SubProj("support")
   dependsOn(core, repo, metadata, proj % "compile->compile;it->compile", logging % "it")
-  dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple)
+  dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil,
+                  aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple)
   dependsOnSbt(sbtLaunchInt, sbtIvy)
   settings(SbtSupport.buildSettings:_*)
   settings(SbtSupport.settings:_*)
@@ -293,16 +302,14 @@ lazy val support = (
 
 // A separate support project for git/jgit
 lazy val supportGit = (
-    SubProj("supportGit") 
-    dependsOn(core, repo, metadata, proj, support)
-    dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
-    dependsOnSbt(sbtLaunchInt, sbtIvy)
-    settings(SbtSupport.buildSettings:_*)
-    settings(SbtSupport.settings:_*)
-    settings(skip210:_*)
+  SubProj("supportGit") 
+  dependsOn(core, repo, metadata, proj, support)
+  dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
+  dependsOnSbt(sbtLaunchInt, sbtIvy)
+  settings(SbtSupport.buildSettings:_*)
+  settings(SbtSupport.settings:_*)
+  settings(skip211:_*)
 )
-
-
 
 // SBT plugin
 lazy val plugin = (
@@ -310,24 +317,44 @@ lazy val plugin = (
   settings(sbtPlugin := true)
   dependsOn(adapter, support, metadata)
   dependsOnSbt(sbtIo)
-  settings(sourceGenerators in Compile <+= (sourceManaged in Compile, scalaVersion, streams) map { (dir, sv, s) =>
-    val file = dir / "Update.scala"
-    if(!dir.isDirectory) dir.mkdirs()
-    s.log.info("Generating \"Update.scala\" for sbt "+sbtVer(sv)+" and Scala "+sv)
-    val where = if (sbtVer(sv).startsWith("0.12")) "Project" else "Def"
-    IO.write(file, """
-package com.typesafe.dbuild.plugin
-object SbtUpdate {
-def update[T]: (sbt.%s.ScopedKey[T]) => (T => T) => sbt.%s.Setting[T] = sbt.%s.update[T]
-}
-""" format (where, where, where))
-      Seq(file)
-    }
+)
+
+lazy val dist = (
+  SubProj("dist")
+  settings(Packaging.settings(build,repo):_*)
+)
+
+lazy val deploy = (
+  SubProj("deploy")
+  dependsOn(adapter)
+  dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
+  settings(libraryDependencies += jacks(scalaVersion.value))
+  dependsOnSbt(sbtLogging, sbtIo)
+)
+
+lazy val build = (
+  SubProj("build")
+  dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
+  dependsOnRemote(aws, uriutil, dispatch, gpgLib, jsch, oro, scallop, commonsLang)
+  dependsOnSbt(sbtLaunchInt, sbtLauncher)
+  settings(skip211:_*)
+  settings(SbtSupport.settings:_*)
+  settings(
+    // We hook the testLoader of it to make sure all the it tasks have a legit sbt plugin to use.
+    // Technically, this just pushes every project.  We could outline just the plugin itself, but for now
+    // we don't care that much.
+    testLoader in IntegrationTest := {
+      val ignore = publishLocal.all(ScopeFilter(inAggregates(LocalRootProject, includeRoot=false))).value
+      (testLoader in IntegrationTest).value
+    },
+    parallelExecution in IntegrationTest := false
   )
 )
 
+
+
 //  settings(
-//    CrossBuilding.crossSbtVersions := Seq("0.12","0.13","1.0.0-M4")
+//    CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M4")
 //  )
 //  settings(CrossPlugin.crossBuildingSettings:_*)
 

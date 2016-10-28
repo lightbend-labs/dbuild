@@ -10,10 +10,12 @@ object SbtSupport {
 
   def currentDownloadUrl(v: String) = "http://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/"+v+"/sbt-launch.jar"
   def oldDownloadUrl(v: String) = "http://repo.typesafe.com/typesafe/ivy-releases/org.scala-tools.sbt/sbt-launch/"+v+"/sbt-launch.jar"
+  def oneDotZeroDownloadUrl(v: String) = "https://repo1.maven.org/maven2/org/scala-sbt/sbt-launch/"+v+"/sbt-launch.jar"
 
   def downloadUrlForVersion(v: String) = (v split "[^\\d]" filter (_ matches "[\\d]+") map (_.toInt)) match {
     case Array(0, 11, x, _*) if x >= 3 => currentDownloadUrl(v)
     case Array(0, y, _*) if y >= 12    => currentDownloadUrl(v)
+    case Array(1, _, _*)               => oneDotZeroDownloadUrl(v)
     case _                             => oldDownloadUrl(v)
   }
 
@@ -31,13 +33,11 @@ object SbtSupport {
   }
 
   val buildSettings: Seq[Setting[_]] = Seq(
-//    sbtLaunchJarUrl <<= sbtVersion apply downloadUrlForVersion,
-    sbtLaunchJarUrl := downloadUrlForVersion(Dependencies.sbtVersion13),
-    sbtLaunchJarLocation <<= baseDirectory (_ / "target" / "sbt" / "sbt-launch.jar"),
-    sbtLaunchJar <<= (sbtLaunchJarUrl, sbtLaunchJarLocation) map downloadFile
+    sbtLaunchJarUrl := downloadUrlForVersion(sbtVersion.value),
+    sbtLaunchJarLocation := baseDirectory.value / "target" / "sbt" / "sbt-launch.jar",
+    sbtLaunchJar := downloadFile(sbtLaunchJarUrl.value, sbtLaunchJarLocation.value)
   )
-
-  val settings: Seq[Setting[_]] = Seq(
+  val settings: Seq[Setting[_]] = buildSettings ++ Seq(
     resourceGenerators in Compile += sbtLaunchJar.taskValue
   )
 }

@@ -3,15 +3,10 @@ import SyntaxAdapter.syntax._
 
 object Dependencies {
 
-  val sbtVersion12 = "0.12.4"
-  val sbtVersion13 = "0.13.0"
-  val sbtVersion100 = "1.0.0-M4"
-
   val mvnVersion = "3.2.3"
   val aetherVersion = "1.0.0.v20140518"
 
   val typesafeConfig = "com.typesafe" % "config" % "1.2.1"
-  val akkaActor29      = "com.typesafe.akka" % "akka-actor" % "2.0.5"
   val akkaActor210     = "com.typesafe.akka" %% "akka-actor" % "2.1.4"
   val akkaActor211     = "com.typesafe.akka" %% "akka-actor" % "2.4.11"
 
@@ -67,5 +62,5 @@ object Dependencies {
   def sbtLauncher(v:String, sv:String)    = if (sv.startsWith("2.11")) "org.scala-sbt" % "launcher" % "1.0.0"
                                               else "org.scala-sbt" % "launcher" % v
   def zincIf211(v:String) = "org.scala-sbt" %% "zinc" % "1.0.0-X1"
-  def sbtIf211(v:String)  = "org.scala-sbt" % "sbt" % v
+  def sbtSbt(v:String, sv:String)         = "org.scala-sbt" % "sbt" % v
 }

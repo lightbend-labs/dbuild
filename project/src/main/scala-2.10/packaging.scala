@@ -11,21 +11,21 @@ object Packaging {
   def mapArt[A](key:sbt.TaskKey[_], kind: String) =
      // cheat a little: by setting the classifier to the version number, we can
      // publish to Ivy the tgz/zip with the full name, like "dbuild-0.8.1.tgz".
-     artifact in (Universal, key) <<= (artifact in (Universal, key), version) {
-       (a,v) => a.copy(`type` = kind, extension = kind, `classifier` = Some(v))
-     }
+     artifact in (Universal, key) :=
+       (artifact in (Universal, key)).value.copy(`type` = kind, extension = kind, `classifier` = Some(version.value))
 
-  def settings: Seq[Setting[_]] = packagerSettings ++ S3Plugin.s3Settings ++ Seq(
+  def settings(build:Project, repo:Project): Seq[Setting[_]] = packagerSettings ++ S3Plugin.s3Settings ++
+     SbtSupport.buildSettings ++ packagerSettings ++ Seq(
      organization := "com.typesafe.dbuild",
      name := "dbuild",
      wixConfig := <wix/>,
-     maintainer := "Antonio Cunei <antonio.cunei@typesafe.com>",
+     maintainer := "Antonio Cunei <antonio.cunei@lightbend.com>",
      packageSummary := "Multi-project builder.",
      packageDescription := """A multi-project builder capable of glueing together a set of related projects.""",
-     mappings in Universal <+= SbtSupport.sbtLaunchJar map { jar =>
+     mappings in Universal ++= SbtSupport.sbtLaunchJar.value map { jar =>
        jar -> "bin/sbt-launch.jar"
      },
-     name in Universal <<= (name,version).apply((n,v) => (n+"-"+v)),
+     name in Universal := name.value + "-" + version.value,
      rpmRelease := "1",
      rpmVendor := "typesafe",
      rpmUrl := Some("http://github.com/typesafehub/dbuild"),
@@ -37,8 +37,11 @@ object Packaging {
 
      // S3 stuff
      host in upload := "downloads.typesafe.com",
-     mappings in upload <<= (packageZipTarball in Universal, packageBin in Universal, name, version, scalaVersion) map
-       {(tgz,zip,n,v,sv) => if(sv.startsWith("2.10")) Seq.empty else Seq(tgz,zip) map {f=>(f,n+"/"+v+"/"+f.getName)}},
+     mappings in upload := { if(scalaVersion.value.startsWith("2.10")) Seq.empty else
+       Seq((packageZipTarball in Universal).value, (packageBin in Universal).value) map {
+         f => (f, name.value+"/"+version.value+"/"+f.getName)
+       }
+     },
      progress in upload := true,
      credentials += Credentials(Path.userHome / ".s3credentials"),
      // Important: always issue "clean" before an S3 upload
@@ -55,9 +58,13 @@ object Packaging {
      crossPaths := false
 
   ) ++
-    addArtifact(artifact in (Universal, packageZipTarball), packageZipTarball in Universal) ++
-    addArtifact(artifact in (Universal, packageBin), packageBin in Universal)
-
+  addArtifact(artifact in (Universal, packageZipTarball), packageZipTarball in Universal) ++
+  addArtifact(artifact in (Universal, packageBin), packageBin in Universal) ++
+  Seq(mappings in Universal ++= Seq(
+        Packaging.makeDBuildProps(target.value, sourceDirectory.value, (scalaVersion in build).value, (version in build).value),
+        Packaging.makeDRepoProps(target.value, sourceDirectory.value, (scalaVersion in build).value, (version in build).value)
+      )
+  )
 
   def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"repo","com.typesafe.dbuild.repo.core.SbtRepoMain")
   def makeDBuildProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"build","com.typesafe.dbuild.build.SbtBuildMain")

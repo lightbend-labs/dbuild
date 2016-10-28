@@ -40,7 +40,7 @@ def selectScalaVersion =
 lazy val root = (
   SubProj("root")
   aggregate(graph, hashing, logging, actorLogging, proj, actorProj, deploy,
-            core, plugin, build, support, supportGit, repo, metadata, /*docs, dist,*/ indexmeta)
+            core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := (), publishLocal := (), version := MyVersion)
   //settings(CrossPlugin.crossBuildingSettings:_*)
   //settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M4"), selectScalaVersion)
@@ -346,5 +346,10 @@ lazy val build = (
     },
     parallelExecution in IntegrationTest := false
   )
+)
+
+lazy val docs = (
+  SubProj("docs")
+  settings(DocsSupport.settings:_*)
 )
 

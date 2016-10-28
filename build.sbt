@@ -15,11 +15,11 @@ def SubProj(name: String) = (
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
     licenses += ("Apache 2", url("http://www.apache.org/licenses/LICENSE-2.0")),
-    licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
+    licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")) /*,
     bintrayReleaseOnPublish := false,
     bintrayOrganization := Some("typesafe"),
     bintrayRepository := "ivy-releases",
-    bintrayPackage := "dbuild"
+    bintrayPackage := "dbuild" */
   )
 )
 

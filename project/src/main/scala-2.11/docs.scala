@@ -1,3 +1,3 @@
 object DocsSupport {
-  def settings:Seq[Setting[_]] = Seq.empty
+  def settings:Seq[sbt.Setting[_]] = Seq.empty
 }

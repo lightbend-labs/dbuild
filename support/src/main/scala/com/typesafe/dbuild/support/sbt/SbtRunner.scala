@@ -2,7 +2,7 @@ package com.typesafe.dbuild.support.sbt
 
 import _root_.java.io.File
 import com.typesafe.dbuild.adapter.{Adapter,Defaults}
-import Adapter.{ IO, Path, Logger => SbtLogger }
+import Adapter.{ IO, Path, toFF, Logger => SbtLogger }
 import Adapter.syntaxio._
 import Path._
 import com.typesafe.dbuild.logging.Logger
@@ -178,7 +178,7 @@ object SbtRunner {
   def buildLevels(dir: File): Int = {
     val sub = dir / "project"
     val subSub = sub / "project"
-    if (sub.isDirectory && (sub.*("*.sbt").get.nonEmpty || (subSub.isDirectory() && sub.*("*.scala").get.nonEmpty)))
+    if (sub.isDirectory && (sub.*(toFF("*.sbt")).get.nonEmpty || (subSub.isDirectory() && sub.*(toFF("*.scala")).get.nonEmpty)))
       buildLevels(sub) + 1
     else 1
   }

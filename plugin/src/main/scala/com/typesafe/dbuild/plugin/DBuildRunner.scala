@@ -5,7 +5,6 @@ import sbt._
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross}
 import Adapter.syntax._
-import sbt.internal.inc.ScalaInstance
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation

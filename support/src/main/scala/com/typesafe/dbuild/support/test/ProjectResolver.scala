@@ -6,7 +6,7 @@ import com.typesafe.dbuild.project.resolve.ProjectResolver
 import java.io.File
 import _root_.java.net.URI
 import com.typesafe.dbuild.adapter.Adapter
-import Adapter.IO
+import Adapter.{IO,toFF}
 import Adapter.Path._
 import Adapter.syntaxio._
 
@@ -20,7 +20,7 @@ class TestProjectResolver() extends ProjectResolver {
 
   def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = {
     // scrub the whole content before returning
-    IO.delete(baseDir.*("*").get)
+    IO.delete(baseDir.*(toFF("*")).get)
 
     val rand = new java.util.Random
     // abort resolution 10% of the times

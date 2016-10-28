@@ -2,7 +2,7 @@ package com.typesafe.dbuild.support.svn
 
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.Path._
-import Adapter.IO
+import Adapter.{IO,toFF}
 import Adapter.syntaxio._
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
@@ -25,7 +25,7 @@ class SvnProjectResolver extends ProjectResolver {
     val uri = new _root_.java.net.URI(config.uri)
 
     // clean the directory content, just in case there are leftovers
-    IO.delete(dir.*("*").get)
+    IO.delete(dir.*(toFF("*")).get)
     if(!(dir / ".svn" ).exists) Svn.checkout(uri, dir, log)
     else Svn.revert(dir, log)
 

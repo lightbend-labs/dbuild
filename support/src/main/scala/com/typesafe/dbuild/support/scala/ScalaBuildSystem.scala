@@ -7,7 +7,7 @@ import org.apache.commons.io.FileUtils
 import _root_.java.io.File
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.Path._
-import Adapter.{IO,NameFilter,allPaths}
+import Adapter.{IO,NameFilter,allPaths,toFF}
 import Adapter.IO.relativize
 import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
@@ -204,7 +204,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     targets foreach {
       case (target, path) =>
         // erase the content of the private cache before each stage of a build, just in case.
-        IO.delete(localM2repo.*("*").get)
+        IO.delete(localM2repo.*(toFF("*")).get)
         val targetDir = path.split("/").foldLeft(dir)(_ / _)
         Process(Seq("ant", target,
           "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
@@ -234,7 +234,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       // possible patterns:
       // org-with-dots/name/var/name-ver.pom
       // org-with-dots/name_suff/var/name_suff-ver.pom
-      val nameFilter = (name: NameFilter) | ((name + "_*"): NameFilter)
+      val nameFilter = (toFF(name)) | (toFF((name + "_*")))
       val potentialDirs = od.*(nameFilter).get
       if (potentialDirs.isEmpty) {
         sys.error("Cannot find artifacts dir for: " + modID)

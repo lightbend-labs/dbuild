@@ -6,7 +6,7 @@ import org.apache.commons.io.FileUtils
 import _root_.java.io.File
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.Path._
-import Adapter.{IO,NameFilter,allPaths}
+import Adapter.{IO,NameFilter,allPaths,toFF}
 import Adapter.IO.relativize
 import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
@@ -207,7 +207,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val localRepo = input.outRepo
     // We do a bunch of in-place file operations in the localRepo, before returning.
     // To avoid problems due to stale files, delete all contents before proceeding.
-    IO.delete(localRepo.*("*").get)
+    IO.delete(localRepo.*(toFF("*")).get)
 
     def mavenArtifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
       ref.organization.split('.').foldLeft(repoDir)(_ / _) / (ref.name + crossSuffix)

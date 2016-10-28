@@ -13,7 +13,7 @@ import com.typesafe.config.ConfigValueFactory
 import com.typesafe.dbuild.model.Utils.readValueT
 import com.typesafe.dbuild.utils.Time.timed
 import collection.immutable.SortedMap
-import com.typesafe.dbuild.repo.core.Defaults
+import com.typesafe.dbuild.adapter.Defaults
 import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException

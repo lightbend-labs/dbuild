@@ -1,7 +1,10 @@
 package com.typesafe.dbuild.build
 
 import sbt._
-import Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.IO
+import Adapter.syntaxio._
+import Adapter.allPaths
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.repo.core._
 import java.io.File
@@ -122,7 +125,7 @@ class DeployBuild(options: GeneralOptions, log: Logger) extends OptionTask(log) 
                   new PGPSecretKeyRing(new java.io.FileInputStream(secretRingFile)).getSecretKey
               }
               if (secretKey == null) sys.error("The key was not found in the pgp keyring.")
-              (dir.***).get.filter(f => !f.isDirectory && isNotChecksum(f.getName)) foreach { f =>
+              (allPaths(dir)).get.filter(f => !f.isDirectory && isNotChecksum(f.getName)) foreach { f =>
                 SecretKey(secretKey).sign(f, new File(f.getAbsolutePath() + ".asc"), passPhrase.toArray)
               }
             }

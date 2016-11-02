@@ -10,7 +10,7 @@ def SubProj(name: String) = (
     version := MyVersion,
     organization := "com.typesafe.dbuild",
     selectScalaVersion,
-    libraryDependencies += specs2(scalaVersion.value),
+    libraryDependencies += specs2,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
@@ -55,7 +55,7 @@ lazy val root = (
 lazy val adapter = (
   SubProj("adapter")
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy, sbtSbt)
-  dependsIf211(zincIf211)
+  dependsOnRemote(zincIf211:_*)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Adapter.scala"
@@ -239,7 +239,7 @@ lazy val logging = (
 lazy val actorLogging = (
   SubProj("actorLogging")
   dependsOn(logging)
-  dependsOnAkka()
+  dependsOnRemote(akkaActor)
   dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
   settings(skip211:_*)
 )
@@ -247,8 +247,7 @@ lazy val actorLogging = (
 lazy val metadata = (
   SubProj("metadata")
   dependsOn(graph, hashing, indexmeta, deploy)
-  dependsOnRemote(jackson, typesafeConfig, /*sbtCollections,*/ commonsLang)
-  settings(libraryDependencies += jacks(scalaVersion.value))
+  dependsOnRemote(jackson, typesafeConfig, commonsLang, jacks)
 )
 
 lazy val repo = (
@@ -326,8 +325,7 @@ lazy val dist = (
 lazy val deploy = (
   SubProj("deploy")
   dependsOn(adapter)
-  dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch)
-  settings(libraryDependencies += jacks(scalaVersion.value))
+  dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch, jacks)
   dependsOnSbt(sbtLogging, sbtIo)
 )
 
@@ -335,7 +333,7 @@ lazy val build = (
   SubProj("build")
   dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
   dependsOnRemote(aws, uriutil, dispatch, jsch, oro, scallop, commonsLang)
-  dependsIf210(gpgLibIf210) // not available on 2.11 at the moment
+  dependsOnRemote(gpgLibIf210:_*)
   dependsOnSbt(sbtLaunchInt, sbtLauncher)
   settings(skip211:_*)
   settings(SbtSupport.settings:_*)

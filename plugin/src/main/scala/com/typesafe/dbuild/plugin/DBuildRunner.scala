@@ -382,6 +382,12 @@ object DBuildRunner {
   def fixInterProjectResolver2 =
     fixGeneric2(Keys.projectResolver, "Disabling inter-project resolver") { _ map { _ => new RawRepository(new ProjectResolver("inter-project", Map.empty)) } }
 
+  // Some projects or plugins modify the "publish" task (for instance, to use Bintray),
+  // but we need the task to point to the standard definition, so that we can publish
+  // the files to the local directories
+  def fixStandardPublish2 =
+    fixGeneric2(Keys.publish, "Resetting publish task") { _ map { _ => sbt.Classpaths.publishTask(Keys.publishConfiguration, Keys.deliver) } }
+
   // alternate version, which only removes the artifacts that are not part
   // of the selected subprojects. Might be more suitable for setupcmd; in this case,
   // local-publish-repo should not be added to the list of resolvers.
@@ -666,6 +672,7 @@ object DBuildRunner {
 
   private def preparePublishSettings(in: BuildInput, log: ConsoleLogger, oldSettings: Seq[Setting[_]]) =
     Seq[Fixer](
+      fixStandardPublish2,
       fixPublishTos2(in.outRepo.getAbsoluteFile),
       fixPGPs2,
       fixVersions2(in)) flatMap { _(oldSettings, log) }

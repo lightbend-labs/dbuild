@@ -54,8 +54,8 @@ lazy val root = (
 // the source file to sbt 0.13/1.0
 lazy val adapter = (
   SubProj("adapter")
-  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy, sbtSbt)
-  dependsOnRemote(zincIf211:_*)
+  dependsOnSbtProvided(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy, sbtSbt)
+  dependsOnRemote(zincProvidedIf211:_*)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Default.scala"
@@ -94,14 +94,14 @@ lazy val indexmeta = (
 lazy val logging = (
   SubProj("logging")
   dependsOn(adapter,graph)
-  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
+  dependsOnSbtProvided(sbtLogging, sbtIo, sbtLaunchInt)
 )
 
 lazy val actorLogging = (
   SubProj("actorLogging")
   dependsOn(logging)
   dependsOnRemote(akkaActor)
-  dependsOnSbt(sbtLogging, sbtIo, sbtLaunchInt)
+  dependsOnSbtProvided(sbtLogging, sbtIo, sbtLaunchInt)
   settings(skip211:_*)
 )
 
@@ -115,27 +115,27 @@ lazy val repo = (
   SubProj("repo")
   dependsOn(adapter, metadata, logging)
   dependsOnRemote(mvnAether, dispatch, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
-  dependsOnSbt(sbtIo, sbtLaunchInt, sbtLogging)
+  dependsOnSbtProvided(sbtIo, sbtLaunchInt, sbtLogging)
 )
 
 lazy val core = (
   SubProj("core")
   dependsOnRemote(javaMail)
   dependsOn(adapter,metadata, graph, hashing, logging, repo)
-  dependsOnSbt(sbtIo, sbtLogging)
+  dependsOnSbtProvided(sbtIo, sbtLogging)
 )
 
 lazy val proj = (
   SubProj("proj")
   dependsOn(core, repo, logging)
   dependsOnRemote(javaMail, commonsIO)
-  dependsOnSbt(sbtIo, sbtIvy)
+  dependsOnSbtProvided(sbtIo, sbtIvy)
 )
 
 lazy val actorProj = (
   SubProj("actorProj")
   dependsOn(core, actorLogging, proj)
-  dependsOnSbt(sbtIo, sbtIvy)
+  dependsOnSbtProvided(sbtIo, sbtIvy)
   settings(skip211:_*)
 )
 
@@ -143,8 +143,8 @@ lazy val support = (
   SubProj("support")
   dependsOn(core, repo, metadata, proj % "compile->compile;it->compile", logging % "it")
   dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil,
-                  aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple)
-  dependsOnSbt(sbtLaunchInt, sbtIvy)
+                  aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple, ivy)
+  dependsOnSbtProvided(sbtLaunchInt, sbtIvy)
   settings(SbtSupport.buildSettings:_*)
   settings(SbtSupport.settings:_*)
   settings(
@@ -164,7 +164,7 @@ lazy val supportGit = (
   SubProj("supportGit") 
   dependsOn(core, repo, metadata, proj, support)
   dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
-  dependsOnSbt(sbtLaunchInt, sbtIvy)
+  dependsOnSbtProvided(sbtLaunchInt, sbtIvy)
   settings(SbtSupport.buildSettings:_*)
   settings(SbtSupport.settings:_*)
   settings(skip211:_*)
@@ -175,7 +175,7 @@ lazy val plugin = (
   SubProj("plugin") 
   settings(sbtPlugin := true)
   dependsOn(adapter, support, metadata)
-  dependsOnSbt(sbtIo)
+  dependsOnSbtProvided(sbtIo)
 )
 
 lazy val dist = (
@@ -187,7 +187,7 @@ lazy val deploy = (
   SubProj("deploy")
   dependsOn(adapter)
   dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch, jacks)
-  dependsOnSbt(sbtLogging, sbtIo)
+  dependsOnSbtProvided(sbtLogging, sbtIo)
 )
 
 lazy val build = (
@@ -195,7 +195,7 @@ lazy val build = (
   dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
   dependsOnRemote(aws, uriutil, dispatch, jsch, oro, scallop, commonsLang)
   dependsOnRemote(gpgLibIf210:_*)
-  dependsOnSbt(sbtLaunchInt, sbtLauncher, sbtLogging, sbtIo)
+  dependsOnSbt(sbtLaunchInt, sbtLauncher, sbtLogging, sbtIo, sbtIvy, sbtSbt)
   settings(skip211:_*)
   settings(SbtSupport.settings:_*)
   settings(

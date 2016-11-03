@@ -1,5 +1,24 @@
 # dbuild release notes
 
+### 0.9.7
+
+- This release is compatible with sbt 1.0.0-M4. The source
+  code and the build files have been reorganized, and
+  moved to the .sbt format. The supported sbt versions are
+  1.0.0-M4 and 0.13.*; support for the old 0.12.4 has
+  been removed.
+
+- Fixes for issues #190, #158, #188
+
+- The dbuild sbt plugin .pom no longer directly refers to
+  sbt jars, but uses those provided by the running sbt
+  environment. Fixes scala/community-builds#384.
+
+### 0.9.6
+
+- Fixed the "deploy" option when the target is a Bintray
+  repository.
+
 ### 0.9.5
 
 - It is now possible to use different versions of the JDK on the

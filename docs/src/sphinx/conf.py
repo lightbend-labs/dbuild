@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, os
+from version import release
 
 sys.path.append(os.path.abspath('_sphinx/exts'))
 extensions = ['sphinxcontrib.issuetracker', 'sphinx.ext.extlinks', 'howto']
@@ -8,9 +9,6 @@ extensions = ['sphinxcontrib.issuetracker', 'sphinx.ext.extlinks', 'howto']
 # Project variables
 
 project = 'dbuild'
-version = '0.9.7'
-release = '0.9.7-SNAPSHOT'
-sbt_version = '0.12.4'
 
 # General settings
 
@@ -66,10 +64,8 @@ rst_epilog = """
 .. _zip: %(dbuild_native_package_base)s/%(project)s/%(version)s/zips/%(project)s-%(version)s.zip
 .. _tgz: %(dbuild_native_package_base)s/%(project)s/%(version)s/tgzs/%(project)s-%(version)s.tgz
 .. |version| replace:: %(version)s
-.. |sbtversion| replace:: %(sbtversion)s
 .. |addSbtplugin| replace:: addSbtPlugin(:s2:`"com.typesafe.dbuild"` %% :s2:`"plugin"` %% :s2:`"%(version)s"`)
 """ % {
-   'sbtversion': sbt_version,
    'version': release,
    'project': project,
    'dbuild_native_package_base': 'http://repo.typesafe.com/typesafe/ivy-releases/com.typesafe.dbuild',

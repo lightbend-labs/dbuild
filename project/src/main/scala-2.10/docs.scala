@@ -51,6 +51,8 @@ object DocsSupport {
     }
     def versionFilter = new PatternFilter(VersionPattern) && DirectoryFilter
 
+  import com.typesafe.sbt.SbtSite.SiteKeys.makeSite
+  import com.typesafe.sbt.SbtSite.SiteKeys.siteSourceDirectory
   def settings:Seq[Setting[_]] = site.settings ++ site.sphinxSupport() ++
     ghpages.settings ++ Seq(
       enableOutput in generatePdf in Sphinx := false,
@@ -58,6 +60,10 @@ object DocsSupport {
       git.remoteRepo := "git@github.com:typesafehub/dbuild.git",
       GhPagesKeys.synchLocal <<= DocsSupport.synchLocalImpl,
       publish := (),
-      publishLocal := ()
-    )
+      publishLocal := (),
+      makeSite <<= makeSite.dependsOn(sbt.Def.task {
+        val file = (siteSourceDirectory in Sphinx).value / "version.py"
+        IO.write(file, ("release = '%s'\n" format (version.value)))
+      })
+  )
 }

@@ -5,6 +5,7 @@ import com.typesafe.dbuild.adapter.Adapter
 import Adapter.IO
 import Adapter.syntaxio._
 import Adapter.allPaths
+import Adapter.Path._
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.repo.core._
 import java.io.File

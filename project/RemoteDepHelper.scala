@@ -1,6 +1,7 @@
 import sbt._
 import Keys._
 import Dependencies._
+import extra.syntax._
 
 // DSL for adding remote deps like local deps.
 class RemoteDepHelper(p: Project) {
@@ -8,7 +9,7 @@ class RemoteDepHelper(p: Project) {
   def dependsOnSbt(ms: (String=>ModuleID)*): Project =
     p.settings(libraryDependencies ++= {
       val v = sbtVersion.value
-      ms map {_(v)}
+      ms map { _(v) % "provided"}
     })
 }
 object RemoteDepHelper {

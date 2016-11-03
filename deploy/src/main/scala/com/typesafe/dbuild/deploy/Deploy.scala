@@ -18,6 +18,7 @@ import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{IO,Logger,allPaths}
 import Adapter.syntaxio._
 import com.lambdaworks.jacks.JacksMapper
+import Adapter.Path._
 
 /**
  * A generic (S3, http, https, etc) deploy location.

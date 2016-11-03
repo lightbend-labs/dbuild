@@ -4,6 +4,7 @@ import sbt._
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{IO,allPaths}
 import Adapter.syntaxio._
+import Adapter.Path._
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import java.io.File

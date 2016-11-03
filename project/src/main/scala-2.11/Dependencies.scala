@@ -11,7 +11,7 @@ object Dependencies extends CommonDependencies {
   def sbtIo(v:String)        = "org.scala-sbt" %% "io" % "1.0.0-M6"
   def sbtIvy(v:String)       = "org.scala-sbt" %% "librarymanagement" % "0.1.0-M12"
   def sbtLogging(v:String)   = "org.scala-sbt" %% "util-logging" % "0.1.0-M14"
-  def sbtLaunchInt(v:String) = "org.scala-sbt" % "launcher" % "1.0.0" % "provided"
+  def sbtLaunchInt(v:String) = "org.scala-sbt" % "launcher" % "1.0.0"
   def sbtLauncher(v:String)  = "org.scala-sbt" % "launcher" % "1.0.0"
   def sbtSbt(v:String)       = "org.scala-sbt" % "sbt" % v
 

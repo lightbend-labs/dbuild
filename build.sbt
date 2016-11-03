@@ -115,14 +115,14 @@ lazy val repo = (
   SubProj("repo")
   dependsOn(adapter, metadata, logging)
   dependsOnRemote(mvnAether, dispatch, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
-  dependsOnSbt(sbtIo, sbtLaunchInt)
+  dependsOnSbt(sbtIo, sbtLaunchInt, sbtLogging)
 )
 
 lazy val core = (
   SubProj("core")
   dependsOnRemote(javaMail)
   dependsOn(adapter,metadata, graph, hashing, logging, repo)
-  dependsOnSbt(sbtIo)
+  dependsOnSbt(sbtIo, sbtLogging)
 )
 
 lazy val proj = (
@@ -195,7 +195,7 @@ lazy val build = (
   dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
   dependsOnRemote(aws, uriutil, dispatch, jsch, oro, scallop, commonsLang)
   dependsOnRemote(gpgLibIf210:_*)
-  dependsOnSbt(sbtLaunchInt, sbtLauncher)
+  dependsOnSbt(sbtLaunchInt, sbtLauncher, sbtLogging, sbtIo)
   settings(skip211:_*)
   settings(SbtSupport.settings:_*)
   settings(

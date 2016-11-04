@@ -43,8 +43,8 @@ object Adapter {
   type Artifact = sbt.Artifact
   type ProjectResolver = sbt.ProjectResolver
   type ScalaInstance = sbt.ScalaInstance
-  val ScalaInstance = sbt.ScalaInstance
-  val Load = sbt.dbuild.hack.DbuildHack.Load
+  lazy val ScalaInstance = sbt.ScalaInstance
+  lazy val Load = sbt.dbuild.hack.DbuildHack.Load
   val applyCross: (String, Option[String => String]) => String =
    sbt.CrossVersion.applyCross
   def defaultID(base: File, prefix: String = "default") =

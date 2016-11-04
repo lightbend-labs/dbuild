@@ -56,7 +56,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       log.warn("**** Warning: no artifacts found in project " + config.name)
       val module = config.uri.substring(4)
       val modRevId = ModuleRevisionId.parse(module)
-      ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
+      ExtractedBuildMetaH(modRevId.getRevision, Seq.empty, Seq.empty)
     } else {
       val modRevId = artifactReports(0).getArtifact.getModuleRevisionId
       val module = modRevId.getModuleId()
@@ -82,7 +82,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val deps = loaded.flatMap { _.getAllArtifacts.toSeq }.distinct
       if (deps.nonEmpty) log.info("Dependencies of project " + config.name + ":")
       deps foreach { d => log.info("  " + d) }
-      val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
+      val q = ExtractedBuildMetaH(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
         firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
         loaded.flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))
       log.debug(q.toString)

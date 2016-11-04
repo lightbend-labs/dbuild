@@ -17,6 +17,8 @@ import com.typesafe.dbuild.project.cleanup.Recycling.{ updateTimeStamp, markSucc
 import com.typesafe.dbuild.model.ExtractionOK
 import org.apache.ivy.core.module.id.ModuleRevisionId
 import com.typesafe.dbuild.model.ProjectRef
+import com.typesafe.dbuild.model.SeqDepsModifiersH._
+import com.typesafe.dbuild.model.SeqStringH._
 
 /** This is used to extract dependencies from projects. */
 class Extractor(

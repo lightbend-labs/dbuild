@@ -30,6 +30,7 @@ import org.apache.ivy.core.resolve.IvyNode
 import org.apache.ivy.core.module.descriptor.Configuration
 import org.apache.ivy.core.module.descriptor.DefaultDependencyArtifactDescriptor
 import com.typesafe.dbuild.project.build.BuildDirs._
+import com.typesafe.dbuild.model.SeqStringH._
 
 object IvyMachinery {
   // there are two stages to the madness below. The first: we create a dummy caller, and add the module we need as a dependency.

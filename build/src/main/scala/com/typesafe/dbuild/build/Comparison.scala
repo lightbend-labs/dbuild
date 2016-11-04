@@ -15,6 +15,7 @@ import java.util.jar.JarFile
 import java.util.jar.JarEntry
 import java.io.FileInputStream
 import org.apache.oro.text.regex
+import com.typesafe.dbuild.model.SeqStringH._
 
 class Comparison(options: GeneralOptions, log: Logger) extends OptionTask(log) {
   def id = "Comparison"

@@ -3,6 +3,7 @@ package com.typesafe.dbuild.model
 import Utils.{ writeValue, canSeeSpace }
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.dbuild.hashing
+import com.typesafe.dbuild.model.SeqStringH._
 
 /**
  * Information on how to build a project.  Consists of both dbuild
@@ -66,7 +67,7 @@ case class RepeatableDepInfo(
   // the two Seqs should probably be converted into a Seq[(String,String)].
 )
 
-object RepeatableDBuildConfig {
+object RepeatableDBuildConfigH {
   def fromExtractionOutcome(outcome: ExtractionOK) = RepeatableDBuildConfig(outcome.pces)
 }
 /**

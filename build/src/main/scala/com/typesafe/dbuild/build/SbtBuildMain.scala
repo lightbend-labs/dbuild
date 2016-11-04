@@ -23,6 +23,8 @@ import java.util.TimeZone
 import collection.JavaConverters._
 import scala.collection.JavaConversions._
 import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.dbuild.model.SeqDBCH._
+import com.typesafe.dbuild.model.SeqStringH._
 
 /**
  * These options are created by SbtBuildMain, and are propagated to most stages of building, as

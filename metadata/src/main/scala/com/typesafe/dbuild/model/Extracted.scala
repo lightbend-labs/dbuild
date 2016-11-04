@@ -1,6 +1,10 @@
 package com.typesafe.dbuild.model
 import com.fasterxml.jackson.annotation.{ JsonCreator, JsonProperty }
 
+// Note: all of the case classes in this file are serialized/deserialized
+// by using the "jacks" library. For that library to work correctly, there
+// must not be any companion objects defined for those case classes.
+
 /**
  * A project dep is an extracted *external* build dependency.  I.e. this is a
  * maven/ivy artifact that exists and is built external to a local build.
@@ -70,7 +74,7 @@ case class ExtractedBuildMeta(@JsonProperty("proj-info") projInfo: Seq /*Levels*
         "%s -> (%s, %s, %s)" format (index, version, projects.mkString("\n\t", "\n\t", "\n"), subproj.mkString("\n  ", ", ", "\n"))
     })
 }
-object ExtractedBuildMeta {
+object ExtractedBuildMetaH {
   def apply(version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty): ExtractedBuildMeta =
     ExtractedBuildMeta(Seq /*Levels*/ (ProjMeta(version, projects, subproj)))
 }

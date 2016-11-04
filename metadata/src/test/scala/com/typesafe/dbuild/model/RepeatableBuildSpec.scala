@@ -2,6 +2,7 @@ package com.typesafe.dbuild.model
 
 import org.specs2.mutable.Specification
 import Utils.{writeValue,readValue}
+import SeqDepsModifiersH._
 
 import com.lambdaworks.jacks._
 import JacksOption._

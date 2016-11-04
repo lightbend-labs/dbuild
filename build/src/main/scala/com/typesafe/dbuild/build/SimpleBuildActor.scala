@@ -21,6 +21,7 @@ import java.io.File
 import com.typesafe.dbuild.repo.core.GlobalDirs
 import org.apache.maven.execution.BuildFailure
 import Logger.prepareLogMsg
+import com.typesafe.dbuild.model.SeqDBCH._
 
 case class RunDBuild(conf: DBuildConfiguration, confName: String,
   buildTarget: Option[String], logger: Logger, options: BuildRunOptions)
@@ -157,7 +158,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 case Right(o) => o
               }
 
-              nest(RepeatableDBuildConfig.fromExtractionOutcome(extractionOutcome)) { fullBuild =>
+              nest(RepeatableDBuildConfigH.fromExtractionOutcome(extractionOutcome)) { fullBuild =>
                 // what we call "RepeatableDBuildConfig" is actually only the portion of data that
                 // affect the build. Further options that do /not/ affect the build, but control dbuild in
                 // other ways (notifications, resolvers, etc), are in the GeneralOptions.

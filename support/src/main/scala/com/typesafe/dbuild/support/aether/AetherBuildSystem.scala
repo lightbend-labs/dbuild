@@ -437,9 +437,9 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
         if (a.getClassifier != "jar" && a.getClassifier != "") Some(a.getClassifier) else None)
     }
 
-    ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
+    ExtractedBuildMetaH(modRevId.getRevision, Seq.empty, Seq.empty)
     // (version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty)
-    val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(modRevId.getName()), modRevId.getOrganisation(),
+    val q = ExtractedBuildMetaH(modRevId.getRevision, Seq(Project(fixName(modRevId.getName()), modRevId.getOrganisation(),
       //  artifacts: Seq[ProjectRef],
       arts map artToProjectRef,
       //  dependencies: Seq[ProjectRef])

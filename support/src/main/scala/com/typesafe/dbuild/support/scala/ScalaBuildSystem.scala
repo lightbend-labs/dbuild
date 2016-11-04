@@ -24,6 +24,7 @@ import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import com.typesafe.dbuild.support.NameFixer.fixName
 import com.typesafe.dbuild.project.build.BuildDirs.dbuildDirName
+import com.typesafe.dbuild.model.SeqStringH._
 
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystemCore {
@@ -55,7 +56,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     // ok, now we just have to merge everything together.
-    val newMeta = ExtractedBuildMeta(meta.version, configAndExtracted.extracted.projects, meta.subproj)
+    val newMeta = ExtractedBuildMetaH(meta.version, configAndExtracted.extracted.projects, meta.subproj)
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta
   }

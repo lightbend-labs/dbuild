@@ -27,7 +27,7 @@ import org.apache.ivy.util.ChecksumHelper
 import com.typesafe.dbuild.support.NameFixer.fixName
 import org.apache.ivy
 import com.typesafe.dbuild.project.build.BuildDirs.localRepos
-
+import com.typesafe.dbuild.model.SeqDBCH._
 /**
  * The "assemble" build system accepts a list of nested projects, with the same format
  * as the "build" section of a normal dbuild configuration file.
@@ -145,7 +145,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     // postprocessing of the subproject names
     val adapted = adaptSubProjects(projectsAndSubprojects)
 
-    val newMeta = ExtractedBuildMeta("0.0.0",
+    val newMeta = ExtractedBuildMetaH("0.0.0",
       allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>
         // remove all dependencies that are not already provided by this
         // assembled project (we pretend the resulting assembled set has

@@ -14,6 +14,8 @@ import com.typesafe.dbuild.project.build.LocalBuildRunner
 import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.model.Utils.{ writeValue, readValue }
 import com.typesafe.dbuild.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
+import com.typesafe.dbuild.model.SeqSeqStringH._
+import com.typesafe.dbuild.model.SeqStringH._
 
 /** Implementation of the SBT build system. */
 class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boolean) extends BuildSystemCore {

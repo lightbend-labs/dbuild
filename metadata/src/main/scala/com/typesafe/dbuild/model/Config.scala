@@ -13,6 +13,13 @@ import collection.JavaConverters._
 import com.typesafe.dbuild.deploy.DeployTarget
 import com.typesafe.dbuild.hashing
 
+import SeqBooleanH._
+import SeqDBCH._
+import SeqDepsModifiersH._
+import SeqNotificationH._
+import SeqSelectorElementH._
+import SeqSeqStringH._
+import SeqStringH._
 /**
  * Metadata about a build.  This is extracted from a config file and contains enough information
  * to further extract information about a build.
@@ -347,7 +354,7 @@ case class SeqString(override val s: Seq[String]) extends Flex[String](s) {
 }
 class SeqStringDeserializer extends SeqFlexDeserializer[String, SeqString]
 class SeqStringSerializer extends SeqFlexSerializer[String]
-object SeqString {
+object SeqStringH {
   implicit def SeqToSeqString(s: Seq[String]): SeqString = SeqString(s)
   implicit def SeqStringToSeq(a: SeqString): Seq[String] = a.s
 }
@@ -362,7 +369,7 @@ case class SeqBoolean(override val s: Seq[Boolean]) extends Flex[Boolean](s) {
 }
 class SeqBooleanDeserializer extends SeqFlexDeserializer[Boolean, SeqBoolean]
 class SeqBooleanSerializer extends SeqFlexSerializer[Boolean]
-object SeqBoolean {
+object SeqBooleanH {
   implicit def SeqToSeqBoolean(s: Seq[Boolean]): SeqBoolean = SeqBoolean(s)
   implicit def SeqBooleanToSeq(a: SeqBoolean): Seq[Boolean] = a.s
 }
@@ -376,7 +383,7 @@ object SeqBoolean {
 case class SeqDBC(override val s: Seq[DBuildConfig]) extends Flex[DBuildConfig](s)
 class SeqDBCDeserializer extends SeqFlexDeserializer[DBuildConfig, SeqDBC]
 class SeqDBCSerializer extends SeqFlexSerializer[DBuildConfig]
-object SeqDBC {
+object SeqDBCH {
   implicit def SeqToSeqDBC(s: Seq[DBuildConfig]): SeqDBC = SeqDBC(s)
   implicit def SeqDBCToSeq(a: SeqDBC): Seq[DBuildConfig] = a.s
 }
@@ -389,7 +396,7 @@ object SeqDBC {
 case class SeqDepsModifiers(override val s: Seq[DepsModifiers]) extends Flex[DepsModifiers](s)
 class SeqDMDeserializer extends SeqFlexDeserializer[DepsModifiers, SeqDepsModifiers]
 class SeqDMSerializer extends SeqFlexSerializer[DepsModifiers]
-object SeqDepsModifiers {
+object SeqDepsModifiersH {
   implicit def SeqToSeqDM(s: Seq[DepsModifiers]): SeqDepsModifiers = SeqDepsModifiers(s)
   implicit def SeqDMToSeq(a: SeqDepsModifiers): Seq[DepsModifiers] = a.s
   implicit def OptToSeqDM(o: Option[DepsModifiers]): SeqDepsModifiers = SeqDepsModifiers(o.toSeq)
@@ -407,7 +414,7 @@ case class SeqSeqString(override val s: Seq[SeqString]) extends Flex[SeqString](
   // turn the SeqSeqString into a Seq[Seq[String]]
   def expand = s map {_.s}
 }
-object SeqSeqString {
+object SeqSeqStringH {
   implicit def SeqToSeqSeqString(s: Seq[SeqString]): SeqSeqString = SeqSeqString(s)
   implicit def SeqSeqStringToSeq(a: SeqSeqString): Seq[SeqString] = a.s
 }
@@ -779,7 +786,7 @@ case class SeqSelectorElement(override val s: Seq[SelectorElement]) extends Flex
 }
 class SeqElementDeserializer extends SeqFlexDeserializer[SelectorElement, SeqSelectorElement]
 class SeqElementSerializer extends SeqFlexSerializer[SelectorElement]
-object SeqSelectorElement {
+object SeqSelectorElementH {
   implicit def SeqToSeqSelectorElement(s: Seq[SelectorElement]): SeqSelectorElement = SeqSelectorElement(s)
   implicit def SeqSelectorElementToSeq(a: SeqSelectorElement): Seq[SelectorElement] = a.s
 }
@@ -793,7 +800,7 @@ object SeqSelectorElement {
 case class SeqNotification(override val s: Seq[Notification]) extends Flex[Notification](s)
 class SeqNotificationDeserializer extends SeqFlexDeserializer[Notification, SeqNotification]
 class SeqNotificationSerializer extends SeqFlexSerializer[Notification]
-object SeqNotification {
+object SeqNotificationH {
   implicit def SeqToSeqNotification(s: Seq[Notification]): SeqNotification = SeqNotification(s)
   implicit def SeqNotificationToSeq(a: SeqNotification): Seq[Notification] = a.s
 }
@@ -976,7 +983,7 @@ class NotificationKindSerializer extends JsonSerializer[NotificationKind] {
 
 class NotificationDeserializer extends JsonDeserializer[Notification] {
   override def deserialize(p: JsonParser, ctx: DeserializationContext): Notification = {
-    val notificationKinds = NotificationKind.kinds
+    val notificationKinds = NotificationKindH.kinds
 
     val tf = ctx.getConfig.getTypeFactory()
     val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[NotificationShadow]), null)
@@ -1133,7 +1140,7 @@ case class Smtp(
 
 case class ConsoleNotification() extends NotificationKind
 
-object NotificationKind {
+object NotificationKindH {
   val kinds: Map[String, java.lang.Class[_ <: NotificationKind]] = Map(
     "console" -> classOf[ConsoleNotification],
     "flowdock" -> classOf[FlowdockNotification],

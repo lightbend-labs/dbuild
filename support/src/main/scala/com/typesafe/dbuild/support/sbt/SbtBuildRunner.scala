@@ -14,6 +14,7 @@ import com.typesafe.dbuild.project.build.BuildDirs._
 import com.typesafe.dbuild.support.sbt.SbtRunner.SbtFileNames._
 import com.typesafe.dbuild.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
 import com.typesafe.dbuild.model.SeqSeqString
+import com.typesafe.dbuild.model.SeqStringH._
 /**
  * Rewiring a level needs the information contained in RewireInput:
  *

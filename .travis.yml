@@ -2,7 +2,7 @@ language: scala
 
 jdk:
 #  - openjdk6
-  - oraclejdk7
+  - oraclejdk8
 
 sudo: false
 
@@ -11,9 +11,9 @@ env:
     - JVM_OPTS="-Xms1024m -Xmx1024m -XX:ReservedCodeCacheSize=128m -XX:MaxPermSize=256m"
 
 script:
-  - sbt "^ test"
-  - sbt "^ publishLocal"
-  - sbt "^ it:test"
+  - sbt "test"
+  - sbt "publishLocal"
+  - sbt "it:test"
 
 notifications:
   email:

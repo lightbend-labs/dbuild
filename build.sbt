@@ -1,6 +1,6 @@
 import Dependencies._
 
-def MyVersion: String = "0.9.7-RC1"
+def MyVersion: String = "0.9.7-SNAPSHOT"
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
@@ -212,17 +212,5 @@ lazy val build = (
 lazy val docs:sbt.Project = (
   SubProj("docs")
   settings(DocsSupport.settings:_*)
-/*
-  settings(makeSite := Def.sequential(
-    task {
-      val file = (sourceDirectory in sphynx).value / "version.py"
-      val sv = scalaVersion.value
-      val v = sbtVersion.value
-      IO.write(sourceDirectory.value, ("release = '%s'\n" format (version.value)))
-      Seq(file)
-    },
-    makeSite.value
-  ))
-*/
 )
 

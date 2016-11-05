@@ -1,7 +1,9 @@
 package com.typesafe.dbuild.build
 
 import sbt._
-import Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{IO,allPaths}
+import Adapter.syntaxio._
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import java.io.File
@@ -13,6 +15,7 @@ import java.util.jar.JarFile
 import java.util.jar.JarEntry
 import java.io.FileInputStream
 import org.apache.oro.text.regex
+import com.typesafe.dbuild.model.SeqStringH._
 
 class Comparison(options: GeneralOptions, log: Logger) extends OptionTask(log) {
   def id = "Comparison"

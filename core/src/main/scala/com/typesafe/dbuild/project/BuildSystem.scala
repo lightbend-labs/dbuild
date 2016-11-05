@@ -3,7 +3,7 @@ package com.typesafe.dbuild.project
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import java.io.File
-import sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter.Path._
 
 case class BuildData(log: Logger, debug: Boolean)
 

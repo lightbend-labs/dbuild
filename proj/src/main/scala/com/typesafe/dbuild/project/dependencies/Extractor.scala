@@ -1,7 +1,8 @@
 package com.typesafe.dbuild.project.dependencies
 
-import sbt.IO
-import sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.IO
+import Adapter.Path._
 import java.io.File
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import com.typesafe.dbuild.model.{ ProjectConfigAndExtracted, ProjectBuildConfig, ExtractedBuildMeta, SeqDepsModifiers }
@@ -16,6 +17,8 @@ import com.typesafe.dbuild.project.cleanup.Recycling.{ updateTimeStamp, markSucc
 import com.typesafe.dbuild.model.ExtractionOK
 import org.apache.ivy.core.module.id.ModuleRevisionId
 import com.typesafe.dbuild.model.ProjectRef
+import com.typesafe.dbuild.model.SeqDepsModifiersH._
+import com.typesafe.dbuild.model.SeqStringH._
 
 /** This is used to extract dependencies from projects. */
 class Extractor(

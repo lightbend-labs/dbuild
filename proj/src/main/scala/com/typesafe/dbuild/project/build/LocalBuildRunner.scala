@@ -6,7 +6,8 @@ import com.typesafe.dbuild.project.resolve.ProjectResolver
 import Logger.prepareLogMsg
 import java.io.File
 import com.typesafe.dbuild.repo.core._
-import sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
 import com.typesafe.dbuild.project.BuildData

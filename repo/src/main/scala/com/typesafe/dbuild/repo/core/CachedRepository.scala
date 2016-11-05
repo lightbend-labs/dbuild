@@ -1,7 +1,9 @@
 package com.typesafe.dbuild.repo.core
 
 import java.io.File
-import sbt.IO
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.IO
+import Adapter.Path._
 import dispatch.classic._
 
 /** A cached remote repository. */

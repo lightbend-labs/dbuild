@@ -5,7 +5,8 @@ package sbt
 import com.typesafe.dbuild.logging.{ConsoleLogger, Logger}
 import com.typesafe.dbuild.model.{ProjectRef, SbtExtraConfig, ProjectBuildConfig, ExtractionConfig}
 import org.specs2.mutable.Specification
-
+import com.typesafe.dbuild.model.SeqSeqStringH._
+import com.typesafe.dbuild.model.SeqStringH._
 
 // TDOO - Because this requires the sbt plugin to be published, we have to publsh locally
 // before we can run integration tests.

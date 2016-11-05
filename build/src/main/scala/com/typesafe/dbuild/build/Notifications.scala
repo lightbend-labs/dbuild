@@ -11,6 +11,9 @@ import RecipientType._
 import com.typesafe.dbuild.deploy.Creds.loadCreds
 import com.typesafe.dbuild.model.TemplateFormatter
 import dispatch.classic.{ Logger => _, _ }
+import com.typesafe.dbuild.model.SeqNotificationH._
+import com.typesafe.dbuild.model.SeqSelectorElementH._
+import com.typesafe.dbuild.model.SeqStringH._
 
 //
 // Ideally, the ConsoleNotification should become the mechanism by which the entire log of the

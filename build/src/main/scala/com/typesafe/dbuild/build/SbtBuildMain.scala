@@ -13,7 +13,7 @@ import com.typesafe.config.ConfigValueFactory
 import com.typesafe.dbuild.model.Utils.readValueT
 import com.typesafe.dbuild.utils.Time.timed
 import collection.immutable.SortedMap
-import com.typesafe.dbuild.repo.core.Defaults
+import com.typesafe.dbuild.adapter.Defaults
 import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
 import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException
@@ -23,6 +23,8 @@ import java.util.TimeZone
 import collection.JavaConverters._
 import scala.collection.JavaConversions._
 import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.dbuild.model.SeqDBCH._
+import com.typesafe.dbuild.model.SeqStringH._
 
 /**
  * These options are created by SbtBuildMain, and are propagated to most stages of building, as

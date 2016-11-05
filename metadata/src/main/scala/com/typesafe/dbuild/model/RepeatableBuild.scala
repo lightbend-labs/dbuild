@@ -3,6 +3,7 @@ package com.typesafe.dbuild.model
 import Utils.{ writeValue, canSeeSpace }
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.dbuild.hashing
+import com.typesafe.dbuild.model.SeqStringH._
 
 /**
  * Information on how to build a project.  Consists of both dbuild
@@ -66,7 +67,7 @@ case class RepeatableDepInfo(
   // the two Seqs should probably be converted into a Seq[(String,String)].
 )
 
-object RepeatableDBuildConfig {
+object RepeatableDBuildConfigH {
   def fromExtractionOutcome(outcome: ExtractionOK) = RepeatableDBuildConfig(outcome.pces)
 }
 /**
@@ -131,7 +132,13 @@ case class RepeatableDBuildConfig(builds: Seq[ProjectConfigAndExtracted]) {
     // more appropriate to print the actual subproject name, rather than the Project
     case class Origin(fromProject: String, spaces: SeqString)
     case class Info(artOrg: String, artName: String, origin: Origin)
-    val generatedArtifacts = builds flatMap { b => b.extracted.projects.map { a => Info(a.organization, a.name, Origin(b.config.name, b.getSpace.to)) } }
+
+    // declare a collision if any artifacts in two distint projects have same organization and name
+    // (even if they differ in their extension or classifiers)
+    val generatedArtifacts = builds flatMap { b => b.extracted.projects.flatMap { _.artifacts.groupBy {
+      case ProjectRef(name, org, ext, classifier) => (org, name)
+    }.map { case ((org, name), _) => Info(org, name, Origin(b.config.name, b.getSpace.to)) } } }
+
     val byArt = (generatedArtifacts.groupBy { case Info(org, name, origin) => (org, name) }).toSeq
     val collisions = byArt flatMap {
       case ((org, name), seqInfo) =>

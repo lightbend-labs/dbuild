@@ -2,7 +2,9 @@ package com.typesafe.dbuild.plugin
 
 import sbt._
 
-object DBuildPlugin extends Plugin {
+object DBuildPlugin extends AutoPlugin {
+  override def trigger = allRequirements
+  override def requires = plugins.JvmPlugin
   override def buildSettings = (
       DBuildRunner.buildSettings
     )

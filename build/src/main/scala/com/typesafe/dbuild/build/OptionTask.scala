@@ -7,6 +7,7 @@ import Logger.prepareLogMsg
 import com.typesafe.dbuild.model._
 import java.io.File
 import com.typesafe.dbuild.repo.core.{ LocalRepoHelper, Repository }
+import com.typesafe.dbuild.model.SeqStringH._
 
 /**
  * Defines a task that will run before or after the build, defined somewhere

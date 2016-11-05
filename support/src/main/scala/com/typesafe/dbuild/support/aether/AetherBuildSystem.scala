@@ -21,8 +21,10 @@ import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.repo.core.LocalArtifactMissingException
 import java.io.File
-import sbt.Path._
-import sbt.IO
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO,allPaths}
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -435,9 +437,9 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
         if (a.getClassifier != "jar" && a.getClassifier != "") Some(a.getClassifier) else None)
     }
 
-    ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
+    ExtractedBuildMetaH(modRevId.getRevision, Seq.empty, Seq.empty)
     // (version: String, projects: Seq[Project], subproj: Seq[String] = Seq.empty)
-    val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(modRevId.getName()), modRevId.getOrganisation(),
+    val q = ExtractedBuildMetaH(modRevId.getRevision, Seq(Project(fixName(modRevId.getName()), modRevId.getOrganisation(),
       //  artifacts: Seq[ProjectRef],
       arts map artToProjectRef,
       //  dependencies: Seq[ProjectRef])
@@ -515,7 +517,7 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     // the pom art will be the first one in "arts"
     val (descriptorResult, arts) = resolveAether(download, localRepo, mainJar, sources, javadoc, Some(availableRepo), log)
     // DELETE from the resolved local repository all files called "_remote.repositories", which are aether temporary leftovers
-    localRepo.**(new sbt.ExactFilter("_remote.repositories")).get.foreach { IO.delete }
+    localRepo.**(new Adapter.ExactFilter("_remote.repositories")).get.foreach { IO.delete }
 
     // TODO: add support for source/javadoc/etc jars, as well as plugins.
 
@@ -608,7 +610,7 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     //BuildSubArtifactsOut(subProjName, artifacts, shas, moduleInfo)
     val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("default-aether-project",
       arts.map { aetherArtifactToArtifactLocation },
-      localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
+      allPaths(localRepo).get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
       ModuleInfo(organization = finalModRevId.getOrganisation,
         name = trimName, version = finalModRevId.getRevision, {
           // We need to calculate CrossBuildProperties; that is made a bit complicated by the fact that

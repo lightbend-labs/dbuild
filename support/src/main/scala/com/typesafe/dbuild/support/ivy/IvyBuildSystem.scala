@@ -5,8 +5,10 @@ import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.repo.core.LocalArtifactMissingException
 import java.io.File
-import sbt.Path._
-import sbt.IO
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO,allPaths}
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -54,7 +56,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       log.warn("**** Warning: no artifacts found in project " + config.name)
       val module = config.uri.substring(4)
       val modRevId = ModuleRevisionId.parse(module)
-      ExtractedBuildMeta(modRevId.getRevision, Seq.empty, Seq.empty)
+      ExtractedBuildMetaH(modRevId.getRevision, Seq.empty, Seq.empty)
     } else {
       val modRevId = artifactReports(0).getArtifact.getModuleRevisionId
       val module = modRevId.getModuleId()
@@ -80,7 +82,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
       val deps = loaded.flatMap { _.getAllArtifacts.toSeq }.distinct
       if (deps.nonEmpty) log.info("Dependencies of project " + config.name + ":")
       deps foreach { d => log.info("  " + d) }
-      val q = ExtractedBuildMeta(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
+      val q = ExtractedBuildMetaH(modRevId.getRevision, Seq(Project(fixName(first.getName), first.getOrganisation,
         firstNode.getAllArtifacts.toSeq.map(artifactToProjectRef).distinct,
         loaded.flatMap { _.getAllArtifacts.toSeq.map(artifactToProjectRef) }.distinct)))
       log.debug(q.toString)
@@ -153,7 +155,7 @@ class IvyBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends Bu
     val modulePluginInfo = pluginAttrs(module)
     val q = BuildArtifactsOut(Seq(BuildSubArtifactsOut("default-ivy-project",
       publishArts,
-      localRepo.***.get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
+      allPaths(localRepo).get.filterNot(file => file.isDirectory) map { LocalRepoHelper.makeArtifactSha(_, localRepo) },
       com.typesafe.dbuild.manifest.ModuleInfo(organization = module.getOrganisation,
         name = fixName(module.getName), version = version, {
           import com.typesafe.dbuild.manifest.ModuleAttributes

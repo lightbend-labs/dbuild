@@ -1,7 +1,9 @@
 package com.typesafe.dbuild.repo.core
 
 import java.io.File
-import sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.IO
+import Adapter.Path._
 
 /** Interface for a repository of raw key-value files. */
 trait ReadableRepository {
@@ -25,7 +27,7 @@ object Repository {
     def readCredFile(f: File): Option[(String, Credentials)] =
       if (f.exists) {
         val props = new java.util.Properties
-        sbt.IO.load(props, f)
+        IO.load(props, f)
         def getProp(name: String): Option[String] =
           Option(props getProperty name)
         for {

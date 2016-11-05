@@ -2,8 +2,10 @@ package com.typesafe.dbuild.support.aether
 
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.model._
-import _root_.sbt.Path._
-import _root_.sbt.IO
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO, toFF}
+import Adapter.syntaxio._
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import java.io.File
 import org.apache.ivy.core.module.id.{ ModuleId, ModuleRevisionId }
@@ -29,7 +31,7 @@ class AetherProjectResolver(repos: List[xsbti.Repository]) extends ProjectResolv
   def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = {
     // clean the directory content, just in case there are leftovers
     // (we do not really need to re-resolve non-snapshot artifacts, but let's be conservative)
-    IO.delete(baseDir.*("*").get)
+    IO.delete(baseDir.*(toFF("*")).get)
 
     val modRevId = AetherBuildSystem.getProjectModuleID(config)
     val revision = modRevId.getRevision

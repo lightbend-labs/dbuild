@@ -4,8 +4,10 @@ import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import java.io.File
-import sbt.IO
-import sbt.Path._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{IO,toFF}
+import Adapter.Path._
+import Adapter.syntaxio._
 
 /**
  * The nil resolver does absolutely nothing.
@@ -17,7 +19,7 @@ class NilProjectResolver() extends ProjectResolver {
 
   def resolve(config: ProjectBuildConfig, baseDir: File, log: Logger): ProjectBuildConfig = {
     // scrub the whole content before returning
-    IO.delete(baseDir.*("*").get)
+    IO.delete(baseDir.*(toFF("*")).get)
     config
   }
 }

@@ -2,7 +2,9 @@ package com.typesafe.dbuild.repo.core
 
 import com.typesafe.dbuild.model._
 import java.io.File
-import sbt.{ RichFile, IO, Path }
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{ RichFile, IO, Path }
+import Adapter.syntaxio._
 import Path._
 import com.typesafe.dbuild.model.Utils.{ writeValue, readValue }
 import com.typesafe.dbuild.logging.Logger

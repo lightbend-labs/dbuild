@@ -5,9 +5,11 @@ import com.typesafe.dbuild.support.BuildSystemCore
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.FileUtils
 import _root_.java.io.File
-import _root_.sbt.Path._
-import _root_.sbt.IO
-import _root_.sbt.IO.relativize
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO,NameFilter,allPaths,toFF}
+import Adapter.IO.relativize
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -21,8 +23,8 @@ import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import com.typesafe.dbuild.support.NameFixer.fixName
-import _root_.sbt.NameFilter
 import com.typesafe.dbuild.project.build.BuildDirs.dbuildDirName
+import com.typesafe.dbuild.model.SeqStringH._
 
 /** Implementation of the Scala  build system. */
 object ScalaBuildSystem extends BuildSystemCore {
@@ -54,7 +56,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     }
 
     // ok, now we just have to merge everything together.
-    val newMeta = ExtractedBuildMeta(meta.version, configAndExtracted.extracted.projects, meta.subproj)
+    val newMeta = ExtractedBuildMetaH(meta.version, configAndExtracted.extracted.projects, meta.subproj)
     log.info(newMeta.subproj.mkString("These subprojects will be built: ", ", ", ""))
     newMeta
   }
@@ -203,7 +205,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     targets foreach {
       case (target, path) =>
         // erase the content of the private cache before each stage of a build, just in case.
-        IO.delete(localM2repo.*("*").get)
+        IO.delete(localM2repo.*(toFF("*")).get)
         val targetDir = path.split("/").foldLeft(dir)(_ / _)
         Process(Seq("ant", target,
           "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
@@ -233,7 +235,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       // possible patterns:
       // org-with-dots/name/var/name-ver.pom
       // org-with-dots/name_suff/var/name_suff-ver.pom
-      val nameFilter = (name: NameFilter) | ((name + "_*"): NameFilter)
+      val nameFilter = (toFF(name)) | (toFF((name + "_*")))
       val potentialDirs = od.*(nameFilter).get
       if (potentialDirs.isEmpty) {
         sys.error("Cannot find artifacts dir for: " + modID)
@@ -245,7 +247,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       // let's look for var/nameWithCross-ver.pom
       val SearchPattern = """([^/]*)/([^/]*)-\1.pom""".r
       val crossSuffixesAndVers = potentialDirs.flatMap { d =>
-        d.***.get.filterNot(file => file.isDirectory).map { f =>
+        allPaths(d).get.filterNot(file => file.isDirectory).map { f =>
           val relative = relativize(d, f) getOrElse sys.error("Internal error in relative paths creation. Please report.")
           relative match {
             case SearchPattern(ver, nameAndCross) =>
@@ -277,7 +279,7 @@ object ScalaBuildSystem extends BuildSystemCore {
       // use the list of artifacts as a hint as to which directories should be looked up,
       // but actually scan the dirs rather than using the list of artifacts (there may be
       // additional files like checksums, for instance).
-      artifacts.map(artifactDir(localRepo, _, crossSuffix)).distinct.flatMap { _.***.get }.
+      artifacts.map(artifactDir(localRepo, _, crossSuffix)).distinct.flatMap { allPaths(_).get }.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map(f)
     }
 

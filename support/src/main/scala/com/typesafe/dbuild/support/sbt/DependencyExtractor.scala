@@ -2,13 +2,16 @@ package com.typesafe.dbuild.support.sbt
 
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
-import _root_.sbt.{ IO, Path, PathExtra }
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{ IO, Path }
+import Adapter.syntaxio._
 import Path._
 import _root_.java.io.File
 import sys.process.Process
 import com.typesafe.dbuild.model.Utils.{ readValue, writeValue }
 import com.typesafe.dbuild.logging.Logger.logFullStackTrace
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.typesafe.dbuild.model.SeqStringH._
 
 /**
  * Input data to the dbuild sbt plugin

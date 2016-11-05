@@ -4,9 +4,11 @@ import com.typesafe.dbuild.model._
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.FileUtils
 import _root_.java.io.File
-import _root_.sbt.Path._
-import _root_.sbt.IO
-import _root_.sbt.IO.relativize
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.Path._
+import Adapter.{IO,NameFilter,allPaths,toFF}
+import Adapter.IO.relativize
+import Adapter.syntaxio._
 import com.typesafe.dbuild.logging.Logger
 import sys.process._
 import com.typesafe.dbuild.repo.core.LocalRepoHelper
@@ -23,10 +25,9 @@ import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import com.typesafe.dbuild.support.NameFixer.fixName
-import _root_.sbt.NameFilter
 import org.apache.ivy
 import com.typesafe.dbuild.project.build.BuildDirs.localRepos
-
+import com.typesafe.dbuild.model.SeqDBCH._
 /**
  * The "assemble" build system accepts a list of nested projects, with the same format
  * as the "build" section of a normal dbuild configuration file.
@@ -144,7 +145,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     // postprocessing of the subproject names
     val adapted = adaptSubProjects(projectsAndSubprojects)
 
-    val newMeta = ExtractedBuildMeta("0.0.0",
+    val newMeta = ExtractedBuildMetaH("0.0.0",
       allConfigAndExtracted.flatMap(_.extracted.projects.map { p =>
         // remove all dependencies that are not already provided by this
         // assembled project (we pretend the resulting assembled set has
@@ -206,7 +207,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     val localRepo = input.outRepo
     // We do a bunch of in-place file operations in the localRepo, before returning.
     // To avoid problems due to stale files, delete all contents before proceeding.
-    IO.delete(localRepo.*("*").get)
+    IO.delete(localRepo.*(toFF("*")).get)
 
     def mavenArtifactDir(repoDir: File, ref: ProjectRef, crossSuffix: String) =
       ref.organization.split('.').foldLeft(repoDir)(_ / _) / (ref.name + crossSuffix)
@@ -225,7 +226,7 @@ object AssembleBuildSystem extends BuildSystemCore {
         val artCross = if (isScalaCoreRef(art)) "" else crossSuffix
         Seq(mavenArtifactDir(localRepo, art, artCross),
           ivyArtifactDir(localRepo, art, artCross))
-      }.distinct.flatMap { _.***.get }.
+      }.distinct.flatMap { allPaths(_).get }.
         // Since this may be a real local maven repo, it also contains
         // the "maven-metadata-local.xml" files, which should /not/ end up in the repository.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml").map(f)
@@ -407,10 +408,10 @@ object AssembleBuildSystem extends BuildSystemCore {
     val allArtifactsOut = artifactsMap.map { _._2 }
     val available = allArtifactsOut.flatMap { _.results }.flatMap { _.artifacts }
 
-    (localRepo.***.get).filter(_.getName.endsWith(".pom")).foreach { patchPomDependencies(_, available) }
+    (allPaths(localRepo).get).filter(_.getName.endsWith(".pom")).foreach { patchPomDependencies(_, available) }
 
     val ivyHome = dir / ".ivy2" / "cache"
-    (localRepo.***.get).filter(_.getName == "ivy.xml").foreach { patchIvyDependencies(_, available, ivyHome, localRepo) }
+    (allPaths(localRepo).get).filter(_.getName == "ivy.xml").foreach { patchIvyDependencies(_, available, ivyHome, localRepo) }
 
     // dbuild SHAs must be re-computed (since the POM/Ivy files changed)
     // We preserve the list of original subprojects (and consequently modules),

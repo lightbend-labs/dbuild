@@ -1,7 +1,6 @@
 package com.typesafe.dbuild.deploy
 
 import sbt._
-import Path._
 import java.io.File
 import java.net.URI
 import com.amazonaws.services.s3.AmazonS3Client
@@ -11,12 +10,15 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.Protocol
 import dispatch.classic.{ Logger => _, _ }
 import org.omg.PortableInterceptor.SUCCESSFUL
-import sbt.Logger
 import Creds.loadCreds
-import com.jcraft.jsch.{ IO => sshIO, _ }
+import com.jcraft.jsch.{ IO => sshIO, Logger => _, _ }
 import java.util.Date
 import com.jcraft.jsch.ChannelSftp
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{IO,Logger,allPaths}
+import Adapter.syntaxio._
 import com.lambdaworks.jacks.JacksMapper
+import Adapter.Path._
 
 /**
  * A generic (S3, http, https, etc) deploy location.
@@ -133,7 +135,7 @@ abstract class IterativeDeploy[T](options: DeployInfo) extends Deploy[T](options
       // - finally, the checksums are uploaded after the main artifacts
       //
 
-      val allFiles = (dir.***).get.filter(f => !f.isDirectory)
+      val allFiles = allPaths(dir).get.filter(f => !f.isDirectory)
       val poms = allFiles.filter(f => f.getName.endsWith("-SNAPSHOT.pom"))
       //
       // we fold over the poms, reducing the set of files until we are left with just
@@ -144,7 +146,7 @@ abstract class IterativeDeploy[T](options: DeployInfo) extends Deploy[T](options
           val thisDir = pomFile.getParentFile()
           if (thisDir == null) sys.error("Unexpected: file has not parent in deploy")
           // select the files in this directory (but not in subdirectories)
-          val theseFiles = (thisDir.***).get.filter(f => !f.isDirectory && f.getParentFile() == thisDir)
+          val theseFiles = allPaths(thisDir).get.filter(f => !f.isDirectory && f.getParentFile() == thisDir)
           // if there is a matching jar, upload the jar first
           val jarFile = new java.io.File(pomFile.getPath().replaceAll("\\.[^\\.]*$", ".jar"))
           val thisSeq = if (theseFiles contains jarFile) {
@@ -285,7 +287,7 @@ class DeployHTTP(log: Logger, options: DeployInfo) extends IterativeDeploy[Unit]
   protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
     import dispatch._
     val sender =
-      url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
+      dispatch.classic.url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
     val response = (new Http with NoLogging)(sender >- { str =>
       Deploy.readSomePath[ArtifactoryResponse](str)
     })
@@ -331,7 +333,7 @@ class DeployBintray(log: Logger, options: DeployInfo) extends DeployHTTP(log, op
       val path = target.getPath
       val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path) + "/publish")
       val sender =
-        url(dest.toString).POST.as(credentials.user, credentials.pass)
+        dispatch.classic.url(dest.toString).POST.as(credentials.user, credentials.pass)
       val response = (new Http with NoLogging)(sender >- { str =>
         Deploy.readSomePath[ArtifactoryResponse](str)
       })

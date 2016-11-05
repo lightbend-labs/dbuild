@@ -2,6 +2,9 @@
 package com.typesafe.dbuild.plugin
 
 import sbt._
+import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross,ScalaInstance}
+import Adapter.syntax._
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -226,7 +229,7 @@ object DBuildRunner {
 
     val newSettings1 = {
       ptSettings map { s =>
-        SbtUpdate.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
+        Def.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
           _ match {
             case Some(r: PatternsBasedRepository) if (!r.patterns.isMavenCompatible) => ivyRepo
             case _ => mavenRepo
@@ -281,7 +284,7 @@ object DBuildRunner {
   }
 
   // as above, but assumes the transformation is a simple Project.update (aka: ~= )
-  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => SbtUpdate.update(s.key)(f) } _
+  def fixGenericK2[K](k: Scoped, f: K => K) = fixGenericTransform2(k) { s: Setting[K] => Def.update(s.key)(f) } _
 
   // Separate cases for settings and tasks (to keep the type inferencer happy)
   def fixGeneric2[K](k: SettingKey[K], m: String)(f: K => K) = fixGenericK2(k, f)(m)
@@ -379,6 +382,12 @@ object DBuildRunner {
   def fixInterProjectResolver2 =
     fixGeneric2(Keys.projectResolver, "Disabling inter-project resolver") { _ map { _ => new RawRepository(new ProjectResolver("inter-project", Map.empty)) } }
 
+  // Some projects or plugins modify the "publish" task (for instance, to use Bintray),
+  // but we need the task to point to the standard definition, so that we can publish
+  // the files to the local directories
+  def fixStandardPublish2 =
+    fixGeneric2(Keys.publish, "Resetting publish task") { _ map { _ => sbt.Classpaths.publishTask(Keys.publishConfiguration, Keys.deliver) } }
+
   // alternate version, which only removes the artifacts that are not part
   // of the selected subprojects. Might be more suitable for setupcmd; in this case,
   // local-publish-repo should not be added to the list of resolvers.
@@ -440,7 +449,7 @@ object DBuildRunner {
           val sc = s.key.scope
           Keys.scalaInstance in sc <<= Keys.appConfiguration in sc map { app =>
             val launcher = app.provider.scalaProvider.launcher
-            ScalaInstance(libraryJar(scalaHome), compilerJar(scalaHome), launcher, allJars(scalaHome): _*)
+            scalaInstance(libraryJar(scalaHome), compilerJar(scalaHome), launcher, allJars(scalaHome): _*)
           }
         }("Setting Scala instance")(oldSettings, log)
     }
@@ -605,7 +614,7 @@ object DBuildRunner {
       // current set of files in the repository against the files we had previously
       val previousFiles = previous._1
       val localRepo = config.info.outRepo.getAbsoluteFile
-      val currentFiles = (localRepo.***).get.
+      val currentFiles = (allPaths(localRepo)).get.
         filterNot(file => file.isDirectory || file.getName == "maven-metadata-local.xml")
       val newFilesShas = currentFiles.diff(previousFiles).map { LocalRepoHelper.makeArtifactSha(_, localRepo) }
 
@@ -663,6 +672,7 @@ object DBuildRunner {
 
   private def preparePublishSettings(in: BuildInput, log: ConsoleLogger, oldSettings: Seq[Setting[_]]) =
     Seq[Fixer](
+      fixStandardPublish2,
       fixPublishTos2(in.outRepo.getAbsoluteFile),
       fixPGPs2,
       fixVersions2(in)) flatMap { _(oldSettings, log) }
@@ -757,7 +767,7 @@ object DBuildRunner {
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
     cross: CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
-    val crossSuffix = CrossVersion.applyCross("", CrossVersion(cross, sv, sbv))
+    val crossSuffix = applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
     } yield model.ArtifactLocation(

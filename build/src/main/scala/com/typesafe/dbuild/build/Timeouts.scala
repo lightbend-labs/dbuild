@@ -2,11 +2,11 @@ package com.typesafe.dbuild.build
 
 import akka.actor.{ Actor, ActorRef, Props, Scheduler }
 import akka.pattern.{ ask, pipe }
-import akka.util.duration._
+import scala.concurrent.duration._
 import akka.util.Timeout
-import akka.util.Duration
-import akka.util.NonFatal
-import akka.dispatch.{ ExecutionContext, Promise, Future }
+import scala.util.control.NonFatal
+import scala.concurrent.{ ExecutionContext, Promise, Future }
+import ExecutionContext.Implicits.global
 
 object Timeouts {
   // overall timeout for the entire dbuild to complete;
@@ -35,14 +35,14 @@ object Timeouts {
    * Returns a [[akka.dispatch.Future]] that will be completed with the success or failure of the provided value
    * after the specified duration.
    */
-  def after[T](duration: Duration, using: Scheduler)(value: ⇒ Future[T])(implicit ec: ExecutionContext): Future[T] =
+  def after[T](duration: FiniteDuration, using: Scheduler)(value: ⇒ Future[T])(implicit ec: ExecutionContext): Future[T] =
     if (duration.isFinite() && duration.length < 1) value else {
       val p = Promise[T]()
       val c = using.scheduleOnce(duration) {
-        p completeWith { try value catch { case NonFatal(t) ⇒ Promise.failed(t) } }
+        p completeWith { try value catch { case NonFatal(t) ⇒ Promise.failed(t).future } }
       }
-      p onComplete { _ ⇒ c.cancel() }
-      p
+      p.future onComplete { _ ⇒ c.cancel() }
+      p.future
     }
   assert((extractionTimeout.duration + 5.minutes) < extractionPhaseTimeout.duration,
     "extractionTimeout must be a bit shorter than extractionPhaseTimeout")

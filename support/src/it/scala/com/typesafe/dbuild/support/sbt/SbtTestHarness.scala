@@ -11,7 +11,10 @@ object SbtTestHarness {
                              url: URL,
                              ivyPattern: String = defaultIvyPatterns,
                              artifactPattern: String = defaultIvyPatterns,
-                             mavenCompatible: Boolean = false) extends xsbti.IvyRepository
+                             mavenCompatible: Boolean = false,
+                             descriptorOptional: Boolean = false,
+                             skipConsistencyCheck:Boolean = false
+                            ) extends xsbti.IvyRepository
   private case class MvnRepo(id: String, url: URL) extends xsbti.MavenRepository
   // TODO - we should pull in whatever local ~/.sbt/repositories specifies, or what the current sbt project is using,
   // so we dont' have super slow integration tests.

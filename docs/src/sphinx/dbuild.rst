@@ -382,9 +382,10 @@ test-tasks
   It is possible to customize the list of tasks that should be executed during the
   testing stage. By default, its value is just ``test``, but it can be modified
   in order to take into account different commands or configurations. This setting
-  can be either a single string or a list of strings; each element can be the name
-  of a task, like ``test``, or a configuration followed by a colon and a task name,
-  like ``it:test``.
+  can be either a single string or a list of strings; each element can be just the
+  name of a task, like ``test``, or a configuration followed by a colon and a task
+  name, like ``it:test``. If an element does not include an explicit configuration,
+  the "test" configuration is used for that task.
 
 options
   A sequence of strings; they will be passed as-is as additional JVM options,

@@ -30,6 +30,7 @@ class CommonDependencies {
   val jackson        = "com.fasterxml.jackson.core" % "jackson-annotations" % "2.1.4"
   val aws            = "com.amazonaws" % "aws-java-sdk" % "1.3.29"
   val uriutil        = "org.eclipse.equinox" % "org.eclipse.equinox.common" % "3.6.0.v20100503"
+  val jline          = "jline" % "jline" % "2.14.2"
 
   val javaMail       = "javax.mail" % "mail" % "1.4.7"
   val commonsLang    = "commons-lang" % "commons-lang" % "2.6"

@@ -10,7 +10,7 @@ def SubProj(name: String) = (
     version := MyVersion,
     organization := "com.typesafe.dbuild",
     selectScalaVersion,
-    libraryDependencies += specs2,
+    libraryDependencies ++= Seq(specs2, jline),
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,

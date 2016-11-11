@@ -575,7 +575,7 @@ object DBuildRunner {
 
       def doTestTask(old: State, taskAndConfig: String): State = {
         val (task: String, config: String) = taskAndConfig.split(':') match {
-          case Array(t, c) => (t, c)
+          case Array(c, t) => (t, c)
           case Array(t) => (t, "test")
           case _ => sys.error("Malformed task description: \"" + taskAndConfig + "\"")
         }

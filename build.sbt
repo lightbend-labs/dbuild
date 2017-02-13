@@ -24,8 +24,8 @@ def SubProj(name: String) = (
 
 import RemoteDepHelper._
 
-def skip211 = Seq(
-      skip in compile := scalaVersion.value.startsWith("2.11"),
+def skip212 = Seq(
+      skip in compile := scalaVersion.value.startsWith("2.12"),
       sources in doc in Compile :=
         { if((skip in compile).value) List() else (sources in doc in Compile).value }
      )
@@ -33,7 +33,7 @@ def skip211 = Seq(
 def selectScalaVersion =
   scalaVersion := {
     val sb = (sbtVersion in sbtPlugin).value
-    if (sb.startsWith("0.13")) "2.10.6" else "2.11.8"
+    if (sb.startsWith("0.13")) "2.10.6" else "2.12.1"
   }
 
 lazy val root = (
@@ -54,7 +54,7 @@ lazy val root = (
 lazy val adapter = (
   SubProj("adapter")
   dependsOnSbtProvided(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy, sbtSbt)
-  dependsOnRemote(zincProvidedIf211:_*)
+  dependsOnRemote(zincProvidedIf212:_*)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Default.scala"
@@ -101,7 +101,7 @@ lazy val actorLogging = (
   dependsOn(logging)
   dependsOnRemote(akkaActor)
   dependsOnSbtProvided(sbtLogging, sbtIo, sbtLaunchInt)
-  settings(skip211:_*)
+  settings(skip212:_*)
 )
 
 lazy val metadata = (
@@ -135,7 +135,7 @@ lazy val actorProj = (
   SubProj("actorProj")
   dependsOn(core, actorLogging, proj)
   dependsOnSbtProvided(sbtIo, sbtIvy)
-  settings(skip211:_*)
+  settings(skip212:_*)
 )
 
 lazy val support = (
@@ -166,7 +166,7 @@ lazy val supportGit = (
   dependsOnSbtProvided(sbtLaunchInt, sbtIvy)
   settings(SbtSupport.buildSettings:_*)
   settings(SbtSupport.settings:_*)
-  settings(skip211:_*)
+  settings(skip212:_*)
 )
 
 // SBT plugin
@@ -195,7 +195,7 @@ lazy val build = (
   dependsOnRemote(aws, uriutil, dispatch, jsch, oro, scallop, commonsLang)
   dependsOnRemote(gpgLibIf210:_*)
   dependsOnSbt(sbtLaunchInt, sbtLauncher, sbtLogging, sbtIo, sbtIvy, sbtSbt)
-  settings(skip211:_*)
+  settings(skip212:_*)
   settings(SbtSupport.settings:_*)
   settings(
     // We hook the testLoader of it to make sure all the it tasks have a legit sbt plugin to use.

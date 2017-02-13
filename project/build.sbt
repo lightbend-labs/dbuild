@@ -1,1 +1,1 @@
-lazy val root = (project in file(".")).dependsOn(BintrayDep211.bintrayIf211:_*)
+lazy val root = (project in file(".")).dependsOn(BintrayDep212.bintrayIf212:_*)

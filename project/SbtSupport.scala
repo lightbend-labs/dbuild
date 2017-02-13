@@ -1,6 +1,5 @@
 import sbt._
 import Keys._
-import SyntaxAdapter.syntaxio._
 import SyntaxAdapter.{syntaxCompile=>Compile}
 
 object SbtSupport {

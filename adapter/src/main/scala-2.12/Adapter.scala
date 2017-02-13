@@ -33,7 +33,6 @@ object Adapter {
   type FileRepository = sbt.librarymanagement.FileRepository
   type Logger = sbt.util.Logger
   def allPaths(f:File) = sbt.io.PathFinder(f).allPaths
-  val syntaxio = sbt.io.syntax
   val syntax = sbt.syntax
   type ModuleID = sbt.librarymanagement.ModuleID
   type Artifact = sbt.librarymanagement.Artifact

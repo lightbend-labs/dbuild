@@ -1,5 +1,4 @@
 import sbt._
-import SyntaxAdapter.syntax._
 
 class CommonDependencies {
 

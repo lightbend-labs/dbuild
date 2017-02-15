@@ -6,7 +6,7 @@ class CommonDependencies {
 
   val typesafeConfig = "com.typesafe" % "config" % "1.2.1"
 
-  val dispatch       = "net.databinder" %% "dispatch-http" % "0.8.10"
+  val dispatch       = "net.databinder.dispatch" %% "dispatch-core" % "0.12.0"
 
   val aetherVersion = "1.0.0.v20140518"
   val aether         = "org.eclipse.aether" % "aether" % aetherVersion

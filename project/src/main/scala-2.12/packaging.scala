@@ -11,7 +11,7 @@ object Packaging {
     // skipping publishing completely (including the ivy file) upon a given condition.
     publishConfiguration := {
       val p = publishConfiguration.value
-      new PublishConfiguration(None,p.resolverName,Map.empty,Seq.empty,p.logging)
+      new PublishConfiguration(None,p.resolverName,Map.empty,Vector[String](),p.logging)
     }
     // TODO: fuse this with skip212()
   )

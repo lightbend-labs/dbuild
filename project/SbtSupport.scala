@@ -1,6 +1,6 @@
 import sbt._
 import Keys._
-import SyntaxAdapter.{syntaxCompile=>Compile}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object SbtSupport {
   val sbtLaunchJarUrl = SettingKey[String]("sbt-launch-jar-url")
@@ -19,13 +19,16 @@ object SbtSupport {
   }
 
   def downloadFile(uri: String, file: File): Seq[File] = {
-    import dispatch.classic._
+    import dispatch._
     if(!file.exists) {
        // oddly, some places require us to create the file before writing...
        IO.touch(file)
-       val writer = new java.io.BufferedOutputStream(new java.io.FileOutputStream(file))
-       try Http(url(uri) >>> writer)
-       finally writer.close()
+       try {
+         val r = Http(url(uri) > as.File(file))
+         r()
+       } catch {
+         case e:Exception => throw new Exception("Error downloading " + file.getCanonicalPath() + " from " + uri, e)
+       }
     }
     // TODO - GPG Trust validation.
     Seq(file)

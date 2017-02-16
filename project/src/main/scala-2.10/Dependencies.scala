@@ -13,6 +13,6 @@ object Dependencies extends CommonDependencies {
   def sbtLauncher(v:String)  = "org.scala-sbt" % "launcher" % v
   def sbtSbt(v:String)       = "org.scala-sbt" % "sbt" % v
 
-  val zincProvidedIf212      = Seq[ModuleID]()
+  val zincIf212              = None:Option[String=>ModuleID]
   val gpgLibIf210            = Seq("com.jsuereth" %% "gpg-library" % "0.8.2")
 }

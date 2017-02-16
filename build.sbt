@@ -53,8 +53,7 @@ lazy val root = (
 // the source file to sbt 0.13/1.0
 lazy val adapter = (
   SubProj("adapter")
-  dependsOnSbtProvided(sbtLogging, sbtIo, sbtLaunchInt, sbtIvy, sbtSbt)
-  dependsOnRemote(zincProvidedIf212:_*)
+  dependsOnSbtProvided((Seq[String=>ModuleID](sbtLogging, sbtIo, sbtLaunchInt, sbtIvy, sbtSbt) ++ zincIf212):_*)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Default.scala"

@@ -16,7 +16,6 @@ import java.util.Date
 import com.jcraft.jsch.ChannelSftp
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{IO,Logger,allPaths}
-import Adapter.syntaxio._
 import com.lambdaworks.jacks.JacksMapper
 import Adapter.Path._
 

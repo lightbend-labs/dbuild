@@ -8,7 +8,6 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.Protocol
-import dispatch.classic.{ Logger => _, _ }
 import org.omg.PortableInterceptor.SUCCESSFUL
 import Creds.loadCreds
 import com.jcraft.jsch.{ IO => sshIO, Logger => _, _ }
@@ -19,6 +18,10 @@ import Adapter.{IO,Logger,allPaths}
 import com.lambdaworks.jacks.JacksMapper
 import Adapter.Path._
 import Adapter.syntaxio._
+import dispatch.{url => dispUrl, Http}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import scala.concurrent.duration._
 
 /**
  * A generic (S3, http, https, etc) deploy location.
@@ -276,7 +279,8 @@ class DeployNull(log: Logger, options: DeployInfo) extends
   protected def deployItem(nothing: Unit, relative: String, file: File, uri: URI) = {}
 }
 
-class DeployHTTP(log: Logger, options: DeployInfo) extends IterativeDeploy[Unit](options) {
+class DeployHTTP(log: Logger, options: DeployInfo, timeOut: Duration = 20 minutes)
+  extends IterativeDeploy[Unit](options) {
   import Deploy.isNotChecksum
   protected def init() = ()
   protected def message(relative: String) =
@@ -285,12 +289,11 @@ class DeployHTTP(log: Logger, options: DeployInfo) extends IterativeDeploy[Unit]
     else
       log.info("Verifying checksum: " + relative)
   protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
-    import dispatch._
     val sender =
-      dispatch.classic.url(uri.toString).PUT.as(credentials.user, credentials.pass) <<< (file, "application/octet-stream")
-    val response = (new Http with NoLogging)(sender >- { str =>
-      Deploy.readSomePath[ArtifactoryResponse](str)
-    })
+      dispUrl(uri.toString).PUT.as(credentials.user, credentials.pass).setBody(file).setBodyEncoding("application/octet-stream")
+    val response = Await.result(Http(sender OK { response =>
+      Deploy.readSomePath[ArtifactoryResponse](response.getResponseBody)
+    }), timeOut)
     try {
       if (response != None && response.get.path != None && response.get.path.get != null) {
         val out = response.get.path.get.replaceFirst("^/", "")
@@ -303,7 +306,7 @@ class DeployHTTP(log: Logger, options: DeployInfo) extends IterativeDeploy[Unit]
 }
 
 // (pass to the constructor the deploy target uri as well)
-class DeployBintray(log: Logger, options: DeployInfo) extends DeployHTTP(log, options) {
+class DeployBintray(log: Logger, options: DeployInfo, timeOut: Duration = 20 minutes) extends DeployHTTP(log, options, timeOut) {
   override protected def init() = {
     val target = new java.net.URI(options.uri)
     val path = target.getPath
@@ -333,10 +336,10 @@ class DeployBintray(log: Logger, options: DeployInfo) extends DeployHTTP(log, op
       val path = target.getPath
       val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path) + "/publish")
       val sender =
-        dispatch.classic.url(dest.toString).POST.as(credentials.user, credentials.pass)
-      val response = (new Http with NoLogging)(sender >- { str =>
-        Deploy.readSomePath[ArtifactoryResponse](str)
-      })
+        dispUrl(dest.toString).POST.as(credentials.user, credentials.pass)
+      val response = Await.result(Http(sender OK { response =>
+        Deploy.readSomePath[ArtifactoryResponse](response.getResponseBody)
+      }), timeOut)
     }
   }
 }

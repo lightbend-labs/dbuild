@@ -37,7 +37,7 @@ object Adapter {
   type Logger = sbt.Logger
   import Path._
   def allPaths(f:File) = sbt.PathFinder(f).***
-  val syntax = new {}
+  val syntaxio = new {}
   type ModuleID = sbt.ModuleID
   type Artifact = sbt.Artifact
   type ProjectResolver = sbt.ProjectResolver

@@ -42,7 +42,7 @@ lazy val root = (
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := (), publishLocal := (), version := MyVersion)
   //settings(CrossPlugin.crossBuildingSettings:_*)
-  //settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M4"), selectScalaVersion)
+  //settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M5"), selectScalaVersion)
   settings(commands += Command.command("release") { state =>
     "clean" :: "publish" :: state
   })

@@ -16,13 +16,13 @@ object Dependencies extends CommonDependencies {
   def sbtSbt(v:String)            = "org.scala-sbt" % "sbt" % v
   val zincIf212(v:String)         = Some( "org.scala-sbt" %% "zinc" % "1.0.0-X1" )
 */
-  def sbtIo(v:String)             = "org.scala-sbt" %% "io" % v
-  def sbtIvy(v:String)            = "org.scala-sbt" %% "librarymanagement" % v
-  def sbtLogging(v:String)        = "org.scala-sbt" %% "util-logging" % v
+  def sbtIo(v:String)             = "org.scala-sbt" %% "io" % "1.0.0-M11"
+  def sbtIvy(v:String)            = "org.scala-sbt" %% "librarymanagement" % "1.0.0-X10"
+  def sbtLogging(v:String)        = "org.scala-sbt" %% "util-logging" % "1.0.0-M23"
   def sbtLaunchInt(v:String)      = "org.scala-sbt" % "launcher" % "1.0.0"
   def sbtLauncher(v:String)       = "org.scala-sbt" % "launcher" % "1.0.0"
   def sbtSbt(v:String)            = "org.scala-sbt" % "sbt" % v
-  val zincIf212                   = Some({ v:String => "org.scala-sbt" %% "zinc" % v })
+  val zincIf212                   = Some({ v:String => "org.scala-sbt" %% "zinc" % "1.0.0-X14" })
 
   val gpgLibIf210                 = Seq[librarymanagement.ModuleID]()
 }

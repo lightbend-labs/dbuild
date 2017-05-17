@@ -42,7 +42,6 @@ import org.apache.ivy.plugins.parser.xml.XmlModuleDescriptorWriter
 import ivy.core.module.id.{ ModuleId, ModuleRevisionId }
 import ivy.core.resolve.{ ResolveEngine, ResolveOptions }
 import ivy.core.report.ResolveReport
-import org.apache.ivy.core.module.id.ModuleRevisionId
 import org.apache.ivy.core.resolve.IvyNode
 import com.typesafe.dbuild.support.NameFixer.fixName
 import org.apache.ivy.core.module.descriptor.DefaultArtifact

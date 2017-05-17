@@ -19,7 +19,8 @@ class CommonDependencies {
   val aetherHttp     = "org.eclipse.aether" % "aether-transport-http" % aetherVersion
   val aetherWagon    = "org.eclipse.aether" % "aether-transport-wagon" % aetherVersion
 
-  val ivy            = "org.scala-sbt.ivy" % "ivy" % "2.3.0-sbt-2cc8d2761242b072cedb0a04cb39435c4fa24f9a"
+//  val ivy            = "org.scala-sbt.ivy" % "ivy" % "2.3.0-sbt-2cc8d2761242b072cedb0a04cb39435c4fa24f9a"
+  val ivy            = "org.scala-sbt.ivy" % "ivy" % "2.3.0-sbt-48dd0744422128446aee9ac31aa356ee203cc9f4"
 
   val mvnAether      = "org.apache.maven" % "maven-aether-provider" % mvnVersion
   val mvnWagon       = "org.apache.maven.wagon" % "wagon-http" % "2.2"

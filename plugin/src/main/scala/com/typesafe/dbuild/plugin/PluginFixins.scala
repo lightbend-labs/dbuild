@@ -27,7 +27,7 @@ object PluginFixins {
   def fixPlugin(m: ModuleID): ModuleID = {
     val id = PluginId(m.organization, NameFixer.fixName(m.name))
     val optVersion = pluginVersions get id
-    optVersion map (v => m.copy(revision = v)) getOrElse m
+    optVersion map (v => m.withRevision(v)) getOrElse m
   }
   
 }

@@ -275,6 +275,7 @@ object DependencyAnalysis {
 
     val extracted = Project.extract(state)
     val Some(baseDirectory) = sbt.Keys.baseDirectory in ThisBuild get extracted.structure.data
+    import Adapter.syntaxio._
     val dbuildDir = baseDirectory / dbuildSbtDirName
     val resultFile = dbuildDir / extractionOutputFileName
     val inputFile = dbuildDir / extractionInputFileName

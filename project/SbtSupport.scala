@@ -27,7 +27,9 @@ object SbtSupport {
          val r = Http.configure(_ setFollowRedirects true)(url(uri) > as.File(file))
          r()
        } catch {
-         case e:Exception => throw new Exception("Error downloading " + file.getCanonicalPath() + " from " + uri, e)
+         case e:Exception =>
+           IO.delete(file) // remove the previously "touched" file
+           throw new Exception("Error downloading " + file.getCanonicalPath() + " from " + uri, e)
        }
     }
     // TODO - GPG Trust validation.

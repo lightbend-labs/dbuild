@@ -6,6 +6,8 @@ object Dependencies extends CommonDependencies {
 
   val specs2         = "org.specs2" %% "specs2" % "2.1.1" % "it,test"
 
+  val dispatch       = "net.databinder.dispatch" %% "dispatch-core" % "0.11.3"
+
   def sbtIo(v:String)        = "org.scala-sbt" % "io" % v
   def sbtIvy(v:String)       = "org.scala-sbt" % "ivy" % v
   def sbtLogging(v:String)   = "org.scala-sbt" % "logging" % v

@@ -6,6 +6,8 @@ object Dependencies extends CommonDependencies {
 
   val specs2         = "org.specs2" %% "specs2-core" % "3.8.8" % "it,test"
 
+  val dispatch       = "net.databinder.dispatch" %% "dispatch-core" % "0.12.1"
+
 // Once new versions of sbt/launcher/libraryManagement/zinc etc are released, move to those versions
 /*
   def sbtIo(v:String)             = "org.scala-sbt" %% "io" % "1.0.0-M6"

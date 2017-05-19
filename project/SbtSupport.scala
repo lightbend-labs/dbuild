@@ -24,7 +24,7 @@ object SbtSupport {
        // oddly, some places require us to create the file before writing...
        IO.touch(file)
        try {
-         val r = Http(url(uri) > as.File(file))
+         val r = Http.configure(_ setFollowRedirects true)(url(uri) > as.File(file))
          r()
        } catch {
          case e:Exception => throw new Exception("Error downloading " + file.getCanonicalPath() + " from " + uri, e)

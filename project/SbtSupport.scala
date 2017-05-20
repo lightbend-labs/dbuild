@@ -19,18 +19,17 @@ object SbtSupport {
   }
 
   def downloadFile(uri: String, file: File): Seq[File] = {
-    import dispatch._
+    import dispatch.classic._
     if(!file.exists) {
-       // oddly, some places require us to create the file before writing...
-       IO.touch(file)
-       try {
-         val r = Http.configure(_ setFollowRedirects true)(url(uri) > as.File(file))
-         r()
-       } catch {
-         case e:Exception =>
-           IO.delete(file) // remove the previously "touched" file
-           throw new Exception("Error downloading " + file.getCanonicalPath() + " from " + uri, e)
-       }
+      // oddly, some places require us to create the file before writing...
+      IO.touch(file)
+      val writer = new java.io.BufferedOutputStream(new java.io.FileOutputStream(file))
+      try Http(url(uri) >>> writer)
+      catch {
+        case e:Exception =>
+        IO.delete(file) // remove the previously "touched" file
+        throw new Exception("Error downloading " + file.getCanonicalPath() + " from " + uri, e)
+      } finally writer.close()
     }
     // TODO - GPG Trust validation.
     Seq(file)

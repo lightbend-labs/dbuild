@@ -1,6 +1,6 @@
 import Dependencies._
 
-def MyVersion: String = "0.9.7-SNAPSHOT"
+def MyVersion: String = "0.9.7-aa1"
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
@@ -41,8 +41,10 @@ lazy val root = (
   aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := (), publishLocal := (), version := MyVersion)
-  //settings(CrossPlugin.crossBuildingSettings:_*)
-  //settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M5"), selectScalaVersion)
+//  settings(CrossPlugin.crossBuildingSettings:_*)
+//  settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M5"), selectScalaVersion)
+// This would work with the integrated version of sbt-cross-building
+//  settings(crossSbtVersions := Seq("0.13","1.0.0-M5"), selectScalaVersion)
   settings(commands += Command.command("release") { state =>
     "clean" :: "publish" :: state
   })
@@ -111,9 +113,16 @@ lazy val metadata = (
 
 lazy val repo = (
   SubProj("repo")
-  dependsOn(adapter, metadata, logging)
-  dependsOnRemote(mvnAether, dispatch, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
+  dependsOn(http, adapter, metadata, logging)
+  dependsOnRemote(mvnAether, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
   dependsOnSbtProvided(sbtIo, sbtLaunchInt, sbtLogging)
+)
+
+lazy val http = (
+  SubProj("http")
+  dependsOn(adapter)
+  dependsOnRemote(dispatch)
+  dependsOnSbtProvided(sbtIo)
 )
 
 lazy val core = (
@@ -183,15 +192,15 @@ lazy val dist = (
 
 lazy val deploy = (
   SubProj("deploy")
-  dependsOn(adapter)
-  dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, dispatch, commonsIO, jsch, jacks)
+  dependsOn(adapter, http)
+  dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, commonsIO, jsch, jacks)
   dependsOnSbtProvided(sbtLogging, sbtIo)
 )
 
 lazy val build = (
   SubProj("build")
   dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
-  dependsOnRemote(aws, uriutil, dispatch, jsch, oro, scallop, commonsLang)
+  dependsOnRemote(aws, uriutil, jsch, oro, scallop, commonsLang)
   dependsOnRemote(gpgLibIf210:_*)
   dependsOnSbt(sbtLaunchInt, sbtLauncher, sbtLogging, sbtIo, sbtIvy, sbtSbt)
   settings(skip212:_*)

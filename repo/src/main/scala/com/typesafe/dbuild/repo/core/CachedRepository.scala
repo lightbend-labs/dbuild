@@ -2,6 +2,7 @@ package com.typesafe.dbuild.repo.core
 
 import java.io.File
 import com.typesafe.dbuild.adapter.Adapter
+import com.typesafe.dbuild.http._
 import Adapter.IO
 import Adapter.Path._
 import dispatch.{url => dispUrl, Http}
@@ -42,7 +43,6 @@ final class CachedRemoteRepository(cacheDir: File, uri: String, credentials: Cre
     // avoid 0-length files, which represents some kind of error downloaded that we've cleaned up,
     // but may reappair on file system exceptions.
     if(!cacheFile.exists || cacheFile.length == 0) {
-      // TODO - immutability restrictions?
       try {
         Remote push (makeUrl(uri, key), file, credentials)
         IO.copyFile(file, cacheFile)
@@ -61,36 +61,21 @@ final class CachedRemoteRepository(cacheDir: File, uri: String, credentials: Cre
 /** Helpers for free-form HTTP repositories */
 object Remote {
   def push(uri: String, file: File, cred: Credentials, timeOut: Duration = 20 minutes): Unit = {
-   // Send as binary always.
-   val sender = 
-    dispUrl(uri).PUT.as(cred.user,cred.pw).setBody(file).setBodyEncoding("application/octet-stream")
-    val response = Await.result(Http(sender OK { response =>
-      println(response.getResponseBody)
-    }), timeOut)
+    val ht = new HttpTransfer()
+    try {
+      ht.upload(uri, file, cred)(println)
+    } finally {
+      ht.close()
+    }
   }
   def pull(uri: String, local: File, timeOut: Duration = 20 minutes): Unit = {
     // Ensure directory exists.
     local.getParentFile.mkdirs()
-    
-    // Pull to temporary file, then move.
-    // uri must be sanitized first: can't contain slashes etc.
-    val saneUri=java.net.URLEncoder.encode(uri)
-    val suffix=saneUri.substring(Math.max(0,saneUri.length-45))
-    IO.withTemporaryFile("dbuild-cache", suffix) { tmp =>
-      val fous = new java.io.FileOutputStream(tmp)
-      // IF there's an error, we must delete the file...
-      try {
-        Await.result(Http(dispUrl(uri).GET OK { response =>
-          val stream = response.getResponseBodyAsStream
-          try IOUtils.copy(response.getResponseBodyAsStream, fous)
-          finally stream.close()
-        }), timeOut)
-      } finally {
-        fous.close()
-        // IF we made it here with no exceptions thrown, it's safe to move the temp file to the
-        // appropriate location.  This should be a far more atomic operation, and "safer".
-        IO.move(tmp, local)
-      }
+    val ht = new HttpTransfer()
+    try {
+      ht.download(uri, local)
+    } finally {
+      ht.close()
     }
   }
 }

@@ -11,8 +11,8 @@ object Dependencies extends CommonDependencies {
   def sbtIo(v:String)        = "org.scala-sbt" % "io" % v
   def sbtIvy(v:String)       = "org.scala-sbt" % "ivy" % v
   def sbtLogging(v:String)   = "org.scala-sbt" % "logging" % v
-  def sbtLaunchInt(v:String) = "org.scala-sbt" % "launcher" % v
-  def sbtLauncher(v:String)  = "org.scala-sbt" % "launcher" % v
+  def sbtLaunchInt(v:String) = "org.scala-sbt" % "launcher" % "1.0.0"
+  def sbtLauncher(v:String)  = "org.scala-sbt" % "launcher" % "1.0.0"
   def sbtSbt(v:String)       = "org.scala-sbt" % "sbt" % v
 
   val zincIf212              = None:Option[String=>ModuleID]

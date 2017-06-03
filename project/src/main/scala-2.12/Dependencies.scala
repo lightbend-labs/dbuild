@@ -9,20 +9,14 @@ object Dependencies extends CommonDependencies {
   val dispatch       = "net.databinder.dispatch" %% "dispatch-core" % "0.12.1"
 
 // Once new versions of sbt/launcher/libraryManagement/zinc etc are released, move to those versions
-/*
-  def sbtIo(v:String)             = "org.scala-sbt" %% "io" % "1.0.0-M6"
-  def sbtIvy(v:String)            = "org.scala-sbt" %% "librarymanagement" % "0.1.0-M12"
-  def sbtLogging(v:String)        = "org.scala-sbt" %% "util-logging" % "0.1.0-M14"
-  def sbtLaunchInt(v:String)      = "org.scala-sbt" % "launcher" % "1.0.0"
-  def sbtLauncher(v:String)       = "org.scala-sbt" % "launcher" % "1.0.0"
-  def sbtSbt(v:String)            = "org.scala-sbt" % "sbt" % v
-  val zincIf212(v:String)         = Some( "org.scala-sbt" %% "zinc" % "1.0.0-X1" )
-*/
   def sbtIo(v:String)             = "org.scala-sbt" %% "io" % "1.0.0-M11"
   def sbtIvy(v:String)            = "org.scala-sbt" %% "librarymanagement" % "1.0.0-X10"
   def sbtLogging(v:String)        = "org.scala-sbt" %% "util-logging" % "1.0.0-M23"
-  def sbtLaunchInt(v:String)      = "org.scala-sbt" % "launcher" % "1.0.0"
-  def sbtLauncher(v:String)       = "org.scala-sbt" % "launcher" % "1.0.0"
+  // sbt 1.0.0-M5 uses launcher 1.0.0
+  def sbtLaunchInt(v:String)      = "org.scala-sbt" % "launcher-interface" % "1.0.0"
+
+  val launcher                    = "org.scala-sbt" % "launcher" % "1.0.0"
+
   def sbtSbt(v:String)            = "org.scala-sbt" % "sbt" % v
   val zincIf212                   = Some({ v:String => "org.scala-sbt" %% "zinc" % "1.0.0-X14" })
 

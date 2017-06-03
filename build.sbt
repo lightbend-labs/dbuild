@@ -115,7 +115,7 @@ lazy val repo = (
   SubProj("repo")
   dependsOn(http, adapter, metadata, logging)
   dependsOnRemote(mvnAether, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
-  dependsOnSbtProvided(sbtIo, sbtLaunchInt, sbtLogging)
+  dependsOnSbtProvided(sbtIo, sbtLaunchInt, sbtLogging, sbtSbt)
 )
 
 lazy val http = (
@@ -194,15 +194,15 @@ lazy val deploy = (
   SubProj("deploy")
   dependsOn(adapter, http)
   dependsOnRemote(jackson, typesafeConfig, commonsLang, aws, uriutil, commonsIO, jsch, jacks)
-  dependsOnSbtProvided(sbtLogging, sbtIo)
+  dependsOnSbtProvided(sbtLogging, sbtIo, sbtSbt)
 )
 
 lazy val build = (
   SubProj("build")
   dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
-  dependsOnRemote(aws, uriutil, jsch, oro, scallop, commonsLang)
+  dependsOnRemote(aws, uriutil, jsch, oro, scallop, commonsLang, launcher)
   dependsOnRemote(gpgLibIf210:_*)
-  dependsOnSbt(sbtLaunchInt, sbtLauncher, sbtLogging, sbtIo, sbtIvy, sbtSbt)
+  dependsOnSbt(sbtLaunchInt, sbtLogging, sbtIo, sbtIvy, sbtSbt)
   settings(skip212:_*)
   settings(SbtSupport.settings:_*)
   settings(

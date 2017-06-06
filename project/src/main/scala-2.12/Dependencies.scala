@@ -15,7 +15,7 @@ object Dependencies extends CommonDependencies {
   // sbt 1.0.0-M5 uses launcher 1.0.0
   def sbtLaunchInt(v:String)      = "org.scala-sbt" % "launcher-interface" % "1.0.0"
 
-  val launcher                    = "org.scala-sbt" % "launcher" % "1.0.0"
+  val launcher                    = "org.scala-sbt" % "launcher" % "1.0.2-dbuild7" % "provided"
 
   def sbtSbt(v:String)            = "org.scala-sbt" % "sbt" % v
   val zincIf212                   = Some({ v:String => "org.scala-sbt" %% "zinc" % "1.0.0-X14" })

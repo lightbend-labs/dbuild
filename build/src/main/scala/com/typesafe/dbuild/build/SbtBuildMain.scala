@@ -220,10 +220,9 @@ class SbtBuildMain extends xsbti.AppMain {
         val repos = if (useLocalResolvers || resolvers.isEmpty)
           localRepos
         else {
-          val listMap = xsbt.boot.ListMap(resolvers.toSeq.reverse: _*)
           // getRepositories contains a ListMap.toList, where sbt's definition
           // of toList is "backing.reverse". So we have to reverse again.
-          (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
+          (new xsbt.boot.ConfigurationParser).getRepositories(resolvers.toSeq.reverse)
         }
         if (debug) {
           println("Resolvers:")

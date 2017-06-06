@@ -18,7 +18,7 @@ import com.typesafe.dbuild.logging.Logger.logFullStackTrace
  * TODO - Make it platform synch safe?
  */
 class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean) {
-  private val launcherJar = SbtRunner.initSbtGlobalBase(repos, globalBase, debug)
+  private val launcherJar = SbtRunner.initSbtGlobalBase(globalBase, debug)
 
   private val defaultProps =
     Map("sbt.global.base" -> globalBase.getAbsolutePath,
@@ -132,7 +132,7 @@ object SbtRunner {
   )
 
   /** inits global base and returns location of launcher jar file. */
-  private def initSbtGlobalBase(repos: List[xsbti.Repository], dir: File, debug: Boolean): File = {
+  private def initSbtGlobalBase(dir: File, debug: Boolean): File = {
     val launcherDir = dir / "launcher"
     val launcherJar = launcherDir / "sbt-launch.jar"
     if (!launcherJar.exists) {

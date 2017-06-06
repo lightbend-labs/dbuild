@@ -33,7 +33,7 @@ class HttpTransfer extends java.io.Closeable {
     }
   }
 
-  // I cannot use Http.configure(_ setFollowRedirect true),
+  // I cannot use directly Http.configure(_ setFollowRedirect true),
   // otherwise dispatch creates one instance for Http and another
   // one for Http.configure(..). Both must be shut down, otherwise
   // the application hangs and never exits. If the first one is

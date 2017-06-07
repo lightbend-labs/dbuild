@@ -7,12 +7,11 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.ning.http.client.{AsyncHttpClientConfig, AsyncHttpClient}
 import java.io.File
-import com.typesafe.dbuild.adapter.Defaults
 import sbt.IO
 
 case class Credentials(user: String, pw: String)
 
-class HttpTransfer extends java.io.Closeable {
+class HttpTransfer(dbuildVersion:String) extends java.io.Closeable {
 
   // The "as.File" facility of dispatch leaks file descriptors,
   // so we use this abstraction instead.
@@ -43,7 +42,7 @@ class HttpTransfer extends java.io.Closeable {
   val http = new Http(
     new AsyncHttpClient(
       new AsyncHttpClientConfig.Builder()
-        .setUserAgent("dbuild/%s" format Defaults.version)
+        .setUserAgent("dbuild/%s" format dbuildVersion)
         .setRequestTimeout(-1)
         .setUseProxyProperties(true)
         .setFollowRedirect(true)

@@ -5,6 +5,7 @@ import com.typesafe.dbuild.adapter.Adapter
 import com.typesafe.dbuild.http._
 import Adapter.IO
 import Adapter.Path._
+import com.typesafe.dbuild.adapter.Defaults
 import dispatch.{url => dispUrl, Http}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -61,7 +62,7 @@ final class CachedRemoteRepository(cacheDir: File, uri: String, credentials: Cre
 /** Helpers for free-form HTTP repositories */
 object Remote {
   def push(uri: String, file: File, cred: Credentials, timeOut: Duration = 20 minutes): Unit = {
-    val ht = new HttpTransfer()
+    val ht = new HttpTransfer(Defaults.version)
     try {
       ht.upload(uri, file, cred)(println)
     } finally {
@@ -71,7 +72,7 @@ object Remote {
   def pull(uri: String, local: File, timeOut: Duration = 20 minutes): Unit = {
     // Ensure directory exists.
     local.getParentFile.mkdirs()
-    val ht = new HttpTransfer()
+    val ht = new HttpTransfer(Defaults.version)
     try {
       ht.download(uri, local)
     } finally {

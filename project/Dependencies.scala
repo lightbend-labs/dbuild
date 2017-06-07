@@ -41,4 +41,7 @@ class CommonDependencies {
 
   val slf4jSimple    = "org.slf4j" % "slf4j-simple" % "1.7.7"
 
+  // sbt 0.13.15 uses launcher 1.0.1, but we need the dbuild-specific patch
+  def sbtLaunchInt(v:String)      = "org.scala-sbt" % "launcher-interface" % "1.0.2-dbuild7"
+  def sbtLauncher(v:String)       = "org.scala-sbt" % "launcher" % "1.0.2-dbuild7"
 }

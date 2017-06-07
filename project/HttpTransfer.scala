@@ -1,0 +1,1 @@
+../http/src/main/scala/com/typesafe/dbuild/http/HttpTransfer.scala

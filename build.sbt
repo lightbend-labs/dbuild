@@ -200,9 +200,9 @@ lazy val deploy = (
 lazy val build = (
   SubProj("build")
   dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
-  dependsOnRemote(aws, uriutil, jsch, oro, scallop, commonsLang, launcher)
+  dependsOnRemote(aws, uriutil, jsch, oro, scallop, commonsLang)
   dependsOnRemote(gpgLibIf210:_*)
-  dependsOnSbt(sbtLaunchInt, sbtLogging, sbtIo, sbtIvy, sbtSbt)
+  dependsOnSbt(sbtLaunchInt, sbtLogging, sbtIo, sbtIvy, sbtSbt, sbtLauncher)
   settings(skip212:_*)
   settings(SbtSupport.settings:_*)
   settings(

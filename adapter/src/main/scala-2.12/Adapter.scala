@@ -25,6 +25,8 @@ object Adapter {
   val IO = sbt.io.IO
   val Path = sbt.io.Path
   type RichFile = sbt.io.RichFile
+  def newIvyPaths(baseDirectory: java.io.File, ivyHome: Option[java.io.File]) =
+    sbt.internal.librarymanagement.IvyPaths(baseDirectory, ivyHome)
   type FileFilter = sbt.io.FileFilter
   def toFF = sbt.io.FileFilter.globFilter _
   val DirectoryFilter = sbt.io.DirectoryFilter
@@ -42,14 +44,16 @@ object Adapter {
   def moduleWithName(m:ModuleID, name:String) = m.withName(name)
   def moduleWithRevision(m:ModuleID, revision:String) = m.withRevision(revision)
   def moduleWithCrossVersion(m:ModuleID, cross:CrossVersion) = m.withCrossVersion(cross)
-  def moduleWithExplicitArtifacts(m:ModuleID, ea:Seq[Artifact]) = m.withExplicitArtifacts(ea)
+  def moduleWithExplicitArtifacts(m:ModuleID, ea:Seq[Artifact]) = m.withExplicitArtifacts(ea.toVector)
   def moduleWithExtraAttributes(m:ModuleID, ea:Map[String,String]) = m.withExtraAttributes(ea)
   def ivyScalaWithCheckExplicit(i:IvyScala, ce:Boolean) = i.withCheckExplicit(ce)
   def artifactWithClassifier(a:Artifact, cl:Option[String]) = a.withClassifier(cl)
   val crossDisabled = sbt.librarymanagement.Disabled()
-  val crossBinary = sbt.librarymanagement.binary
-  val crossFull = sbt.librarymanagement.full
-  val crossPatch = sbt.librarymanagement.patch
+  type crossDisabled = sbt.librarymanagement.Disabled
+  val crossBinary = sbt.librarymanagement.Binary()
+  type crossBinary = sbt.librarymanagement.Binary
+  val crossFull = sbt.librarymanagement.Full()
+  type crossFull = sbt.librarymanagement.Full
   type ProjectResolver = sbt.internal.librarymanagement.ProjectResolver
   type ScalaInstance = sbt.internal.inc.ScalaInstance
   val ScalaInstance = sbt.internal.inc.ScalaInstance

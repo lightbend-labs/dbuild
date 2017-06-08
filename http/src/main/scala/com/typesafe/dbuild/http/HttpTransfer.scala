@@ -1,13 +1,13 @@
 package com.typesafe.dbuild.http
 
 import scala.language.postfixOps
-import dispatch._
+import dispatch.{url => dispatchUrl,_}
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.ning.http.client.{AsyncHttpClientConfig, AsyncHttpClient}
 import java.io.File
-import sbt.IO
+import com.typesafe.dbuild.adapter.Adapter.IO
 
 case class Credentials(user: String, pw: String)
 
@@ -72,7 +72,7 @@ class HttpTransfer(dbuildVersion:String) extends java.io.Closeable {
         // an incorrect download w/ exception to leave behind
         // an old file that may be misinterpreted as the new one.
         if (absFile.exists) absFile.delete()
-        val r = http(url(uri) > AsFile(tmp))
+        val r = http(dispatchUrl(uri) > AsFile(tmp))
         Await.result(r, timeOut)
         // did all go ok? Move the file to the right place.
         // Note that IO.move() may choke if the dest file is not absolute
@@ -87,7 +87,7 @@ class HttpTransfer(dbuildVersion:String) extends java.io.Closeable {
   def upload(uri: String, file: File, cred: Credentials, timeOut: Duration = 10 minutes)(handleResponseBody: String => Unit ) = {
     val absFile = file.getAbsoluteFile()
     try {
-      val request = url(uri).PUT.as(cred.user,cred.pw).setBody(absFile).setBodyEncoding("application/octet-stream")
+      val request = dispatchUrl(uri).PUT.as(cred.user,cred.pw).setBody(absFile).setBodyEncoding("application/octet-stream")
       val r = http(request OK { response => handleResponseBody(response.getResponseBody) })
       Await.result(r, timeOut)
     } catch {

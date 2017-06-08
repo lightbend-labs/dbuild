@@ -28,6 +28,8 @@ object Adapter {
   val IO = sbt.IO
   val Path = sbt.Path
   type RichFile = sbt.RichFile
+  def newIvyPaths(baseDirectory: java.io.File, ivyHome: Option[java.io.File]) =
+    new sbt.IvyPaths(baseDirectory, ivyHome)
   type FileFilter = sbt.FileFilter
   def toFF = sbt.FileFilter.globFilter _
   val DirectoryFilter = sbt.DirectoryFilter

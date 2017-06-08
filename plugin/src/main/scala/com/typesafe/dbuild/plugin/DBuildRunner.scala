@@ -5,7 +5,7 @@ import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross,ScalaInstance}
 import Adapter.{moduleWithName,moduleWithRevision,moduleWithCrossVersion,moduleWithExplicitArtifacts}
 import Adapter.{moduleWithExtraAttributes,ivyScalaWithCheckExplicit,artifactWithClassifier}
-import Adapter.{crossDisabled,crossFull,crossBinary}
+import Adapter.{crossDisabled,crossFull,crossBinary,newIvyPaths}
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -418,7 +418,7 @@ object DBuildRunner {
       val sc = r.key.scope
       Keys.ivyPaths in sc := {
         val d = (Keys.baseDirectory in sc).value
-        new IvyPaths(d, Some(sbtIvyCache(d)))
+        newIvyPaths(d, Some(sbtIvyCache(d)))
       }
     }("Patching Ivy paths") _
 

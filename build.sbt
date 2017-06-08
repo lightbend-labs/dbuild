@@ -122,7 +122,7 @@ lazy val http = (
   SubProj("http")
   dependsOn(adapter)
   dependsOnRemote(dispatch)
-  dependsOnSbtProvided(sbtIo)
+  dependsOnSbtProvided(sbtIo, sbtIvy, sbtLauncher)
 )
 
 lazy val core = (

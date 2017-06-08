@@ -203,7 +203,8 @@ class DeploySSH(log: Logger, options: DeployInfo) extends IterativeDeploy[Channe
     // try to locate a private key; if it exists, add
     // the identity (for passwordless authentication)
     // Only the default location is supported, and no passphrase
-    import com.typesafe.dbuild.adapter.Adapter.syntaxio._
+    import Adapter.syntaxio._
+    import Adapter.Path._
     val privateKeyLocation = new File(System.getProperty("user.home")) / ".ssh" / "id_rsa"
     try {
       val is = new java.io.FileInputStream(privateKeyLocation)

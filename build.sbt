@@ -38,7 +38,7 @@ def selectScalaVersion =
 
 lazy val root = (
   SubProj("root")
-  aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy,
+  aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := (), publishLocal := (), version := MyVersion)
 //  settings(CrossPlugin.crossBuildingSettings:_*)

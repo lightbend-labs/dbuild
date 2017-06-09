@@ -107,6 +107,8 @@ class SbtBuildMain extends xsbti.AppMain {
       conflicts(noNotify, List(checkout.uuid, checkout.project, checkout.path))
       conflicts(local, List(checkout.uuid, checkout.project, checkout.path))
       // requireOne(checkout.uuid,configFile) // use manual checking (below) to get a better error message
+      addSubcommand(checkout)
+      verify()
     }
     try {
       val useLocalResolvers = conf.noResolvers() || conf.local()

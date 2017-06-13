@@ -22,7 +22,7 @@ object SbtSupport {
     // use this version once 0.13.16 is out
     // sbtLaunchJarUrl := "https://repo1.maven.org/maven2/org/scala-sbt/sbt-launch/"+sbtVersion.value+"/sbt-launch.jar"
     // This is a patched 0.13.15 launcher, w/the dbuild-specific changes
-    sbtLaunchJarUrl := "http://moxie.typesafe.com/sbt-launch-0.13.15-dbuild7.jar",
+    sbtLaunchJarUrl := "http://moxie.typesafe.com/sbt-launch-0.13.15-dbuild14.jar",
     sbtLaunchJarLocation := baseDirectory.value / "target" / "sbt" / "sbt-launch.jar",
     sbtLaunchJar := downloadFile(streams.value.log, version.value, sbtLaunchJarUrl.value, sbtLaunchJarLocation.value)
   )

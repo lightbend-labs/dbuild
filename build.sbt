@@ -172,8 +172,6 @@ lazy val supportGit = (
   dependsOn(core, repo, metadata, proj, support)
   dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, jgit)
   dependsOnSbtProvided(dbuildLaunchInt, sbtIvy)
-  settings(SbtSupport.buildSettings:_*)
-  settings(SbtSupport.settings:_*)
   settings(skip212:_*)
 )
 

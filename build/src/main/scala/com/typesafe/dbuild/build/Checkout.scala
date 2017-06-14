@@ -75,7 +75,8 @@ object Checkout {
         // getRepositories contains a ListMap.toList, where sbt's definition
         // of toList is "backing.reverse". So we have to reverse again,
         // and we finally get the needed List[xsbti.Repository]
-        val savedRepos = (new xsbt.boot.ConfigurationParser).getRepositories(resolversMap.toSeq.reverse)
+        val listMap = xsbt.boot.ListMap(resolversMap.toSeq.reverse: _*)
+        val savedRepos = (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
         
         val repos = if (useLocalResolvers || savedRepos.isEmpty)
           localRepos

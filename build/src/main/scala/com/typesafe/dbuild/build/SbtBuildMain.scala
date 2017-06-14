@@ -224,7 +224,8 @@ class SbtBuildMain extends xsbti.AppMain {
         else {
           // getRepositories contains a ListMap.toList, where sbt's definition
           // of toList is "backing.reverse". So we have to reverse again.
-          (new xsbt.boot.ConfigurationParser).getRepositories(resolvers.toSeq.reverse)
+          val listMap = xsbt.boot.ListMap(resolvers.toSeq.reverse: _*)
+          (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
         }
         if (debug) {
           println("Resolvers:")

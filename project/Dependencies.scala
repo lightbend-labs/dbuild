@@ -1,4 +1,5 @@
 import sbt._
+import DbuildLauncher._
 
 class CommonDependencies {
 
@@ -41,7 +42,12 @@ class CommonDependencies {
 
   val slf4jSimple    = "org.slf4j" % "slf4j-simple" % "1.7.7"
 
-  // sbt 0.13.15 uses launcher 1.0.1, but we need the dbuild-specific patch
-  def sbtLaunchInt(v:String)      = "org.scala-sbt" % "launcher-interface" % "1.0.2-dbuild14"
-  def sbtLauncher(v:String)       = "org.scala-sbt" % "launcher" % "1.0.2-dbuild14"
+  // We deal with two separate launchers:
+  // 1) The "sbt-launch.jar" is the regular sbt launcher. we package it in the "build" subproject
+  // as a resource, so that it is available to the running dbuild when it wants to spawn a further sbt.
+  // 2) We use a modified, dbuild-specific modified version in order to launch dbuild. This
+  // is necessary since the Proguard-optimized sbt launcher is unusable as a library. This is the
+  // version herebelow.
+  def dbuildLaunchInt(v:String) = launchInt
+  def dbuildLauncher(v:String)  = launcher
 }

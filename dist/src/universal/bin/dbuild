@@ -17,5 +17,5 @@ declare -r SCRIPT_DIR="$(dirname $SCRIPT_PATH)"
 
 java \
   -Dsbt.boot.properties=$SCRIPT_DIR/dbuild.properties \
-  -jar $SCRIPT_DIR/sbt-launch.jar \
+  -jar $SCRIPT_DIR/dbuild-launcher.jar \
   $@

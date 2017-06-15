@@ -1,6 +1,7 @@
 import sbt.Keys._
 import sbt.Path._
 import sbt.IO
+import sbt.Logger
 import java.io.File
 import sbt.{Setting,PatternFilter,DirectoryFilter}
 import com.typesafe.sbt.SbtSite.site
@@ -14,15 +15,14 @@ import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generate
 object DocsSupport {
     val VersionPattern = """(\d+)\.(\d+)\.(\d+)(-.+)?""".r.pattern
 
-    def synchLocalImpl = (mappings in GhPagesKeys.synchLocal, GhPagesKeys.updatedRepository, version, isSnapshot, streams) map {
-        (mappings, repo, v, snap, s) =>
+    def synchLocalImpl(mappings:Seq[(java.io.File, String)], repo:File, v:String, snap:Boolean, log:Logger) = {
             val versioned = repo / v
             if(snap) {
-                    s.log.info("Replacing docs for previous snapshot in: " + versioned.getAbsolutePath)
+                    log.info("Replacing docs for previous snapshot in: " + versioned.getAbsolutePath)
                     IO.delete(versioned)
             } else if(versioned.exists) {
-                    s.log.warn("Site for " + v + " was already in: " + versioned.getAbsolutePath)
-                    s.log.info("Replacing previous docs...")
+                    log.warn("Site for " + v + " was already in: " + versioned.getAbsolutePath)
+                    log.info("Replacing previous docs...")
                     IO.delete(versioned)
             }
             IO.copy(mappings map { case (file, target) => (file, versioned / target) })
@@ -35,7 +35,7 @@ object DocsSupport {
                                 """|/index.html"></HEAD>
                                    |<BODY><p><a href=""".stripMargin+"\""+v+"""/index.html"> </a></p></BODY>
                                    |</HTML>""".stripMargin)
-            s.log.info("Copied site to " + versioned)
+            log.info("Copied site to " + versioned)
             repo
     }
     def versionsJs(vs: Seq[String]): String = "var availableDocumentationVersions = " + vs.mkString("['", "', '", "']")
@@ -58,7 +58,14 @@ object DocsSupport {
       enableOutput in generatePdf in Sphinx := false,
       enableOutput in generateEpub in Sphinx := false,
       git.remoteRepo := "git@github.com:typesafehub/dbuild.git",
-      GhPagesKeys.synchLocal <<= DocsSupport.synchLocalImpl,
+      GhPagesKeys.synchLocal := {
+        val maps = (mappings in GhPagesKeys.synchLocal).value
+        val repo = GhPagesKeys.updatedRepository.value
+        val v = version.value
+        val snap = isSnapshot.value
+        val log = streams.value.log
+        DocsSupport.synchLocalImpl(maps, repo, v, snap, log)
+      },
       publish := (),
       publishLocal := (),
       makeSite <<= makeSite.dependsOn(sbt.Def.task {

@@ -292,7 +292,7 @@ class DeployHTTP(log: Logger, options: DeployInfo, timeOut: Duration = 20 minute
       log.info("Verifying checksum: " + relative)
   protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
     val sender =
-      dispUrl(uri.toString).PUT.as(credentials.user, credentials.pass).setBody(file).setBodyEncoding("application/octet-stream")
+      dispUrl(uri.toString).PUT.as(credentials.user, credentials.pass).setBody(file).setContentType("application/octet-stream","UTF-8")
     val response = Await.result(Http(sender OK { response =>
       Deploy.readSomePath[ArtifactoryResponse](response.getResponseBody)
     }), timeOut)

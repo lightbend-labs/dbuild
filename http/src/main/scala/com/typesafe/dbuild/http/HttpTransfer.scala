@@ -87,7 +87,7 @@ class HttpTransfer(dbuildVersion:String) extends java.io.Closeable {
   def upload(uri: String, file: File, cred: Credentials, timeOut: Duration = 10 minutes)(handleResponseBody: String => Unit ) = {
     val absFile = file.getAbsoluteFile()
     try {
-      val request = dispatchUrl(uri).PUT.as(cred.user,cred.pw).setBody(absFile).setBodyEncoding("application/octet-stream")
+      val request = dispatchUrl(uri).PUT.as(cred.user,cred.pw).setBody(absFile).setContentType("application/octet-stream","UTF-8")
       val r = http(request OK { response => handleResponseBody(response.getResponseBody) })
       Await.result(r, timeOut)
     } catch {

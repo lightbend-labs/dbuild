@@ -276,6 +276,7 @@ object IvyMachinery {
     }
   /** Creates a resolver for Maven Central.*/
   def mavenMainResolver = defaultMavenResolver("Maven Central")
+  def jcenterResolver = mavenResolver("JCenter", "https://jcenter.bintray.com/")
   /** Creates a maven-style resolver with the default root.*/
   def defaultMavenResolver(name: String) =
     {
@@ -326,6 +327,7 @@ object IvyMachinery {
       case Local => localResolver(ivyHome.getAbsolutePath)
       case MavenLocal => mavenLocal
       case MavenCentral => mavenMainResolver
+      case Jcenter => jcenterResolver
       case ScalaToolsReleases | SonatypeOSSReleases => mavenResolver("Sonatype Releases Repository", "https://oss.sonatype.org/content/repositories/releases")
       case ScalaToolsSnapshots | SonatypeOSSSnapshots => scalaSnapshots("")
     }
@@ -408,5 +410,4 @@ object IvyMachinery {
     def isShowProgress = false
     def setShowProgress(progress: Boolean) {}
   }
-
 }

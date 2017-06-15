@@ -170,7 +170,7 @@ class EmailNotificationContext(log: Logger) extends NotificationContext[EmailNot
             } catch {
               // getLocalHost() will throw an exception if the current hostname is set but unrecognized
               // by the local dns server. As a last resort, we fall back to "localhost".
-              case e => "localhost"
+              case e:java.net.UnknownHostException => "localhost"
             }
             "dbuild at " + host + " <" + userName + "@" + host + ">"
         }

@@ -68,7 +68,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                     t.afterBuild(rdb, buildOutcome)
                     (t.id, true)
                   } catch {
-                    case e =>
+                    case e:Throwable =>
                       (t.id, false)
                   }
                 }
@@ -85,7 +85,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   notifTask.afterBuild(rdb, outcomeForNotif)
                   (notifTask.id, true)
                 } catch {
-                  case e =>
+                  case e:Throwable =>
                     (notifTask.id, false)
                 })
               }
@@ -149,7 +149,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               def nest[K](f: => K)(g: K => Future[BuildOutcome]): Future[BuildOutcome] = (try {
                 Left(f)
               } catch {
-                case e =>
+                case e:Throwable =>
                   val outcome = Future(ExtractionFailed(".", extractionOutcome.outcomes, "Cause: " + prepareLogMsg(log, e)))
                   afterTasks(None, outcome)
                   Right(outcome)
@@ -183,7 +183,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
           }
         }
       } catch {
-        case e =>
+        case e:Throwable =>
           Future(UnexpectedOutcome(".", Seq.empty, "Cause: " + prepareLogMsg(log, e)))
       }
       result pipeTo listener
@@ -193,13 +193,13 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   final def wrapExceptionIntoOutcomeF[A <: BuildOutcome](log: Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
     implicit val ctx = context.system
     try f(a) catch {
-      case e =>
+      case e:Throwable =>
         Future(UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e)))
     }
   }
   final def wrapExceptionIntoOutcome[A <: BuildOutcome](log: Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
     try f(a) catch {
-      case e =>
+      case e:Throwable =>
         UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e))
     }
   }

@@ -139,7 +139,7 @@ class DeployBuild(options: GeneralOptions, log: Logger) extends OptionTask(log) 
           }
           goodModInfos
         } catch {
-          case e =>
+          case e:Throwable =>
             log.error("***ERROR*** Encountered an error while deploying to " + options.uri)
             throw e
         }
@@ -153,7 +153,7 @@ class DeployBuild(options: GeneralOptions, log: Logger) extends OptionTask(log) 
             Deploy.deploy(target = indexOptions, indexDir, log)
           }
           catch {
-            case e =>
+            case e:Throwable =>
               log.error("***ERROR*** Encountered an error while generating or deploying the index file to " + indexOptions.uri)
               throw e
           }

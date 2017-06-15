@@ -88,7 +88,7 @@ class Extractor(
       outcome
     }
   } catch {
-    case e =>
+    case e:Throwable =>
       ExtractionFailed(extractionConfig.buildConfig.name, Seq.empty, prepareLogMsg(logger, e))
   }
 

@@ -37,7 +37,7 @@ class LocalBuildRunner(builder: BuildRunner,
             buildData))
       }
     } catch {
-      case t =>
+      case t:Throwable =>
         BuildFailed(build.config.name, children, prepareLogMsg(log, t))
     }
   }

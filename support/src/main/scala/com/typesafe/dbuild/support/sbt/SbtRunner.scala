@@ -87,7 +87,7 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
         val lastErr = try {
           readFileToString(lastMsg, "UTF-8")
         } catch {
-          case _ => sys.error("Failure to run sbt!  Error code: " + n)
+          case _:Throwable => sys.error("Failure to run sbt!  Error code: " + n)
         }
         sys.error(lastErr)
       }

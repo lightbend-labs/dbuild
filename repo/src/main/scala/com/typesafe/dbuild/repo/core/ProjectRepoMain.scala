@@ -196,7 +196,7 @@ object ProjectRepoMain {
       SavedConfiguration(expandedDBuildConfig, build) <- LocalRepoHelper.readBuildMeta(buildUUID, cache)
       project <- build.repeatableBuilds
     } try printProjectInfo(project.uuid)
-      catch { case _ => println("     " + project.config.name + " is not built.")}
+      catch { case _:Throwable => println("     " + project.config.name + " is not built.")}
   }
 }
 

@@ -2,9 +2,15 @@ package com.typesafe.dbuild.repo.core
 
 import java.io.File
 import com.typesafe.dbuild.adapter.Adapter
+import com.typesafe.dbuild.http._
 import Adapter.IO
 import Adapter.Path._
-import dispatch.classic._
+import com.typesafe.dbuild.adapter.Defaults
+import dispatch.{url => dispUrl, Http}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import scala.concurrent.duration._
+import org.apache.commons.io.{ FileUtils, IOUtils }
 
 /** A cached remote repository. */
 class CachedRemoteReadableRepository(cacheDir: File, uri: String) extends ReadableRepository {
@@ -38,7 +44,6 @@ final class CachedRemoteRepository(cacheDir: File, uri: String, credentials: Cre
     // avoid 0-length files, which represents some kind of error downloaded that we've cleaned up,
     // but may reappair on file system exceptions.
     if(!cacheFile.exists || cacheFile.length == 0) {
-      // TODO - immutability restrictions?
       try {
         Remote push (makeUrl(uri, key), file, credentials)
         IO.copyFile(file, cacheFile)
@@ -56,33 +61,22 @@ final class CachedRemoteRepository(cacheDir: File, uri: String, credentials: Cre
 
 /** Helpers for free-form HTTP repositories */
 object Remote {
-  def push(uri: String, file: File, cred: Credentials): Unit = {
-   import dispatch._
-   // TODO - Discover mime type from file extension if necessary, or just send
-   // as binary always.
-   val sender = 
-    url(uri).PUT.as(cred.user,cred.pw) <<< (file, "application/octet-stream")
-    // TODO - output to logger.
-    Http(sender >>> System.out)
+  def push(uri: String, file: File, cred: Credentials, timeOut: Duration = 20 minutes): Unit = {
+    val ht = new HttpTransfer(Defaults.version)
+    try {
+      ht.upload(uri, file, cred)(println)
+    } finally {
+      ht.close()
+    }
   }
-  def pull(uri: String, local: File): Unit = {
+  def pull(uri: String, local: File, timeOut: Duration = 20 minutes): Unit = {
     // Ensure directory exists.
     local.getParentFile.mkdirs()
-    
-    // Pull to temporary file, then move.
-    // uri must be sanitized first: can't contain slashes etc.
-    val saneUri=java.net.URLEncoder.encode(uri)
-    val suffix=saneUri.substring(Math.max(0,saneUri.length-45))
-    IO.withTemporaryFile("dbuild-cache", suffix) { tmp =>
-      import dispatch._
-      val fous = new java.io.FileOutputStream(tmp)
-      // IF there's an error, we must delete the file...
-      try Http(url(uri) >>> fous)
-      finally fous.close()
-      // IF we made it here with no exceptions thrown, it's safe to move the temp file to the
-      // appropriate location.  This should be a far more atomic operation, and "safer".
-      IO.move(tmp, local)
+    val ht = new HttpTransfer(Defaults.version)
+    try {
+      ht.download(uri, local)
+    } finally {
+      ht.close()
     }
-    
   }
 }

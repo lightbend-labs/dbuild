@@ -107,6 +107,8 @@ class SbtBuildMain extends xsbti.AppMain {
       conflicts(noNotify, List(checkout.uuid, checkout.project, checkout.path))
       conflicts(local, List(checkout.uuid, checkout.project, checkout.path))
       // requireOne(checkout.uuid,configFile) // use manual checking (below) to get a better error message
+      addSubcommand(checkout)
+      verify()
     }
     try {
       val useLocalResolvers = conf.noResolvers() || conf.local()
@@ -220,9 +222,9 @@ class SbtBuildMain extends xsbti.AppMain {
         val repos = if (useLocalResolvers || resolvers.isEmpty)
           localRepos
         else {
-          val listMap = xsbt.boot.ListMap(resolvers.toSeq.reverse: _*)
           // getRepositories contains a ListMap.toList, where sbt's definition
           // of toList is "backing.reverse". So we have to reverse again.
+          val listMap = xsbt.boot.ListMap(resolvers.toSeq.reverse: _*)
           (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
         }
         if (debug) {

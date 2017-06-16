@@ -28,13 +28,13 @@ object StateHelpers {
   def saveLastMsg(lastMsgFile: File, f: (State, Seq[String]) => State)(state: State, args: Seq[String]): State = try {
     f(state, args)
   } catch {
-    case e => saveMsg(e, lastMsgFile)
+    case e:Throwable => saveMsg(e, lastMsgFile)
   }
   
   def saveLastMsg(lastMsgFile: File, f: State => State)(state: State): State = try {
     f(state)
   } catch {
-    case e => saveMsg(e, lastMsgFile)
+    case e:Throwable => saveMsg(e, lastMsgFile)
   }
 
 }

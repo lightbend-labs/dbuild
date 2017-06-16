@@ -1,10 +1,11 @@
-
 package com.typesafe.dbuild.plugin
 
 import sbt._
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross,ScalaInstance}
-import Adapter.syntax._
+import Adapter.{moduleWithName,moduleWithRevision,moduleWithCrossVersion,moduleWithExplicitArtifacts}
+import Adapter.{moduleWithExtraAttributes,ivyScalaWithCheckExplicit,artifactWithClassifier}
+import Adapter.{crossDisabled,crossFull,crossBinary,newIvyPaths}
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -115,31 +116,32 @@ object DBuildRunner {
         if artifact.info.name == fixName(m.name) || (m.explicitArtifacts map expandName).contains(artifact.info.name)
       } yield artifact).headOption
     findArt map { art =>
-      val newArt =
-        // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it may have an extra suffix
-        // due to the classifier). Use fixName(m.name) instead.
-        // Note2: in case of a classifier, there is a hack to make it match even
-        // if the requested library has an explicit matching name and no classifier;
-        // this is required by one of the test projects. So we match in that way as
-        // well (see above m.explicitArtifacts contains...)
-        m.copy(name = fixName(m.name) + art.crossSuffix, revision = art.version, crossVersion = CrossVersion.Disabled, explicitArtifacts =
-          // More hacking: the explicit artifact did not originally contain the crossSuffix; if we leave it in place as-is, the name in the
-          // explicit artifact takes over, and fixName(m.name)+art.crossSuffix gets ignored. Conversely, if we remove the explicit artifact
-          // in order to make the name (with crossSuffic) match, we may lose a classifier specified in the initial explicit artifact, with the
-          // result of matching against the wrong artifact. The only solution is rewriting the explicitArtifacts adequately.
-          m.explicitArtifacts.map { a =>
-            if (expandName(a) == art.info.name && a.classifier.nonEmpty)
-              // this means, for example, that the explicitArtifact is "compiler-interface" with classifier "bin", while art.info.name is
-              // "compiler-interface-bin". This is made more complicated by the crossSuffix, as just adding the suffix would mean the
-              // explicitArtifact is "compiler-interface_2.11", classifier bin, therefore "compiler-interface_2.11-bin", while
-              // art.info.name is "compiler-interface-bin_2.11". Oops. We fix that by appending the suffix to the /classifier/ instead,
-              // in order to make things somehow work.
-              a.copy(classifier = Some(fixName(a.classifier.get) + art.crossSuffix))
-            else
-              a
-          },
-          extraAttributes = fixAttrs(m.extraAttributes, art.pluginAttrs)
-        )
+      // Note: do not take art.info.name; in case of explicitArtifacts, it will not match (it may have an extra suffix
+      // due to the classifier). Use fixName(m.name) instead.
+      // Note2: in case of a classifier, there is a hack to make it match even
+      // if the requested library has an explicit matching name and no classifier;
+      // this is required by one of the test projects. So we match in that way as
+      // well (see above m.explicitArtifacts contains...)
+      val m2 = moduleWithName(m, fixName(m.name) + art.crossSuffix)
+      val m3 = moduleWithRevision(m2, art.version)
+      val m4 = moduleWithCrossVersion(m3, crossDisabled)
+      val m5 = moduleWithExplicitArtifacts(m4,
+        // More hacking: the explicit artifact did not originally contain the crossSuffix; if we leave it in place as-is, the name in the
+        // explicit artifact takes over, and fixName(m.name)+art.crossSuffix gets ignored. Conversely, if we remove the explicit artifact
+        // in order to make the name (with crossSuffic) match, we may lose a classifier specified in the initial explicit artifact, with the
+        // result of matching against the wrong artifact. The only solution is rewriting the explicitArtifacts adequately.
+        m.explicitArtifacts.map { a =>
+          if (expandName(a) == art.info.name && a.classifier.nonEmpty)
+            // this means, for example, that the explicitArtifact is "compiler-interface" with classifier "bin", while art.info.name is
+            // "compiler-interface-bin". This is made more complicated by the crossSuffix, as just adding the suffix would mean the
+            // explicitArtifact is "compiler-interface_2.11", classifier bin, therefore "compiler-interface_2.11-bin", while
+            // art.info.name is "compiler-interface-bin_2.11". Oops. We fix that by appending the suffix to the /classifier/ instead,
+            // in order to make things somehow work.
+            artifactWithClassifier(a, Some(fixName(a.classifier.get) + art.crossSuffix))
+          else
+            a
+        })
+      val newArt = moduleWithExtraAttributes(m5,fixAttrs(m.extraAttributes, art.pluginAttrs))
       log.debug("Rewriting " + m + " to " + newArt + " (against: " + art + " )")
       newArt
     } getOrElse {
@@ -154,7 +156,7 @@ object DBuildRunner {
       if (!(modules exists { i => i.getOrganisation == m.organization && fixName(i.getName) == fixName(m.name) })) {
         // Do we have a Scala-based library dependency that was not rewritten? We can recognize it
         // since there is a cross version suffix attached to the name, hence m.name != fixName(m.name)
-        if ((m.name != fixName(m.name) || m.crossVersion != CrossVersion.Disabled)) {
+        if ((m.name != fixName(m.name) || m.crossVersion != crossDisabled)) {
           // If we are here, it means that this is a library dependency that is required,
           // that refers to an artifact that is not provided by any project in this build,
           // and that needs a certain Scala version (range) in order to work as intended.
@@ -245,7 +247,7 @@ object DBuildRunner {
     val newSettings = newSettings1 ++ {
       pmsSettings map { s =>
         val sc = s.key.scope
-        Keys.publishTo in sc <<= (Keys.publishMavenStyle in sc) { if (_) mavenRepo else ivyRepo }
+        Keys.publishTo in sc := { if ((Keys.publishMavenStyle in sc).value) mavenRepo else ivyRepo }
       }
     }
 
@@ -315,18 +317,18 @@ object DBuildRunner {
     val scalaBinaryFull =
       fixGenericTransform2(Keys.scalaBinaryVersion) { s: Setting[String] =>
         val sc = s.key.scope
-        Keys.scalaBinaryVersion in sc <<= Keys.scalaVersion in sc
+        Keys.scalaBinaryVersion in sc := (Keys.scalaVersion in sc).value
       }("Setting Scala binary version to full") _
 
     crossVersion match {
       case "binaryFull" => scalaBinaryFull
       case "standard" => { (_: Seq[Setting[_]], _: Logger) => Seq.empty }
       case "disabled" => { (s: Seq[Setting[_]], l: Logger) =>
-        fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => CrossVersion.Disabled }(s, l) ++
+        fixGeneric2(Keys.crossVersion, "Disabling cross version") { _ => crossDisabled }(s, l) ++
           scalaBinaryFull(s, l)
       }
       case "full" => { (s: Seq[Setting[_]], l: Logger) =>
-        fixGeneric2(Keys.crossVersion, "Setting cross version to full") { _ => CrossVersion.full }(s, l) ++
+        fixGeneric2(Keys.crossVersion, "Setting cross version to full") { _ => crossFull }(s, l) ++
           scalaBinaryFull(s, l)
       }
       case _ => sys.error("Unrecognized option \"" + crossVersion + "\" in cross-version")
@@ -339,7 +341,10 @@ object DBuildRunner {
     checkMissing: Boolean, fromSpace: String, log: Logger) =
     fixGenericTransform2(Keys.allDependencies) { r: Setting[Task[Seq[sbt.ModuleID]]] =>
       val sc = r.key.scope
-      Keys.allDependencies in sc <<= (Keys.allDependencies in sc, Keys.name in sc, Keys.organization in sc) map { (old, n, o) =>
+      Keys.allDependencies in sc := {
+        val old = (Keys.allDependencies in sc).value
+        val n = (Keys.name in sc).value
+        val o = (Keys.organization in sc).value
         old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log, n.toLowerCase, o.toLowerCase)
       }
     }("Updating dependencies") _
@@ -373,7 +378,7 @@ object DBuildRunner {
   // a shortened version). That generates tons of warnings; in order to disable that, we set
   // IvyScala.checkExplicit to false
   def fixScalaBinaryCheck2 =
-    fixGeneric2(Keys.ivyScala, "Disabling Scala binary checking") { _ map { _.copy(checkExplicit = false) } }
+    fixGeneric2(Keys.ivyScala, "Disabling Scala binary checking") { _ map { i => ivyScalaWithCheckExplicit(i, false) } }
 
   // We need to disable the inter-project resolver entirely. Otherwise, sbt will try to build all
   // of the dependent subprojects each time one of the subprojects is built, including some that
@@ -394,12 +399,12 @@ object DBuildRunner {
   def fixInterProjectResolver2bis(modules: Seq[ModuleRevisionId]) =
     fixGenericTransform2(Keys.projectResolver) { r: Setting[Task[Resolver]] =>
       val sc = r.key.scope
-      Keys.projectResolver in sc <<= (Keys.projectDescriptors in sc) map {
-        m =>
-          val k = m.filter {
-            case (a, _) => modules exists { b => b.getOrganisation == a.getOrganisation && fixName(b.getName) == fixName(a.getName) }
-          }
-          new RawRepository(new ProjectResolver("inter-project", k))
+      Keys.projectResolver in sc := {
+        val m = (Keys.projectDescriptors in sc).value
+        val k = m.filter {
+          case (a, _) => modules exists { b => b.getOrganisation == a.getOrganisation && fixName(b.getName) == fixName(a.getName) }
+        }
+        new RawRepository(new ProjectResolver("inter-project", k))
       }
     }("Patching the inter-project resolver") _
 
@@ -411,9 +416,9 @@ object DBuildRunner {
   def fixIvyPaths2(log: Logger) =
     fixGenericTransform2(Keys.baseDirectory) { r: Setting[IvyPaths] =>
       val sc = r.key.scope
-      Keys.ivyPaths in sc <<= (Keys.baseDirectory in sc) {
-        d =>
-          new IvyPaths(d, Some(sbtIvyCache(d)))
+      Keys.ivyPaths in sc := {
+        val d = (Keys.baseDirectory in sc).value
+        newIvyPaths(d, Some(sbtIvyCache(d)))
       }
     }("Patching Ivy paths") _
 
@@ -447,7 +452,8 @@ object DBuildRunner {
       fixGeneric2(Keys.scalaVersion, "Setting Scala version to: " + ver) { _ => ver }(oldSettings, log) ++
         fixGenericTransform2(Keys.scalaInstance) { s: Setting[Task[ScalaInstance]] =>
           val sc = s.key.scope
-          Keys.scalaInstance in sc <<= Keys.appConfiguration in sc map { app =>
+          Keys.scalaInstance in sc := {
+            val app = (Keys.appConfiguration in sc).value
             val launcher = app.provider.scalaProvider.launcher
             scalaInstance(libraryJar(scalaHome), compilerJar(scalaHome), launcher, allJars(scalaHome): _*)
           }
@@ -766,7 +772,7 @@ object DBuildRunner {
   def buildSettings: Seq[Setting[_]] = Seq(Keys.commands += buildIt)
 
   def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
-    cross: CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
+    cross: Adapter.CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
     val crossSuffix = applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
@@ -782,9 +788,9 @@ object DBuildRunner {
     import com.typesafe.dbuild.manifest._
     // according to the specificatin of CrossBuildProperties:
     val someScala: Option[String] = crossVersion match {
-      case CrossVersion.Disabled => None
-      case x: CrossVersion.Binary => Some(scalaBinaryVersion)
-      case x: CrossVersion.Full => Some(scalaVersion)
+      case _: crossDisabled => None
+      case x: crossBinary => Some(scalaBinaryVersion)
+      case x: crossFull => Some(scalaVersion)
       case _ => sys.error("Internal error: unknown crossVersion in generateModuleInfo(). Please report.")
     }
     val cbp = if (isSbtPlugin) {
@@ -796,8 +802,9 @@ object DBuildRunner {
   }
 
   def projectSettings: Seq[Setting[_]] = Seq(
-    extractArtifacts <<= (Keys.organization, Keys.version, Keys.packagedArtifacts in Compile,
-      Keys.crossVersion, Keys.scalaVersion, Keys.scalaBinaryVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin) map extractArtifactLocations,
-    moduleInfo <<= (Keys.organization, Keys.moduleName, Keys.version, Keys.scalaVersion, Keys.scalaBinaryVersion,
-      Keys.sbtVersion, Keys.sbtBinaryVersion, Keys.sbtPlugin, Keys.crossVersion) map generateModuleInfo)
+    extractArtifacts := extractArtifactLocations(Keys.organization.value, Keys.version.value, (Keys.packagedArtifacts in Compile).value,
+      Keys.crossVersion.value, Keys.scalaVersion.value, Keys.scalaBinaryVersion.value, Keys.sbtBinaryVersion.value, Keys.sbtPlugin.value),
+    moduleInfo := generateModuleInfo(Keys.organization.value, Keys.moduleName.value, Keys.version.value, Keys.scalaVersion.value,
+      Keys.scalaBinaryVersion.value, Keys.sbtVersion.value, Keys.sbtBinaryVersion.value, Keys.sbtPlugin.value, Keys.crossVersion.value)
+  )
 }

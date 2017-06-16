@@ -35,7 +35,7 @@ object Utils {
             if (e.getMessage().startsWith("Can not deserialize instance of java.lang.String"))
               m1 + "\nA string may have been found in place of an array, somewhere in this object" else m1
           } catch {
-            case f => throw new JsonMappingException("Internal dbuild exception while deserializing; please report.", e)
+            case f:Throwable => throw new JsonMappingException("Internal dbuild exception while deserializing; please report.", e)
           }
           throw new JsonMappingException(e.getMessage.split("\n")(0) + m2, e.getCause)
       }
@@ -59,7 +59,7 @@ object Utils {
     try {
       mapper.readValue[SeqString](rendered)
     } catch {
-      case e => throw new JsonMappingException("The \"properties\" section contains unexpected data.", e)
+      case e:Throwable => throw new JsonMappingException("The \"properties\" section contains unexpected data.", e)
     }
   }
 

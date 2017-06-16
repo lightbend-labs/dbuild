@@ -5,6 +5,8 @@ import com.typesafe.sbt.SbtNativePackager._
 import com.typesafe.sbt.S3Plugin
 import com.typesafe.sbt.S3Plugin.S3._
 import com.typesafe.sbt.packager.universal.Keys.packageZipTarball
+import scala.concurrent.ExecutionContext.Implicits.global
+import DbuildLauncher.{launcherVersion,uri}
 
 object Packaging {
 
@@ -22,9 +24,6 @@ object Packaging {
      maintainer := "Antonio Cunei <antonio.cunei@lightbend.com>",
      packageSummary := "Multi-project builder.",
      packageDescription := """A multi-project builder capable of glueing together a set of related projects.""",
-     mappings in Universal ++= SbtSupport.sbtLaunchJar.value map { jar =>
-       jar -> "bin/sbt-launch.jar"
-     },
      name in Universal := name.value + "-" + version.value,
      rpmRelease := "1",
      rpmVendor := "typesafe",
@@ -34,18 +33,6 @@ object Packaging {
      // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
      // otherwise Universal may end up using outdated files.
      // The command "release" in root will perform a clean, followed by a publish.
-
-     // S3 stuff
-     host in upload := "downloads.typesafe.com",
-     mappings in upload := { if(scalaVersion.value.startsWith("2.10")) Seq.empty else
-       Seq((packageZipTarball in Universal).value, (packageBin in Universal).value) map {
-         f => (f, name.value+"/"+version.value+"/"+f.getName)
-       }
-     },
-     progress in upload := true,
-     credentials += Credentials(Path.userHome / ".s3credentials"),
-     // Important: always issue "clean" before an S3 upload
-     // until here
 
      publishArtifact in Compile := false,
 
@@ -62,9 +49,24 @@ object Packaging {
   addArtifact(artifact in (Universal, packageBin), packageBin in Universal) ++
   Seq(mappings in Universal ++= Seq(
         Packaging.makeDBuildProps(target.value, sourceDirectory.value, (scalaVersion in build).value, (version in build).value),
-        Packaging.makeDRepoProps(target.value, sourceDirectory.value, (scalaVersion in build).value, (version in build).value)
+        Packaging.makeDRepoProps(target.value, sourceDirectory.value, (scalaVersion in build).value, (version in build).value),
+        Packaging.dbuildLauncher(target.value, streams.value.log, (version in build).value)
       )
   )
+
+  def dbuildLauncher(target: File, log: Logger, dbuildVersion: String) = {
+    val tdir = target / "dbuild-launcher"
+    if(!tdir.exists) tdir.mkdirs()
+    val file = tdir / "dbuild-launcher.jar"
+    log.info("Downloading dbuild launcher "+ uri +" to "+ file.getAbsolutePath() +"...")
+    val ht = new com.typesafe.dbuild.http.HttpTransfer(dbuildVersion)
+    try {
+      ht.download(uri, file) // uri from DbuildLauncher.scala
+    } finally {
+      ht.close()
+    }
+    file -> "bin/dbuild-launcher.jar"
+  }
 
   def makeDRepoProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"repo","com.typesafe.dbuild.repo.core.SbtRepoMain")
   def makeDBuildProps(t: File, src: File, sv: String, v: String): (File, String) = makeProps(t,src,sv,v,"build","com.typesafe.dbuild.build.SbtBuildMain")

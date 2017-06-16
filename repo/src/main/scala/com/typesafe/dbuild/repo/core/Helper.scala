@@ -49,7 +49,7 @@ object LocalRepoHelper {
         // if we are here the file exists, so we either match, or it's an error.
         // We might also fail to deserialize, though. We continue after the try.
       } catch {
-        case e =>
+        case e:Throwable =>
           // the meta doesn't exist in the repo, or other I/O error (wrong privs, for instance).
           // we try to write, hoping we succeed.
           log.debug("While reading from repo: " + e.getMessage)
@@ -63,7 +63,7 @@ object LocalRepoHelper {
         readValue[T](f)
         // deserialized ok. We continue after the try
       } catch {
-        case e =>
+        case e:Throwable =>
           // failed to deserialize. Should be impossible.
           log.error("The data already present in the dbuild repository for this data (uuid = " + data.uuid + ")")
           log.error("does not seem to be a valid " + data.getClass.getSimpleName + ". This shouldn't happen! Please report.")

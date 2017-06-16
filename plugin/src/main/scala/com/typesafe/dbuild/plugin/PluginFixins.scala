@@ -2,6 +2,7 @@ package com.typesafe.dbuild.plugin
 
 import sbt._
 import com.typesafe.dbuild.support.NameFixer
+import com.typesafe.dbuild.adapter.Adapter.moduleWithRevision
 
 object PluginFixins {
   case class PluginId(group: String, name: String)
@@ -27,7 +28,7 @@ object PluginFixins {
   def fixPlugin(m: ModuleID): ModuleID = {
     val id = PluginId(m.organization, NameFixer.fixName(m.name))
     val optVersion = pluginVersions get id
-    optVersion map (v => m.copy(revision = v)) getOrElse m
+    optVersion map (v => moduleWithRevision(m, v)) getOrElse m
   }
   
 }

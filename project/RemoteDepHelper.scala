@@ -1,7 +1,6 @@
 import sbt._
 import Keys._
 import Dependencies._
-import SyntaxAdapter.syntax._
 
 // DSL for adding remote deps like local deps.
 class RemoteDepHelper(p: Project) {

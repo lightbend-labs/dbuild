@@ -44,7 +44,7 @@ abstract class OptionTask(log: Logger) {
   def runRememberingExceptions[A](diagnose: Boolean, i: Iterable[A])(f: A => Unit) = {
     val status = i map { item =>
       try { f(item); (true, "") } catch {
-        case e =>
+        case e:Throwable =>
           // Got an error from this notification? remember it and continue.
           // use "diagnose" to print diagnostics only in the innermost calls
           if (diagnose) prepareLogMsg(log, e)

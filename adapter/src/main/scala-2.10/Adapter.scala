@@ -28,6 +28,8 @@ object Adapter {
   val IO = sbt.IO
   val Path = sbt.Path
   type RichFile = sbt.RichFile
+  def newIvyPaths(baseDirectory: java.io.File, ivyHome: Option[java.io.File]) =
+    new sbt.IvyPaths(baseDirectory, ivyHome)
   type FileFilter = sbt.FileFilter
   def toFF = sbt.FileFilter.globFilter _
   val DirectoryFilter = sbt.DirectoryFilter
@@ -37,10 +39,24 @@ object Adapter {
   type Logger = sbt.Logger
   import Path._
   def allPaths(f:File) = sbt.PathFinder(f).***
-  val syntax = new {}
-  val syntaxio = syntax
+  val syntaxio = new {}
   type ModuleID = sbt.ModuleID
   type Artifact = sbt.Artifact
+  type CrossVersion = sbt.CrossVersion
+  type IvyScala = sbt.IvyScala
+  def moduleWithName(m:ModuleID, n:String) = m.copy(name=n)
+  def moduleWithRevision(m:ModuleID, r:String) = m.copy(revision=r)
+  def moduleWithCrossVersion(m:ModuleID, cross:CrossVersion) = m.copy(crossVersion=cross)
+  def moduleWithExplicitArtifacts(m:ModuleID, ea:Seq[Artifact]) = m.copy(explicitArtifacts=ea)
+  def moduleWithExtraAttributes(m:ModuleID, ea:Map[String,String]) = m.copy(extraAttributes=ea)
+  def ivyScalaWithCheckExplicit(i:IvyScala, ce:Boolean) = i.copy(checkExplicit=ce)
+  def artifactWithClassifier(a:Artifact, cl:Option[String]) = a.copy(classifier=cl)
+  val crossDisabled = sbt.CrossVersion.Disabled
+  type crossDisabled = sbt.CrossVersion.Disabled.type
+  val crossBinary = sbt.CrossVersion.binary
+  type crossBinary = sbt.CrossVersion.Binary
+  val crossFull = sbt.CrossVersion.full
+  type crossFull = sbt.CrossVersion.Full
   type ProjectResolver = sbt.ProjectResolver
   type ScalaInstance = sbt.ScalaInstance
   lazy val ScalaInstance = sbt.ScalaInstance

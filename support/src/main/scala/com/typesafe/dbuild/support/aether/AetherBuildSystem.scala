@@ -42,7 +42,6 @@ import org.apache.ivy.plugins.parser.xml.XmlModuleDescriptorWriter
 import ivy.core.module.id.{ ModuleId, ModuleRevisionId }
 import ivy.core.resolve.{ ResolveEngine, ResolveOptions }
 import ivy.core.report.ResolveReport
-import org.apache.ivy.core.module.id.ModuleRevisionId
 import org.apache.ivy.core.resolve.IvyNode
 import com.typesafe.dbuild.support.NameFixer.fixName
 import org.apache.ivy.core.module.descriptor.DefaultArtifact
@@ -302,6 +301,8 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
         Some(new RemoteRepository.Builder("Maven2 Local", "default", "file://" + System.getProperty("user.home") + "/.m2/repository/").build())
       case MavenCentral =>
         Some(new RemoteRepository.Builder("Maven Central", "default", "http://repo1.maven.org/maven2/").build())
+      case Jcenter =>
+        Some(new RemoteRepository.Builder("JCenter", "default", "https://jcenter.bintray.com/").build())
       case ScalaToolsReleases | SonatypeOSSReleases =>
         Some(new RemoteRepository.Builder("Sonatype Releases Repository", "default", "https://oss.sonatype.org/content/repositories/releases").build())
       case ScalaToolsSnapshots | SonatypeOSSSnapshots =>

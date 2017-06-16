@@ -41,9 +41,9 @@ Then, proceed with "release" as usual to issue the snapshot to your Artifactory 
 
 IMPORTANT: the publishing process needs to be repeated twice, changing
 project/build.properties in the meantime, in order to publish artifacts
-for both sbt 0.13/scala 2.10 and sbt 1.0/scala 2.11 (currently 1.0.0-M4)
+for both sbt 0.13/scala 2.10 and sbt 1.0/scala 2.12 (currently 1.0.0-M6)
 All the artifacts are published for 2.10, while only those relevant to
-the sbt plugin are published for 2.11.
+the sbt plugin are published for 2.12.
 
 ## Get Involved
 

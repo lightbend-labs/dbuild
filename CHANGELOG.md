@@ -2,17 +2,29 @@
 
 ### 0.9.7
 
-- This release is compatible with sbt 1.0.0-M4. The source
-  code and the build files have been reorganized, and
+- This release is compatible with sbt 1.0.0-M5 and 1.0.0-M6. The
+  source code and the build files have been reorganized, and
   moved to the .sbt format. The supported sbt versions are
-  1.0.0-M4 and 0.13.*; support for the old 0.12.4 has
+  1.0.0-M5, 1.0.0-M6, and 0.13.*; support for the old 0.12.4 has
   been removed.
 
+- A customized sbt launcher is now used to launch dbuild; the
+  only difference being that Proguard optimization is disabled.
+  That allowed the latest launcher to be used (the old 0.13.8
+  launcher was being used previously).
+
 - Fixes for issues #190, #158, #188
+
+- Added support for Jcenter in Ivy and Maven build systems
 
 - The dbuild sbt plugin .pom no longer directly refers to
   sbt jars, but uses those provided by the running sbt
   environment. Fixes scala/community-builds#384.
+
+- Replaced the classic version of the dispatch library with new
+  code based on the modern dispatch reboot.
+
+- Various library upgrades, and other updates
 
 ### 0.9.6
 

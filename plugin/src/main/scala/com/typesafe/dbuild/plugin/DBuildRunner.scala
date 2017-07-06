@@ -231,8 +231,9 @@ object DBuildRunner {
 
     val newSettings1 = {
       ptSettings map { s =>
-        Def.update(s.asInstanceOf[Setting[Option[sbt.Resolver]]].key) {
-          _ match {
+        val sc = s.key.scope
+        Keys.publishTo in sc := {
+          (Keys.publishTo in sc).value match {
             case Some(r: PatternsBasedRepository) if (!r.patterns.isMavenCompatible) => ivyRepo
             case _ => mavenRepo
           }

@@ -1,0 +1,221 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Download and Setup &mdash; dbuild Documentation</title>
+    
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="top" title="dbuild Documentation" href="index.html" />
+    <link rel="next" title="Using dbuild" href="dbuild.html" />
+    <link rel="prev" title="dbuild: Introduction" href="introduction.html" /> 
+  </head>
+  <body role="document">
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="#">Download</a></li>
+          <li><a href="http://github.com/typesafehub/dbuild">GitHub Project</a></li>           
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Download and Setup</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="dbuild.html">Using dbuild</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="introduction.html">dbuild: Introduction</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.8">Version 0.9.8</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="download-and-setup">
+<h1>Download and Setup<a class="headerlink" href="#download-and-setup" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="installing-the-build-tool">
+<h2>Installing the build tool<a class="headerlink" href="#installing-the-build-tool" title="Permalink to this headline">¶</a></h2>
+<p>The dbuild tool is distributed as a launcher, and a set of components that are downloaded
+automatically. The launcher can be downloaded in one of the following formats:</p>
+<dl class="docutils">
+<dt>Available formats, dbuild-0.9.8:</dt>
+<dd><ul class="first last simple">
+<li>gzipped tar: <a class="reference external" href="http://repo.typesafe.com/typesafe/ivy-releases/com.typesafe.dbuild/dbuild/0.9.8/tgzs/dbuild-0.9.8.tgz">tgz</a></li>
+<li>zip archive: <a class="reference external" href="http://repo.typesafe.com/typesafe/ivy-releases/com.typesafe.dbuild/dbuild/0.9.8/zips/dbuild-0.9.8.zip">zip</a></li>
+</ul>
+</dd>
+</dl>
+<p>The archive contains the following files:</p>
+<div class="highlight-text"><div class="highlight"><pre>./bin
+./bin/dbuild
+./bin/dbuild.properties
+./bin/drepo
+./bin/drepo.properties
+./bin/dbuild-launcher.jar
+</pre></div>
+</div>
+<p>Where <code class="docutils literal"><span class="pre">dbuild</span></code> is the build tool, and <code class="docutils literal"><span class="pre">dbuild.properties</span></code> is its configuration file. The <code class="docutils literal"><span class="pre">bin</span></code> directory also contains
+the <code class="docutils literal"><span class="pre">drepo</span></code> repository inspection tool, together with its configuration file; you can find more information in the
+section <a class="reference internal" href="repositories.html#section-drepo"><span>drepo</span></a>, later in this guide.</p>
+</div>
+<div class="section" id="using-dbuild">
+<h2>Using dbuild<a class="headerlink" href="#using-dbuild" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">dbuild</span></code> launcher is called by specifying on the command line its build configuration file:</p>
+<div class="highlight-bash"><div class="highlight"><pre>$ bin/dbuild build-file.dbuild
+</pre></div>
+</div>
+<p>The build tool will create, if not existing, a <code class="docutils literal"><span class="pre">~/.dbuild</span></code> directory in your home, which stores general
+dbuild support files and the local repository cache, and a <code class="docutils literal"><span class="pre">target</span></code> in your current directory, which is
+used as a staging area for the current build.</p>
+<p>Unless specified otherwise, the end results of the build (artifacts and build information) will be stored
+into a local repository in <code class="docutils literal"><span class="pre">~/.dbuild</span></code>. It is also possible to use a remote Ivy repository as storage;
+that is explained later in the section <a class="reference internal" href="repositories.html"><em>Repositories</em></a>. Additional details on the command line options
+are available below.</p>
+<p>The very first time dbuild is launched on a new machine, it will pause for several minutes while a number
+of needed libraries are downloaded from the network; this is normal and will happen only upon the very
+first invocation.</p>
+</div>
+<div class="section" id="properties-file">
+<h2>Properties file<a class="headerlink" href="#properties-file" title="Permalink to this headline">¶</a></h2>
+<p>By default, dbuild will use the file <code class="docutils literal"><span class="pre">dbuild.properties</span></code> to retrieve information about its internal
+configuration. There is usually no need to touch this file, as it contains defaults that should be
+adequate for most projects. However, you can modify this file if you would like to modify the standard
+behavior in some way (for instance, relocating the default <code class="docutils literal"><span class="pre">~/.dbuild</span></code> directory, or the location of
+the Ivy cache it uses).</p>
+<p>The <code class="docutils literal"><span class="pre">dbuild.properties</span></code> file also contains the default list of resolvers that are used to resolve
+artifacts within dbuild. The list can be modified here, or via variables or further properties files,
+as explained in the section <a class="reference internal" href="dbuild.html#custom-resolvers"><span>Customizing the list of repositories</span></a>.</p>
+</div>
+<div class="section" id="command-line-options">
+<h2>Command line options<a class="headerlink" href="#command-line-options" title="Permalink to this headline">¶</a></h2>
+<p>A summary of the command line options can be obtained at any time by typing <code class="docutils literal"><span class="pre">dbuild</span> <span class="pre">--help</span></code>. As of
+version 0.9.0, the options are:</p>
+<div class="highlight-text"><div class="highlight"><pre>$ bin/dbuild --help
+Typesafe dbuild 0.9.0
+Usage: dbuild [OPTIONS] config-file [target]
+dbuild is a multi-project build tool that can verify the compatibility
+of multiple related projects, by building each one on top of the others.
+Options:
+
+  -Dkey=value [key=value]...   One or more Java-style properties
+  -d, --debug                  Print more debugging information
+  -l, --local                  Equivalent to: --no-resolvers --no-notify
+  -n, --no-notify              Disable the notifications defined in the
+                               configuration file, and only print a report on the
+                               console
+  -r, --no-resolvers           Disable the parsing of the &quot;options.resolvers&quot;
+                               section from the dbuild configuration file: only
+                               use the resolvers defined in dbuild.properties
+      --help                   Show help message
+      --version                Show version of this program
+
+ trailing arguments:
+  config-file (not required)   The name of the dbuild configuration file
+  target (not required)        If a target project name is specified, dbuild will
+                               build only that project and its dependencies
+                               Multiple targets are also possible, supplying a
+                               comma separated list (with no blanks).
+
+Subcommand: checkout
+Use &quot;dbuild checkout&quot; to check out one project from a previously compiled
+build, preparing sbt for a debugging session.
+Options:
+
+      --help   Show help message
+
+ trailing arguments:
+  uuid (required)      UUID of the build
+  project (required)   name of the project
+  path (required)      path into which the source will be checked out
+
+For more information: http://typesafehub.github.io/dbuild
+</pre></div>
+</div>
+<p>During common usage, the most common ways to invoke dbuild are <code class="docutils literal"><span class="pre">dbuild</span> <span class="pre">file.dbuild</span></code> (to run
+a build using a configuration file), and <code class="docutils literal"><span class="pre">dbuild</span> <span class="pre">checkout</span> <span class="pre">uuid</span> <span class="pre">project</span> <span class="pre">dir</span></code> (to debug
+a failed build).</p>
+<p>Of particular interest is the option <code class="docutils literal"><span class="pre">--no-resolvers</span></code>. As will be described later, each dbuild
+configuration file may include a list of resolvers, which are used to retrieve the libraries
+used by the various projects. If you receive a configuration file from someone
+else, and the list of resolvers includes repositories that are not available to you (for
+instance proxy repositories), you can use that flag to ignore the list in the build file,
+and use instead the list specified in your <code class="docutils literal"><span class="pre">dbuild.properties</span></code> file. This options applies
+both to dbuild building as well as to dbuild checkout.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="dbuild.html"><em>Using dbuild</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Download and Setup</a><ul>
+<li><a class="reference internal" href="#installing-the-build-tool">Installing the build tool</a></li>
+<li><a class="reference internal" href="#using-dbuild">Using dbuild</a></li>
+<li><a class="reference internal" href="#properties-file">Properties file</a></li>
+<li><a class="reference internal" href="#command-line-options">Command line options</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

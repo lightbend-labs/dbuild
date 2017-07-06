@@ -62,42 +62,73 @@ object Adapter {
   def defaultID(base: File, prefix: String = "default") =
    sbt.dbuild.hack.DbuildHack.defaultID(base, prefix)
 
-// these bits are inappropriately copied from zinc v1.0.0-X1, where they
-// are private now, and exactly from:
-// internal/zinc-classpath/src/main/scala/sbt/internal/inc/ScalaInstance.scala
-  private val VersionPrefix = "version "
-  private def fastActualVersion(scalaLoader: ClassLoader): String =
-    {
-      val stream = scalaLoader.getResourceAsStream("compiler.properties")
-      try {
-        val props = new java.util.Properties
-        props.load(stream)
-        props.getProperty("version.number")
-      } finally stream.close()
-    }
+
+// These bits are inappropriately copied from various versions of zinc; some have been
+// removed and some made private, but we need them.
+// See: internal/zinc-classpath/src/main/scala/sbt/internal/inc/ScalaInstance.scala
+
   import java.net.{ URL, URLClassLoader }
-  private def scalaLoader(launcher: xsbti.Launcher): Seq[File] => ClassLoader = jars =>
-    new URLClassLoader(jars.map(_.toURI.toURL).toArray[URL], launcher.topLoader)
-  private def actualVersion(scalaLoader: ClassLoader)(label: String) =
+
+  /** Runtime exception representing a failure when finding a `ScalaInstance`. */
+  class InvalidScalaInstance(message: String, cause: Throwable)
+    extends RuntimeException(message, cause)
+
+  /** The prefix being used for Scala artifacts name creation. */
+  val VersionPrefix = "version "
+
+  private def slowActualVersion(scalaLoader: ClassLoader)(label: String) = {
+    val scalaVersion = {
+      try {
+        // Get scala version from the `Properties` file in Scalac
+        Class
+          .forName("scala.tools.nsc.Properties", true, scalaLoader) 
+          .getMethod("versionString")
+          .invoke(null)
+          .toString
+      } catch {
+        case cause: Exception =>
+          val msg = s"Scala instance doesn't exist or is invalid: $label"
+          throw new InvalidScalaInstance(msg, cause)
+      }
+    }
+
+    if (scalaVersion.startsWith(VersionPrefix))
+      scalaVersion.substring(VersionPrefix.length)
+    else scalaVersion
+  }  
+
+  private def fastActualVersion(scalaLoader: ClassLoader): String = {
+    val stream = scalaLoader.getResourceAsStream("compiler.properties")
+    try {
+      val props = new java.util.Properties  
+      props.load(stream)
+      props.getProperty("version.number")  
+    } finally stream.close()
+  }
+
+  /** Gets the version of Scala in the compiler.properties file from the loader.*/
+  private def actualVersion(scalaLoader: ClassLoader)(label: String) = {
     try fastActualVersion(scalaLoader)
     catch { case e: Exception => slowActualVersion(scalaLoader)(label) }
-  private def slowActualVersion(scalaLoader: ClassLoader)(label: String) =
-    {
-      val v = try { Class.forName("scala.tools.nsc.Properties", true, scalaLoader).getMethod("versionString").invoke(null).toString }
-      catch { case cause: Exception => throw new sbt.internal.inc.InvalidScalaInstance("Scala instance doesn't exist or is invalid: " + label, cause) }
-      if (v.startsWith(VersionPrefix)) v.substring(VersionPrefix.length) else v
-    }
-//
-// The code below was deprecated and has been removed from ScalaInstance in zinc 1.0.x,
-// however it may work for us.
-//
-// TODO: use one of the currently supported variants of ScalaInstance.apply()
-//
-  def scalaInstance(libraryJar: File, compilerJar: File, launcher: xsbti.Launcher, extraJars: File*): ScalaInstance = {
-    val classLoader = scalaLoader(launcher)
-    val loader = classLoader(libraryJar :: compilerJar :: extraJars.toList)
-    val version = actualVersion(loader)(" (library jar  " + libraryJar.getAbsolutePath + ")")
-    new ScalaInstance(VersionPrefix, loader, libraryJar, compilerJar, extraJars.toArray, None)
   }
+
+  private def scalaLoader(launcher: xsbti.Launcher): Seq[File] => ClassLoader = { jars =>
+    import java.net.{ URL, URLClassLoader }
+    new URLClassLoader(
+      jars.map(_.toURI.toURL).toArray[URL],
+      launcher.topLoader
+    )
+  }
+
+  private def scalaInstanceHelper(libraryJar: File, compilerJar: File, extraJars: File*)(classLoader: List[File] => ClassLoader): ScalaInstance =
+    {
+      val loader = classLoader(libraryJar :: compilerJar :: extraJars.toList)
+      val version = actualVersion(loader)(" (library jar  " + libraryJar.getAbsolutePath + ")")
+      new ScalaInstance(version, loader, libraryJar, compilerJar, extraJars.toArray, None)
+    }
+
+  def scalaInstance(libraryJar: File, compilerJar: File, launcher: xsbti.Launcher, extraJars: File*): ScalaInstance =
+    scalaInstanceHelper(libraryJar, compilerJar, extraJars: _*)(scalaLoader(launcher))
+
 }
 }

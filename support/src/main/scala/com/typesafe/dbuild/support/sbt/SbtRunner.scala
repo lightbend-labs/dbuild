@@ -326,7 +326,7 @@ object SbtRunner {
    * If quiet, then silence Ivy resolution
    */
   def ivyQuiet(debug: Boolean) =
-    if (debug) "" else "ivyLoggingLevel in Global := UpdateLogging.Quiet\n\n"
+    if (debug) "ivyLoggingLevel in Global := UpdateLogging.Full\n\n" else "ivyLoggingLevel in Global := UpdateLogging.Quiet\n\n"
 
   /**
    * The string needed to load the dbuild plugin

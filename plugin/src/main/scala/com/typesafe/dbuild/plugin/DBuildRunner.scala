@@ -577,10 +577,20 @@ object DBuildRunner {
         Project.extract(old).runTask(task in ref, old)
       }
 
+      def doInputTask[T](old: State, task: InputKey[T], input: String, msg: String = "") = {
+        if (msg.nonEmpty)
+          println(msg + ": " + normalizedProjectName(ref, baseDirectory))
+        Project.extract(old).runInputTask(task in ref, input, old)
+      }
+
       val (state7, artifacts) = doTask(state6, extractArtifacts, "Running build")
       purge()
 
-      def doTestTask(old: State, taskAndConfig: String): State = {
+      def doTestTask(old: State, taskAndConfigAndInput: String): State = {
+        val (input:String, taskAndConfig) = taskAndConfigAndInput.split(" ", 2) match {
+          case Array(tc, i) => (i, tc)
+          case Array(tc) => ("", tc)
+        }
         val (task: String, config: String) = taskAndConfig.split(':') match {
           case Array(c, t) => (t, c)
           case Array(t) => (t, "test")
@@ -588,7 +598,8 @@ object DBuildRunner {
         }
         val index = Project.extract(state7).structure.index.keyIndex
         val sel = Project.extract(state7).structure.index.keyMap.get(task)
-        def toTaskKey[T](a: AttributeKey[Task[T]]) = TaskKey[T](a)
+        def keyFromTask[T](a: AttributeKey[Task[T]]) = TaskKey[T](a)
+        def keyFromInputTask[T](a: AttributeKey[InputTask[T]]) = InputKey[T](a)
 
         // sel is now an Option[sbt.AttributeKey[_]]. Since we don't know the
         // inner type parameter, we cannot really build a matching TaskKey[_].
@@ -596,13 +607,17 @@ object DBuildRunner {
         // doesn't need any manifest (there is one directly inside the AttributeKey).
         // So, we should be safe by crudely casting.
         val taskManifest = ClassManifest.fromClass(classOf[Task[_]]).erasure
+        val inputTaskManifest = ClassManifest.fromClass(classOf[InputTask[_]]).erasure
         sel match {
           case None => sys.error("You asked dbuild to test using the task \"" + task + "\", but the task is unknown in this project.")
           case Some(key) =>
             // does this AttributeKey refer to a Task ?
             if (key.manifest.erasure == taskManifest) { // select AttributeKey[Task[whatever]]
-              doTask(state7, toTaskKey(key.asInstanceOf[AttributeKey[Task[Any]]]) in
+              doTask(state7, keyFromTask(key.asInstanceOf[AttributeKey[Task[Any]]]) in
                 new ConfigKey(config), "Running \"" + task + "\" in")._1
+            } else if (key.manifest.erasure == inputTaskManifest) {
+              doInputTask(state7, keyFromInputTask(key.asInstanceOf[AttributeKey[InputTask[Any]]]) in
+                new ConfigKey(config), input, "Running \"" + task + "\" in")._1
             } else {
               sys.error("Not a task: " + task + ", (found: " + key.manifest + ")")
             }

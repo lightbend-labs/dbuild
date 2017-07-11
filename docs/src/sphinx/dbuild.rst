@@ -386,6 +386,20 @@ test-tasks
   name of a task, like ``test``, or a configuration followed by a colon and a task
   name, like ``it:test``. If an element does not include an explicit configuration,
   the "test" configuration is used for that task.
+  Input tasks are also supported; everything that follows the first whitespace will be taken
+  as the list of arguments to the input task.
+
+.. note::
+  If you use ``scripted`` as a test task, you will need to propagate the list of
+  resolvers used by dbuild to the tests: by default, the scripted tests receive
+  just the default sbt list of resolvers. You can do that by adding to ``commands``
+  the line:
+
+  .. code-block:: text
+
+    "commands" : [ ...,
+      "set scriptedLaunchOpts ++= Seq(\"-Dsbt.override.build.repos=true\", (\"-Dsbt.repository.config=\"+(baseDirectory.value.getAbsolutePath())+\"/.dbuild/repositories\"), (\"-Dsbt.ivy.home=\"+(baseDirectory.value.getAbsolutePath())+\"/.dbuild/ivy2\"))"
+    ]
 
 options
   A sequence of strings; they will be passed as-is as additional JVM options,

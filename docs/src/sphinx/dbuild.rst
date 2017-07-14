@@ -432,7 +432,7 @@ post-commands
   ``post-commands``, by using the ``eval`` command of sbt, in conjunction with
   Scala's ``Process`` facility. For example, a valid sbt command is:
 
-  ``eval Process(Seq("ls","-l")).lines foreach println``
+  ``eval scala.sys.process.Process(Seq("ls","-l")).lines foreach println``
 
 settings
   A sequence of sbt settings, in the format in which they would normally be specified

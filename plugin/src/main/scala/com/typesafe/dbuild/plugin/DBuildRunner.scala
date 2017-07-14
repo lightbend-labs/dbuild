@@ -591,13 +591,16 @@ object DBuildRunner {
           case Array(tc, i) => (i, tc)
           case Array(tc) => ("", tc)
         }
-        val (task: String, config: String) = taskAndConfig.split(':') match {
+        val (task: String, configuration: String) = taskAndConfig.split(':') match {
           case Array(c, t) => (t, c)
           case Array(t) => (t, "test")
           case _ => sys.error("Malformed task description: \"" + taskAndConfig + "\"")
         }
-        val index = Project.extract(state7).structure.index.keyIndex
-        val sel = Project.extract(state7).structure.index.keyMap.get(task)
+        val conf = new ConfigKey(configuration)
+        val scope = Scope.ThisScope.in(ref, conf)
+        val structure = Project.extract(state7).structure
+        val index = structure.index.keyIndex
+        val sel = structure.index.keyMap.get(task)
         def keyFromTask[T](a: AttributeKey[Task[T]]) = TaskKey[T](a)
         def keyFromInputTask[T](a: AttributeKey[InputTask[T]]) = InputKey[T](a)
 
@@ -609,23 +612,32 @@ object DBuildRunner {
         val taskManifest = ClassManifest.fromClass(classOf[Task[_]]).erasure
         val inputTaskManifest = ClassManifest.fromClass(classOf[InputTask[_]]).erasure
         sel match {
-          case None => sys.error("You asked dbuild to test using the task \"" + task + "\", but the task is unknown in this project.")
+          case None =>
+            if (config.testParams.skipMissingTests) {
+              println("Warning: the test task key \"" + task + "\" is not known in " + normalizedProjectName(ref, baseDirectory) + ", so skipping.")
+              old
+            } else sys.error("You asked dbuild to test using the task \"" + task + "\", but the task key is unknown in project \"" + normalizedProjectName(ref, baseDirectory) + "\".")
+          case Some(key) if (structure.data.get(scope, key).isEmpty) =>
+            if (config.testParams.skipMissingTests) {
+              println("Warning: the test task key \"" + task + "\" is known but it is not defined in " + normalizedProjectName(ref, baseDirectory) + ", so skipping.")
+              old
+            } else sys.error("You asked dbuild to test using the task \"" + task + "\". The task key exists, but it is undefined in project \"" + normalizedProjectName(ref, baseDirectory) + "\".")
           case Some(key) =>
             // does this AttributeKey refer to a Task ?
             if (key.manifest.erasure == taskManifest) { // select AttributeKey[Task[whatever]]
-              doTask(state7, keyFromTask(key.asInstanceOf[AttributeKey[Task[Any]]]) in
-                new ConfigKey(config), "Running \"" + task + "\" in")._1
+              doTask(old, keyFromTask(key.asInstanceOf[AttributeKey[Task[Any]]]) in
+                scope, "Running \"" + task + "\" in")._1
             } else if (key.manifest.erasure == inputTaskManifest) {
-              doInputTask(state7, keyFromInputTask(key.asInstanceOf[AttributeKey[InputTask[Any]]]) in
-                new ConfigKey(config), input, "Running \"" + task + "\" in")._1
+              doInputTask(old, keyFromInputTask(key.asInstanceOf[AttributeKey[InputTask[Any]]]) in
+                scope, input, "Running \"" + task + "\" in")._1
             } else {
               sys.error("Not a task: " + task + ", (found: " + key.manifest + ")")
             }
         }
       }
 
-      val state8 = if (config.runTests) {
-        config.testTasks.foldLeft(state7)((state:State,taskAndConfig:String) => doTestTask(state,taskAndConfig))
+      val state8 = if (config.testParams.runTests) {
+        config.testParams.testTasks.foldLeft(state7)((state:State,taskAndConfig:String) => doTestTask(state,taskAndConfig))
       } else state7
       purge()
 

@@ -311,6 +311,7 @@ In this case the "extra" argument is a record with the following content:
     "exclude"             : [ subproj1, subproj2,... ]
     "run-tests"           : <run-tests>
     "test-tasks"          : [ task1, task2,... ]
+    "skip-missing-tests"  : <skip-missing-tests>
     "options"             : [ opt1, opt2,... ]
     "commands"            : [ cmd1, cmd2,... ]
     "post-commands"       : [ cmd1, cmd2,... ]
@@ -400,6 +401,12 @@ test-tasks
     "commands" : [ ...,
       "set scriptedLaunchOpts ++= Seq(\"-Dsbt.override.build.repos=true\", (\"-Dsbt.repository.config=\"+(baseDirectory.value.getAbsolutePath())+\"/.dbuild/repositories\"), (\"-Dsbt.ivy.home=\"+(baseDirectory.value.getAbsolutePath())+\"/.dbuild/ivy2\"))"
     ]
+
+skip-missing-tests
+  Boolean value, default false. If set to true, any test tasks that are not defined in
+  some of the subprojects will be just skipped for those subprojects. If set to false,
+  dbuild expects the test tasks to be available in all the subprojects, and will
+  stop with an error message if that is not the case.
 
 options
   A sequence of strings; they will be passed as-is as additional JVM options,

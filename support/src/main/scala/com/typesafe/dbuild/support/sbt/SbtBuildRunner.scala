@@ -31,8 +31,8 @@ case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String],
 /**
  * Input to generateArtifacts()
  */
-case class GenerateArtifactsInput(info: BuildInput, runTests: Boolean,
-    testTasks: Seq[String], debug: Boolean)
+case class TestParams(runTests: Boolean, skipMissingTests: Boolean, testTasks: Seq[String])
+case class GenerateArtifactsInput(info: BuildInput, testParams: TestParams, debug: Boolean)
 
 object SbtBuilder {
 
@@ -56,8 +56,10 @@ object SbtBuilder {
     // preparation of the input data to generateArtifacts()
     // This is for the first level only
     val buildIn = GenerateArtifactsInput(config.info,
-      runTests = config.config.runTests,
-      testTasks = config.config.testTasks,
+      testParams = TestParams(
+        config.config.runTests,
+        config.config.skipMissingTests,
+        config.config.testTasks),
       debug = debug)
     SbtRunner.placeGenArtsInputFile(projectDir, buildIn)
 

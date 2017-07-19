@@ -643,6 +643,7 @@ case class SbtExtraConfig(
   @JsonProperty("sbt-version") sbtVersion: Option[String] = None,
   directory: String = "",
   @JsonProperty("run-tests") runTests: Boolean = true,
+  @JsonProperty("skip-missing-tests") skipMissingTests: Boolean = false,
   @JsonProperty("test-tasks") testTasks: SeqString = Seq("test"),
   // For the difference between the build section's "javaOptions",
   // the project-specific "options", and javaAllOptions (below),

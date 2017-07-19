@@ -1,4 +1,4 @@
-import sbt.internal.librarymanagement.PublishConfiguration
+import sbt.librarymanagement.PublishConfiguration
 import sbt.Keys._
 import sbt.Project
 
@@ -11,7 +11,10 @@ object Packaging {
     // skipping publishing completely (including the ivy file) upon a given condition.
     publishConfiguration := {
       val p = publishConfiguration.value
-      new PublishConfiguration(None,p.resolverName,Map.empty,Vector[String](),p.logging)
+      PublishConfiguration(p.publishMavenStyle, p.deliverIvyPattern, p.status,
+                           p.configurations, p.resolverName,
+                           Vector[scala.Tuple2[sbt.librarymanagement.Artifact, java.io.File]](),
+                           Vector[String](), p.logging, p.overwrite)
     }
     // TODO: fuse this with skip212()
   )

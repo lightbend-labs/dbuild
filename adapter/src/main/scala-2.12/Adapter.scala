@@ -1,3 +1,6 @@
+import org.apache.ivy.core.module.id.ModuleRevisionId
+import org.apache.ivy.core.module.descriptor.ModuleDescriptor
+
 package sbt.dbuild.hack {
 object DbuildHack {
   val Load = sbt.internal.Load
@@ -40,6 +43,8 @@ object Adapter {
   type Artifact = sbt.librarymanagement.Artifact
   type CrossVersion = sbt.librarymanagement.CrossVersion
   type IvyScala = sbt.librarymanagement.ScalaModuleInfo
+  def interProjectResolver(k:Map[ModuleRevisionId, ModuleDescriptor]) =
+    new sbt.librarymanagement.RawRepository(new sbt.internal.librarymanagement.ProjectResolver("inter-project", k), "inter-project")
   val keyIvyScala = sbt.Keys.scalaModuleInfo
   def moduleWithName(m:ModuleID, name:String) = m.withName(name)
   def moduleWithRevision(m:ModuleID, revision:String) = m.withRevision(revision)

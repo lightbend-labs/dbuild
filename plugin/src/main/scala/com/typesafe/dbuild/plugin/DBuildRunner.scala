@@ -5,7 +5,7 @@ import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross,ScalaInstance}
 import Adapter.{moduleWithName,moduleWithRevision,moduleWithCrossVersion,moduleWithExplicitArtifacts}
 import Adapter.{moduleWithExtraAttributes,ivyScalaWithCheckExplicit,artifactWithClassifier}
-import Adapter.{crossDisabled,crossFull,crossBinary,newIvyPaths}
+import Adapter.{crossDisabled,crossFull,crossBinary,newIvyPaths,keyIvyScala}
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -379,7 +379,7 @@ object DBuildRunner {
   // a shortened version). That generates tons of warnings; in order to disable that, we set
   // IvyScala.checkExplicit to false
   def fixScalaBinaryCheck2 =
-    fixGeneric2(Keys.ivyScala, "Disabling Scala binary checking") { _ map { i => ivyScalaWithCheckExplicit(i, false) } }
+    fixGeneric2(keyIvyScala, "Disabling Scala binary checking") { _ map { i => ivyScalaWithCheckExplicit(i, false) } }
 
   // We need to disable the inter-project resolver entirely. Otherwise, sbt will try to build all
   // of the dependent subprojects each time one of the subprojects is built, including some that

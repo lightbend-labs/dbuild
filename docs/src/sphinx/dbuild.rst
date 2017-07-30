@@ -498,7 +498,7 @@ extraction-version
   Different versions of dbuild support different pre-releases of sbt 1.0.x,
   while development is ongoing. Versions prior to 0.9.8 support sbt 0.13.x.
   Version 0.9.8 supports 0.13.x and 1.0.0-M6. Version 0.9.9 supports 0.13.x
-  and 1.0.0-RC2. Future versions will support sbt 1.0.0 final.
+  and 1.0.0-RC3. Future versions will support sbt 1.0.0 final.
 
 Scala-specific options
 ----------------------

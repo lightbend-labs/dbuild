@@ -40,7 +40,7 @@ object Adapter {
   type Artifact = sbt.librarymanagement.Artifact
   type CrossVersion = sbt.librarymanagement.CrossVersion
   type IvyScala = sbt.librarymanagement.ScalaModuleInfo
-  val IvyScala = sbt.librarymanagement.ScalaModuleInfo
+  val keyIvyScala = sbt.Keys.scalaModuleInfo
   def moduleWithName(m:ModuleID, name:String) = m.withName(name)
   def moduleWithRevision(m:ModuleID, revision:String) = m.withRevision(revision)
   def moduleWithCrossVersion(m:ModuleID, cross:CrossVersion) = m.withCrossVersion(cross)

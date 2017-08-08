@@ -73,8 +73,10 @@ object Defaults {
   val version = "%s"
   val org = "%s"
   val hash = "%s"
+  val scalaVersion = "%s"
+  val sbtVersion = "%s"
 }
-""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
+""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head, sv, v))
 
 )
     Seq(file)
@@ -155,6 +157,7 @@ lazy val support = (
   dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil,
                   aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple, ivy)
   dependsOnSbtProvided(dbuildLaunchInt, sbtIvy)
+  dependsOnSbtProvidedIt(sbtSbt)
   settings(SbtSupport.buildSettings:_*)
   settings(SbtSupport.settings:_*)
   settings(

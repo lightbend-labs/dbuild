@@ -1,6 +1,6 @@
 libraryDependencies += Dispatch.dispatch
 
-//addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.4.0")
+addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.1")
 
 libraryDependencies ++= {
   val dependencies = Seq("com.typesafe.sbt" % "sbt-site" % "0.7.0",

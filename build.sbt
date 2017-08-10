@@ -44,10 +44,9 @@ lazy val root = (
   aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := (), publishLocal := (), version := MyVersion)
-//  settings(CrossPlugin.crossBuildingSettings:_*)
-//  settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M6"), selectScalaVersion)
-// This would work with the integrated version of sbt-cross-building
-//  settings(crossSbtVersions := Seq("0.13","1.0.0-M6"), selectScalaVersion)
+// This does not work for us; we need to change sbt.version in project/build.project and
+// recompile and publish twice.
+//  settings(crossSbtVersions := Seq("0.13","1.0.0"), selectScalaVersion)
   settings(commands += Command.command("release") { state =>
     "clean" :: "publish" :: state
   })

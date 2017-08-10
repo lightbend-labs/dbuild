@@ -19,7 +19,7 @@ object SbtSupport {
   }
 
   val buildSettings: Seq[Setting[_]] = Seq(
-    sbtLaunchJarUrl := "https://repo1.maven.org/maven2/org/scala-sbt/sbt-launch/1.0.0-RC3/sbt-launch.jar",
+    sbtLaunchJarUrl := "https://repo1.maven.org/maven2/org/scala-sbt/sbt-launch/1.0.0/sbt-launch.jar",
     sbtLaunchJarLocation := baseDirectory.value / "target" / "sbt" / "sbt-launch.jar",
     sbtLaunchJar := downloadFile(streams.value.log, version.value, sbtLaunchJarUrl.value, sbtLaunchJarLocation.value)
   )

@@ -2,6 +2,7 @@ package com.typesafe.dbuild
 package support
 package sbt
 
+import com.typesafe.dbuild.adapter.Defaults
 import com.typesafe.dbuild.logging.{ConsoleLogger, Logger}
 import com.typesafe.dbuild.model.{ProjectRef, SbtExtraConfig, ProjectBuildConfig, ExtractionConfig}
 import org.specs2.mutable.Specification
@@ -15,7 +16,7 @@ object SbtExtractionSpec extends Specification {
   "SbtBuildSystem" should {
     "extract dependencies" in {
       withBuildSystem { case SbtTestConfig(buildSystem, projectDir) =>
-         val sbtVersion = "0.13.5"
+         val sbtVersion = Defaults.sbtVersion
          writeBuildProperties(projectDir, sbtVersion)
          writePluginsFile(projectDir)(
            """|organization := "test"
@@ -24,8 +25,8 @@ object SbtExtractionSpec extends Specification {
               |
               |libraryDependencies += "com.typesafe" % "config" % "1.2.1"
               |""".stripMargin)
-         writeBuildFile(projectDir)(
-           """|scalaVersion := "2.10.4"
+         writeBuildFile(projectDir)("scalaVersion := \"" + Defaults.scalaVersion + "\"" +
+          ("""|
               |
               |name := "test"
               |
@@ -43,7 +44,7 @@ object SbtExtractionSpec extends Specification {
               |  version := "1.2",
               |  libraryDependencies += "junit" % "junit" % "4.11"
               |)
-              |""".stripMargin)
+              |""".stripMargin))
          val stdOutLogger: Logger = ConsoleLogger(true)
          val config: ExtractionConfig =
            ExtractionConfig(ProjectBuildConfig(
@@ -53,7 +54,7 @@ object SbtExtractionSpec extends Specification {
              extra = Some(
                SbtExtraConfig(
                  sbtVersion = Some(sbtVersion),
-                 extractionVersion = Some("2.10.4"),
+                 extractionVersion = Some(Defaults.scalaVersion),
                  commands = Nil,
                  settings = Nil))))
 

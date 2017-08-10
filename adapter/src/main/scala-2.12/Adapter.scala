@@ -1,3 +1,6 @@
+import org.apache.ivy.core.module.id.ModuleRevisionId
+import org.apache.ivy.core.module.descriptor.ModuleDescriptor
+
 package sbt.dbuild.hack {
 object DbuildHack {
   val Load = sbt.internal.Load
@@ -26,7 +29,7 @@ object Adapter {
   val Path = sbt.io.Path
   type RichFile = sbt.io.RichFile
   def newIvyPaths(baseDirectory: java.io.File, ivyHome: Option[java.io.File]) =
-    sbt.internal.librarymanagement.IvyPaths(baseDirectory, ivyHome)
+    sbt.librarymanagement.ivy.IvyPaths(baseDirectory, ivyHome)
   type FileFilter = sbt.io.FileFilter
   def toFF = sbt.io.FileFilter.globFilter _
   val DirectoryFilter = sbt.io.DirectoryFilter
@@ -39,8 +42,10 @@ object Adapter {
   type ModuleID = sbt.librarymanagement.ModuleID
   type Artifact = sbt.librarymanagement.Artifact
   type CrossVersion = sbt.librarymanagement.CrossVersion
-  type IvyScala = sbt.librarymanagement.IvyScala
-  val IvyScala = sbt.librarymanagement.IvyScala
+  type IvyScala = sbt.librarymanagement.ScalaModuleInfo
+  def interProjectResolver(k:Map[ModuleRevisionId, ModuleDescriptor]) =
+    new sbt.librarymanagement.RawRepository(new sbt.internal.librarymanagement.ProjectResolver("inter-project", k), "inter-project")
+  val keyIvyScala = sbt.Keys.scalaModuleInfo
   def moduleWithName(m:ModuleID, name:String) = m.withName(name)
   def moduleWithRevision(m:ModuleID, revision:String) = m.withRevision(revision)
   def moduleWithCrossVersion(m:ModuleID, cross:CrossVersion) = m.withCrossVersion(cross)

@@ -5,7 +5,7 @@ import com.typesafe.dbuild.adapter.Adapter
 import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross,ScalaInstance}
 import Adapter.{moduleWithName,moduleWithRevision,moduleWithCrossVersion,moduleWithExplicitArtifacts}
 import Adapter.{moduleWithExtraAttributes,ivyScalaWithCheckExplicit,artifactWithClassifier}
-import Adapter.{crossDisabled,crossFull,crossBinary,newIvyPaths}
+import Adapter.{crossDisabled,crossFull,crossBinary,newIvyPaths,keyIvyScala,interProjectResolver}
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -379,14 +379,14 @@ object DBuildRunner {
   // a shortened version). That generates tons of warnings; in order to disable that, we set
   // IvyScala.checkExplicit to false
   def fixScalaBinaryCheck2 =
-    fixGeneric2(Keys.ivyScala, "Disabling Scala binary checking") { _ map { i => ivyScalaWithCheckExplicit(i, false) } }
+    fixGeneric2(keyIvyScala, "Disabling Scala binary checking") { _ map { i => ivyScalaWithCheckExplicit(i, false) } }
 
   // We need to disable the inter-project resolver entirely. Otherwise, sbt will try to build all
   // of the dependent subprojects each time one of the subprojects is built, including some that
   // we may have explicitly excluded (as they are built in a different project, for instance)
   // (currently unused).
   def fixInterProjectResolver2 =
-    fixGeneric2(Keys.projectResolver, "Disabling inter-project resolver") { _ map { _ => new RawRepository(new ProjectResolver("inter-project", Map.empty)) } }
+    fixGeneric2(Keys.projectResolver, "Disabling inter-project resolver") { _ map { _ => interProjectResolver(Map.empty) } }
 
   // Some projects or plugins modify the "publish" task (for instance, to use Bintray),
   // but we need the task to point to the standard definition, so that we can publish
@@ -405,7 +405,7 @@ object DBuildRunner {
         val k = m.filter {
           case (a, _) => modules exists { b => b.getOrganisation == a.getOrganisation && fixName(b.getName) == fixName(a.getName) }
         }
-        new RawRepository(new ProjectResolver("inter-project", k))
+        interProjectResolver(k)
       }
     }("Patching the inter-project resolver") _
 

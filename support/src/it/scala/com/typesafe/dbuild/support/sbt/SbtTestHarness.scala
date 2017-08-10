@@ -1,4 +1,5 @@
 package com.typesafe.dbuild.support.sbt
+import com.typesafe.dbuild.adapter.Adapter.IO
 
 import java.io.File
 import java.net.URL
@@ -38,28 +39,28 @@ object SbtTestHarness {
   /** Helper which constructs an sbt build system for use. */
   def withBuildSystem[A](f: SbtTestConfig => A): A =
     // TODO - maybe use the same directory each time.
-    sbt.IO.withTemporaryDirectory { dir =>
+    IO.withTemporaryDirectory { dir =>
       // TODO - Figure out repositories!
       val system = new SbtBuildSystem(fallBackResolvers, dir, true)
       val projectDir = new File(dir, "test-project")
-      sbt.IO.createDirectory(projectDir)
+      IO.createDirectory(projectDir)
       f(SbtTestConfig(system, projectDir))
     }
 
 
   /** Writes build properties file for sbt in the given root directory. */
   def writeBuildProperties(dir: File, sbtVersion: String): Unit =
-    sbt.IO.write(new File(dir, "project/build.properties"), """sbt.version="""+sbtVersion)
+    IO.write(new File(dir, "project/build.properties"), """sbt.version="""+sbtVersion)
 
 
   def writePluginsFile(dir: File, name: String = "plugins.sbt")(content: String): Unit =
-    sbt.IO.write(new File(dir, "project/" + name), content)
+    IO.write(new File(dir, "project/" + name), content)
 
   def writeMetaPluginsFile(dir: File, name: String = "plugins.sbt")(content: String): Unit =
-    sbt.IO.write(new File(dir, "project/project/" + name), content)
+    IO.write(new File(dir, "project/project/" + name), content)
 
   def writeBuildFile(dir: File, name: String = "build.sbt")(content: String): Unit =
-    sbt.IO.write(new File(dir, name), content)
+    IO.write(new File(dir, name), content)
 }
 
 case class SbtTestConfig(system: SbtBuildSystem, projectRootDir: File)

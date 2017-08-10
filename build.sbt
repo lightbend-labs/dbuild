@@ -1,6 +1,6 @@
 import Dependencies._
 
-def MyVersion: String = "0.9.9-SNAPSHOT"
+def MyVersion: String = "0.9.9"
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
@@ -14,12 +14,11 @@ def SubProj(name: String) = (
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
-    licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")) /*,
+    licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
     bintrayReleaseOnPublish := false,
     bintrayOrganization := Some("typesafe"),
     bintrayRepository := "ivy-releases",
     bintrayPackage := "dbuild"
-*/
   )
 )
 
@@ -45,10 +44,9 @@ lazy val root = (
   aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := (), publishLocal := (), version := MyVersion)
-//  settings(CrossPlugin.crossBuildingSettings:_*)
-//  settings(CrossBuilding.crossSbtVersions := Seq("0.13","1.0.0-M6"), selectScalaVersion)
-// This would work with the integrated version of sbt-cross-building
-//  settings(crossSbtVersions := Seq("0.13","1.0.0-M6"), selectScalaVersion)
+// This does not work for us; we need to change sbt.version in project/build.project and
+// recompile and publish twice.
+//  settings(crossSbtVersions := Seq("0.13","1.0.0"), selectScalaVersion)
   settings(commands += Command.command("release") { state =>
     "clean" :: "publish" :: state
   })
@@ -74,8 +72,10 @@ object Defaults {
   val version = "%s"
   val org = "%s"
   val hash = "%s"
+  val scalaVersion = "%s"
+  val sbtVersion = "%s"
 }
-""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head))
+""" format (version.value, organization.value, scala.sys.process.Process("git log --pretty=format:%H -n 1").lines.head, sv, v))
 
 )
     Seq(file)
@@ -156,6 +156,7 @@ lazy val support = (
   dependsOnRemote(mvnEmbedder, mvnWagon, javaMail, aether, aetherApi, aetherSpi, aetherUtil,
                   aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, slf4jSimple, ivy)
   dependsOnSbtProvided(dbuildLaunchInt, sbtIvy)
+  dependsOnSbtProvidedIt(sbtSbt)
   settings(SbtSupport.buildSettings:_*)
   settings(SbtSupport.settings:_*)
   settings(

@@ -1,6 +1,6 @@
 import Dependencies._
 
-def MyVersion: String = "0.9.9"
+def MyVersion: String = "0.9.10-SNAPSHOT"
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))

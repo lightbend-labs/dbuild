@@ -1,5 +1,22 @@
 # dbuild release notes
 
+### 0.9.9
+
+- Support for sbt 1.0.0 final.
+
+- The custom list of tests can now also include commands, as well as tasks.
+  That allow `scripted` to be invoked as a test step.
+
+- Added "skip-missing-tests" flag: if some of the test tasks/commands are
+  not defined in some of the subprojects, the build will not fail but the
+  test step will be skipped instead for those subprojects.
+
+- Minor doc updates; minor fixes.
+
+### 0.9.8
+
+- Improved support for sbt 1.0.0-M6.
+
 ### 0.9.7
 
 - This release is compatible with sbt 1.0.0-M5 and 1.0.0-M6. The

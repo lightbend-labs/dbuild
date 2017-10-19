@@ -12,6 +12,10 @@ though each of them may evolve independently.
 You can find the complete dbuild documentation at the
 [dbuild web site](http://typesafehub.github.com/dbuild).
 
+This project is active, but unsupported. It is maintained by the Tooling Team at Lightbend.
+
+## Releasing
+
 To create a dbuild release (if you belong to the Typesafe organization on Bintray):
 
 1. Type "release"  (please do not use "^publish", as some additional preparation is necessary)

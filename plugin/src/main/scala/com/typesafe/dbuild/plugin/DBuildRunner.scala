@@ -183,7 +183,7 @@ object DBuildRunner {
           // the missing dependency. However, we can inspect the extraAttributes to find out if we are dealing with an sbt plugin
           // Note that we may also encounter the dbuild plugin itself, among the dependencies, which we normally ignore
           pluginAttrs(m) map { attrs => // if pluginAttrs(m) is not None, then:
-            if (m.name != "plugin" && m.organization != "com.typesafe.dbuild") {
+            if (m.organization != "com.typesafe.dbuild") { // ignore all plugins in the organization "com.typesafe.dbuild"
               val msg = "This sbt plugin is not provided (in space \"" + fromSpace + "\") by any project within this dbuild config: " + m.organization + "#" + m.name + " (sbtVersion=" + attrs.sbtVersion + ", scalaVersion=" + attrs.scalaVersion + ")"
               if (checkMissing) {
                 log.error(msg)

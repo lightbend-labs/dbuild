@@ -57,7 +57,7 @@ object DocsSupport {
     ghpages.settings ++ Seq(
       enableOutput in generatePdf in Sphinx := false,
       enableOutput in generateEpub in Sphinx := false,
-      git.remoteRepo := "git@github.com:typesafehub/dbuild.git",
+      git.remoteRepo := "git@github.com:lightbend/dbuild.git",
       GhPagesKeys.synchLocal := {
         val maps = (mappings in GhPagesKeys.synchLocal).value
         val repo = GhPagesKeys.updatedRepository.value

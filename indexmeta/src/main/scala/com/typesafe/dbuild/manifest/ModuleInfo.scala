@@ -1,7 +1,7 @@
 package com.typesafe.dbuild.manifest
 
 /**
-* Represents the information for a given Ivy module within the typesafe reactive-platform.
+* Represents the information for a given Ivy module within the Lightbend Reactive Platform (v1, no longer in use)
 *
 * - Organization should be the SAME as the groupId/organizatoin used in ivy.
 * - name should be the SAME as the name used in sbt. This means, any cross-version shading

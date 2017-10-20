@@ -13,7 +13,7 @@ therefore the syntax of the file can be simplified by using the conventions of t
 quotes and commas may be omitted, variable substitution is available, and other facilities are
 available. You should check the many options that are available to simplify the syntax of
 configuration file; they are all documented on the website of the
-`config library <http://github.com/typesafehub/config>`_. In addition, dbuild has one special
+`config library <http://github.com/lightbend/config>`_. In addition, dbuild has one special
 feature concerning lists of strings: whenever a list of strings is expected, in the form
 ``x:[a,b,c]``, if you only have one element you can also omit the square brackets altogether,
 and just write ``x:a``. The same automatic "single element to array" conversion also applies

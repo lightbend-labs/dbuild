@@ -53,7 +53,7 @@ html_context = {'home_site': home_site, 'site_search_base': site_search_base}
 # Issues role
 
 issuetracker = 'github'
-issuetracker_project = 'typesafehub/dbuild'
+issuetracker_project = 'lightbend/dbuild'
 issuetracker_plaintext_issues = True
 issuetracker_issue_pattern = r'\bgh-(\d+)\b'
 issuetracker_title_template = '#{issue.id}'

@@ -54,7 +54,7 @@ template
 The "send" and "default" fields, in addition to a list, will also accept a single
 notification; in that case, the square brackets can be omitted. That,
 combined with the extended JSON syntax of the
-`config library <http://github.com/typesafehub/config>`_, makes for a practical
+`config library <http://github.com/lightbend/config>`_, makes for a practical
 shortened syntax. An example can be found later on this page.
 
 If the list of notifications is empty, by default a short report will be printed to

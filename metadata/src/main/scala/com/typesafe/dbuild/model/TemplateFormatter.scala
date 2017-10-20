@@ -21,7 +21,7 @@ case class SubstitutionVars(
 
 /**
  * Create a TemplateFormatter with your resolved template and vars, in order to obtain the expanded
- * values, via the Typesafe config library.
+ * values, via the Lightbend config library.
  */
 class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome, confName:String) {
   /** A report that concatenates the summaries of subprojects, using the same template */

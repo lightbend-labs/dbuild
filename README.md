@@ -10,7 +10,7 @@ all the requested projects, and makes sure that they all work together, even
 though each of them may evolve independently.
 
 You can find the complete dbuild documentation at the
-[dbuild web site](http://typesafehub.github.com/dbuild).
+[dbuild web site](http://lightbend.github.com/dbuild).
 
 This project is active, but unsupported. It is maintained by the Tooling Team at Lightbend.
 
@@ -52,7 +52,7 @@ the sbt plugin are published for 2.12.
 ## Get Involved
 
 dbuild has a [mailing list](http://groups.google.com/d/forum/dbuild) for help.  Additionally, issues can be
-reported to [github issue tracker](https://github.com/typesafehub/dbuild/issues).
+reported to [github issue tracker](https://github.com/lightbend/dbuild/issues).
 
 ## Release Notes
 

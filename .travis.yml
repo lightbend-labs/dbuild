@@ -17,4 +17,4 @@ script:
 
 notifications:
   email:
-    - qbranch@typesafe.com
+    - tooling@lightbend.com

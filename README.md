@@ -64,7 +64,7 @@ This software is licensed under the Apache 2 license.
 
 ### Developed by Lightbend
 
-Maintained by [Akka Team](https://github.com/orgs/lightbend/teams/scala-team)
+Maintained by [Scala Team](https://github.com/orgs/lightbend/teams/scala-team)
 
 Feel free to ping above maintainers for code review or discussions. 
 Pull requests are very welcome–thanks in advance!

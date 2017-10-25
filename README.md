@@ -57,3 +57,14 @@ reported to [github issue tracker](https://github.com/lightbend/dbuild/issues).
 ## Release Notes
 
 see [CHANGELOG.md](CHANGELOG.md)
+
+## License
+
+This software is licensed under the Apache 2 license.
+
+### Developed by Lightbend
+
+Maintained by the [Tooling Team](https://github.com/orgs/lightbend/teams/tooling-team)
+
+Feel free to ping above maintainers for code review or discussions. 
+Pull requests are very welcome–thanks in advance!

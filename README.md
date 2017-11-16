@@ -10,7 +10,7 @@ all the requested projects, and makes sure that they all work together, even
 though each of them may evolve independently.
 
 You can find the complete dbuild documentation at the
-[dbuild web site](http://lightbend.github.com/dbuild).
+[dbuild web site](http://lightbend.github.io/dbuild).
 
 This project is active, but unsupported. It is maintained by the Tooling Team at Lightbend.
 

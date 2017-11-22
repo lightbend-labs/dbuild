@@ -42,7 +42,7 @@ are specified in a shell-stype glob format, for instance:
   skip: [ "*.properties", "*.html", "META-INF/MANIFEST.MF", "dir?/src/*" ]
 
 Further details on the supported glob syntax can be found
-`here <http://jakarta.apache.org/oro/api/org/apache/oro/text/GlobCompiler.html>`_.
+`here <https://svn.apache.org/repos/asf/jakarta/oro/tags/oro-2.0.9-dev-1/docs/api/org/apache/oro/text/GlobCompiler.html>`_.
 
 Note that only the jars of the artifacts are compared; the POM or ivy.xml files,
 or other files generated as part of the artifacts, are not inspected for equality.

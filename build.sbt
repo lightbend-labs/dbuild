@@ -101,7 +101,7 @@ lazy val indexmeta = (
 lazy val logging = (
   SubProj("logging")
   dependsOn(adapter,graph)
-  dependsOnSbtProvided(sbtLogging, sbtIo, dbuildLaunchInt)
+  dependsOnSbtProvided(sbtLogging, sbtIo, sbtCommand, dbuildLaunchInt)
 )
 
 lazy val actorLogging = (

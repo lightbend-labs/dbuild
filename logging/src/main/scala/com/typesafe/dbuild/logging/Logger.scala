@@ -1,6 +1,7 @@
 package com.typesafe.dbuild.logging
 
-import sys.process.ProcessLogger
+import scala.sys.process.ProcessLogger
+import sbt.dbuild.hack.DbuildHack.ExceptionCategory
 import com.typesafe.dbuild.graph
 import com.typesafe.dbuild.adapter.{LoggingInterface,StreamLoggerAdapter}
 import LoggingInterface.{Logger=>SbtLogger,BasicLogger=>SbtBasicLogger,_}
@@ -23,7 +24,12 @@ object Logger {
     }
     val errors = new java.io.StringWriter
     val pw = new java.io.PrintWriter(errors)
-    t.printStackTrace(pw)
+    import ExceptionCategory.{ AlreadyHandled, MessageOnly, Full }
+    ExceptionCategory(t) match {
+      case AlreadyHandled => ()
+      case m: MessageOnly => pw.println(m.message)
+      case _: Full        => t.printStackTrace(pw)
+    }
     val errStack=errors.toString.split("\n")
     if (short) {
       errStack.take(12).foreach { log.error(_) }
@@ -53,7 +59,14 @@ final class StreamLogger(out: java.io.PrintStream, debug: Boolean) extends Basic
   def trace(t: => Throwable): Unit =
     out.synchronized {
       val traceLevel = getTrace
-      if (traceLevel >= 0) out.print(StackTrace.trimmed(t, traceLevel))
+      if (traceLevel >= 0) {
+        import ExceptionCategory.{ AlreadyHandled, MessageOnly, Full }
+        ExceptionCategory(t) match {
+          case AlreadyHandled => ()
+          case m: MessageOnly => out.print(m.message)
+          case _: Full        => out.print(StackTrace.trimmed(t, traceLevel))
+        }
+      }
     }
   def success(message: => String): Unit =
     if (successEnabled) log(SuccessLabel, message)

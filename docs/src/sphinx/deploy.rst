@@ -144,7 +144,7 @@ For example:
   "deploy":[
     {
       uri="file:///home/user/files/repo"
-      projects:["genjavadoc",{from:"akka",publish:"akka-actor"}]
+      projects:["genjavadoc",{from:"akka",subprojects:"akka-actor"}]
     },
     {
       uri="s3://s3-testBucket/repo"

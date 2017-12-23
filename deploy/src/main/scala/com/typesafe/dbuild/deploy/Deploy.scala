@@ -27,7 +27,7 @@ import scala.concurrent.duration._
  * A generic (S3, http, https, etc) deploy location.
  * The uri refers to a remote directory or container, and
  * does not include the deployed file names.
- * 
+ *
  * If you are supplying host/user/pass directly, you
  * can prepare a "Creds" record, and extend a
  * DeployInfo.
@@ -309,8 +309,11 @@ class DeployHTTP(log: Logger, options: DeployInfo, timeOut: Duration = 20 minute
 
 // (pass to the constructor the deploy target uri as well)
 class DeployBintray(log: Logger, options: DeployInfo, timeOut: Duration = 20 minutes) extends DeployHTTP(log, options, timeOut) {
+  private val target = new java.net.URI(options.uri)
+  private val overrides = target.getQuery().split("&").contains("override=1")
+  private val bintrayBase = "https://api.bintray.com/content/"
+
   override protected def init() = {
-    val target = new java.net.URI(options.uri)
     val path = target.getPath
     if (Option(path) == None) sys.error("In a Bintray deploy section, the uri path must begin with a '/' character")
     val parts = (if (path.head == '/') path.tail else path).split("/")
@@ -325,15 +328,18 @@ class DeployBintray(log: Logger, options: DeployInfo, timeOut: Duration = 20 min
       case Some(fragment) => log.debug("The uri fragment is \""+fragment+"\", so we will not release after deploy (must be \"release\").")
       case None => log.debug("There is no fragment, so we will not release after deploy.")
     }
+    if (overrides) log.debug("The uri contains \"?override=1\", therefore new artifacts will overwrite existing ones.")
   }
-  private val bintrayBase = "https://api.bintray.com/content/"
   override protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
     val path = uri.getPath
-    val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path))
+    val dest = new java.net.URI(
+      bintrayBase +
+      (if (path.head == '/') path.tail else path) +
+      (if (overrides) "?override=1" else "")
+    )
     super.deployItem(handler, relative, file, dest)
   }
   override protected def close(handler: Unit) = {
-    val target = new java.net.URI(options.uri)
     if (Option(target.getFragment) == Some("release")) {
       val path = target.getPath
       val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path) + "/publish")

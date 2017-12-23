@@ -62,7 +62,12 @@ repository-uri
     must be defined in the path, defining the Bintray parameters. You can optionally
     append to the uri the fragment "#release" if you wish a release to be published
     at the end of deploy; if the fragment is not present or is not "#release", the
-    artifacts will be left pending in the Bintray repository.
+    artifacts will be left pending in the Bintray repository. If the uri contains the
+    query component "?override=1", then new artifacts will overwrite existing ones
+    with the same name and path already in the repository (if published within the
+    last 180 days), otherwise an attemp to overwrite artifacts will return a "409"
+    HTTP error code. Please note that if you have both a query and a fragment in the
+    uri, then the query must come first.
     The uri format above will work for both generic as well as for Maven-style bintray
     repositories.
 

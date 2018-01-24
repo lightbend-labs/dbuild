@@ -36,7 +36,7 @@ def skip212 = Seq(
 def selectScalaVersion =
   scalaVersion := {
     val sb = (sbtVersion in sbtPlugin).value
-    if (sb.startsWith("0.13")) "2.10.6" else "2.12.2"
+    if (sb.startsWith("0.13")) "2.10.7" else "2.12.4"
   }
 
 lazy val root = (

@@ -68,9 +68,9 @@ object DocsSupport {
       },
       publish := (),
       publishLocal := (),
-      makeSite <<= makeSite.dependsOn(sbt.Def.task {
+      makeSite := makeSite.dependsOn(sbt.Def.task {
         val file = (siteSourceDirectory in Sphinx).value / "version.py"
         IO.write(file, ("release = '%s'\n" format (version.value)))
-      })
+      }).value
   )
 }

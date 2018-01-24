@@ -18,7 +18,7 @@ This project is active, but unsupported. It is maintained by the Tooling Team at
 
 To create a dbuild release (if you belong to the Typesafe organization on Bintray):
 
-1. Type "release"  (please do not use "^publish", as some additional preparation is necessary)
+1. Type "^publish"
 2. Check https://bintray.com/typesafe/ivy-releases/dbuild/view to ensure files are as expected (Optional)
 3. Type "root/bintrayRelease" to make the release public
 
@@ -30,7 +30,7 @@ If you are not part of the Typesafe organization on Bintray, use:
 
     set every bintrayOrganization := None
 
-to publish to "ivy-releases/dbuild" in your own Bintray repository
+to publish to "ivy-releases/dbuild" to your own Bintray repository
 (or to a different repository by changing the settings described
 in the bintray-sbt plugin documentation pages).
 
@@ -41,13 +41,13 @@ Bintray yet, you can use:
     set every publishTo := Some(Resolver.url("somelabel", new URL("http://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
     set every credentials := Seq(Credentials(Path.userHome / "some" / "path" / "credentials-file"))
 
-Then, proceed with "release" as usual to issue the snapshot to your Artifactory server.
+Then, proceed with "^publish" as usual to issue the snapshot to your Artifactory server.
 
-IMPORTANT: the publishing process needs to be repeated twice, changing
-project/build.properties in the meantime, in order to publish artifacts
-for both sbt 0.13/scala 2.10 and sbt 1.0/scala 2.12 (currently 1.0.0)
-All the artifacts are published for 2.10, while only those relevant to
-the sbt plugin are published for 2.12.
+You can also publish a test version locally to any directory of your choice, by using:
+
+    set every publishTo := Some(Resolver.file("dbuild-publish-temp", new File("/home/user/here/"))(Resolver.ivyStylePatterns))
+    ^publish
+
 
 ## Get Involved
 

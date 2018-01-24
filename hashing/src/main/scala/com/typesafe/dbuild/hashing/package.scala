@@ -2,6 +2,7 @@ package com.typesafe.dbuild
 import com.typesafe.config.ConfigValue
 import collection.JavaConverters._
 import java.nio.ByteBuffer
+
 package object hashing {
 
   private lazy val javaSpecificationVersion = System.getProperty("java.specification.version")
@@ -11,7 +12,7 @@ package object hashing {
 
   def sha512(t: Any): String =
     messageDigestHex(java.security.MessageDigest.getInstance("SHA-512"))(t)
-  
+
   def messageDigestHex(md: java.security.MessageDigest)(t: Any): String = {
     def addBytes(obj: Any): Unit = obj match {
       case b: Byte            => md update b
@@ -21,7 +22,7 @@ package object hashing {
       }
       case bytes: Array[Byte] => md update bytes
       case s: String          => md update s.getBytes
-      case map: Map[String,_] =>
+      case map: Map[String @unchecked,_] =>
         val data = map.toSeq.sortBy(_._1)
         data foreach { case (k,v) =>
           addBytes(k)
@@ -38,7 +39,7 @@ package object hashing {
       case list: java.util.List[_] =>
         md update 1.toByte
         list.asScala foreach addBytes
-      case map: java.util.Map[String,_] =>
+      case map: java.util.Map[String @unchecked,_] =>
         val data = map.entrySet.iterator.asScala.toSeq.sortBy(_.getKey)
         data foreach { kv =>
           addBytes(kv.getKey)
@@ -48,13 +49,13 @@ package object hashing {
         md update (if(b) 0.toByte else 1.toByte)
       case c: ConfigValue =>
         addBytes(c.unwrapped)
-        
+
     }
     addBytes(t)
     addBytes(javaSpecificationVersion)
     convertToHex(md.digest)
   }
-  
+
   def convertToHex(data: Array[Byte]): String = {
     val buf = new StringBuffer
     def byteToHex(b: Int) =

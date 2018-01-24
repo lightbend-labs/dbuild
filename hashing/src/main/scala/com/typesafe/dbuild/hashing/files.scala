@@ -6,10 +6,10 @@ import java.security.MessageDigest
 object files {
   def sha1(f: File): String =
     digest(MessageDigest.getInstance("SHA-1"))(f)
-  
+
   def sha512(f: File): String =
     digest(MessageDigest.getInstance("SHA-512"))(f)
-    
+
       // This should calculate the SHA sum of a file the same as the linux process.
   def digest(digest: MessageDigest)(file: File): String = {
     val in = new java.io.FileInputStream(file);

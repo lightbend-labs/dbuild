@@ -26,6 +26,14 @@ import RemoteDepHelper._
 
 def skip212 = Seq(
       skip in compile := scalaVersion.value.startsWith("2.12"),
+      publish := Def.taskDyn {
+        val p = publish.taskValue
+        if (scalaVersion.value.startsWith("2.12")) Def.task {} else Def.task(p.value)
+      }.value,
+      publishLocal := Def.taskDyn {
+        val p = publishLocal.taskValue
+        if (scalaVersion.value.startsWith("2.12")) Def.task {} else Def.task(p.value)
+      }.value,
       sources in doc in Compile :=
         {
           val theSources = (sources in doc in Compile).value
@@ -43,13 +51,8 @@ lazy val root = (
   SubProj("root")
   aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
-  settings(publish := (), publishLocal := (), version := MyVersion)
-// This does not work for us; we need to change sbt.version in project/build.project and
-// recompile and publish twice.
-//  settings(crossSbtVersions := Seq("0.13","1.0.0"), selectScalaVersion)
-  settings(commands += Command.command("release") { state =>
-    "clean" :: "publish" :: state
-  })
+  settings(publish := Def.task {}, publishLocal := Def.task {}, version := MyVersion)
+  settings(crossSbtVersions := Seq("0.13.16","1.0.4"), selectScalaVersion)
 )
 
 // This subproject only has dynamically
@@ -190,7 +193,9 @@ lazy val plugin = (
 
 lazy val dist = (
   SubProj("dist")
+  enablePlugins(UniversalPlugin)
   settings(Packaging.settings(build,repo):_*)
+  settings(skip212:_*)
 )
 
 lazy val deploy = (

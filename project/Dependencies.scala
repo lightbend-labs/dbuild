@@ -3,11 +3,21 @@ import DbuildLauncher._
 
 class CommonDependencies {
 
-  val mvnVersion = "3.2.3"
+  val mvnVersion = "3.5.2"
 
   val typesafeConfig = "com.typesafe" % "config" % "1.2.1"
 
-  val aetherVersion = "1.0.0.v20140518"
+  val aetherVersion = "1.1.0"
+  val aether         = "org.apache.maven.resolver" % "maven-resolver" % aetherVersion
+  val aetherApi      = "org.apache.maven.resolver" % "maven-resolver-api" % aetherVersion
+  val aetherSpi      = "org.apache.maven.resolver" % "maven-resolver-spi" % aetherVersion
+  val aetherUtil     = "org.apache.maven.resolver" % "maven-resolver-util" % aetherVersion
+  val aetherImpl     = "org.apache.maven.resolver" % "maven-resolver-impl" % aetherVersion
+  val aetherConnectorBasic = "org.apache.maven.resolver" % "maven-resolver-connector-basic" % aetherVersion
+  val aetherFile     = "org.apache.maven.resolver" % "maven-resolver-transport-file" % aetherVersion
+  val aetherHttp     = "org.apache.maven.resolver" % "maven-resolver-transport-http" % aetherVersion
+  val aetherWagon    = "org.apache.maven.resolver" % "maven-resolver-transport-wagon" % aetherVersion
+/*
   val aether         = "org.eclipse.aether" % "aether" % aetherVersion
   val aetherApi      = "org.eclipse.aether" % "aether-api" % aetherVersion
   val aetherSpi      = "org.eclipse.aether" % "aether-spi" % aetherVersion
@@ -17,12 +27,11 @@ class CommonDependencies {
   val aetherFile     = "org.eclipse.aether" % "aether-transport-file" % aetherVersion
   val aetherHttp     = "org.eclipse.aether" % "aether-transport-http" % aetherVersion
   val aetherWagon    = "org.eclipse.aether" % "aether-transport-wagon" % aetherVersion
-
-//  val ivy            = "org.scala-sbt.ivy" % "ivy" % "2.3.0-sbt-2cc8d2761242b072cedb0a04cb39435c4fa24f9a"
+*/
   val ivy            = "org.scala-sbt.ivy" % "ivy" % "2.3.0-sbt-48dd0744422128446aee9ac31aa356ee203cc9f4"
 
-  val mvnAether      = "org.apache.maven" % "maven-aether-provider" % mvnVersion
-  val mvnWagon       = "org.apache.maven.wagon" % "wagon-http" % "2.2"
+  val mvnAether      = "org.apache.maven" % "maven-resolver-provider" % mvnVersion
+  val mvnWagon       = "org.apache.maven.wagon" % "wagon-http" % "3.0.0"
   val mvnEmbedder    = "org.apache.maven" % "maven-embedder" % mvnVersion
 
   val jacks          = "com.cunei" %% "jacks" % "2.2.5"

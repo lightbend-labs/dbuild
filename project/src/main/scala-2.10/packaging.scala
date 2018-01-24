@@ -2,13 +2,12 @@ import sbt._
 import com.typesafe.sbt.packager.Keys._
 import sbt.Keys._
 import com.typesafe.sbt.SbtNativePackager._
-import com.typesafe.sbt.S3Plugin
-import com.typesafe.sbt.S3Plugin.S3._
-import com.typesafe.sbt.packager.universal.Keys.packageZipTarball
 import scala.concurrent.ExecutionContext.Implicits.global
 import DbuildLauncher.{launcherVersion,uri}
 
 object Packaging {
+
+  lazy val cleanMsg = TaskKey[Unit]("cleanMsg")
 
   def mapArt[A](key:sbt.TaskKey[_], kind: String) =
      // cheat a little: by setting the classifier to the version number, we can
@@ -16,11 +15,10 @@ object Packaging {
      artifact in (Universal, key) :=
        (artifact in (Universal, key)).value.copy(`type` = kind, extension = kind, `classifier` = Some(version.value))
 
-  def settings(build:Project, repo:Project): Seq[Setting[_]] = packagerSettings ++ S3Plugin.s3Settings ++
-     SbtSupport.buildSettings ++ packagerSettings ++ Seq(
+  def settings(build:Project, repo:Project): Seq[Setting[_]] =
+     SbtSupport.buildSettings ++ Seq(
      organization := "com.typesafe.dbuild",
      name := "dbuild",
-     wixConfig := <wix/>,
      maintainer := "Antonio Cunei <antonio.cunei@lightbend.com>",
      packageSummary := "Multi-project builder.",
      packageDescription := """A multi-project builder capable of glueing together a set of related projects.""",
@@ -35,6 +33,15 @@ object Packaging {
      // The command "release" in root will perform a clean, followed by a publish.
 
      publishArtifact in Compile := false,
+
+     // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
+     // otherwise Universal may end up using outdated files.
+
+     cleanMsg := {streams.value.log.info("Cleaning dist...")},
+     clean := clean.dependsOn(cleanMsg).value,
+
+     publishLocal := publishLocal.dependsOn(clean).value,
+     publish := publish.dependsOn(clean).value,
 
      publishMavenStyle := false,
      autoScalaLibrary := false,

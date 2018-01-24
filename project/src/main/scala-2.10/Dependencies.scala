@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies extends CommonDependencies {
 
-  val akkaActor      = "com.typesafe.akka" %% "akka-actor" % "2.1.4"
+  val akkaActor      = "com.typesafe.akka" %% "akka-actor" % "2.3.16"
 
   val specs2         = "org.specs2" %% "specs2" % "2.1.1" % "it,test"
 

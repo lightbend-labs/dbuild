@@ -9,11 +9,11 @@ object Dependencies extends CommonDependencies {
   val dispatch       = "net.databinder.dispatch" %% "dispatch-core" % "0.12.2"
 
 // Once new versions of sbt/launcher/libraryManagement/zinc etc are released, move to those versions
-  def sbtIo(v:String)             = "org.scala-sbt" %% "io" % "1.0.0"
-  def sbtIvy(v:String)            = "org.scala-sbt" %% "librarymanagement-ivy" % "1.0.0"
-  def sbtLogging(v:String)        = "org.scala-sbt" %% "util-logging" % "1.0.0"
+  def sbtIo(v:String)             = "org.scala-sbt" %% "io" % "1.0.2"
+  def sbtIvy(v:String)            = "org.scala-sbt" %% "librarymanagement-ivy" % "1.0.4"
+  def sbtLogging(v:String)        = "org.scala-sbt" %% "util-logging" % "1.0.3"
   def sbtSbt(v:String)            = "org.scala-sbt" % "sbt" % v
 
-  val zincIf212                   = Some({ v:String => "org.scala-sbt" %% "zinc" % "1.0.0" })
+  val zincIf212                   = Some({ v:String => "org.scala-sbt" %% "zinc" % "1.0.5" })
   val gpgLibIf210                 = Seq[librarymanagement.ModuleID]()
 }

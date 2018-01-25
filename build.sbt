@@ -225,7 +225,7 @@ lazy val build = (
   )
 )
 
-lazy val docs:sbt.Project = (
+lazy val docs = (
   SubProj("docs")
   settings(DocsSupport.settings:_*)
 )

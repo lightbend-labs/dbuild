@@ -1,5 +1,6 @@
 import sbt.Keys._
 import sbt.Path._
+import sbt.Def
 import sbt.IO
 import sbt.Logger
 import java.io.File
@@ -68,6 +69,7 @@ object DocsSupport {
       },
       publish := (),
       publishLocal := (),
+      skip in compile := true,
       makeSite := makeSite.dependsOn(sbt.Def.task {
         val file = (siteSourceDirectory in Sphinx).value / "version.py"
         IO.write(file, ("release = '%s'\n" format (version.value)))

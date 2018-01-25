@@ -1,1 +1,0 @@
-../../../../adapter/src/main/scala-2.12/Adapter.scala

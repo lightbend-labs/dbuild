@@ -10,7 +10,7 @@ class RemoteDepHelper(p: Project) {
   def dependsOnSbtProvidedIt(ms: (String=>ModuleID)*): Project = dependsOnSbtP(true, true, ms:_*)
   def dependsOnSbtP(provided: Boolean, itOnly: Boolean, ms: (String=>ModuleID)*): Project =
     p.settings(libraryDependencies ++= {
-      val v = sbtVersion.value
+      val v = (sbtVersion in pluginCrossBuild).value
       ms map { lib =>
         val d = lib(v)
         if (itOnly && !provided) (d % "it") else

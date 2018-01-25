@@ -43,7 +43,7 @@ def skip212 = Seq(
 
 def selectScalaVersion =
   scalaVersion := {
-    val sb = (sbtVersion in sbtPlugin).value
+    val sb = (sbtVersion in pluginCrossBuild).value
     if (sb.startsWith("0.13")) "2.10.7" else "2.12.4"
   }
 
@@ -66,7 +66,7 @@ lazy val adapter = (
     val fileName = "Default.scala"
     val file = dir / fileName
     val sv = scalaVersion.value
-    val v = sbtVersion.value
+    val v = (sbtVersion in pluginCrossBuild).value
     if(!dir.isDirectory) dir.mkdirs()
     IO.write(file, (
 """

@@ -165,8 +165,9 @@ name
 
 system
   A string that describes the build system used by this software project. Possible values are
-  "scala" (specific to build the Scala project), "sbt", "ivy", "aether", and "assemble". Additional
-  mechanisms will be added soon (Maven support is in the works). If unspecified, "sbt" is used.
+  "sbt", "ivy", "aether", and "assemble". A build system called "scala" exists, but it refers to
+  an old Ant-based build script that is no longer in use (the Scala conpiler is now build using sbt).
+  Additional mechanisms might be added in the future. If unspecified, "sbt" is used.
 
 uri
   A string pointing to the source repository for this project. It can be git-based (if the uri begins
@@ -499,109 +500,6 @@ extraction-version
   Versions prior to 0.9.8 support sbt 0.13.x. Version 0.9.8 supports 0.13.x
   and 1.0.0-M6. Version 0.9.9 supports 0.13.x and sbt 1.0.0 final.
 
-Scala-specific options
-----------------------
-
-In the case of Scala, the "extra" record is:
-
-.. code-block:: javascript
-
-   {
-    "build-number"   : <build-number>,
-    "exclude"        : [ subproj1, subproj2,... ]
-    "targets"        : [ ["target1","path1"],["target2,"path2"],... ]
-    "build-options"  : [ opt1, opt2,... ]
-   }
-
-Each of the fields is optional. The are:
-
-build-number
-  The contents of the file `build.properties` can be overridden by
-  using this option. It is specified as:
-
-  .. code-block:: javascript
-
-     {
-      "major"  : <major>,
-      "minor"  : <minor>,
-      "patch"  : <patch>,
-      "bnum"   : <bnum>,
-     }
-
-  See below for further details on how to change the different
-  variations on the Scala version number.
-
-exclude
-  The ant-based Scala build does not support real subprojects. However,
-  dbuild will simulate multiple subprojects based on the artifact names.
-  This "exclude" clause can be used to prevent some artifacts from being
-  published or advertised as available to the rest of the dbuild projects.
-  They will still be built, however.
-
-targets
-  The Scala build system will normally generate the files by invoking
-  the target "publish.local", if available. If the target
-  "publish.local" is not available, it will run instead
-  "distpack-maven" in "dists/maven/latest", followed by
-  "deploy.local".
-
-  If required, this options can be used to specify an alternate sequence
-  of targets that should be used instead to generate the Scala compiler
-  files; each element is a pair where the first element is the
-  ant target name, and the second is a relative path (using "/"
-  as a separator) leading to the build.xml where the target is
-  defined. For the latter, a path of "." or "" can be used to refer
-  to the project root.
-
-build-options
-  A sequence of strings; they will be appended to the ant options when
-  compiling. This option can be used to define additional properties,
-  or to set other flags. If left unspecified, no additional options
-  will be passed to ant, and the default targets will
-  produce a build that is **non-optimized**. In order to
-  compile an optimized build, just append to build-options the
-  string ``"-Dscalac.args.optimise=-optimise"``.
-
-
-Scala version numbers
----------------------
-
-The handling of version numbers in the Scala build system is made
-somewhat more complicated by the variety of ways in which version
-strings are passed to ant while compiling Scala. The combination
-of `build-number`, `set-version` (described above), and `build-options`,
-however, makes it possible to control all the various aspects.
-In detail, this is the way in which versions are handled:
-
-maven.version.number
-  The first version number is the one that is passed to ant via
-  a property called `maven.version.number`. If `set-version` is
-  specified, the corresponding string will be used. If there is
-  no set-version, the version string will be derived from the
-  content of the file `build.number`, in the checked out source
-  tree, with an additional build-specific suffix. If there is no
-  `build.number`, the Scala build system will use instead
-  the version string contained in the file `dbuild.json`, if
-  present, with the build-specific suffix. If both `dbuild.json`
-  and `build.number` exist, the version in `build.number` will
-  be used.
-
-build.number
-  The content of the build.number, independently, will also
-  affect the calculation of some of the version strings used
-  by the Scala ant system. If the extra option `build-option`
-  is used, its content will be used to overwrite the content
-  of the `build.number` file inside the source tree. This
-  replacement will not affect the calculation of `maven.version.number`
-  described above.
-
-other properties
-  The Scala ant build file uses internally other properties; as
-  mentioned previously, they can be set if needed by using the
-  option `build-options`. The main option that is probably of
-  interest is `build.release`; it can be set using:
-  ``build-options:["-Dbuild.release=true"]``
-
 Ivy-specific options
 --------------------
 
@@ -805,6 +703,114 @@ at the end of the "assemble" rewriting.
   on top of one another. It is therefore advisable to
   adopt a regular (non-cyclic) build as soon as that
   is feasible.
+
+
+Scala-specific options
+----------------------
+
+The "scala" build system is no longer in use. The documentation in
+this section is only retained as a reference; the Scala compiler is
+currently built using sbt.
+
+In the case of the "scala" build system, the "extra" record is:
+
+.. code-block:: javascript
+
+   {
+    "build-number"   : <build-number>,
+    "exclude"        : [ subproj1, subproj2,... ]
+    "targets"        : [ ["target1","path1"],["target2,"path2"],... ]
+    "build-options"  : [ opt1, opt2,... ]
+   }
+
+Each of the fields is optional. The are:
+
+build-number
+  The contents of the file `build.properties` can be overridden by
+  using this option. It is specified as:
+
+  .. code-block:: javascript
+
+     {
+      "major"  : <major>,
+      "minor"  : <minor>,
+      "patch"  : <patch>,
+      "bnum"   : <bnum>,
+     }
+
+  See below for further details on how to change the different
+  variations on the Scala version number.
+
+exclude
+  The ant-based Scala build does not support real subprojects. However,
+  dbuild will simulate multiple subprojects based on the artifact names.
+  This "exclude" clause can be used to prevent some artifacts from being
+  published or advertised as available to the rest of the dbuild projects.
+  They will still be built, however.
+
+targets
+  The Scala build system will normally generate the files by invoking
+  the target "publish.local", if available. If the target
+  "publish.local" is not available, it will run instead
+  "distpack-maven" in "dists/maven/latest", followed by
+  "deploy.local".
+
+  If required, this options can be used to specify an alternate sequence
+  of targets that should be used instead to generate the Scala compiler
+  files; each element is a pair where the first element is the
+  ant target name, and the second is a relative path (using "/"
+  as a separator) leading to the build.xml where the target is
+  defined. For the latter, a path of "." or "" can be used to refer
+  to the project root.
+
+build-options
+  A sequence of strings; they will be appended to the ant options when
+  compiling. This option can be used to define additional properties,
+  or to set other flags. If left unspecified, no additional options
+  will be passed to ant, and the default targets will
+  produce a build that is **non-optimized**. In order to
+  compile an optimized build, just append to build-options the
+  string ``"-Dscalac.args.optimise=-optimise"``.
+
+
+Scala version numbers
+---------------------
+
+The handling of version numbers in the Scala build system is made
+somewhat more complicated by the variety of ways in which version
+strings are passed to ant while compiling Scala. The combination
+of `build-number`, `set-version` (described above), and `build-options`,
+however, makes it possible to control all the various aspects.
+In detail, this is the way in which versions are handled:
+
+maven.version.number
+  The first version number is the one that is passed to ant via
+  a property called `maven.version.number`. If `set-version` is
+  specified, the corresponding string will be used. If there is
+  no set-version, the version string will be derived from the
+  content of the file `build.number`, in the checked out source
+  tree, with an additional build-specific suffix. If there is no
+  `build.number`, the Scala build system will use instead
+  the version string contained in the file `dbuild.json`, if
+  present, with the build-specific suffix. If both `dbuild.json`
+  and `build.number` exist, the version in `build.number` will
+  be used.
+
+build.number
+  The content of the build.number, independently, will also
+  affect the calculation of some of the version strings used
+  by the Scala ant system. If the extra option `build-option`
+  is used, its content will be used to overwrite the content
+  of the `build.number` file inside the source tree. This
+  replacement will not affect the calculation of `maven.version.number`
+  described above.
+
+other properties
+  The Scala ant build file uses internally other properties; as
+  mentioned previously, they can be set if needed by using the
+  option `build-options`. The main option that is probably of
+  interest is `build.release`; it can be set using:
+  ``build-options:["-Dbuild.release=true"]``
 
 
 .. _custom-resolvers:

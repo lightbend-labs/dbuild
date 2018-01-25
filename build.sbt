@@ -1,4 +1,5 @@
 import Dependencies._
+import RemoteDepHelper._
 
 def MyVersion: String = "0.9.10-SNAPSHOT"
 
@@ -10,7 +11,6 @@ def SubProj(name: String) = (
     version := MyVersion,
     organization := "com.typesafe.dbuild",
     selectScalaVersion,
-    libraryDependencies ++= Seq(specs2, jline),
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
@@ -20,9 +20,8 @@ def SubProj(name: String) = (
     bintrayRepository := "ivy-releases",
     bintrayPackage := "dbuild"
   )
+  dependsOnRemote(specs2 _, jline)
 )
-
-import RemoteDepHelper._
 
 def skip212 = Seq(
       skip in compile := scalaVersion.value.startsWith("2.12"),
@@ -60,7 +59,8 @@ lazy val root = (
 // the source file to sbt 0.13/1.0
 lazy val adapter = (
   SubProj("adapter")
-  dependsOnSbtProvided((Seq[String=>ModuleID](sbtLogging, sbtIo, dbuildLaunchInt, sbtIvy, sbtSbt) ++ zincIf212):_*)
+  dependsOnSbtProvided(sbtLogging, sbtIo, dbuildLaunchInt, sbtIvy, sbtSbt)
+  dependsOnSbtProvidedOpt(zincIf212 _)
   settings(sourceGenerators in Compile += task {
     val dir = (sourceManaged in Compile).value
     val fileName = "Default.scala"
@@ -107,7 +107,7 @@ lazy val logging = (
 lazy val actorLogging = (
   SubProj("actorLogging")
   dependsOn(logging)
-  dependsOnRemote(akkaActor)
+  dependsOnRemote(akkaActor _)
   dependsOnSbtProvided(sbtLogging, sbtIo, dbuildLaunchInt)
   settings(skip212:_*)
 )
@@ -128,8 +128,8 @@ lazy val repo = (
 lazy val http = (
   SubProj("http")
   dependsOn(adapter)
-  dependsOnRemote(dispatch)
-  dependsOnSbtProvided(sbtIo, sbtIvy/*, dbuildLauncher*/)
+  dependsOnRemote(dispatch _)
+  dependsOnSbtProvided(sbtIo, sbtIvy)
 )
 
 lazy val core = (
@@ -209,7 +209,7 @@ lazy val build = (
   SubProj("build")
   dependsOn(actorProj, support, supportGit, repo, metadata, deploy, proj)
   dependsOnRemote(aws, uriutil, jsch, oro, scallop, commonsLang)
-  dependsOnRemote(gpgLibIf210:_*)
+  dependsOnRemote(gpgLibIf210 _)
   dependsOnSbt(dbuildLaunchInt, sbtLogging, sbtIo, sbtIvy, sbtSbt, dbuildLauncher)
   settings(skip212:_*)
   settings(SbtSupport.settings:_*)

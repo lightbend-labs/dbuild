@@ -1,7 +1,7 @@
 import sbt._
 import DbuildLauncher._
 
-class CommonDependencies {
+object Dependencies {
 
   val mvnVersion = "3.5.2"
 
@@ -17,17 +17,7 @@ class CommonDependencies {
   val aetherFile     = "org.apache.maven.resolver" % "maven-resolver-transport-file" % aetherVersion
   val aetherHttp     = "org.apache.maven.resolver" % "maven-resolver-transport-http" % aetherVersion
   val aetherWagon    = "org.apache.maven.resolver" % "maven-resolver-transport-wagon" % aetherVersion
-/*
-  val aether         = "org.eclipse.aether" % "aether" % aetherVersion
-  val aetherApi      = "org.eclipse.aether" % "aether-api" % aetherVersion
-  val aetherSpi      = "org.eclipse.aether" % "aether-spi" % aetherVersion
-  val aetherUtil     = "org.eclipse.aether" % "aether-util" % aetherVersion
-  val aetherImpl     = "org.eclipse.aether" % "aether-impl" % aetherVersion
-  val aetherConnectorBasic = "org.eclipse.aether" % "aether-connector-basic" % aetherVersion
-  val aetherFile     = "org.eclipse.aether" % "aether-transport-file" % aetherVersion
-  val aetherHttp     = "org.eclipse.aether" % "aether-transport-http" % aetherVersion
-  val aetherWagon    = "org.eclipse.aether" % "aether-transport-wagon" % aetherVersion
-*/
+
   val ivy            = "org.scala-sbt.ivy" % "ivy" % "2.3.0-sbt-48dd0744422128446aee9ac31aa356ee203cc9f4"
 
   val mvnAether      = "org.apache.maven" % "maven-resolver-provider" % mvnVersion
@@ -51,12 +41,76 @@ class CommonDependencies {
 
   val slf4jSimple    = "org.slf4j" % "slf4j-simple" % "1.7.7"
 
+
+  // these dependencies change depending on the scala version
+
+  def akkaActor(scala212: Boolean) =
+    if (scala212)
+      "com.typesafe.akka" %% "akka-actor" % "2.4.17"
+    else
+      "com.typesafe.akka" %% "akka-actor" % "2.3.16"
+
+  def specs2(scala212: Boolean) =
+    if (scala212)
+      "org.specs2" %% "specs2-core" % "3.8.8" % "it,test"
+    else
+      "org.specs2" %% "specs2" % "2.1.1" % "it,test"
+
+  def dispatch(scala212: Boolean) =
+    if (scala212)
+      "net.databinder.dispatch" %% "dispatch-core" % "0.12.2"
+    else
+      "net.databinder.dispatch" %% "dispatch-core" % "0.11.3"
+
+  // Once new versions of sbt/launcher/libraryManagement/zinc etc are released, move the 2.12 dependencies to those versions
+  // The sbt modules dependend on both the scala version and the sbt version; sometimes they are "provided", but not always
+
+  def sbtIo(scala212: Boolean, v: String) =
+    if (scala212)
+      "org.scala-sbt" %% "io" % "1.0.2"
+    else
+      "org.scala-sbt" % "io" % v
+
+  def sbtIvy(scala212: Boolean, v: String) =
+    if (scala212)
+      "org.scala-sbt" %% "librarymanagement-ivy" % "1.0.4"
+    else
+      "org.scala-sbt" % "ivy" % v
+
+  def sbtLogging(scala212: Boolean, v: String) =
+    if (scala212)
+      "org.scala-sbt" %% "util-logging" % "1.0.3"
+    else
+      "org.scala-sbt" % "logging" % v
+
+  def sbtSbt(scala212: Boolean, v: String) =
+    if (scala212)
+      "org.scala-sbt" % "sbt" % v
+    else
+      "org.scala-sbt" % "sbt" % v
+
   // We deal with two separate launchers:
   // 1) The "sbt-launch.jar" is the regular sbt launcher. we package it in the "build" subproject
   // as a resource, so that it is available to the running dbuild when it wants to spawn a further sbt.
   // 2) We use a modified, dbuild-specific modified version in order to launch dbuild. This
   // is necessary since the Proguard-optimized sbt launcher is unusable as a library. This is the
-  // version herebelow.
-  def dbuildLaunchInt(v:String) = launchInt
-  def dbuildLauncher(v:String)  = launcher
+  // version herebelow. The dependencies are not always provided, so we handle them like sbt dependencies,
+  // even though they do not really change on scalaversion/sbtversion
+
+  def dbuildLaunchInt(scala212: Boolean, v:String) = launchInt
+  def dbuildLauncher(scala212: Boolean, v:String) = launcher
+
+  // other dependencies that depend on whether scala is 2.10 or 2.12, but are only included in some cases
+  def zincIf212(scala212: Boolean, v:String): Option[ModuleID] =
+    if (scala212)
+      Some("org.scala-sbt" %% "zinc" % "1.0.5")
+    else
+      None
+
+  def gpgLibIf210(scala212: Boolean): Option[ModuleID] =
+    if (scala212)
+      None
+    else
+      Some("com.jsuereth" %% "gpg-library" % "0.8.2")
+
 }

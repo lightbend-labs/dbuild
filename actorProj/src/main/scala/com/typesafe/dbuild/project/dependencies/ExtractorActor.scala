@@ -5,7 +5,6 @@ import com.typesafe.dbuild.model.{ ProjectBuildConfig, ExtractionConfig }
 import com.typesafe.dbuild.project.build.ActorPatterns.forwardingErrorsToFutures
 import _root_.java.io.File
 import sbt.Path._
-import com.typesafe.dbuild.project.controller.{ Controller, Controlled, Done }
 import ExtractionDirs.projectExtractionDir
 import com.typesafe.dbuild.repo.core.GlobalDirs.extractionDir
 import com.typesafe.dbuild.model.CleanupExpirations
@@ -67,10 +66,10 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
     // at the same time, so some form of auxiliary locking is needed anyway.
   }
   def receive: Receive = {
-    case Controlled(ExtractBuildDependencies(build, uuidDir, log, debug), from) =>
-      Controller.forwardingErrorsToFuturesControlled(sender, from) {
+    case ExtractBuildDependencies(build, uuidDir, log, debug) =>
+      forwardingErrorsToFutures(sender) {
         log info ("--== Extracting dependencies for %s ==--" format (build.buildConfig.name))
-        sender ! Done(e.extract(extractionDir(target) / uuidDir, build, log, debug), from)
+        sender ! e.extract(extractionDir(target) / uuidDir, build, log, debug)
         log info ("--== End Extracting dependencies for %s ==--" format (build.buildConfig.name))
       }
   }

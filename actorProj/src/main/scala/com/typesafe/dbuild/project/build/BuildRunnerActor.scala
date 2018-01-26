@@ -8,7 +8,6 @@ import com.typesafe.dbuild.project.build.ActorPatterns.forwardingErrorsToFutures
 import java.io.File
 import com.typesafe.dbuild.repo.core._
 import sbt.IO
-import com.typesafe.dbuild.project.controller.{ Controller, Controlled, Done }
 import com.typesafe.dbuild.project.cleanup.Recycling._
 import sbt.Path._
 import com.typesafe.dbuild.repo.core.GlobalDirs.buildDir
@@ -34,10 +33,10 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
   }
 
   def receive = {
-    case Controlled(RunBuild(build, outProjects, children, buildData@BuildData(log, _)), from) =>
-      Controller.forwardingErrorsToFuturesControlled(sender, from) {
+    case RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
+      forwardingErrorsToFutures(sender) {
         log info ("--== Building %s ==--" format (build.config.name))
-        sender ! Done(builder.checkCacheThenBuild(target, build, outProjects, children, buildData), from)
+        sender ! builder.checkCacheThenBuild(target, build, outProjects, children, buildData)
         log info ("--== End Building %s ==--" format (build.config.name))
       }
   }

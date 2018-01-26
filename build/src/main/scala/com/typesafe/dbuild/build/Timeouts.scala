@@ -27,23 +27,6 @@ object Timeouts {
   // (leave some time for notifications: it should be a bit less than dbuildTimeout)
   val extractionPlusBuildTimeout: Timeout = 20.hours
 
-  // after() was introduced in Akka 2.1.0, but we have to be compatible also with
-  // sbt 0.12 -> Scala 2.9 -> Akka 2.0.5. So we copy here an old implementation of the same,
-  // with minor changes.
-
-  /**
-   * Returns a [[akka.dispatch.Future]] that will be completed with the success or failure of the provided value
-   * after the specified duration.
-   */
-  def after[T](duration: FiniteDuration, using: Scheduler)(value: ⇒ Future[T])(implicit ec: ExecutionContext): Future[T] =
-    if (duration.isFinite() && duration.length < 1) value else {
-      val p = Promise[T]()
-      val c = using.scheduleOnce(duration) {
-        p completeWith { try value catch { case NonFatal(t) ⇒ Promise.failed(t).future } }
-      }
-      p.future onComplete { _ ⇒ c.cancel() }
-      p.future
-    }
   assert((extractionTimeout.duration + 5.minutes) < extractionPhaseTimeout.duration,
     "extractionTimeout must be a bit shorter than extractionPhaseTimeout")
 

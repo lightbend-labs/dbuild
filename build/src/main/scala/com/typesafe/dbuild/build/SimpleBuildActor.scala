@@ -10,7 +10,7 @@ import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.hashing
 import com.typesafe.dbuild.graph
 import akka.actor.{ Actor, ActorRef, Props }
-import akka.pattern.{ ask, pipe }
+import akka.pattern.{ ask, pipe, after }
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise, ExecutionContext }
 import ExecutionContext.Implicits.global
@@ -114,10 +114,10 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         // sure that any outcome returned by a watchdog extends TimedOut (the condition is
         // checked within afterTask() to inhibit deployment and possibly other tasks that
         // can only be executed when building completed successfully).
-        val extractionWatchdog = Timeouts.after(extractionPhaseDuration,
+        val extractionWatchdog = after(extractionPhaseDuration,
           using = ctx.scheduler)(
             Future(new ExtractionFailed(".", Seq(), "Timeout: extraction took longer than " + extractionPhaseDuration) with TimedOut))
-        val extractionPlusBuildWatchdog = Timeouts.after(extractionPlusBuildDuration,
+        val extractionPlusBuildWatchdog = after(extractionPlusBuildDuration,
           using = ctx.scheduler) {
             // something went wrong and we ran into an unexpected timeout. We prepare the watchdog at the beginning,
             // so that we know we will have enough time for the notifications before dbuildTimeout arrives. So we mark
@@ -291,7 +291,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
             } else {
               val outProjects = p.extracted.projects
               val buildDuration = Timeouts.buildTimeout.duration
-              val watchdog = Timeouts.after(buildDuration,
+              val watchdog = after(buildDuration,
                 using = ctx.scheduler)(
                   Future(new BuildFailed(b.config.name, outcomes,
                     "Timeout: building project " + b.config.name + " took longer than " + buildDuration) with TimedOut))
@@ -325,7 +325,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     val futureOutcomes: Future[Seq[ExtractionOutcome]] =
       Future.traverse(projects) { projConfig =>
         val extractionDuration = Timeouts.extractionTimeout.duration
-        val watchdog = Timeouts.after(extractionDuration,
+        val watchdog = after(extractionDuration,
           using = ctx.scheduler)(
             Future(new ExtractionFailed(projConfig.name, Seq(),
               "Timeout: extraction of project " + projConfig.name + " took longer than " + extractionDuration) with TimedOut))

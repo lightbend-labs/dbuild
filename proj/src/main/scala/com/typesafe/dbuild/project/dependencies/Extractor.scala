@@ -69,7 +69,7 @@ class Extractor(
   }
 
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */
-  def extract(tdir: File, extractionConfig: ExtractionConfig, logger: Logger, debug: Boolean): ExtractionOutcome = try {
+  def extract(tdir: File, extractionConfig: ExtractionConfig, logger: Logger, debug: Boolean): ExtractionOutcome = {
     val build = extractionConfig.buildConfig
     ExtractionDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
       updateTimeStamp(dir)
@@ -87,9 +87,6 @@ class Extractor(
       }
       outcome
     }
-  } catch {
-    case e:Throwable =>
-      ExtractionFailed(extractionConfig.buildConfig.name, Seq.empty, prepareLogMsg(logger, e))
   }
 
   def extractedResolvedWithCache(config: ExtractionConfig, dir: File, logger: Logger, debug: Boolean): ExtractionOutcome = {

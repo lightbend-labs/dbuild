@@ -25,20 +25,15 @@ class LocalBuildRunner(builder: BuildRunner,
     buildData: BuildData): BuildOutcome = {
     val log = buildData.log
     try {
-      try {
-        val artifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
-        LocalRepoHelper.debugArtifactsInfo(artifactsOut, log)
-        BuildUnchanged(build.config.name, children, artifactsOut)
-      } catch {
-        case t: RepositoryException =>
-          log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
-          //log.trace(t)
-          BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects,
-            buildData))
-      }
+      val artifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
+      LocalRepoHelper.debugArtifactsInfo(artifactsOut, log)
+      BuildUnchanged(build.config.name, children, artifactsOut)
     } catch {
-      case t:Throwable =>
-        BuildFailed(build.config.name, children, prepareLogMsg(log, t))
+      case t: RepositoryException =>
+        log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
+        //log.trace(t)
+        BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects,
+          buildData))
     }
   }
 

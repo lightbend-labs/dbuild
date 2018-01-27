@@ -1,8 +1,8 @@
 package com.typesafe.dbuild.project.dependencies
 
 import akka.actor.{ ActorRef, Actor, Props, PoisonPill, Terminated }
-import com.typesafe.dbuild.model.{ ProjectBuildConfig, ExtractionConfig }
-import com.typesafe.dbuild.project.build.ActorPatterns.forwardingErrorsToFutures
+import akka.pattern.ask
+import com.typesafe.dbuild.model.{ ProjectBuildConfig, ExtractionConfig, ExtractionFailed, TimedOut }
 import _root_.java.io.File
 import sbt.Path._
 import ExtractionDirs.projectExtractionDir
@@ -11,6 +11,10 @@ import com.typesafe.dbuild.model.CleanupExpirations
 import com.typesafe.dbuild.project.cleanup.Recycling._
 import sbt.{ IO, DirectoryFilter }
 import com.typesafe.dbuild.logging.Logger
+import Logger.prepareLogMsg
+import com.typesafe.dbuild.project.Timeouts
+import scala.util.{Success,Failure}
+import java.util.concurrent.TimeoutException
 
 case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, log: Logger, debug: Boolean)
 
@@ -67,10 +71,34 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
   }
   def receive: Receive = {
     case ExtractBuildDependencies(build, uuidDir, log, debug) =>
-      forwardingErrorsToFutures(sender) {
-        log info ("--== Extracting dependencies for %s ==--" format (build.buildConfig.name))
-        sender ! e.extract(extractionDir(target) / uuidDir, build, log, debug)
-        log info ("--== End Extracting dependencies for %s ==--" format (build.buildConfig.name))
-      }
+      log info ("--== Extracting dependencies for %s ==--" format (build.buildConfig.name))
+      sender ! (try {
+        e.extract(extractionDir(target) / uuidDir, build, log, debug)
+      } catch {
+        case t:Throwable =>
+          ExtractionFailed(build.buildConfig.name, Seq.empty, prepareLogMsg(log, t))
+      })
+      log info ("--== End Extracting dependencies for %s ==--" format (build.buildConfig.name))
   }
 }
+
+class TimedExtractorActor(extractor: Extractor, target: File, exp: CleanupExpirations) extends Actor {
+  val realExtractor = context.actorOf(Props(new ExtractorActor(extractor, target, exp)))
+  val extractionDuration = Timeouts.extractionTimeout
+  def receive = {
+    case msg@ExtractBuildDependencies(build, uuidDir, log, debug) =>
+      (realExtractor ? msg)(extractionDuration).andThen {
+        case Success(answer) =>
+          sender ! answer
+        case Failure(e) =>
+          e match {
+            case timeout: TimeoutException =>
+              sender ! new ExtractionFailed(build.buildConfig.name, Seq(),
+              "Timeout: extraction of project " + build.buildConfig.name + " took longer than " + extractionDuration) with TimedOut
+            case _ =>
+              sender ! akka.actor.Status.Failure(e)
+          }
+      } (scala.concurrent.ExecutionContext.Implicits.global)
+  }
+}
+

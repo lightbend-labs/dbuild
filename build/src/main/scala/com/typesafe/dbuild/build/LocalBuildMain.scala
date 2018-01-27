@@ -11,6 +11,7 @@ import com.typesafe.dbuild.repo.core._
 import com.typesafe.dbuild.model.ClassLoaderMadness
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.support.BuildSystemCore
+import com.typesafe.dbuild.project.Timeouts
 import akka.pattern.ask
 import com.typesafe.dbuild.repo.core.GlobalDirs.checkForObsoleteDirs
 import com.typesafe.dbuild.support

@@ -4,7 +4,6 @@ import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import akka.actor.{ ActorRef, Actor, Props, PoisonPill, Terminated }
 import com.typesafe.dbuild.project.resolve.ProjectResolver
-import com.typesafe.dbuild.project.build.ActorPatterns.forwardingErrorsToFutures
 import java.io.File
 import com.typesafe.dbuild.repo.core._
 import sbt.IO
@@ -12,6 +11,11 @@ import com.typesafe.dbuild.project.cleanup.Recycling._
 import sbt.Path._
 import com.typesafe.dbuild.repo.core.GlobalDirs.buildDir
 import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
+import com.typesafe.dbuild.project.Timeouts
+import akka.pattern.ask
+import java.util.concurrent.TimeoutException
+import scala.util.{Success,Failure}
+import Logger.prepareLogMsg
 
 case class RunBuild(build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome], buildData: BuildData)
 
@@ -22,6 +26,7 @@ class CleaningBuildActor extends Actor {
       self ! PoisonPill
   }
 }
+
 /** This actor can run builds locally and return the generated artifacts. */
 class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations) extends Actor {
   override def preStart() = {
@@ -34,10 +39,33 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
 
   def receive = {
     case RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
-      forwardingErrorsToFutures(sender) {
-        log info ("--== Building %s ==--" format (build.config.name))
-        sender ! builder.checkCacheThenBuild(target, build, outProjects, children, buildData)
-        log info ("--== End Building %s ==--" format (build.config.name))
-      }
+      log info ("--== Building %s ==--" format (build.config.name))
+      sender ! (try {
+        builder.checkCacheThenBuild(target, build, outProjects, children, buildData)
+      } catch {
+        case t:Throwable =>
+          BuildFailed(build.config.name, children, prepareLogMsg(log, t))
+      })
+      log info ("--== End Building %s ==--" format (build.config.name))
+  }
+}
+
+class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations) extends Actor {
+  val realBuilder = context.actorOf(Props(new BuildRunnerActor(builder, target, exp)))
+  val buildDuration = Timeouts.buildTimeout
+  def receive = {
+    case msg@RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
+      (realBuilder ? msg)(buildDuration).andThen {
+        case Success(answer) =>
+          sender ! answer
+        case Failure(e) =>
+          e match {
+            case timeout: TimeoutException =>
+              sender ! new BuildFailed(build.config.name, children,
+                "Timeout: building project " + build.config.name + " took longer than " + buildDuration) with TimedOut
+            case _ =>
+              sender ! akka.actor.Status.Failure(e)
+          }
+      } (scala.concurrent.ExecutionContext.Implicits.global)
   }
 }

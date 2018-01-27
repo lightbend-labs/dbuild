@@ -23,6 +23,11 @@ sealed abstract class BuildOutcome {
   def withOutcomes(os:Seq[BuildOutcome]):BuildOutcome
 }
 
+// this marker trait is only used internally, in order to
+// recognize outcomes that are caused by timeout conditions.
+// However, this is not a marker exposed to the user (at this time)
+trait TimedOut
+
 sealed abstract class BuildGood extends BuildOutcome {
   override def whenIDs: Seq[String] = "good" +: super.whenIDs
   def artsOut: BuildArtifactsOut
@@ -30,11 +35,6 @@ sealed abstract class BuildGood extends BuildOutcome {
 sealed abstract class BuildBad extends BuildOutcome {
   override def whenIDs: Seq[String] = "bad" +: super.whenIDs
 }
-
-// this marker trait is only used internally, in order to
-// recognize outcomes that are caused by timeout conditions.
-// However, this is not a marker exposed to the user (at this time)
-trait TimedOut
 
 /** We rebuilt the project, and all was ok. */
 case class BuildSuccess(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {

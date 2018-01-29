@@ -182,8 +182,9 @@ uri
      "uri":  "git://github.com/scala/scala.git#2.10.x"
 
   dbuild will download and extract the most recent available version in the specified branch, or the
-  exact version or commit in case if specified . If no prefix is added, dbuild will fetch the most recent
-  version in git master, or svn head.
+  exact version or commit in case if specified. If no prefix is added, dbuild will fetch the most recent
+  version in git master, or svn head. In order to point to GitHub pull requests, it is possible to
+  use a target like ``#pull/<NNN>/head``
 
   Some other source repository formats are used in special cases: the
   ``ivy:`` scheme is only used together with the Ivy build system (see below), and the ``nil:``

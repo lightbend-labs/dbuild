@@ -16,6 +16,21 @@ import akka.pattern.ask
 import com.typesafe.dbuild.repo.core.GlobalDirs.checkForObsoleteDirs
 import com.typesafe.dbuild.support
 import com.typesafe.dbuild.logging
+import akka.actor.{DeadLetter, Actor}
+
+
+class DeadLetterMonitorActor
+  extends Actor
+  with akka.actor.ActorLogging {
+  log.debug("DeadLetterMonitorActor: now monitoring")
+
+  def receive = {
+    case d: DeadLetter => {
+      log.error(s"DeadLetterMonitorActor : saw dead letter $d")
+    }
+    case _ => log.info("DeadLetterMonitorActor : got a message")
+  }
+}
 
 class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
 
@@ -39,6 +54,9 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
   // Gymnastics for classloader madness
 
   val system = ClassLoaderMadness.withContextLoader(getClass.getClassLoader)(ActorSystem.create)
+  val deadLetterMonitorActor = system.actorOf(Props[DeadLetterMonitorActor],"deadlettermonitoractor")
+  system.eventStream.subscribe(deadLetterMonitorActor, classOf[DeadLetter])
+
   val logMgr = {
     val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor))
     mgr ! Props(new logging.LogDirManagerActor(new File(targetDir, "logs")))

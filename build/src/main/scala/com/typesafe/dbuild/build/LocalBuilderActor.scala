@@ -8,7 +8,6 @@ import com.typesafe.dbuild.project.build.TimedBuildRunnerActor
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import akka.actor.{Actor,Props,ActorRef,ActorContext}
-import akka.routing.BalancingPool
 import java.io.File
 import com.typesafe.dbuild.repo.core.Repository
 import com.typesafe.dbuild.project.dependencies.Extractor
@@ -35,12 +34,12 @@ class LocalBuilderActor(
   val buildRunner = new com.typesafe.dbuild.project.build.AggregateBuildRunner(buildSystems)
   val localBuildRunner = new com.typesafe.dbuild.project.build.LocalBuildRunner(buildRunner, extractor, repository)
 
-  val extractorActor = context.actorOf(BalancingPool(concurrencyLevel).props(
-      Props(classOf[TimedExtractorActor], extractor, targetDir, options.cleanup.extraction)),
+  val extractorActor = context.actorOf(
+      Props(classOf[TimedExtractorActor], extractor, targetDir, options.cleanup.extraction),
       "Project-Dependency-Extractor")
 
-  val baseBuildActor = context.actorOf(BalancingPool(concurrencyLevel).props(
-      Props(classOf[TimedBuildRunnerActor], localBuildRunner, targetDir, options.cleanup.build)),
+  val baseBuildActor = context.actorOf(
+      Props(classOf[TimedBuildRunnerActor], localBuildRunner, targetDir, options.cleanup.build),
       "Project-Builder")
 
   val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository, buildSystems)), "simple-builder")

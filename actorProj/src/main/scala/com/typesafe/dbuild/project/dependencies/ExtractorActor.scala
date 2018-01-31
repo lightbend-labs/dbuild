@@ -87,16 +87,19 @@ class TimedExtractorActor(extractor: Extractor, target: File, exp: CleanupExpira
   val extractionDuration = Timeouts.extractionTimeout
   def receive = {
     case msg@ExtractBuildDependencies(build, uuidDir, log, debug) =>
+      val originalSender = sender // need to copy, as we we'll use it later in a "andThen()" (a future)
       (realExtractor ? msg)(extractionDuration).andThen {
         case Success(answer) =>
-          sender ! answer
+          originalSender ! answer
         case Failure(e) =>
           e match {
             case timeout: TimeoutException =>
-              sender ! new ExtractionFailed(build.buildConfig.name, Seq(),
-              "Timeout: extraction of project " + build.buildConfig.name + " took longer than " + extractionDuration) with TimedOut
+              val timeoutMsg =
+              "Timeout: extraction of project " + build.buildConfig.name + " took longer than " + extractionDuration.duration
+              log.error(timeoutMsg)
+              originalSender ! new ExtractionFailed(build.buildConfig.name, Seq(), timeoutMsg) with TimedOut
             case _ =>
-              sender ! akka.actor.Status.Failure(e)
+              originalSender ! akka.actor.Status.Failure(e)
           }
       } (scala.concurrent.ExecutionContext.Implicits.global)
   }

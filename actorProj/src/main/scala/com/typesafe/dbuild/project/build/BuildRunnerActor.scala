@@ -55,16 +55,19 @@ class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: Cleanu
   val buildDuration = Timeouts.buildTimeout
   def receive = {
     case msg@RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
+      val originalSender = sender // need to copy, as we we'll use it later in a "andThen()" (a future)
       (realBuilder ? msg)(buildDuration).andThen {
         case Success(answer) =>
-          sender ! answer
+          originalSender ! answer
         case Failure(e) =>
           e match {
             case timeout: TimeoutException =>
-              sender ! new BuildFailed(build.config.name, children,
-                "Timeout: building project " + build.config.name + " took longer than " + buildDuration) with TimedOut
+              val timeoutMsg =
+                "Timeout: building project " + build.config.name + " took longer than " + buildDuration.duration
+              log.error(timeoutMsg)
+              originalSender ! new BuildFailed(build.config.name, children, timeoutMsg) with TimedOut
             case _ =>
-              sender ! akka.actor.Status.Failure(e)
+              originalSender ! akka.actor.Status.Failure(e)
           }
       } (scala.concurrent.ExecutionContext.Implicits.global)
   }

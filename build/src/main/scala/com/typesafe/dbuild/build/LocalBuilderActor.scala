@@ -36,11 +36,11 @@ class LocalBuilderActor(
   val localBuildRunner = new com.typesafe.dbuild.project.build.LocalBuildRunner(buildRunner, extractor, repository)
 
   val extractorActor = context.actorOf(BalancingPool(concurrencyLevel).props(
-      Props(classOf[TimedExtractorActor], targetDir, options.cleanup.extraction)),
+      Props(classOf[TimedExtractorActor], extractor, targetDir, options.cleanup.extraction)),
       "Project-Dependency-Extractor")
 
   val baseBuildActor = context.actorOf(BalancingPool(concurrencyLevel).props(
-      Props(classOf[TimedBuildRunnerActor], targetDir, options.cleanup.build)),
+      Props(classOf[TimedBuildRunnerActor], localBuildRunner, targetDir, options.cleanup.build)),
       "Project-Builder")
 
   val fullBuilderActor = context.actorOf(Props(new SimpleBuildActor(extractorActor, baseBuildActor, repository, buildSystems)), "simple-builder")

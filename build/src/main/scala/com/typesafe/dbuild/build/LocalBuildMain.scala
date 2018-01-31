@@ -17,18 +17,17 @@ import com.typesafe.dbuild.repo.core.GlobalDirs.checkForObsoleteDirs
 import com.typesafe.dbuild.support
 import com.typesafe.dbuild.logging
 import akka.actor.{DeadLetter, Actor}
+import com.typesafe.dbuild.logging.Logger
 
-
-class DeadLetterMonitorActor
-  extends Actor
-  with akka.actor.ActorLogging {
-  log.debug("DeadLetterMonitorActor: now monitoring")
+class DeadLetterMonitorActor(logger: Logger)
+  extends Actor {
+  logger.debug("DeadLetterMonitorActor: now monitoring")
 
   def receive = {
     case d: DeadLetter => {
-      log.error(s"DeadLetterMonitorActor : saw dead letter $d")
+      logger.error(s"DeadLetterMonitorActor : saw dead letter $d")
     }
-    case _ => log.info("DeadLetterMonitorActor : got a message")
+    case _ => logger.info("DeadLetterMonitorActor : got a message")
   }
 }
 
@@ -54,18 +53,19 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
   // Gymnastics for classloader madness
 
   val system = ClassLoaderMadness.withContextLoader(getClass.getClassLoader)(ActorSystem.create)
-  val deadLetterMonitorActor = system.actorOf(Props[DeadLetterMonitorActor],"deadlettermonitoractor")
-  system.eventStream.subscribe(deadLetterMonitorActor, classOf[DeadLetter])
 
   val logMgr = {
     val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor), "ChainedLoggerSupervisorActor")
-    val logDirManagerActor = (mgr ? Props(new logging.LogDirManagerActor(new File(targetDir, "logs")))(1 minute)
+    val logDirManagerActor = (mgr ? Props(new logging.LogDirManagerActor(new File(targetDir, "logs"))))(1 minute)
     val systemOutLoggerActor = (mgr ? Props(new logging.SystemOutLoggerActor(options.debug)))(1 minute)
     mgr
   }
   val repository = Repository.default
   val logger = new logging.ActorLogger(logMgr)
   checkForObsoleteDirs(logger.warn _)
+
+  val deadLetterMonitorActor = system.actorOf(Props(classOf[DeadLetterMonitorActor], logger), "deadlettermonitoractor")
+  system.eventStream.subscribe(deadLetterMonitorActor, classOf[DeadLetter])
 
   val builder = system.actorOf(Props(new LocalBuilderActor(resolvers, buildSystems, repository, targetDir, logger, options)))
   // TODO - Look up target elsewhere...

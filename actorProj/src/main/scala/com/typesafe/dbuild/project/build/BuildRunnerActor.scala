@@ -3,6 +3,8 @@ package com.typesafe.dbuild.project.build
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import akka.actor.{ ActorRef, Actor, Props, PoisonPill, Terminated }
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import java.io.File
 import com.typesafe.dbuild.repo.core._
@@ -56,7 +58,17 @@ class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: Cleanu
   def receive = {
     case msg@RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
       val originalSender = sender // need to copy, as we we'll use it later in a "andThen()" (a future)
-      (realBuilder ? msg)(buildDuration).andThen {
+      val responseFuture = (realBuilder ? msg)(buildDuration)
+
+      // We only want one extraction operation at a time, in here. We use
+      // the "Timed" builder, and the ask operation, mainly to avoid
+      // creating a watchdog future, which will then keep running for
+      // several hours without a chance to be interrupted (eating a thread)
+      // So, yes: really wait. Will timeout after buildDuration, in case.
+      //
+      Await.ready(responseFuture, Duration.Inf)
+
+      responseFuture.andThen {
         case Success(answer) =>
           originalSender ! answer
         case Failure(e) =>

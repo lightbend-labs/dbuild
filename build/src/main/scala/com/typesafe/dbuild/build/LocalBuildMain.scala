@@ -58,9 +58,9 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
   system.eventStream.subscribe(deadLetterMonitorActor, classOf[DeadLetter])
 
   val logMgr = {
-    val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor))
-    mgr ! Props(new logging.LogDirManagerActor(new File(targetDir, "logs")))
-    mgr ! Props(new logging.SystemOutLoggerActor(options.debug))
+    val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor), "ChainedLoggerSupervisorActor")
+    val logDirManagerActor = (mgr ? Props(new logging.LogDirManagerActor(new File(targetDir, "logs")))(1 minute)
+    val systemOutLoggerActor = (mgr ? Props(new logging.SystemOutLoggerActor(options.debug)))(1 minute)
     mgr
   }
   val repository = Repository.default

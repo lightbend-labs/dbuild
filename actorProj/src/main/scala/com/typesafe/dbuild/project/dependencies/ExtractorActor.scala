@@ -4,6 +4,7 @@ import akka.actor.{ ActorRef, Actor, Props, PoisonPill, Terminated }
 import akka.pattern.ask
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import java.util.concurrent.atomic.AtomicBoolean
 import com.typesafe.dbuild.model.{ ProjectBuildConfig, ExtractionConfig, ExtractionFailed, TimedOut }
 import _root_.java.io.File
 import sbt.Path._
@@ -87,33 +88,39 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
 class TimedExtractorActor(extractor: Extractor, target: File, exp: CleanupExpirations) extends Actor {
   val realExtractor = context.actorOf(Props(new ExtractorActor(extractor, target, exp)))
   val extractionDuration = Timeouts.extractionTimeout
+  val keepProcessing = new AtomicBoolean(true)
   def receive = {
     case msg@ExtractBuildDependencies(build, uuidDir, log, debug) =>
-      val originalSender = sender // need to copy, as we we'll use it later in a "andThen()" (a future)
-      val responseFuture = (realExtractor ? msg)(extractionDuration)
+      val originalSender = sender // need to copy, as we we'll use it later in a future (andThen)
+      if (!keepProcessing.get) {
+        val msg = "Cannot extract, another extraction timed out"
+        originalSender ! new ExtractionFailed(build.buildConfig.name, Seq(), msg)
+      } else {
+        val future1 = (realExtractor ? msg)(extractionDuration)
+        val future2 = future1.andThen {
+          case Success(answer) =>
+            originalSender ! answer
+          case Failure(e) =>
+            keepProcessing.set(false)
+            e match {
+              case timeout: TimeoutException =>
+                val timeoutMsg =
+                "Timeout: extraction took longer than " + extractionDuration.duration
+                log.error(timeoutMsg)
+                originalSender ! new ExtractionFailed(build.buildConfig.name, Seq(), timeoutMsg) with TimedOut
+              case _ =>
+                originalSender ! akka.actor.Status.Failure(e)
+            }
+        } (scala.concurrent.ExecutionContext.Implicits.global)
 
-      // We only want one extraction operation at a time, in here. We use
-      // the "Timed" extractor, and the ask operation, mainly to avoid
-      // creating a watchdog future, which will then keep running for
-      // several hours without a chance to be interrupted (eating a thread)
-      // So, yes: really wait. Will timeout after extractionDuration, in case.
-      //
-      Await.ready(responseFuture, Duration.Inf)
-
-      responseFuture.andThen {
-        case Success(answer) =>
-          originalSender ! answer
-        case Failure(e) =>
-          e match {
-            case timeout: TimeoutException =>
-              val timeoutMsg =
-              "Timeout: extraction of project " + build.buildConfig.name + " took longer than " + extractionDuration.duration
-              log.error(timeoutMsg)
-              originalSender ! new ExtractionFailed(build.buildConfig.name, Seq(), timeoutMsg) with TimedOut
-            case _ =>
-              originalSender ! akka.actor.Status.Failure(e)
-          }
-      } (scala.concurrent.ExecutionContext.Implicits.global)
+        // We only want one extraction operation at a time, in here. We use
+        // the "Timed" extractor, and the ask operation, mainly to avoid
+        // creating a watchdog future, which will then keep running for
+        // several hours without a chance to be interrupted (eating a thread)
+        // So, yes: really wait. Will timeout after extractionDuration, in case.
+        //
+        Await.ready(future2, Duration.Inf)
+      }
   }
 }
 

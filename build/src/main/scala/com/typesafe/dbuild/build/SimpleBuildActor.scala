@@ -234,7 +234,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   final def wrapExceptionIntoOutcome[A <: BuildOutcome](log: Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
     try f(a) catch {
       case e:java.util.concurrent.TimeoutException =>
-        new BuildFailed(".", a.outcomes, "Timeout: took longer than the allowed time limit.") with TimedOut
+        new BuildFailed(".", a.outcomes, "Timeout: took longer than the allowed time limit") with TimedOut
       case e:Throwable =>
         UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e))
     }

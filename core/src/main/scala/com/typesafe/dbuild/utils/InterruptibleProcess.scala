@@ -2,7 +2,7 @@
 // so that they can be preemptively killed if needed, for example if a
 // timeout occurs. One wrapper can keep track of only one Process at a time,
 // so there will be usually one wrapper per build/extraction worker.
-package com.typesafe.dbuild.project
+package com.typesafe.dbuild.utils
 import sys.process._
 
 class TrackedProcessBuilder {

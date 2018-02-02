@@ -16,6 +16,7 @@ import com.typesafe.dbuild.model.Utils.{ writeValue, readValue }
 import com.typesafe.dbuild.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
 import com.typesafe.dbuild.model.SeqSeqStringH._
 import com.typesafe.dbuild.model.SeqStringH._
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 /** Implementation of the SBT build system. */
 class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boolean) extends BuildSystemCore {
@@ -77,20 +78,21 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
     }
   }
 
-  def extractDependencies(config: ExtractionConfig, baseDir: File, extr: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, tracker: TrackedProcessBuilder, baseDir: File,
+    extr: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
     val projDir = SbtBuildSystem.projectDir(baseDir, ec)
-    SbtExtractor.extractMetaData(repos, extractor)(projDir, ec, log, debug)
+    SbtExtractor.extractMetaData(repos, extractor)(tracker, projDir, ec, log, debug)
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, info: BuildInput, localBuildRunner: LocalBuildRunner,
-    buildData: BuildData): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, tracker: TrackedProcessBuilder, dir: File,
+    info: BuildInput, localBuildRunner: LocalBuildRunner, buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
     val name = project.config.name
     val projDir = SbtBuildSystem.projectDir(dir, ec)
     val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."),
       project.config.checkMissing getOrElse sys.error("Internal error: checkMissing not expanded in runBuild."), info)
-    SbtBuilder.buildSbtProject(repos, runner)(projDir, config, buildData.log, buildData.debug)
+    SbtBuilder.buildSbtProject(repos, runner)(projDir, config, tracker, buildData.log, buildData.debug)
     readValue[BuildArtifactsOut](buildArtsFile(projDir))
   }
 }

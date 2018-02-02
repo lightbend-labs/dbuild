@@ -9,6 +9,7 @@ import java.io.File
 import com.typesafe.dbuild.logging
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project.build.LocalBuildRunner
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 /** The Test build system does essentially nothing; it just fails every now and then. It is used for testing */
 object TestBuildSystem extends BuildSystemCore {
@@ -21,7 +22,8 @@ object TestBuildSystem extends BuildSystemCore {
     case _ => throw new Exception("Internal error: Test build config options have the wrong type. Please report.")
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, tracker: TrackedProcessBuilder,
+      dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
     val meta=readMeta(config.buildConfig)
     val projects=meta.projects map {_.name}
@@ -29,8 +31,8 @@ object TestBuildSystem extends BuildSystemCore {
     meta
   }
 
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      buildData: BuildData): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, tracker: TrackedProcessBuilder, dir: File,
+      input: BuildInput, localBuildRunner: LocalBuildRunner, buildData: BuildData): BuildArtifactsOut = {
     val ec = project.extra[ExtraType]
 
     val version = input.version

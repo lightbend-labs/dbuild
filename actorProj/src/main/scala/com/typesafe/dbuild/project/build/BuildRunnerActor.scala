@@ -15,6 +15,7 @@ import sbt.Path._
 import com.typesafe.dbuild.repo.core.GlobalDirs.buildDir
 import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.project.Timeouts
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import akka.pattern.ask
 import java.util.concurrent.TimeoutException
 import scala.util.{Success,Failure}
@@ -31,7 +32,7 @@ class CleaningBuildActor extends Actor {
 }
 
 /** This actor can run builds locally and return the generated artifacts. */
-class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations) extends Actor {
+class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations, tracker: TrackedProcessBuilder) extends Actor {
   override def preStart() = {
     // Cleanup works in two stages; see ExtractorActor for details.
     // Note that cleanup is performed independently for the extraction and build directories
@@ -44,7 +45,7 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
     case RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
       log info ("--== Building %s ==--" format (build.config.name))
       sender ! (try {
-        builder.checkCacheThenBuild(target, build, outProjects, children, buildData)
+        builder.checkCacheThenBuild(target, build, tracker, outProjects, children, buildData)
       } catch {
         case t:Throwable =>
           BuildFailed(build.config.name, children, prepareLogMsg(log, t))
@@ -54,12 +55,14 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
 }
 
 class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations) extends Actor {
-  val realBuilder = context.actorOf(Props(new BuildRunnerActor(builder, target, exp)))
+  val tracker = new TrackedProcessBuilder
+  val realBuilder = context.actorOf(Props(new BuildRunnerActor(builder, target, exp, tracker)))
   val buildDuration = Timeouts.buildTimeout
   val keepProcessing = new AtomicBoolean(true)
   def receive = {
     case msg@RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
       val originalSender = sender // need to copy, as we we'll use it later in a future (andThen)
+      tracker.reset()
       if (!keepProcessing.get) {
         val msg = "Cannot proceed, another build timed out"
         originalSender ! new BuildFailed(build.config.name, children, msg)
@@ -70,6 +73,11 @@ class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: Cleanu
             originalSender ! answer
           case Failure(e) =>
             keepProcessing.set(false)
+            tracker.abort()
+            // Note that the Process may not be destroyed immediately, and may only stop
+            // upon return from a system call, for example. We give it a little time here,
+            // just in case, although the eventual dead letter response might arrive even later.
+            Thread.sleep(1000)
             e match {
               case timeout: TimeoutException =>
                 val timeoutMsg =

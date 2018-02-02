@@ -12,6 +12,7 @@ import org.apache.commons.io.FileUtils.readFileToString
 import com.typesafe.dbuild.model.Utils.{ readValue, writeValue }
 import org.apache.commons.io.FileUtils.writeStringToFile
 import com.typesafe.dbuild.logging.Logger.logFullStackTrace
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 /**
  * A runner for SBT.
@@ -30,12 +31,13 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
 
   // "process" defaults to processCommand(), below, but it can be
   // customized in order to process the command line in some special manner
-  def run(projectDir: File,
+  def run(tracker: TrackedProcessBuilder,
+    projectDir: File,
     sbtVersion: String,
     log: Logger,
     javaProps: Map[String, String] = Map.empty,
     extraArgs: Seq[String] = Seq.empty,
-    process: Option[(File, Logger, File, Seq[String]) => Unit] = None)(args: String*): Unit = {
+    process: Option[(TrackedProcessBuilder, File, Logger, File, Seq[String]) => Unit] = None)(args: String*): Unit = {
 
     val useSbtVersion = if (sbtVersion != "standard") {
       removeProjectBuild(projectDir, log)
@@ -70,18 +72,18 @@ class SbtRunner(repos: List[xsbti.Repository], globalBase: File, debug: Boolean)
         extraArgs)(args: _*)
 
       log.debug("Running: " + cmd.mkString("[", ",", "]"))
-      (process getOrElse processCommand _)(projectDir, log, lastMsg, cmd)
+      (process getOrElse processCommand _)(tracker, projectDir, log, lastMsg, cmd)
     }
   }
 
-  private def processCommand(projectDir: File, log: Logger, lastMsg: File, cmd: Seq[String]): Unit = {
+  private def processCommand(tracker: TrackedProcessBuilder, projectDir: File, log: Logger, lastMsg: File, cmd: Seq[String]): Unit = {
     // I need a sort of back channel to return a diagnostic string from sbt,
     // aside from stdin/stderr which are captured by the logger. I use a
     // temporary file and ask the sbt plugin to fill it in, in case of
     // exception, as last thing before returning. If I return, there is
     // nothing in the file, but the return code is !=0, I revert to a
     // generic message.
-    Process(cmd, Some(projectDir)) ! log match {
+    tracker.!(Process(cmd, Some(projectDir)),log) match {
       case 0 => ()
       case n => { // Always exit this block with a throw or sys.error
         val lastErr = try {

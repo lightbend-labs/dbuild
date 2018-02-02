@@ -15,6 +15,8 @@ import com.typesafe.dbuild.support.sbt.SbtRunner.SbtFileNames._
 import com.typesafe.dbuild.support.sbt.SbtRunner.{ sbtIvyCache, buildArtsFile }
 import com.typesafe.dbuild.model.SeqSeqString
 import com.typesafe.dbuild.model.SeqStringH._
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
+
 /**
  * Rewiring a level needs the information contained in RewireInput:
  *
@@ -39,8 +41,8 @@ object SbtBuilder {
   // If customProcess is not None, the resulting sbt command line will be prepared and then
   // passed to customProcess, rather than to the regular Process() in SbtRunner. This feature
   // is used by "dbuild checkout".
-  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig,
-    log: Logger, debug: Boolean, customProcess: Option[(File, Logger, File, Seq[String]) => Unit] = None,
+  def buildSbtProject(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, config: SbtBuildConfig, tracker: TrackedProcessBuilder,
+    log: Logger, debug: Boolean, customProcess: Option[(TrackedProcessBuilder, File, Logger, File, Seq[String]) => Unit] = None,
     targetCommands: Seq[String] = Seq("dbuild-build"))(): Unit = {
 
     // everything needed for the automatic rewiring, driven by
@@ -76,6 +78,7 @@ object SbtBuilder {
     SbtRunner.writeRepoFile(repos, repoFile, "build-local" -> baseRematerializedRepo.toURI.toASCIIString)
 
     runner.run(
+      tracker = tracker,
       projectDir = projectDir,
       sbtVersion = config.config.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,

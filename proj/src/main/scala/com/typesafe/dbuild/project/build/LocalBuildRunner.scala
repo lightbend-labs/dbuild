@@ -11,6 +11,7 @@ import Adapter.Path._
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
 import com.typesafe.dbuild.project.BuildData
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import BuildDirs._
 
 /**
@@ -21,8 +22,8 @@ class LocalBuildRunner(builder: BuildRunner,
   val extractor: Extractor,
   val repository: Repository) {
 
-  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project], children: Seq[BuildOutcome],
-    buildData: BuildData): BuildOutcome = {
+  def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, tracker: TrackedProcessBuilder,
+      outProjects: Seq[Project], children: Seq[BuildOutcome], buildData: BuildData): BuildOutcome = {
     val log = buildData.log
     try {
       val artifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
@@ -32,13 +33,13 @@ class LocalBuildRunner(builder: BuildRunner,
       case t: RepositoryException =>
         log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
         //log.trace(t)
-        BuildSuccess(build.config.name, children, runLocalBuild(target, build, outProjects,
+        BuildSuccess(build.config.name, children, runLocalBuild(target, build, tracker, outProjects,
           buildData))
     }
   }
 
-  def runLocalBuild(target: File, build: RepeatableProjectBuild, outProjects: Seq[Project],
-    buildData: BuildData): BuildArtifactsOut =
+  def runLocalBuild(target: File, build: RepeatableProjectBuild, tracker: TrackedProcessBuilder,
+    outProjects: Seq[Project], buildData: BuildData): BuildArtifactsOut =
     useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
       updateTimeStamp(dir)
       // extractor.resolver.resolve() only resolves the main URI,
@@ -53,7 +54,7 @@ class LocalBuildRunner(builder: BuildRunner,
       log.debug("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)
       if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
-      val results = builder.runBuild(build, dir,
+      val results = builder.runBuild(build, tracker, dir,
         BuildInput(dependencies, version, build.configAndExtracted.extracted.projInfo.map{_.subproj}, writeRepo, build.config.name), this, buildData)
       LocalRepoHelper.publishArtifactsInfo(build, results, writeRepo, repository, log)
       markSuccess(dir)

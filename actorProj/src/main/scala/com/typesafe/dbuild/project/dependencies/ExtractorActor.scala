@@ -18,6 +18,7 @@ import Logger.prepareLogMsg
 import com.typesafe.dbuild.project.Timeouts
 import scala.util.{Success,Failure}
 import java.util.concurrent.TimeoutException
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 case class ExtractBuildDependencies(config: ExtractionConfig, uuidDir: String, log: Logger, debug: Boolean)
 
@@ -36,7 +37,7 @@ class CleaningExtractionActor extends Actor {
 /**
  * An actor that will extract the project dependencies.
  */
-class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extends Actor {
+class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations, tracker: TrackedProcessBuilder) extends Actor {
   override def preStart() = {
     // Cleanup works in two stages.
     // Before any extraction is performed, in a quick pass the extraction directory
@@ -76,7 +77,7 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
     case ExtractBuildDependencies(build, uuidDir, log, debug) =>
       log info ("--== Extracting dependencies for %s ==--" format (build.buildConfig.name))
       sender ! (try {
-        e.extract(extractionDir(target) / uuidDir, build, log, debug)
+        e.extract(extractionDir(target) / uuidDir, build, tracker, log, debug)
       } catch {
         case t:Throwable =>
           ExtractionFailed(build.buildConfig.name, Seq.empty, prepareLogMsg(log, t))
@@ -86,12 +87,14 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations) extend
 }
 
 class TimedExtractorActor(extractor: Extractor, target: File, exp: CleanupExpirations) extends Actor {
-  val realExtractor = context.actorOf(Props(new ExtractorActor(extractor, target, exp)))
+  val tracker = new TrackedProcessBuilder
+  val realExtractor = context.actorOf(Props(new ExtractorActor(extractor, target, exp, tracker)))
   val extractionDuration = Timeouts.extractionTimeout
   val keepProcessing = new AtomicBoolean(true)
   def receive = {
     case msg@ExtractBuildDependencies(build, uuidDir, log, debug) =>
       val originalSender = sender // need to copy, as we we'll use it later in a future (andThen)
+      tracker.reset()
       if (!keepProcessing.get) {
         val msg = "Cannot extract, another extraction timed out"
         originalSender ! new ExtractionFailed(build.buildConfig.name, Seq(), msg)
@@ -102,6 +105,11 @@ class TimedExtractorActor(extractor: Extractor, target: File, exp: CleanupExpira
             originalSender ! answer
           case Failure(e) =>
             keepProcessing.set(false)
+            tracker.abort()
+            // Note that the Process may not be destroyed immediately, and may only stop
+            // upon return from a system call, for example. We give it a little time here,
+            // just in case, although the eventual dead letter response might arrive even later.
+            Thread.sleep(1000)
             e match {
               case timeout: TimeoutException =>
                 val timeoutMsg =

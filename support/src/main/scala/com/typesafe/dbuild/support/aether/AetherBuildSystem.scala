@@ -20,6 +20,7 @@ import com.typesafe.dbuild.support.BuildSystemCore
 import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.repo.core.LocalArtifactMissingException
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import java.io.File
 import com.typesafe.dbuild.adapter.Adapter
 import Adapter.Path._
@@ -413,7 +414,8 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     // keep the pom at the beginning, in arts
     (descriptorResult, Seq(outPomArt, outJarArt, outSourceArt, outJavadocArt).flatten)
   }
-  def extractDependencies(extractionConfig: ExtractionConfig, baseDir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
+  def extractDependencies(extractionConfig: ExtractionConfig, tracker: TrackedProcessBuilder,
+    baseDir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val config = extractionConfig.buildConfig
     val extra = config.getExtra[AetherExtraConfig]
     import extra._
@@ -449,8 +451,8 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
     q
   }
 
-  def runBuild(project: RepeatableProjectBuild, baseDir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-    buildData: BuildData): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, tracker: TrackedProcessBuilder, baseDir: File,
+    input: BuildInput, localBuildRunner: LocalBuildRunner, buildData: BuildData): BuildArtifactsOut = {
     val extra = project.config.getExtra[AetherExtraConfig]
     import extra._
 

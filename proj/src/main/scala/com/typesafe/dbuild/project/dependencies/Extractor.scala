@@ -19,6 +19,7 @@ import org.apache.ivy.core.module.id.ModuleRevisionId
 import com.typesafe.dbuild.model.ProjectRef
 import com.typesafe.dbuild.model.SeqDepsModifiersH._
 import com.typesafe.dbuild.model.SeqStringH._
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 /** This is used to extract dependencies from projects. */
 class Extractor(
@@ -69,7 +70,7 @@ class Extractor(
   }
 
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */
-  def extract(tdir: File, extractionConfig: ExtractionConfig, logger: Logger, debug: Boolean): ExtractionOutcome = {
+  def extract(tdir: File, extractionConfig: ExtractionConfig, tracker: TrackedProcessBuilder, logger: Logger, debug: Boolean): ExtractionOutcome = {
     val build = extractionConfig.buildConfig
     ExtractionDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
       updateTimeStamp(dir)
@@ -80,7 +81,7 @@ class Extractor(
       val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, dir, this, logger))
       config.buildConfig.getCommit foreach { s: String => logger.info("Commit: " + s) }
       logger.debug("Repeatable Config: " + writeValue(config))
-      val outcome = extractedResolvedWithCache(config, dir, logger, debug)
+      val outcome = extractedResolvedWithCache(config, tracker, dir, logger, debug)
       outcome match {
         case _: ExtractionOK => markSuccess(dir)
         case _ =>
@@ -89,14 +90,14 @@ class Extractor(
     }
   }
 
-  def extractedResolvedWithCache(config: ExtractionConfig, dir: File, logger: Logger, debug: Boolean): ExtractionOutcome = {
+  def extractedResolvedWithCache(config: ExtractionConfig, tracker: TrackedProcessBuilder, dir: File, logger: Logger, debug: Boolean): ExtractionOutcome = {
     // Here, we attempt to cache our extracted dependencies rather than do
     // resolution again.
     // TODO - This should be configurable!
     val build = config.buildConfig
     cachedExtractOr(config, logger) {
       logger.info("Extracting dependencies for: " + build.name)
-      val extractedDeps = dependencyExtractor.extract(config, dir, this, logger, debug)
+      val extractedDeps = dependencyExtractor.extract(config, tracker, dir, this, logger, debug)
       // process deps.ignore clauses
       val deps = modifiedDeps(config.buildConfig.deps, extractedDeps, logger)
       logger.debug("Dependencies = " + writeValue(deps))

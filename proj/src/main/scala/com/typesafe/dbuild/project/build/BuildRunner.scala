@@ -5,6 +5,7 @@ import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project._
 import com.typesafe.dbuild.model.ProjectBuildConfig
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 /** Runs a build in the given directory. */
 trait BuildRunner {
@@ -18,8 +19,8 @@ trait BuildRunner {
    * @param localBuildRunner The LocalBuildRunner currently in use (for nested calls)
    * @param log  The log to write to.
    */
-  def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      buildData:BuildData): BuildArtifactsOut
+  def runBuild(b: RepeatableProjectBuild, tracker: TrackedProcessBuilder, dir: java.io.File,
+               input: BuildInput, localBuildRunner: LocalBuildRunner, buildData:BuildData): BuildArtifactsOut
 }
 
 /** Aggregate builder. */
@@ -27,7 +28,7 @@ class AggregateBuildRunner(systems: Seq[BuildSystem[Extractor, LocalBuildRunner]
   private def findBuildSystem(proj: ProjectBuildConfig): BuildSystem[Extractor, LocalBuildRunner] =
     BuildSystem.forName(proj.system, systems)
 
-  def runBuild(b: RepeatableProjectBuild, dir: java.io.File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-      buildData:BuildData): BuildArtifactsOut =
-    findBuildSystem(b.config).runBuild(b, dir, input, localBuildRunner, buildData)
+  def runBuild(b: RepeatableProjectBuild, tracker: TrackedProcessBuilder, dir: java.io.File,
+      input: BuildInput, localBuildRunner: LocalBuildRunner, buildData:BuildData): BuildArtifactsOut =
+    findBuildSystem(b.config).runBuild(b, tracker, dir, input, localBuildRunner, buildData)
 }

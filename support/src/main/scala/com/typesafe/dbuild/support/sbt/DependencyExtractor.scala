@@ -12,6 +12,7 @@ import com.typesafe.dbuild.model.Utils.{ readValue, writeValue }
 import com.typesafe.dbuild.logging.Logger.logFullStackTrace
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.dbuild.model.SeqStringH._
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 /**
  * Input data to the dbuild sbt plugin
@@ -25,7 +26,8 @@ case class ExtractionInput(
 object SbtExtractor {
 
   // TODO - Better synchronize?
-  def extractMetaData(repos: List[xsbti.Repository], runner: SbtRunner)(projectDir: File, extra: SbtExtraConfig, log: Logger, debug: Boolean): ExtractedBuildMeta = {
+  def extractMetaData(repos: List[xsbti.Repository], runner: SbtRunner)(tracker: TrackedProcessBuilder,
+    projectDir: File, extra: SbtExtraConfig, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     log.debug("Extracting dependencies of SBT build:")
     log.debug("  " + projectDir.getCanonicalPath())
     val scalaCompiler = extra.extractionVersion getOrElse
@@ -94,6 +96,7 @@ object SbtExtractor {
     // that contains onLoad, following the model used during rewiring, so that each extraction (and possibly
     // each extraction level) uses a separate ivy cache. That seems overkill, however: the global one should be ok.
     runner.run(
+      tracker = tracker,
       projectDir = projectDir,
       sbtVersion = extra.sbtVersion getOrElse sys.error("Internal error: sbtVersion has not been expanded. Please report."),
       log = log,

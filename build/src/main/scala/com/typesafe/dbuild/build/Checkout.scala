@@ -6,6 +6,7 @@ import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.project.resolve.AggregateProjectResolver
 import com.typesafe.dbuild.logging.ConsoleLogger
 import com.typesafe.dbuild.project.build.LocalBuildRunner
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import sbt.Path._
 import sys.process._
 import com.typesafe.dbuild.support.sbt.SbtBuildSystem
@@ -77,7 +78,7 @@ object Checkout {
         // and we finally get the needed List[xsbti.Repository]
         val listMap = xsbt.boot.ListMap(resolversMap.toSeq.reverse: _*)
         val savedRepos = (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
-        
+
         val repos = if (useLocalResolvers || savedRepos.isEmpty)
           localRepos
         else {
@@ -105,8 +106,9 @@ object Checkout {
         val info = BuildInput(dependencies, version, subprojs, writeRepo, projectName)
         val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."),
             project.config.checkMissing getOrElse sys.error("Internal error: checkMissing not expanded in runBuild."), info)
-        val artsOut = com.typesafe.dbuild.support.sbt.SbtBuilder.buildSbtProject(repos, sbtRunner)(projDir, config, log, debug, customProcess = Some({
-          (_, _, _, cmd: Seq[String]) =>
+        val tracker = new TrackedProcessBuilder
+        val artsOut = com.typesafe.dbuild.support.sbt.SbtBuilder.buildSbtProject(repos, sbtRunner)(projDir, config, tracker, log, debug, customProcess = Some({
+          (_, _, _, _, cmd: Seq[String]) =>
             val commandFile = dir / dbuildSbtDirName / "start"
             val writer = new PrintWriter(commandFile)
             writer.println("#!/usr/bin/env bash")

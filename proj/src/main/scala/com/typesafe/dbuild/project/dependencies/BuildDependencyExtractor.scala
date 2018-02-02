@@ -4,6 +4,7 @@ import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.project.BuildSystem
 import com.typesafe.dbuild.project.build.LocalBuildRunner
 import com.typesafe.dbuild.logging.Logger
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 /** Interface for extracting project metadata. */
 trait BuildDependencyExtractor {
@@ -12,7 +13,7 @@ trait BuildDependencyExtractor {
    * project. Project MUST have already been
    * resolved, via a call to resolve()
    */
-  def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta
+  def extract(config: ExtractionConfig, tracker: TrackedProcessBuilder, dir: java.io.File, extractor:Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta
 
   /** Returns true or false, depending on whether or not this extractor can handle
    * a given build system.
@@ -34,8 +35,9 @@ class MultiBuildDependencyExtractor(buildSystems: Seq[BuildSystem[Extractor, Loc
       case _       => sys.error("No extractor found for: " + config.name)
     }
   }
-  def extract(config: ExtractionConfig, dir: java.io.File, extractor:Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta =
-    findSystem(config.buildConfig).extractDependencies(config, dir, extractor, log, debug)
+  def extract(config: ExtractionConfig, tracker: TrackedProcessBuilder, dir: java.io.File,
+              extractor:Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta =
+    findSystem(config.buildConfig).extractDependencies(config, tracker, dir, extractor, log, debug)
   def resolve(config: ProjectBuildConfig, dir: java.io.File, extractor:Extractor, log: Logger): ProjectBuildConfig = {
     if (!dir.isDirectory()) sys.error("Internal error, please report; resolve() dir does not exist: "+dir.getCanonicalPath())
     findSystem(config).resolve(config, dir, extractor, log)

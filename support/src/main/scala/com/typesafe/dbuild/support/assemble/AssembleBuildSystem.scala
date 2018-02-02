@@ -25,9 +25,11 @@ import org.apache.maven.model.io.xpp3.{ MavenXpp3Reader, MavenXpp3Writer }
 import org.apache.maven.model.Dependency
 import org.apache.ivy.util.ChecksumHelper
 import com.typesafe.dbuild.support.NameFixer.fixName
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import org.apache.ivy
 import com.typesafe.dbuild.project.build.BuildDirs.localRepos
 import com.typesafe.dbuild.model.SeqDBCH._
+
 /**
  * The "assemble" build system accepts a list of nested projects, with the same format
  * as the "build" section of a normal dbuild configuration file.
@@ -87,7 +89,7 @@ object AssembleBuildSystem extends BuildSystemCore {
     rootResolved.copy(extra = newExtra)
   }
 
-  def extractDependencies(config: ExtractionConfig, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
+  def extractDependencies(config: ExtractionConfig, tracker: TrackedProcessBuilder, dir: File, extractor: Extractor, log: Logger, debug: Boolean): ExtractedBuildMeta = {
     val ec = config.extra[ExtraType]
 
     // we consider the names of parts in the same way as subprojects, allowing for a
@@ -100,7 +102,7 @@ object AssembleBuildSystem extends BuildSystemCore {
       buildConfig.projects map { p =>
         log.info("----------")
         val nestedExtractionConfig = ExtractionConfig(p)
-        extractor.extractedResolvedWithCache(nestedExtractionConfig, projectsDir(dir, p),
+        extractor.extractedResolvedWithCache(nestedExtractionConfig, tracker, projectsDir(dir, p),
           log.newNestedLogger(p.name, p.name), debug)
       }
     }
@@ -195,8 +197,8 @@ object AssembleBuildSystem extends BuildSystemCore {
   // runBuild() is called with the (empty) root source resolved, but the parts have not been checked out yet.
   // Therefore, we will call localBuildRunner.checkCacheThenBuild() on each part,
   // which will in turn resolve it and then build it (if not already in cache).
-  def runBuild(project: RepeatableProjectBuild, dir: File, input: BuildInput, localBuildRunner: LocalBuildRunner,
-    buildData: BuildData): BuildArtifactsOut = {
+  def runBuild(project: RepeatableProjectBuild, tracker: TrackedProcessBuilder, dir: File,
+    input: BuildInput, localBuildRunner: LocalBuildRunner, buildData: BuildData): BuildArtifactsOut = {
 
     val ec = project.extra[ExtraType]
     val version = input.version // IGNORED!!
@@ -257,7 +259,7 @@ object AssembleBuildSystem extends BuildSystemCore {
           // remove all dependencies, and pretend that this project stands alone))
           partConfigAndExtracted.extracted.projInfo.map { pm => RepeatableDepInfo(pm.version, Seq.empty, Seq.empty) })
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild,
-          Seq.empty, Seq.empty, BuildData(log.newNestedLogger(p.name, p.name), buildData.debug))
+          tracker, Seq.empty, Seq.empty, BuildData(log.newNestedLogger(p.name, p.name), buildData.debug))
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)

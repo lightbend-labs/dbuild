@@ -14,6 +14,11 @@ class TrackedProcessBuilder {
     processOpt map { _.destroy() }
   }
 
+  def reset(): Unit = synchronized {
+    interrupted = false
+    processOpt = None
+  }
+
   def !!(pb: ProcessBuilder, log: ProcessLogger)  = slurp(pb, Some(log), withIn = false)
   def !(pb: ProcessBuilder, log: ProcessLogger)  = runBuffered(pb, log, connectInput = false)
 

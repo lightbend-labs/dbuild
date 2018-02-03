@@ -51,7 +51,7 @@ lazy val root = (
   aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := Def.task {}, publishLocal := Def.task {}, version := MyVersion)
-  settings(crossSbtVersions := Seq("0.13.17","1.0.4"), selectScalaVersion)
+  settings(crossSbtVersions := Seq("0.13.16","1.0.4"), selectScalaVersion)
 )
 
 // This subproject only has dynamically

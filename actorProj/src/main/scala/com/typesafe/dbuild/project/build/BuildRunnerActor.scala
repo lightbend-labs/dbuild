@@ -77,7 +77,7 @@ class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: Cleanu
             // Note that the Process may not be destroyed immediately, and may only stop
             // upon return from a system call, for example. We give it a little time here,
             // just in case, although the eventual dead letter response might arrive even later.
-            Thread.sleep(1000)
+            Thread.sleep(5000)
             e match {
               case timeout: TimeoutException =>
                 val timeoutMsg =

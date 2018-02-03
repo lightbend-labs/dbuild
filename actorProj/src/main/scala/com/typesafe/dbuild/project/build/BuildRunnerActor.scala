@@ -5,7 +5,6 @@ import com.typesafe.dbuild.logging.Logger
 import akka.actor.{ ActorRef, Actor, Props, PoisonPill, Terminated }
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import java.util.concurrent.atomic.AtomicBoolean
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import java.io.File
 import com.typesafe.dbuild.repo.core._
@@ -58,44 +57,37 @@ class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: Cleanu
   val tracker = new TrackedProcessBuilder
   val realBuilder = context.actorOf(Props(new BuildRunnerActor(builder, target, exp, tracker)))
   val buildDuration = Timeouts.buildTimeout
-  val keepProcessing = new AtomicBoolean(true)
   def receive = {
     case msg@RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
       val originalSender = sender // need to copy, as we we'll use it later in a future (andThen)
       tracker.reset()
-      if (!keepProcessing.get) {
-        val msg = "Cannot proceed, another build timed out"
-        originalSender ! new BuildFailed(build.config.name, children, msg)
-      } else {
-        val future1 = (realBuilder ? msg)(buildDuration)
-        val future2 = future1.andThen {
-          case Success(answer) =>
-            originalSender ! answer
-          case Failure(e) =>
-            keepProcessing.set(false)
-            tracker.abort()
-            // Note that the Process may not be destroyed immediately, and may only stop
-            // upon return from a system call, for example. We give it a little time here,
-            // just in case, although the eventual dead letter response might arrive even later.
-            Thread.sleep(5000)
-            e match {
-              case timeout: TimeoutException =>
-                val timeoutMsg =
-                  "Timeout: build took longer than " + buildDuration.duration
-                log.error(timeoutMsg)
-                originalSender ! new BuildFailed(build.config.name, children, timeoutMsg) with TimedOut
-              case _ =>
-                originalSender ! akka.actor.Status.Failure(e)
-            }
-        } (scala.concurrent.ExecutionContext.Implicits.global)
+      val future1 = (realBuilder ? msg)(buildDuration)
+      val future2 = future1.andThen {
+        case Success(answer) =>
+          originalSender ! answer
+        case Failure(e) =>
+          tracker.abort()
+          // Note that the Process may not be destroyed immediately, and may only stop
+          // upon return from a system call, for example. We give it a little time here,
+          // just in case, although the eventual dead letter response might arrive even later.
+          Thread.sleep(5000)
+          e match {
+            case timeout: TimeoutException =>
+              val timeoutMsg =
+                "Timeout: build took longer than " + buildDuration.duration
+              log.error(timeoutMsg)
+              originalSender ! new BuildFailed(build.config.name, children, timeoutMsg) with TimedOut
+            case _ =>
+              originalSender ! akka.actor.Status.Failure(e)
+          }
+      } (scala.concurrent.ExecutionContext.Implicits.global)
 
-        // We only want one extraction operation at a time, in here. We use
-        // the "Timed" builder, and the ask operation, mainly to avoid
-        // creating a watchdog future, which will then keep running for
-        // several hours without a chance to be interrupted (eating a thread)
-        // So, yes: really wait. Will timeout after buildDuration, in case.
-        //
-        Await.ready(future2, Duration.Inf)
-      }
+      // We only want one extraction operation at a time, in here. We use
+      // the "Timed" builder, and the ask operation, mainly to avoid
+      // creating a watchdog future, which will then keep running for
+      // several hours without a chance to be interrupted (eating a thread)
+      // So, yes: really wait. Will timeout after buildDuration, in case.
+      //
+      Await.ready(future2, Duration.Inf)
   }
 }

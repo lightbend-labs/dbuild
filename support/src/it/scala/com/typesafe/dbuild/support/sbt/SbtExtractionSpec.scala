@@ -3,6 +3,7 @@ package support
 package sbt
 
 import com.typesafe.dbuild.adapter.Defaults
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import com.typesafe.dbuild.logging.{ConsoleLogger, Logger}
 import com.typesafe.dbuild.model.{ProjectRef, SbtExtraConfig, ProjectBuildConfig, ExtractionConfig}
 import org.specs2.mutable.Specification
@@ -58,7 +59,7 @@ object SbtExtractionSpec extends Specification {
                  commands = Nil,
                  settings = Nil))))
 
-         val result = buildSystem.extractDependencies(config, projectDir, null /* Extractor */, stdOutLogger, true)
+         val result = buildSystem.extractDependencies(config, new TrackedProcessBuilder, projectDir, null /* Extractor */, stdOutLogger, true)
          // Here there are implicit build levels.  projInfo is split into an arbitrary number of levels, each
          // denoting one of the sbt project levels.  For example:
          //  Index - Project

@@ -48,4 +48,29 @@ class TrackedProcessBuilder {
     }
     exitVal
   }
+
+  // Technically we shouldn't keep
+  // tracker instances alive by adding
+  // them to a list. However, in the usual
+  // case of a single extractor and a single
+  // builder, the grand total number of trackers
+  // will be two. We can change indexing
+  // mechanism, adding a better controller
+  // object, in case we start using more
+  // extractors and builders, or in the
+  // (remote) case we should start creating
+  // them dynamically, for some reason.
+  TrackedProcessBuilder.record(this)
+}
+
+object TrackedProcessBuilder {
+  val trackers = new scala.collection.mutable.MutableList[TrackedProcessBuilder]
+
+  def record(t:TrackedProcessBuilder) = synchronized {
+    trackers += t
+  }
+
+  def abortAll() = synchronized {
+    trackers foreach { _.abort() }
+  }
 }

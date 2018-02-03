@@ -18,6 +18,7 @@ import com.typesafe.dbuild.support
 import com.typesafe.dbuild.logging
 import akka.actor.{DeadLetter, Actor}
 import com.typesafe.dbuild.logging.Logger
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 
 class DeadLetterMonitorActor(logger: Logger)
   extends Actor {
@@ -76,6 +77,7 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
     Await.result(result.mapTo[BuildOutcome], Duration.Inf)
   }
   def dispose(): Unit = {
+    TrackedProcessBuilder.abortAll()
     implicit val timeout: Timeout = 5.minutes
     Await.result((logMgr ? "exit").mapTo[String], Duration.Inf)
     system.shutdown() // pro forma, as all loggers should already be stopped at this point

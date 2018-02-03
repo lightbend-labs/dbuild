@@ -209,7 +209,7 @@ object ScalaBuildSystem extends BuildSystemCore {
         // erase the content of the private cache before each stage of a build, just in case.
         IO.delete(localM2repo.*(toFF("*")).get)
         val targetDir = path.split("/").foldLeft(dir)(_ / _)
-        Process(Seq("ant", target,
+        tracker.!(Process(Seq("ant", target,
           "-Dlocal.snapshot.repository=" + localRepo.getAbsolutePath,
           "-Dlocal.release.repository=" + localRepo.getAbsolutePath,
           "-Dmaven.version.number=" + version) ++ rewireOptions ++
@@ -217,7 +217,7 @@ object ScalaBuildSystem extends BuildSystemCore {
           // The special and rather unsupported env variable "_JAVA_OPTIONS" is the *only* thing
           // capable to forcibly change user.home in all the jvm invocations therein. Changing only
           // HOME or defining -Duser.home when calling ant, will *still* cause ~/.m2 to be used by ant & maven
-          "_JAVA_OPTIONS" -> ("-Duser.home=\"" + dbuildDir.getCanonicalPath() + "\"")) ! log match {
+          "_JAVA_OPTIONS" -> ("-Duser.home=\"" + dbuildDir.getCanonicalPath() + "\"")), log) match {
             case 0 => ()
             case n => sys.error("Could not run scala ant build, error code: " + n)
           }

@@ -83,6 +83,12 @@ object Dependencies {
     else
       "org.scala-sbt" % "logging" % v
 
+  def sbtCommand(scala212: Boolean, v: String) =
+    if (scala212)
+      "org.scala-sbt" %% "command" % v
+    else
+      "org.scala-sbt" % "command" % v
+
   def sbtSbt(scala212: Boolean, v: String) =
     if (scala212)
       "org.scala-sbt" % "sbt" % v

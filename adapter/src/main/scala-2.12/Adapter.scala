@@ -8,6 +8,7 @@ object DbuildHack {
    sbt.librarymanagement.CrossVersion.applyCross
   val defaultID: (java.io.File,String) => String =
    sbt.internal.BuildDef.defaultID
+  val ExceptionCategory = sbt.ExceptionCategory
 }
 }
 package com.typesafe.dbuild.adapter {

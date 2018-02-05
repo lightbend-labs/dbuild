@@ -4,6 +4,7 @@ import org.apache.ivy.core.module.descriptor.ModuleDescriptor
 package sbt.dbuild.hack {
 object DbuildHack {
   val Load = sbt.Load
+  val ExceptionCategory = sbt.ExceptionCategory
 }
 }
 

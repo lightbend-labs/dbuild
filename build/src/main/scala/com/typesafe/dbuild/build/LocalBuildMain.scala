@@ -82,6 +82,7 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
     Await.result((logMgr ? "exit").mapTo[String], Duration.Inf)
     system.shutdown() // pro forma, as all loggers should already be stopped at this point
     try {
+      println("Shutting down, please wait...")
       system.awaitTermination(4.minute)
     } catch {
       case e:Exception => println("Warning: system did not shut down within the allotted time")

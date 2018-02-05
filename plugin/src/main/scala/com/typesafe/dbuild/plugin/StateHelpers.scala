@@ -10,8 +10,14 @@ object StateHelpers {
 
   private def saveMsg(e: Throwable, lastMsgFile: File): Nothing = {
     val msg = e match {
-      case x: Incomplete =>
-        x.message orElse (x.directCause flatMap (t => Option(t.getMessage))) getOrElse ""
+      case x:sbt.Incomplete =>
+        x.message match {
+          case Some(s) => s
+          case None => x.directCause match {
+            case Some(i) => Option(i.getMessage) getOrElse ""
+            case None => ""
+          }
+        }
       case x => x.getMessage
     }
     writeStringToFile(lastMsgFile, msg, "UTF-8")

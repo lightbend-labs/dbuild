@@ -50,6 +50,7 @@ options
       "compare"       : [ <compare_1>, <compare_2>, ... ]
       "resolvers"     : { label1: resolv1, label2: resolv2, ...}
       "cleanup"       : <cleanup_options>
+      "timeouts"      : <timeout_options>
      }
 
 The various options are described in detail in the rest of this guide.
@@ -978,6 +979,58 @@ If all ages are set to zero, all prior data will be
 removed when dbuild starts; the temporary files
 corresponding to the current run of dbuild will
 be preserved in any case.
+
+Build timeouts
+---------------
+
+Builds can get stuck for a variety of reasons. For instance,
+a test may end up in an infinite loop, or a development
+version of a build tool may get stuck for some reason.
+In order to avoid blocking the build indefinitely, dbuild
+relies on a number of timeouts, which can be tuned individually.
+
+The default values, which can be individually overridden,
+are the following:
+
+.. code-block:: text
+
+  options.timeouts: {
+    extraction: "1 hour"
+    build:"5 hours"
+    extraction-phase: "6 hours"
+    build-phase: "16 hours"
+    dbuild: "23 hours"
+  }
+
+The timeouts are:
+
+extraction
+  This is the timeout that we allow for each dependency extraction
+  to complete. It may include git/svn checkout, maven/ivy resolution,
+  and the actual extraction process.
+
+build
+  The timeout that we allow for each build to complete (during the build phase),
+  again including checkout, resolution, code compilation, and possibly testing.
+
+extraction-phase
+  This is the maximum duration that we allow for the entire extraction phase
+  to complete, for all of the projects together.
+
+build-phase
+  As above, for the build phase: it is the limit on the time used for the
+  building and testing of all the projects.
+
+dbuild:
+  This is the overall maximum duration for the entire dbuild run, including
+  all the extractions, all the builds and tests, and also the time used for
+  the final tasks like notifications, deploy, comparisons, and so on.
+
+The format of each value is "<length><unit>", where whitespace is allowed
+before,  between and after the parts. For example, valid durations are "2 
+seconds", "1 day", "11.25 hours", "80 minutes". For all of the timeouts,
+the maximum duration is 21474835 seconds, or about 248.5 days.
+
 
 .. note::
 

@@ -13,6 +13,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import com.typesafe.dbuild.model.Utils.readValueT
 import com.typesafe.dbuild.utils.Time.timed
+import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import collection.immutable.SortedMap
 import com.typesafe.dbuild.adapter.Defaults
 import com.typesafe.config.{ ConfigSyntax, ConfigFactory, ConfigParseOptions }
@@ -250,6 +251,13 @@ class SbtBuildMain extends xsbti.AppMain {
 
         val main = new LocalBuildMain(repos, BuildRunOptions(finalConfig.options.cleanup,
           finalConfig.options.timeouts, debug, defaultNotifications))
+
+        // Make extra certain that the processes spawned by extractor and builder
+        // will be terminated upon exit, even in case of a sudden ctrl-C.
+        Runtime.getRuntime.addShutdownHook(new Thread { override def run = {
+          TrackedProcessBuilder.abortAll()
+        }})
+
         val (outcome, time) = try {
           timed { main.build(finalConfig, configFile.getName, buildTarget) }
         } finally main.dispose()
@@ -266,4 +274,4 @@ class SbtBuildMain extends xsbti.AppMain {
     }
   }
   case class Exit(val code: Int) extends xsbti.Exit
-} 
+}

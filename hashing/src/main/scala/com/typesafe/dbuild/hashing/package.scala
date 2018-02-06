@@ -2,6 +2,7 @@ package com.typesafe.dbuild
 import com.typesafe.config.ConfigValue
 import collection.JavaConverters._
 import java.nio.ByteBuffer
+import scala.concurrent.duration._
 
 package object hashing {
 
@@ -22,6 +23,7 @@ package object hashing {
       }
       case bytes: Array[Byte] => md update bytes
       case s: String          => md update s.getBytes
+      case d: Duration        => addBytes(d.toString)
       case map: Map[String @unchecked,_] =>
         val data = map.toSeq.sortBy(_._1)
         data foreach { case (k,v) =>

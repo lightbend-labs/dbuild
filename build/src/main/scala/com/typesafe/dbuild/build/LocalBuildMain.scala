@@ -23,16 +23,19 @@ import akka.actor.{DeadLetter, Actor}
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.typesafe.config.ConfigFactory
 
 class DeadLetterMonitorActor(logger: Logger)
   extends Actor {
   logger.debug("DeadLetterMonitorActor: now monitoring")
 
   def receive = {
-    case d: DeadLetter => {
-      logger.error(s"DeadLetterMonitorActor : saw dead letter $d")
-    }
-    case _ => logger.info("DeadLetterMonitorActor : got a message")
+
+    case DeadLetter(message, snd, rcp) =>
+      val origin = if (snd eq context.system.deadLetters) "without sender" else s"from $snd"
+      logger.debug(s"Dead Letter! Message [${message.getClass.getName}] $origin to $rcp was not delivered.")
+
+    case _ => logger.info("DeadLetterMonitorActor : got an unexpected message")
   }
 }
 
@@ -57,8 +60,11 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
 
   // Gymnastics for classloader madness
 
-  val system = ClassLoaderMadness.withContextLoader(getClass.getClassLoader)(ActorSystem.create)
-
+  val system = ClassLoaderMadness.withContextLoader(getClass.getClassLoader) {
+  val conf = ConfigFactory.parseString("akka.log-dead-letters-during-shutdown: off\n" +
+                                       "akka.log-dead-letters: off" )
+    ActorSystem.create("dbuild", conf)
+  }
   val logMgr = {
     val mgr = system.actorOf(Props(new logging.ChainedLoggerSupervisorActor), "ChainedLoggerSupervisorActor")
     val logDirManagerActor = (mgr ? Props(new logging.LogDirManagerActor(new File(targetDir, "logs"))))(1 minute)

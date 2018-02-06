@@ -1162,29 +1162,14 @@ case class Timeouts (
   @JsonProperty("build") buildTimeout: FiniteDuration = 5.hours,
 
   // timeout that we allow for the entire extraction phase to complete
-  @JsonProperty("extraction-phase") extractionPhaseTimeout: FiniteDuration = 12.hours,
+  @JsonProperty("extraction-phase") extractionPhaseTimeout: FiniteDuration = 6.hours,
 
-  // timeout that we allow for the entire extraction plus building phases
-  // (leave some time for notifications: it should be a bit less than dbuildTimeout)
-  @JsonProperty("extraction-plus-build-phases") extractionPlusBuildTimeout: FiniteDuration = 20.hours,
+  // timeout that we allow for the entire build phase to complete
+  @JsonProperty("build-phase") buildPhaseTimeout: FiniteDuration = 16.hours,
 
-  // overall timeout for the entire dbuild to complete;
-  // should never be reached, unless something truly
-  // unexpected occurs. One of the subsequent other
-  // timeouts would rather be encountered beforehand.
-  @JsonProperty("dbuild") dbuildTimeout: FiniteDuration = 21.hours
-) {
-  assert((extractionTimeout + 5.minutes) < extractionPhaseTimeout,
-    "extraction timeout must be a at least five minutes shorter than extraction-phase timeout")
-
-  // after extraction some data may be pushed to a remote repo, so allow for some time
-  assert((extractionPlusBuildTimeout + 10.minutes) > extractionPhaseTimeout,
-    "extraction-plus-build-phases timeout must be at least 10 minutes longer than extraction-phase timeout")
-
-  // some time will be required for notifications (and possibly deploy) to complete
-  assert((extractionPlusBuildTimeout + 25.minutes) < dbuildTimeout,
-    "extraction-plus-build-phases timeout must be at least 25 minutes shorter than dbuild timeout")
-}
+  // overall timeout for the entire dbuild to complete
+  @JsonProperty("dbuild") dbuildTimeout: FiniteDuration = 23.hours
+)
 
 class FiniteDurationSerializer extends JsonSerializer[FiniteDuration] {
   override def serialize(value: FiniteDuration, g: JsonGenerator, p: SerializerProvider) {

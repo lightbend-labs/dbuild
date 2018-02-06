@@ -1019,7 +1019,9 @@ extraction-phase
 
 build-phase
   As above, for the build phase: it is the limit on the time used for the
-  building and testing of all the projects.
+  building and testing of all the projects. This is particularly useful if
+  you would like to perform extraction but don't proceed to the build stage:
+  you can just specify "0 seconds" for this timeout.
 
 dbuild:
   This is the overall maximum duration for the entire dbuild run, including

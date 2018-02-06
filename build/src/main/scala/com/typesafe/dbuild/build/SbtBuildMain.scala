@@ -7,6 +7,7 @@ import com.typesafe.dbuild.model.ClassLoaderMadness
 import com.typesafe.dbuild.model.{ BuildOutcome, BuildBad }
 import com.typesafe.dbuild.model.TemplateFormatter
 import com.typesafe.dbuild.model.CleanupOptions
+import com.typesafe.dbuild.model.Timeouts
 import java.util.Properties
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
@@ -31,7 +32,7 @@ import com.typesafe.dbuild.model.SeqStringH._
  *  they alter secondary details of the build process in various ways (for example, the logging
  *  level, or how frequently old data is deleted).
  */
-case class BuildRunOptions(cleanup: CleanupOptions, debug: Boolean, defaultNotifications: Boolean)
+case class BuildRunOptions(cleanup: CleanupOptions, timeouts: Timeouts, debug: Boolean, defaultNotifications: Boolean)
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -247,7 +248,8 @@ class SbtBuildMain extends xsbti.AppMain {
         }).toMap
         val finalConfig = config.copy(options = config.options.copy(resolvers = repoMap))
 
-        val main = new LocalBuildMain(repos, BuildRunOptions(finalConfig.options.cleanup, debug, defaultNotifications))
+        val main = new LocalBuildMain(repos, BuildRunOptions(finalConfig.options.cleanup,
+          finalConfig.options.timeouts, debug, defaultNotifications))
         val (outcome, time) = try {
           timed { main.build(finalConfig, configFile.getName, buildTarget) }
         } finally main.dispose()

@@ -3,6 +3,7 @@ package com.typesafe.dbuild.project.build
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.logging.Logger
 import akka.actor.{ ActorRef, Actor, Props, PoisonPill, Terminated }
+import akka.util.Timeout
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.typesafe.dbuild.project.resolve.ProjectResolver
@@ -13,7 +14,6 @@ import com.typesafe.dbuild.project.cleanup.Recycling._
 import sbt.Path._
 import com.typesafe.dbuild.repo.core.GlobalDirs.buildDir
 import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
-import com.typesafe.dbuild.project.Timeouts
 import com.typesafe.dbuild.utils.TrackedProcessBuilder
 import akka.pattern.ask
 import java.util.concurrent.TimeoutException
@@ -31,7 +31,8 @@ class CleaningBuildActor extends Actor {
 }
 
 /** This actor can run builds locally and return the generated artifacts. */
-class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations, tracker: TrackedProcessBuilder) extends Actor {
+class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations,
+                       tracker: TrackedProcessBuilder) extends Actor {
   override def preStart() = {
     // Cleanup works in two stages; see ExtractorActor for details.
     // Note that cleanup is performed independently for the extraction and build directories
@@ -53,15 +54,15 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
   }
 }
 
-class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpirations) extends Actor {
+class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File,
+        exp: CleanupExpirations, buildDuration: FiniteDuration) extends Actor {
   val tracker = new TrackedProcessBuilder
   val realBuilder = context.actorOf(Props(new BuildRunnerActor(builder, target, exp, tracker)))
-  val buildDuration = Timeouts.buildTimeout
   def receive = {
     case msg@RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
       val originalSender = sender // need to copy, as we we'll use it later in a future (andThen)
       tracker.reset()
-      val future1 = (realBuilder ? msg)(buildDuration)
+      val future1 = (realBuilder ? msg)(Timeout(buildDuration))
       val future2 = future1.andThen {
         case Success(answer) =>
           originalSender ! answer
@@ -74,7 +75,7 @@ class TimedBuildRunnerActor(builder: LocalBuildRunner, target: File, exp: Cleanu
           e match {
             case timeout: TimeoutException =>
               val timeoutMsg =
-                "Timeout: build took longer than " + buildDuration.duration
+                "Timeout: build took longer than " + buildDuration
               log.error(timeoutMsg)
               originalSender ! new BuildFailed(build.config.name, children, timeoutMsg) with TimedOut
             case _ =>

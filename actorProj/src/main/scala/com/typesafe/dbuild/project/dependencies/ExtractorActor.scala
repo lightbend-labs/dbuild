@@ -1,6 +1,7 @@
 package com.typesafe.dbuild.project.dependencies
 
 import akka.actor.{ ActorRef, Actor, Props, PoisonPill, Terminated }
+import akka.util.Timeout
 import akka.pattern.ask
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -14,7 +15,6 @@ import com.typesafe.dbuild.project.cleanup.Recycling._
 import sbt.{ IO, DirectoryFilter }
 import com.typesafe.dbuild.logging.Logger
 import Logger.prepareLogMsg
-import com.typesafe.dbuild.project.Timeouts
 import scala.util.{Success,Failure}
 import java.util.concurrent.TimeoutException
 import com.typesafe.dbuild.utils.TrackedProcessBuilder
@@ -85,15 +85,15 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations, tracke
   }
 }
 
-class TimedExtractorActor(extractor: Extractor, target: File, exp: CleanupExpirations) extends Actor {
+class TimedExtractorActor(extractor: Extractor, target: File,
+        exp: CleanupExpirations, extractionDuration: FiniteDuration) extends Actor {
   val tracker = new TrackedProcessBuilder
   val realExtractor = context.actorOf(Props(new ExtractorActor(extractor, target, exp, tracker)))
-  val extractionDuration = Timeouts.extractionTimeout
   def receive = {
     case msg@ExtractBuildDependencies(build, uuidDir, log, debug) =>
       val originalSender = sender // need to copy, as we we'll use it later in a future (andThen)
       tracker.reset()
-      val future1 = (realExtractor ? msg)(extractionDuration)
+      val future1 = (realExtractor ? msg)(Timeout(extractionDuration))
       val future2 = future1.andThen {
         case Success(answer) =>
           originalSender ! answer
@@ -106,7 +106,7 @@ class TimedExtractorActor(extractor: Extractor, target: File, exp: CleanupExpira
           e match {
             case timeout: TimeoutException =>
               val timeoutMsg =
-              "Timeout: extraction took longer than " + extractionDuration.duration
+              "Timeout: extraction took longer than " + extractionDuration
               log.error(timeoutMsg)
               originalSender ! new ExtractionFailed(build.buildConfig.name, Seq(), timeoutMsg) with TimedOut
             case _ =>

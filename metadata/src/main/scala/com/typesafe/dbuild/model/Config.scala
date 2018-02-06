@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ser.impl.StringArraySerializer
 import collection.JavaConverters._
 import com.typesafe.dbuild.deploy.DeployTarget
 import com.typesafe.dbuild.hashing
+import scala.concurrent.duration._
 
 import SeqBooleanH._
 import SeqDBCH._
@@ -320,7 +321,9 @@ case class GeneralOptions(deploy: Seq[DeployOptions] = Seq.empty,
   notifications: NotificationOptions = NotificationOptions(),
   compare: Seq[ComparisonOptions] = Seq(),
   resolvers: Map[String, String] = Map[String, String](),
-  cleanup: CleanupOptions = CleanupOptions())
+  cleanup: CleanupOptions = CleanupOptions(),
+  timeouts: Timeouts = Timeouts()
+)
 
 // expiration times are in hours. Dirs are cleaned if the (truncated)
 // number of hours between now and the time in which a build was last
@@ -1146,4 +1149,56 @@ object NotificationKindH {
     "console" -> classOf[ConsoleNotification],
     "flowdock" -> classOf[FlowdockNotification],
     "email" -> classOf[EmailNotification])
+}
+
+
+case class Timeouts (
+  // timeout that we allow for each extraction to complete
+  // (may include git/svn checkout, and Ivy resolution)
+  @JsonProperty("extraction") extractionTimeout: FiniteDuration = 1.hour,
+
+  // timeout that we allow for each build to complete (only during the build phase);
+  // a large value is allowed if extractionPlusBuildTimeout is our limit, instead
+  @JsonProperty("build") buildTimeout: FiniteDuration = 5.hours,
+
+  // timeout that we allow for the entire extraction phase to complete
+  @JsonProperty("extraction-phase") extractionPhaseTimeout: FiniteDuration = 12.hours,
+
+  // timeout that we allow for the entire extraction plus building phases
+  // (leave some time for notifications: it should be a bit less than dbuildTimeout)
+  @JsonProperty("extraction-plus-build-phases") extractionPlusBuildTimeout: FiniteDuration = 20.hours,
+
+  // overall timeout for the entire dbuild to complete;
+  // should never be reached, unless something truly
+  // unexpected occurs. One of the subsequent other
+  // timeouts would rather be encountered beforehand.
+  @JsonProperty("dbuild") dbuildTimeout: FiniteDuration = 21.hours
+) {
+  assert((extractionTimeout + 5.minutes) < extractionPhaseTimeout,
+    "extraction timeout must be a at least five minutes shorter than extraction-phase timeout")
+
+  // after extraction some data may be pushed to a remote repo, so allow for some time
+  assert((extractionPlusBuildTimeout + 10.minutes) > extractionPhaseTimeout,
+    "extraction-plus-build-phases timeout must be at least 10 minutes longer than extraction-phase timeout")
+
+  // some time will be required for notifications (and possibly deploy) to complete
+  assert((extractionPlusBuildTimeout + 25.minutes) < dbuildTimeout,
+    "extraction-plus-build-phases timeout must be at least 25 minutes shorter than dbuild timeout")
+}
+
+class FiniteDurationSerializer extends JsonSerializer[FiniteDuration] {
+  override def serialize(value: FiniteDuration, g: JsonGenerator, p: SerializerProvider) {
+    new StringSerializer().serialize(value.toString, g, p)
+  }
+}
+class FiniteDurationDeserializer extends JsonDeserializer[FiniteDuration] {
+  override def deserialize(p: JsonParser, ctx: DeserializationContext): FiniteDuration = {
+    val tf = ctx.getConfig.getTypeFactory()
+    val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[String]), null)
+    val s = d.deserialize(p, ctx).asInstanceOf[String]
+    Duration(s) match {
+      case f: FiniteDuration => f
+      case _ => sys.error("The duration "+s+" is invalid, it must be a finite duration");
+    }
+  }
 }

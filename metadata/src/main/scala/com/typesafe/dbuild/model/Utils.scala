@@ -7,12 +7,19 @@ import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.Config
 import com.lambdaworks.jacks.JacksOption._
 import com.lambdaworks.jacks.JacksMapper
-import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind._
+import com.fasterxml.jackson.databind.module.SimpleModule
+import scala.concurrent.duration._
 import java.io.File
 
 object Utils {
   private val mapper = JacksMapper.withOptions(CaseClassCheckNulls(true),
     CaseClassSkipNulls(true), CaseClassRequireKnown(true))
+  private val module = new SimpleModule()
+  module.addSerializer(classOf[FiniteDuration], new FiniteDurationSerializer())
+  module.addDeserializer(classOf[FiniteDuration], new FiniteDurationDeserializer())
+  mapper.mapper.registerModule(module)
+
   def readValueT[T](c: Config)(implicit m: Manifest[T]) =
     withContextLoader(getClass.getClassLoader) {
       val expanded = c.resolve.root.render(ConfigRenderOptions.concise)
@@ -62,6 +69,7 @@ object Utils {
       case e:Throwable => throw new JsonMappingException("The \"properties\" section contains unexpected data.", e)
     }
   }
+
 
   private val mapper2 = JacksMapper
   // specific simplified variant to deal with reading a path from a /possible/ Artifactory response,

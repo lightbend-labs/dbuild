@@ -11,7 +11,6 @@ import com.typesafe.dbuild.repo.core._
 import com.typesafe.dbuild.model.ClassLoaderMadness
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.support.BuildSystemCore
-import com.typesafe.dbuild.project.Timeouts
 import akka.pattern.ask
 import com.typesafe.dbuild.repo.core.GlobalDirs.checkForObsoleteDirs
 import com.typesafe.dbuild.support
@@ -72,7 +71,7 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
   // TODO - Look up target elsewhere...
 
   def build(conf: DBuildConfiguration, confName: String, buildTarget: Option[String]): BuildOutcome = {
-    implicit val timeout: Timeout = Timeouts.dbuildTimeout
+    implicit val timeout: Timeout = options.timeouts.dbuildTimeout
     val result = builder ? RunLocalBuild(conf, confName, buildTarget)
     Await.result(result.mapTo[BuildOutcome], Duration.Inf)
   }

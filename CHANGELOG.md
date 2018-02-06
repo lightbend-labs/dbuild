@@ -1,5 +1,29 @@
 # dbuild release notes
 
+
+### 0.9.10
+
+- Fixed several issues related to timeouts, which are now all
+  properly caught and processed, and can be customized by the user.
+
+- The underlying processes spawned by dbuild are now properly
+  terminated in case of build failure, timeout, or premature
+  termination (including Ctrl-C).
+
+- Better error messages when sbt terminates with an
+  "Incomplete" exception, avoiding long printouts of unreadable
+  internal structures. Thanks, Dale Wijnand (@dwijnand)
+
+- Support for the "override" flag when deploying to Bintray
+
+- Build code refactoring: a single command can again crossbuild
+  all of the required libraries and archives.
+
+- Updates to the code base, to match updated versions of several
+  dependencies.
+
+- Documentation updates and fixes.
+
 ### 0.9.9
 
 - Support for sbt 1.0.0 final.

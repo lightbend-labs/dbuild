@@ -41,7 +41,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       val listener = sender
 
       val extractionPhaseDuration = options.timeouts.extractionPhaseTimeout
-      val extractionPlusBuildDuration = options.timeouts.extractionPlusBuildTimeout
+      val buildPhaseDuration = options.timeouts.buildPhaseTimeout
 
       implicit val ctx = context.system
       val logger = log.newNestedLogger(hashing sha1 inputConf)
@@ -120,8 +120,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         // as appropriate.
         //
 
-        // A few watchdogs and timeout limits are used; please refer to object "Timeouts" for details.
-        //
         // Both the extraction and the build of a single project may time out. The handling of time outs,
         // however, is very tricky. Extraction and build may spawn an external process (for example in the
         // case of sbt), which needs to be killed in case of timeout, otherwise it will just keep working
@@ -141,21 +139,11 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         // and build timeouts have to be applied within the extractor and the builder, respectively, and
         // not here.
 
+        // However, here we use two watchdogs in order to monitor the extraction and build phase as a whole.
+
         val extractionWatchdog = after(extractionPhaseDuration,
           using = ctx.scheduler)(
-            Future(new ExtractionFailed(".", Seq(), "Timeout: extraction took longer than " + extractionPhaseDuration) with TimedOut))
-        val extractionPlusBuildWatchdog = after(extractionPlusBuildDuration,
-          using = ctx.scheduler) {
-            // something went wrong and we ran into an unexpected timeout. We prepare the watchdog at the beginning,
-            // so that we know we will have enough time for the notifications before dbuildTimeout arrives. So we mark
-            // this as a BuildFailed; we also create a fictitious dependency on every subproject, where every
-            // subproject also fails in the same manner.
-            val msg = "Timeout: extraction plus building took longer than " + extractionPlusBuildDuration
-            def timeoutOutcome(name: String) = BuildFailed(name, Seq(), msg)
-            val outcomes = projects.map { p => timeoutOutcome(p.name) }
-            Future(new BuildFailed(".", outcomes, msg) with TimedOut)
-          }
-
+            Future(new ExtractionFailed(".", Seq(), "Timeout: the extraction phase took longer than " + extractionPhaseDuration) with TimedOut))
         val extractionOutcome = analyze(projects.sortBy(_.name.toLowerCase), log.newNestedLogger(hashing sha1 projects), options.debug)
         Future.firstCompletedOf(Seq(extractionWatchdog, extractionOutcome)) flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
@@ -202,7 +190,14 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   val findBuild = fullBuild.buildMap
                   val futureBuildResult = runBuild(targetGraph, findBuild, expandedDBuildConfig.uuid,
                     fullLogger, options.debug)
-                  afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(extractionPlusBuildWatchdog, futureBuildResult)))
+                  val buildWatchdog = after(buildPhaseDuration,
+                    using = ctx.scheduler) {
+                      val msg = "Timeout: the build phase took longer than " + buildPhaseDuration
+                      def timeoutOutcome(name: String) = BuildFailed(name, Seq(), msg)
+                      val outcomes = projects.map { p => timeoutOutcome(p.name) }
+                      Future(new BuildFailed(".", outcomes, msg) with TimedOut)
+                    }
+                  afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(buildWatchdog, futureBuildResult)))
                 }
               }
 
@@ -372,15 +367,16 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   // extractor and builder will manage their own timeouts, always returning a future within their allowed timeout.
   // therefore, below we use a very long timeout (just in case), which in theory should never be reached.
   // we set that to the entirety of the build process; a watchdog, above, will intervene beforehand, though.
-  // Our Asynchronous API.
-  def extract(uuidDir: String, logger: Logger, debug: Boolean, timeout: FiniteDuration)(config: ExtractionConfig): Future[ExtractionOutcome] =
-    (extractor ? ExtractBuildDependencies(config, uuidDir,     // the logger will print the project name
-        logger.newNestedLogger(config.buildConfig.name, config.buildConfig.name), debug))(timeout).mapTo[ExtractionOutcome]
 
-  // TODO - Repository Knowledge here
+  // The timeout in this ask() will never be reached; we have a general timeout for the extraction phase instead, above
+  def extract(uuidDir: String, logger: Logger, debug: Boolean)(config: ExtractionConfig): Future[ExtractionOutcome] =
+    (extractor ? ExtractBuildDependencies(config, uuidDir,     // the logger will print the project name
+        logger.newNestedLogger(config.buildConfig.name, config.buildConfig.name), debug))(90000.days).mapTo[ExtractionOutcome]
+
   // outProjects is the list of Projects that will be generated by this build, as reported during extraction.
   // we will need it to calculate the version string in LocalBuildRunner, but won't need it any further
+  // The timeout in this ask() will never be reached; we have a general timeout for the extraction phase instead, above
   def buildProject(build: RepeatableProjectBuild, outProjects: Seq[Project],
-    children: Seq[BuildOutcome], buildData: BuildData, timeout: FiniteDuration): Future[BuildOutcome] =
-    (builder ? RunBuild(build, outProjects, children, buildData))(timeout).mapTo[BuildOutcome]
+    children: Seq[BuildOutcome], buildData: BuildData): Future[BuildOutcome] =
+    (builder ? RunBuild(build, outProjects, children, buildData))(90000.days).mapTo[BuildOutcome]
 }

@@ -82,7 +82,7 @@ object RewireSpec extends Specification {
           (new xsbt.boot.ConfigurationParser).getRepositories(listMap)
         }
 
-        val main = new LocalBuildMain(repos, BuildRunOptions(CleanupOptions(), true, true))
+        val main = new LocalBuildMain(repos, BuildRunOptions(CleanupOptions(), Timeouts(), true, true))
         val outcome = try {
           main.build(conf, "InjectionTest", None)
         } finally main.dispose()

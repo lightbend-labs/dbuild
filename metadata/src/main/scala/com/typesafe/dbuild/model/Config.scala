@@ -1158,7 +1158,6 @@ case class Timeouts (
   @JsonProperty("extraction") extractionTimeout: FiniteDuration = 1.hour,
 
   // timeout that we allow for each build to complete (only during the build phase);
-  // a large value is allowed if extractionPlusBuildTimeout is our limit, instead
   @JsonProperty("build") buildTimeout: FiniteDuration = 5.hours,
 
   // timeout that we allow for the entire extraction phase to complete

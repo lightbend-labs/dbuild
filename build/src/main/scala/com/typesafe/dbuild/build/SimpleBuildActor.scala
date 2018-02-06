@@ -9,6 +9,7 @@ import com.typesafe.dbuild.project.{ BuildSystem, BuildData }
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.hashing
 import com.typesafe.dbuild.graph
+import Logger.prepareLogMsg
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.pattern.{ ask, pipe, after }
 import scala.concurrent.duration._

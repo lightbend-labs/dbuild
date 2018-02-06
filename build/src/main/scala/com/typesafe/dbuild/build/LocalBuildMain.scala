@@ -4,13 +4,17 @@ import java.io.File
 import akka.actor.{ ActorSystem, Props }
 import scala.concurrent.Await
 import akka.util.Timeout
+import akka.pattern.AskTimeoutException
 import scala.concurrent.duration._
+import scala.concurrent.Future
+import scala.util.{Success,Failure}
 import com.typesafe.dbuild.model._
 import com.typesafe.dbuild.model.Utils.{ readValue, writeValue }
 import com.typesafe.dbuild.repo.core._
 import com.typesafe.dbuild.model.ClassLoaderMadness
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.support.BuildSystemCore
+import com.typesafe.dbuild.logging.Logger.prepareLogMsg
 import akka.pattern.ask
 import com.typesafe.dbuild.repo.core.GlobalDirs.checkForObsoleteDirs
 import com.typesafe.dbuild.support
@@ -18,6 +22,7 @@ import com.typesafe.dbuild.logging
 import akka.actor.{DeadLetter, Actor}
 import com.typesafe.dbuild.logging.Logger
 import com.typesafe.dbuild.utils.TrackedProcessBuilder
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class DeadLetterMonitorActor(logger: Logger)
   extends Actor {
@@ -71,13 +76,19 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
   // TODO - Look up target elsewhere...
 
   def build(conf: DBuildConfiguration, confName: String, buildTarget: Option[String]): BuildOutcome = {
-    implicit val timeout: Timeout = options.timeouts.dbuildTimeout
-    val result = builder ? RunLocalBuild(conf, confName, buildTarget)
-    Await.result(result.mapTo[BuildOutcome], Duration.Inf)
+    val dbuildtimeout = options.timeouts.dbuildTimeout
+    val result1 = (builder ? RunLocalBuild(conf, confName, buildTarget))(dbuildtimeout)
+    val result2 = result1.recover {
+        case e: AskTimeoutException =>
+          new UnexpectedOutcome(".", Seq(), "Timeout: the entire dbuild run took longer than " + dbuildtimeout) with TimedOut
+        case e: Throwable =>
+          new UnexpectedOutcome(".", Seq(), "Cause: " + prepareLogMsg(logger, e))
+    }
+    Await.result(result2.mapTo[BuildOutcome], Duration.Inf)
   }
   def dispose(): Unit = {
     TrackedProcessBuilder.abortAll()
-    implicit val timeout: Timeout = 5.minutes
+    implicit val timeout: Timeout = 3.minutes
     Await.result((logMgr ? "exit").mapTo[String], Duration.Inf)
     system.shutdown() // pro forma, as all loggers should already be stopped at this point
     try {

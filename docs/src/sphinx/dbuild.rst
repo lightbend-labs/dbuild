@@ -1021,7 +1021,7 @@ build-phase
   As above, for the build phase: it is the limit on the time used for the
   building and testing of all the projects. This is particularly useful if
   you would like to perform extraction but don't proceed to the build stage:
-  you can just specify "0 seconds" for this timeout.
+  you can just specify "1 seconds" for this timeout.
 
 dbuild:
   This is the overall maximum duration for the entire dbuild run, including
@@ -1031,7 +1031,9 @@ dbuild:
 The format of each value is "<length><unit>", where whitespace is allowed
 before,  between and after the parts. For example, valid durations are "2 
 seconds", "1 day", "11.25 hours", "80 minutes". For all of the timeouts,
-the maximum duration is 21474835 seconds, or about 248.5 days.
+the maximum duration is 21474835 seconds, or about 248.5 days. All
+durations must be greater than zero ("1 nanosecond" is ok, but "0 days"
+is not).
 
 
 .. note::

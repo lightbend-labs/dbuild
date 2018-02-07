@@ -23,6 +23,9 @@ package object hashing {
       }
       case bytes: Array[Byte] => md update bytes
       case s: String          => md update s.getBytes
+      // warning: Duration may lose precision, and does not handle
+      // precisely negative durations in most Scala versions, see
+      // Scala issues #9949 and #10320
       case d: Duration        => addBytes(d.toString)
       case map: Map[String @unchecked,_] =>
         val data = map.toSeq.sortBy(_._1)

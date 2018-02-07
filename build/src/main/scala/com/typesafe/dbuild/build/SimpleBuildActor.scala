@@ -73,7 +73,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         def afterTasks(rdb: Option[RepeatableDBuildConfig], futureBuildResult: Future[BuildOutcome]): Future[BuildOutcome] = {
           if (tasks.nonEmpty) futureBuildResult map {
             // >>>> careful with map() on Futures: exceptions must be caught separately!!
-            wrapExceptionIntoOutcome[BuildOutcome](log) { buildOutcome =>
+            wrapExceptionIntoOutcome[BuildOutcome](".", log) { buildOutcome =>
               val taskOuts = {
                 val taskOutsWithoutNotif = tasks.diff(Seq(notifTask)) map { t =>
                   try { // even if one task fails, we move on to the rest
@@ -141,7 +141,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val extractionOutcome = analyze(projects.sortBy(_.name.toLowerCase),
           log.newNestedLogger(hashing sha1 projects), options.debug, extractionPhaseDuration)
         extractionOutcome flatMap {
-          wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
+          wrapExceptionIntoOutcomeF[ExtractionOutcome](".", log) {
             case extractionOutcome: ExtractionFailed =>
               // This is a bit of a hack, in order to get better notifications: we
               // replace extractionOutcome.outcomes.outcomes so that, for each extraction
@@ -199,26 +199,32 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
     }
   }
 
-  final def wrapExceptionIntoOutcomeFS[A <: Seq[BuildOutcome]](log: Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
+
+  //
+  // The first two wrappers do not handle exceptions from within the futures: they handle
+  // exceptions that may happen in code that manipulates the futures, instead.
+  //
+  final def wrapExceptionIntoOutcomeFS[A <: Seq[BuildOutcome]](name: String, log: Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
     implicit val ctx = context.system
     try f(a) catch {
       case e:Throwable =>
-        Future(UnexpectedOutcome(".", a, "Cause: " + prepareLogMsg(log, e)))
+        Future(UnexpectedOutcome(name, a, "Cause: " + prepareLogMsg(log, e)))
     }
   }
-  final def wrapExceptionIntoOutcomeF[A <: BuildOutcome](log: Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
+  final def wrapExceptionIntoOutcomeF[A <: BuildOutcome](name: String, log: Logger)(f: A => Future[BuildOutcome])(a: A): Future[BuildOutcome] = {
     implicit val ctx = context.system
     try f(a) catch {
       case e:Throwable =>
-        Future(UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e)))
+        Future(UnexpectedOutcome(name, a.outcomes, "Cause: " + prepareLogMsg(log, e)))
     }
   }
-  final def wrapExceptionIntoOutcome[A <: BuildOutcome](log: Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
+
+  final def wrapExceptionIntoOutcome[A <: BuildOutcome](name: String, log: Logger)(f: A => BuildOutcome)(a: A): BuildOutcome = {
     try f(a) catch {
       case e:java.util.concurrent.TimeoutException =>
-        new BuildFailed(".", a.outcomes, "Timeout: took longer than the allowed time limit") with TimedOut
+        new BuildFailed(name, a.outcomes, "Timeout: took longer than the allowed time limit") with TimedOut
       case e:Throwable =>
-        UnexpectedOutcome(".", a.outcomes, "Cause: " + prepareLogMsg(log, e))
+        UnexpectedOutcome(name, a.outcomes, "Cause: " + prepareLogMsg(log, e))
     }
   }
 
@@ -303,7 +309,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
           // the builder ? .., it means something /truly/ unusual
           // happened, and getting an exception might be appropriate.
           // Let's wrap anyway.
-          wrapExceptionIntoOutcomeFS[Seq[BuildOutcome]](log) { outcomes =>
+          wrapExceptionIntoOutcomeFS[Seq[BuildOutcome]](p.config.name, log) { outcomes =>
             if (outcomes exists { _.isInstanceOf[BuildBad] }) {
               Future(BuildBrokenDependency(b.config.name, outcomes))
             } else {
@@ -316,7 +322,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   val msg = "Timeout: the build phase took longer than " + buildPhaseDuration
                   new BuildFailed(b.config.name, outcomes, msg) with TimedOut
                 case e: Throwable =>
-                  UnexpectedOutcome(".", outcomes, "Cause: " + prepareLogMsg(log, e))
+                  UnexpectedOutcome(p.config.name, outcomes, "Cause: " + prepareLogMsg(log, e))
               }
             }
         }
@@ -352,9 +358,9 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         val extractionOutcome = extract(uuid, log, debug, extractionPhaseDuration)(ExtractionConfig(projConfig))
         extractionOutcome.recover {
           case e: AskTimeoutException =>
-            new ExtractionFailed(".", Seq(), "Timeout: the extraction phase took longer than " + extractionPhaseDuration) with TimedOut
+            new ExtractionFailed(projConfig.name, Seq(), "Timeout: the extraction phase took longer than " + extractionPhaseDuration) with TimedOut
           case e: Throwable =>
-            ExtractionFailed(".", Seq(), "Cause: " + prepareLogMsg(log, e))
+            ExtractionFailed(projConfig.name, Seq(), "Cause: " + prepareLogMsg(log, e))
         }
       }
     futureOutcomes map { s: Seq[ExtractionOutcome] =>

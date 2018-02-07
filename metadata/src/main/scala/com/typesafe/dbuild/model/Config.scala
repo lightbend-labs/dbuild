@@ -1181,8 +1181,8 @@ class FiniteDurationDeserializer extends JsonDeserializer[FiniteDuration] {
     val d = ctx.findContextualValueDeserializer(tf.constructType(classOf[String]), null)
     val s = d.deserialize(p, ctx).asInstanceOf[String]
     Duration(s) match {
-      case f: FiniteDuration => f
-      case _ => sys.error("The duration "+s+" is invalid, it must be a finite duration");
+      case f: FiniteDuration if f > Duration("0 nanoseconds") => f
+      case _ => sys.error("The duration "+s+" is invalid, it must be a positive, non-zero finite duration");
     }
   }
 }

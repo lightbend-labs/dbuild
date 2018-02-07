@@ -12,6 +12,7 @@ import com.typesafe.dbuild.graph
 import Logger.prepareLogMsg
 import akka.actor.{ Actor, ActorRef, Props }
 import akka.pattern.{ ask, pipe, after }
+import akka.pattern.AskTimeoutException
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise, ExecutionContext }
 import ExecutionContext.Implicits.global
@@ -122,31 +123,24 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
         //
 
         // Both the extraction and the build of a single project may time out. The handling of time outs,
-        // however, is very tricky. Extraction and build may spawn an external process (for example in the
+        // however, is a bit tricky. Extraction and build may spawn an external process (for example in the
         // case of sbt), which needs to be killed in case of timeout, otherwise it will just keep working
         // indefinitely. Also, Akka actors cannot be killed preemptively, and neither can Akka futures.
-        // All that makes it very impractical to try and catch timeouts, in order to present a clean report
-        // at the end of the run detailing what exactly timed out, while allowing the remaining projects
-        // to progress normally.
-        // Because of these reasons, all timeouts are made fatal: as soon as a timeout condition is detected,
-        // dbuild will generate a TimeoutException which will be let to propagate up to the dbuild main.
-        // However, there will still be an attempt to run a trimmed-down notification stage, but no other
-        // afterTasks will be attempted.
-        //
         // Also: extractions and buildings will be scheduled for execution, but their actual starting time
         // may happen much later. For instance, if we have many independent projects that do rely on other
         // projects for their dependencies, they will all be send to the builder actor pool together, but
-        // some may start only later, depending on the pool capacity. Because of this reason the extraction
-        // and build timeouts have to be applied within the extractor and the builder, respectively, and
-        // not here.
+        // some may start only later, depending on the pool capacity. Because of this reason the timeout of
+        // each individual extraction and build have to be applied within the extractor and the builder,
+        // respectively, and not here.
 
-        // However, here we use two watchdogs in order to monitor the extraction and build phase as a whole.
+        // Conversely, here we catch the timeouts of the entire extraction and build phase. In order to do
+        // that, we rely on the fact that all the future builds and extractions are schedules basically
+        // at the same time, at the beginning. So we can apply those timeouts to the moment where each
+        // each is scheduled (see at the end, in extract() and buildProject()). No watchdogs are necessary.
 
-        val extractionWatchdog = after(extractionPhaseDuration,
-          using = ctx.scheduler)(
-            Future(new ExtractionFailed(".", Seq(), "Timeout: the extraction phase took longer than " + extractionPhaseDuration) with TimedOut))
-        val extractionOutcome = analyze(projects.sortBy(_.name.toLowerCase), log.newNestedLogger(hashing sha1 projects), options.debug)
-        Future.firstCompletedOf(Seq(extractionWatchdog, extractionOutcome)) flatMap {
+        val extractionOutcome = analyze(projects.sortBy(_.name.toLowerCase),
+          log.newNestedLogger(hashing sha1 projects), options.debug, extractionPhaseDuration)
+        extractionOutcome flatMap {
           wrapExceptionIntoOutcomeF[ExtractionOutcome](log) {
             case extractionOutcome: ExtractionFailed =>
               // This is a bit of a hack, in order to get better notifications: we
@@ -185,7 +179,6 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                 val fullLogger = log.newNestedLogger(expandedDBuildConfig.uuid)
                 writeDependencies(fullBuild, fullLogger)
                 nest(publishFullBuild(SavedConfiguration(expandedDBuildConfig, fullBuild), fullLogger)) { unit =>
-                  // are we building a specific target? If so, filter the graph
                   // are we building a specific target? If so, filter the graph
                   val targetGraph = filterGraph(buildTarget, fullBuild)
                   val findBuild = fullBuild.buildMap
@@ -315,14 +308,16 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               Future(BuildBrokenDependency(b.config.name, outcomes))
             } else {
               val outProjects = p.extracted.projects
-              val buildWatchdog = after(buildPhaseDuration,
-                using = ctx.scheduler) {
-                  val msg = "Timeout: the build phase took longer than " + buildPhaseDuration
-                  Future(new BuildFailed(b.config.name, outcomes, msg) with TimedOut)
-                }
               val buildOutcome = buildProject(b, outProjects, outcomes,
-                BuildData(log.newNestedLogger(b.config.name, b.config.name), debug)) // logger will print the project name
-              Future.firstCompletedOf(Seq(buildWatchdog, buildOutcome))
+                BuildData(log.newNestedLogger(b.config.name, b.config.name), // logger will print the project name
+                          debug), buildPhaseDuration)
+              buildOutcome.recover {
+                case e: AskTimeoutException =>
+                  val msg = "Timeout: the build phase took longer than " + buildPhaseDuration
+                  new BuildFailed(b.config.name, outcomes, msg) with TimedOut
+                case e: Throwable =>
+                  UnexpectedOutcome(".", outcomes, "Cause: " + prepareLogMsg(log, e))
+              }
             }
         }
       }(Some((a, b) => a.config.name < b.config.name))
@@ -348,38 +343,46 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   }
 
   // Asynchronously extract information from builds.
-  def analyze(projects: Seq[ProjectBuildConfig], log: Logger, debug: Boolean): Future[ExtractionOutcome] = {
+  def analyze(projects: Seq[ProjectBuildConfig], log: Logger, debug: Boolean,
+        extractionPhaseDuration: FiniteDuration): Future[ExtractionOutcome] = {
     implicit val ctx = context.system
     val uuid = hashing sha1 projects
     val futureOutcomes: Future[Seq[ExtractionOutcome]] =
       Future.traverse(projects) { projConfig =>
-        val extractionOutcome = extract(uuid, log, debug)(ExtractionConfig(projConfig))
-        extractionOutcome
+        val extractionOutcome = extract(uuid, log, debug, extractionPhaseDuration)(ExtractionConfig(projConfig))
+        extractionOutcome.recover {
+          case e: AskTimeoutException =>
+            new ExtractionFailed(".", Seq(), "Timeout: the extraction phase took longer than " + extractionPhaseDuration) with TimedOut
+          case e: Throwable =>
+            ExtractionFailed(".", Seq(), "Cause: " + prepareLogMsg(log, e))
+        }
       }
     futureOutcomes map { s: Seq[ExtractionOutcome] =>
-      if (s exists { _.isInstanceOf[ExtractionFailed] })
-        ExtractionFailed(".", s,
-          s.filter { _.isInstanceOf[ExtractionFailed] }.map { _.project }.mkString("failed: ", ", ", ""))
-      else {
+      if (s exists { _.isInstanceOf[ExtractionFailed] }) {
+        if (s exists { _.isInstanceOf[TimedOut] })
+          new ExtractionFailed(".", s, "Timeout: the extraction phase took longer than " + extractionPhaseDuration) with TimedOut
+        else
+          ExtractionFailed(".", s,
+            s.filter { _.isInstanceOf[ExtractionFailed] }.map { _.project }.mkString("failed: ", ", ", ""))
+      } else {
         val sok = s.collect({ case e: ExtractionOK => e })
         ExtractionOK(".", sok, sok flatMap { _.pces })
       }
     }
   }
 
-  // extractor and builder will manage their own timeouts, always returning a future within their allowed timeout.
-  // therefore, below we use a very long timeout (just in case), which in theory should never be reached.
-  // we set that to the entirety of the build process; a watchdog, above, will intervene beforehand, though.
+  // Each extractor and builder will manage its own timeouts, always returning a future within their allowed timeout.
+  // Here we manage the timeout from the moment those operations are scheduled to the moment they are actually complete,
+  // with a limit corresponding to the entire extraction or build phase.
 
-  // The timeout in this ask() will never be reached; we have a general timeout for the extraction phase instead, above
-  def extract(uuidDir: String, logger: Logger, debug: Boolean)(config: ExtractionConfig): Future[ExtractionOutcome] =
+  def extract(uuidDir: String, logger: Logger, debug: Boolean,
+      timeout: FiniteDuration)(config: ExtractionConfig): Future[ExtractionOutcome] =
     (extractor ? ExtractBuildDependencies(config, uuidDir,     // the logger will print the project name
-        logger.newNestedLogger(config.buildConfig.name, config.buildConfig.name), debug))(248.days).mapTo[ExtractionOutcome]
+        logger.newNestedLogger(config.buildConfig.name, config.buildConfig.name), debug))(timeout).mapTo[ExtractionOutcome]
 
   // outProjects is the list of Projects that will be generated by this build, as reported during extraction.
   // we will need it to calculate the version string in LocalBuildRunner, but won't need it any further
-  // The timeout in this ask() will never be reached; we have a general timeout for the extraction phase instead, above
   def buildProject(build: RepeatableProjectBuild, outProjects: Seq[Project],
-    children: Seq[BuildOutcome], buildData: BuildData): Future[BuildOutcome] =
-    (builder ? RunBuild(build, outProjects, children, buildData))(248.days).mapTo[BuildOutcome]
+      children: Seq[BuildOutcome], buildData: BuildData, timeout: FiniteDuration): Future[BuildOutcome] =
+    (builder ? RunBuild(build, outProjects, children, buildData))(timeout).mapTo[BuildOutcome]
 }

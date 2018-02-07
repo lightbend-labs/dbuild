@@ -190,15 +190,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
                   val targetGraph = filterGraph(buildTarget, fullBuild)
                   val findBuild = fullBuild.buildMap
                   val futureBuildResult = runBuild(targetGraph, findBuild, expandedDBuildConfig.uuid,
-                    fullLogger, options.debug)
-                  val buildWatchdog = after(buildPhaseDuration,
-                    using = ctx.scheduler) {
-                      val msg = "Timeout: the build phase took longer than " + buildPhaseDuration
-                      def timeoutOutcome(name: String) = BuildFailed(name, Seq(), msg)
-                      val outcomes = projects.map { p => timeoutOutcome(p.name) }
-                      Future(new BuildFailed(".", outcomes, msg) with TimedOut)
-                    }
-                  afterTasks(Some(fullBuild), Future.firstCompletedOf(Seq(buildWatchdog, futureBuildResult)))
+                    fullLogger, options.debug, buildPhaseDuration)
+                  afterTasks(Some(fullBuild), futureBuildResult)
                 }
               }
 
@@ -303,7 +296,7 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
   }
 
   def runBuild(targetGraph: ProjectGraph, findBuild: BuildFinder, uuid: String,
-    log: Logger, debug: Boolean): Future[BuildOutcome] = {
+    log: Logger, debug: Boolean, buildPhaseDuration: FiniteDuration): Future[BuildOutcome] = {
     implicit val ctx = context.system
     val tdir = GlobalDirs.targetDir
     type State = Future[BuildOutcome]
@@ -322,24 +315,33 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
               Future(BuildBrokenDependency(b.config.name, outcomes))
             } else {
               val outProjects = p.extracted.projects
+              val buildWatchdog = after(buildPhaseDuration,
+                using = ctx.scheduler) {
+                  val msg = "Timeout: the build phase took longer than " + buildPhaseDuration
+                  Future(new BuildFailed(b.config.name, outcomes, msg) with TimedOut)
+                }
               val buildOutcome = buildProject(b, outProjects, outcomes,
                 BuildData(log.newNestedLogger(b.config.name, b.config.name), debug)) // logger will print the project name
-              buildOutcome
+              Future.firstCompletedOf(Seq(buildWatchdog, buildOutcome))
             }
         }
       }(Some((a, b) => a.config.name < b.config.name))
     }
     // we go from a Seq[Future[BuildOutcome]] to a Future[Seq[BuildOutcome]]
     Future.sequence(runBuild()).map { outcomes =>
-      if (outcomes exists { case _: BuildBad => true; case _ => false })
+      if (outcomes exists { case _: BuildBad => true; case _ => false }) {
+        // pick the ones that failed, but not because any of their dependencies failed.
         // "." is the name of the root project
-        BuildFailed(".", outcomes,
-          // pick the ones that failed, but not because any of their dependencies failed.
-          outcomes.filter { o =>
-            o.isInstanceOf[BuildBad] &&
-              !o.outcomes.exists { _.isInstanceOf[BuildBad] }
+        if (outcomes exists { _.isInstanceOf[TimedOut] }) {
+          new BuildFailed(".", outcomes, "Timeout: the build phase took longer than " + buildPhaseDuration) with TimedOut
+        } else {
+          BuildFailed(".", outcomes,
+            outcomes.filter { o =>
+              o.isInstanceOf[BuildBad] &&
+                !o.outcomes.exists { _.isInstanceOf[BuildBad] }
           }.map { _.project }.mkString("failed: ", ", ", ""))
-      else {
+        }
+      } else {
         BuildSuccess(".", outcomes, BuildArtifactsOut(Seq.empty))
       }
     }

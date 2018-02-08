@@ -3,7 +3,7 @@ dbuild
 
 What is it?
 -----------
-Typesafe's **dbuild** is a build and debugging tool based on sbt.
+Lightbend's **dbuild** is a build and debugging tool based on sbt.
 
 It is used to coordinate the development of multiple, independent projects that evolve in parallel: dbuild
 uses a multi-project definition file to build all the requested projects, and makes sure that they all work

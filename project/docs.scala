@@ -1,3 +1,4 @@
+import sbt.Path.richFile
 import sbt.Keys._
 import sbt.Path._
 import sbt.Def
@@ -5,13 +6,14 @@ import sbt.IO
 import sbt.Logger
 import java.io.File
 import sbt.{Setting,PatternFilter,DirectoryFilter}
+/*
 import com.typesafe.sbt.SbtSite.site
 import com.typesafe.sbt.SbtGhPages.{ghpages, GhPagesKeys}
 import com.typesafe.sbt.SbtGit.{git, GitKeys}
 import com.typesafe.sbt.site.SphinxSupport
 import com.typesafe.sbt.site.SphinxSupport.{ enableOutput, generatePdf, generatedPdf, generateEpub,
                                              generatedEpub, sphinxInputs, sphinxPackages, Sphinx }
-
+*/
 // based on the related sbt source code
 object DocsSupport {
     val VersionPattern = """(\d+)\.(\d+)\.(\d+)(-.+)?""".r.pattern
@@ -52,27 +54,11 @@ object DocsSupport {
     }
     def versionFilter = new PatternFilter(VersionPattern) && DirectoryFilter
 
+/*
   import com.typesafe.sbt.SbtSite.SiteKeys.makeSite
   import com.typesafe.sbt.SbtSite.SiteKeys.siteSourceDirectory
-  def settings:Seq[Setting[_]] = site.settings ++ site.sphinxSupport() ++
-    ghpages.settings ++ Seq(
-      enableOutput in generatePdf in Sphinx := false,
-      enableOutput in generateEpub in Sphinx := false,
-      git.remoteRepo := "git@github.com:lightbend/dbuild.git",
-      GhPagesKeys.synchLocal := {
-        val maps = (mappings in GhPagesKeys.synchLocal).value
-        val repo = GhPagesKeys.updatedRepository.value
-        val v = version.value
-        val snap = isSnapshot.value
-        val log = streams.value.log
-        DocsSupport.synchLocalImpl(maps, repo, v, snap, log)
-      },
-      publish := (),
-      publishLocal := (),
-      skip in compile := true,
-      makeSite := makeSite.dependsOn(sbt.Def.task {
-        val file = (siteSourceDirectory in Sphinx).value / "version.py"
-        IO.write(file, ("release = '%s'\n" format (version.value)))
-      }).value
-  )
+*/
 }
+
+
+

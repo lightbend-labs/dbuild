@@ -225,8 +225,28 @@ lazy val build = (
   )
 )
 
+
 lazy val docs = (
   SubProj("docs")
-  settings(DocsSupport.settings:_*)
+  enablePlugins(GhpagesPlugin, SphinxPlugin)
+  settings(
+    enableOutput in generatePdf in Sphinx := false,
+    enableOutput in generateEpub in Sphinx := false,
+    git.remoteRepo := "git@github.com:lightbend/dbuild.git",
+    ghpagesSynchLocal := {
+      val maps = (mappings in ghpagesSynchLocal).value
+      val repo = ghpagesUpdatedRepository.value
+      val v = version.value
+      val snap = isSnapshot.value
+      val log = streams.value.log
+      DocsSupport.synchLocalImpl(maps, repo, v, snap, log)
+    },
+    publish := (),
+    publishLocal := (),
+    skip in compile := true,
+    makeSite := makeSite.dependsOn(sbt.Def.task {
+      val file = (siteSourceDirectory in Sphinx).value / "version.py"
+      IO.write(file, ("release = '%s'\n" format (version.value)))
+    }).value
+  )
 )
-

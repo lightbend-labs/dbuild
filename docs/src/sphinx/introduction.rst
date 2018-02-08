@@ -20,9 +20,9 @@ dbuild project
 A quick example
 ---------------
 
-Let's assume we want to make sure that a specific branch or commit of
-`sperformance <http://github.com/jsuereth/sperformance>`_ works with a specific branch or commit
-of `scala <http://github.com/scala/scala>`_.
+Let's assume we want to make sure that specific versions of certain libraries and applications
+work correctly together, even though the library dependencies within the source tree of each may
+refer to some other version. For this example, we will try scala-xml, scalacheck, and sbinary.
 
 A suitable build configuration file is:
 
@@ -30,19 +30,25 @@ A suitable build configuration file is:
 
    build.projects:[
      {
-       name:   scala
-       system: scala
-       uri:    "git://github.com/scala/scala.git#2.10.x"
+       name:   sbinary
+       uri:    "https://github.com/sbt/sbinary.git#v0.4.4"
      }, {
-       name:   sperformance
-       system: sbt
-       uri:    "git://github.com/jsuereth/sperformance.git#community"
+       name:   scalacheck
+       uri:    "https://github.com/rickynils/scalacheck.git#e65c90a"
+       extra.projects: jvm
+     }, {
+       name:   scala-xml
+       uri:    "https://github.com/scala/scala-xml.git#v1.0.6"
      }
    ]
 
-We will put this into a file called ``test.dbuild``. The line "system" specifies the build mechanism used to build each of the
-projects (a custom "scala" build system for scala, and "sbt" for sperformance). Let's download dbuild, and try it out (you can
-find the exact download instructions and other details later in this manual):
+Here, for each project we specify a name, the location of the source repository,
+and the commit, tag, or branch that we want to verity. For the scalacheck project,
+we also indicate that we only want to build one specific subproject ("jvm").
+
+We will write this configuration into a file called ``test.dbuild``. Let's download
+dbuild, and try it out (you can find the exact download instructions and other
+details later in this manual):
 
 .. code-block:: bash
 
@@ -51,43 +57,60 @@ find the exact download instructions and other details later in this manual):
    $ [...edit test.dbuild...]
    $ bin/dbuild test.dbuild
 
-Now dbuild will download, parse, and build in turn scala and sperformance, from the branches
-"2.10.x" and "community" respectively. You can also specify a commit hash, in place of the branch.
+Now dbuild will download, parse, and build in turn each of the projects, from the
+tags and commits we want to verify. In detail, during an initial "extraction" phase,
+each project will be inspected in order to determine its library dependencies, and
+the artifacts that it provides. It will then match the projects, so that it determines
+that certain projects can provide the dependencies needed by some other projects, and
+will print a short report, like:
 
-It is important to notice that here sperformance will be forced to use the scala version that
-you specify, overriding its normal build settings. In case the build file contains many different projects,
-each of them will be tweaked on-the-fly, in order to use the exact combination of branches/commits that you
+.. code-block:: bash
+
+   [info] ---== Dependency Information ===---
+   [info] Project scalacheck
+   [info]   depends on:
+   [info] Project scala-xml
+   [info]   depends on:
+   [info] Project sbinary
+   [info]   depends on: scala-xml, scalacheck
+   [info] ---== End Dependency Information ===---
+
+
+In this case, sbinary will be forced to use the binaries provided by the other two projects,
+overriding its normal build settings. Each of the projects will be tweaked on-the-fly and
+rebuilt, in turn, in order to use the exact combination of branches/commits that you
 specified in the configuration file.
 
-dbuild will keep an index of the actual commit ids (git hashes, svn versions, etc) used during that particular
-run: the same configuration can later be reproduced again, and prepared for debugging.
-
-At the end of the build, all the of generated artifacts and other information on the build will be stored
-in a local repository, contained in your ``~/.dbuild/cache`` directory. If the build ends successfully, you know
-that all the network of inter-dependent projects you specified builds together as desired.
+At the end of the build, all the of generated artifacts and other information on the build
+will be stored in a local repository, contained in your ``~/.dbuild/cache`` directory.
+If the build run ends successfully, you will know that the various inter-dependent projects
+that you specified worked together as desired; if not, a handy compilation summary will be
+printed in order to help you pinpoint the exact reason for the failure, and the build log
+will show you the relevant compilation or test errors.
 
 What if the build fails?
 ------------------------
 
-While testing, at some point it is almost inevitable that one of the projects will fail to build,
-possibly affecting some other projects listed in the dbuild file. At that point, it is useful to be
-able to set up a debugging environment, in order to be able to reproduce the failure and to perform
-some debugging. In dbuild that is very easy to do.
+When testing many projects together, which may evolve independently, it may happen that
+some of them will fail to build, possibly affecting in turn other projects. For instance,
+a functional change or an API change may cause a failure. At that point, it may useful
+to be able to set up a debugging environment, in order to be able to reproduce the exact
+failure and to perform additional debugging. In dbuild that is very easy to do.
 
 During the dbuild run, you will see two lines like:
 
 .. code-block:: text
 
    [info] ---==  RepeatableBuild ==---
-   [info]  uuid = 48baab8156458005cb2e0569e8e8c2c39221d56e
+   [info]  uuid = c474e7a4caa376e240d530cd7786ffd3e6a37dac
 
-The uuid uniquely identifies the tested combination of projects and commits. Let us assume that
-sperformance failed, and that we want to debug it. We can reconstruct the very same configuration,
+This uuid uniquely identifies the tested combination of projects and commits. Let us assume that
+sbinary failed, and that we want to debug it. We can reconstruct the very same configuration,
 and debug interactively the project, using the command:
 
 .. code-block:: text
 
-   $ dbuild checkout 48baab8156458005cb2e0569e8e8c2c39221d56e sperformance newdir
+   $ dbuild checkout c474e7a4caa376e240d530cd7786ffd3e6a37dac sbinary newdir
    [...]
 
    Ready! You can start the debugging environment by running: [...]/newdir/start
@@ -103,9 +126,8 @@ be able to try things out, and proceed with debugging.
 |
 
 .. note::
-   dbuild is currently under active development, and should still be considered experimental.
-   New features and improvements are constantly being introduced: the syntax and other details of
-   the tool may change over time.
+   dbuild is under active development, and new features and improvements are introduced over time:
+   the syntax and other details of the tool may change in the future.
 
 |
 

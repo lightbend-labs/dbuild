@@ -11,6 +11,7 @@ class TrackedProcessBuilder {
 
   def abort(): Unit = synchronized {
     interrupted = true
+    // note: it is safe to call destroy() on the same tracked process multiple times.
     processOpt map { _.destroy() }
   }
 

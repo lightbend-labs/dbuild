@@ -16,10 +16,6 @@ Limitations
   but you may want to keep it in check. The much larger directories containing the actual build files,
   located in "./target-{ver}", are instead cleaned automatically.
 
-.. code-block:: text
-
-  $ git clone git://github.com/etorreborre/specs2.git specs-dir
-
 |
 
 (back to :doc:`the index <index>`)

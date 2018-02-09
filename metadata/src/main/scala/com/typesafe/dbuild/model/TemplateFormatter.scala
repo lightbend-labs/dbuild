@@ -33,7 +33,7 @@ class TemplateFormatter(templ: ResolvedTemplate, outcome: BuildOutcome, confName
   }
   def paddedProjectDescription(outcome:BuildOutcome) =
     // "." is the name of the root project
-    if (outcome.project == ".") "The dbuild result is------------" else "Project " + (outcome.project.padTo(24, "-").mkString)
+    if (outcome.project == ".") "The dbuild result is----------------" else "Project " + (outcome.project.padTo(28, "-").mkString)
 
   private val notifVars = SubstitutionNotifications(
     SubstitutionVars(projectName = outcome.project,

@@ -64,7 +64,7 @@ the artifacts that it provides. It will then match the projects, so that it dete
 that certain projects can provide the dependencies needed by some other projects, and
 will print a short report, like:
 
-.. code-block:: bash
+.. code-block:: text
 
    [info] ---== Dependency Information ===---
    [info] Project scalacheck

@@ -310,7 +310,7 @@ class DeployHTTP(log: Logger, options: DeployInfo, timeOut: Duration = 20 minute
 // (pass to the constructor the deploy target uri as well)
 class DeployBintray(log: Logger, options: DeployInfo, timeOut: Duration = 20 minutes) extends DeployHTTP(log, options, timeOut) {
   private val target = new java.net.URI(options.uri)
-  private val overrides = target.getQuery().split("&").contains("override=1")
+  private val overrides = Option(target.getQuery()).getOrElse("").split("&").contains("override=1")
   private val bintrayBase = "https://api.bintray.com/content/"
 
   override protected def init() = {

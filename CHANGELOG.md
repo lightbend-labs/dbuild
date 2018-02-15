@@ -1,6 +1,10 @@
 # dbuild release notes
 
 
+### 0.9.11
+
+- Hotfix to the deploy code, in case the target is Bintray
+
 ### 0.9.10
 
 - Fixed several issues related to timeouts, which are now all

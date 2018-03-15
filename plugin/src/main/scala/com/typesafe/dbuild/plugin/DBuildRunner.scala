@@ -799,8 +799,9 @@ object DBuildRunner {
   /** Settings you can add your build to print dependencies. */
   def buildSettings: Seq[Setting[_]] = Seq(Keys.commands += buildIt)
 
-  def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File],
-    cross: Adapter.CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] = {
+  def extractArtifactLocations(org: String, version: String, artifacts: Map[Artifact, File], skipInPublish: Boolean,
+    cross: Adapter.CrossVersion, sv: String, sbv: String, sbtbv: String, isSbtPlugin: Boolean): Seq[model.ArtifactLocation] =
+  if (skipInPublish) Seq.empty else {
     val crossSuffix = applyCross("", CrossVersion(cross, sv, sbv))
     for {
       (artifact, file) <- artifacts.toSeq
@@ -830,8 +831,9 @@ object DBuildRunner {
   }
 
   def projectSettings: Seq[Setting[_]] = Seq(
-    extractArtifacts := extractArtifactLocations(Keys.organization.value, Keys.version.value, (Keys.packagedArtifacts in Compile).value,
-      Keys.crossVersion.value, Keys.scalaVersion.value, Keys.scalaBinaryVersion.value, Keys.sbtBinaryVersion.value, Keys.sbtPlugin.value),
+    extractArtifacts := extractArtifactLocations(Keys.organization.value, Keys.version.value,
+      (Keys.packagedArtifacts in Compile).value, (Keys.skip in Keys.publish).value, Keys.crossVersion.value,
+      Keys.scalaVersion.value, Keys.scalaBinaryVersion.value, Keys.sbtBinaryVersion.value, Keys.sbtPlugin.value),
     moduleInfo := generateModuleInfo(Keys.organization.value, Keys.moduleName.value, Keys.version.value, Keys.scalaVersion.value,
       Keys.scalaBinaryVersion.value, Keys.sbtVersion.value, Keys.sbtBinaryVersion.value, Keys.sbtPlugin.value, Keys.crossVersion.value)
   )

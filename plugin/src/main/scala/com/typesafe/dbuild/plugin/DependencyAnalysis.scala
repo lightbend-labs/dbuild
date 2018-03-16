@@ -36,7 +36,8 @@ object DependencyAnalysis {
         model.ProjectRef("scala-compiler", "org.scala-lang", "jar", None)
 
       // Project Artifacts
-      val artifacts = for {
+      val skipPublish = extracted.runTask(Keys.skip in (ref, Keys.publish), state)._2
+      val artifacts = if (skipPublish) Seq[model.ProjectRef]() else for {
         a <- extracted get (Keys.artifacts in ref)
       } yield model.ProjectRef(fixName(a.name), organization, a.extension, a.classifier)
 

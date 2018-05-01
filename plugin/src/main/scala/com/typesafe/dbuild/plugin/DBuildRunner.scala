@@ -336,6 +336,7 @@ object DBuildRunner {
     }
   }
 
+
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
   def fixDependencies2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
@@ -349,6 +350,22 @@ object DBuildRunner {
         old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log, n.toLowerCase, o.toLowerCase)
       }
     }("Updating dependencies") _
+
+  // We may want to override overrides as well
+  def fixOverrides2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
+    checkMissing: Boolean, rewriteOverrides: Boolean, fromSpace: String, log: Logger) =
+    if (!rewriteOverrides)
+      { (settings:Seq[sbt.Setting[_]], _:sbt.Logger) => Seq.empty }
+    else fixGenericTransform2(Keys.dependencyOverrides) { r: Setting[Set[sbt.ModuleID]] =>
+      val sc = r.key.scope
+      Keys.dependencyOverrides in sc := {
+        val old = (Keys.dependencyOverrides in sc).value
+        val n = (Keys.name in sc).value
+        val o = (Keys.organization in sc).value
+        old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log, n.toLowerCase, o.toLowerCase)
+      }
+    }("Updating overrides") _
+
 
   def fixVersions2(in: BuildInput) =
     fixGeneric2(Keys.version, "Updating version strings") { _ => in.version }
@@ -697,6 +714,7 @@ object DBuildRunner {
     Seq[Fixer](
       fixResolvers2(repoDir, log),
       fixDependencies2(arts, modules, crossVersion, checkMissing, fromSpace, log),
+      fixOverrides2(arts, modules, crossVersion, checkMissing, true, fromSpace, log),    // TODO: should only be done conditionally
       fixScalaVersion2(dbuildDir, repoDir, arts),
       fixInterProjectResolver2bis(modules),
       fixCrossVersions2(crossVersion),

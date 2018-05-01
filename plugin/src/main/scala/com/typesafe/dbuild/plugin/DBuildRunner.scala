@@ -710,11 +710,11 @@ object DBuildRunner {
 
   private def prepareCompileSettings(log: ConsoleLogger, modules: Seq[ModuleRevisionId], dbuildDir: File,
     repoDir: File, arts: Seq[ArtifactLocation], oldSettings: Seq[Setting[_]], crossVersion: String,
-    checkMissing: Boolean, fromSpace: String) = {
+    checkMissing: Boolean, rewriteOverrides: Boolean, fromSpace: String) = {
     Seq[Fixer](
       fixResolvers2(repoDir, log),
       fixDependencies2(arts, modules, crossVersion, checkMissing, fromSpace, log),
-      fixOverrides2(arts, modules, crossVersion, checkMissing, true, fromSpace, log),    // TODO: should only be done conditionally
+      fixOverrides2(arts, modules, crossVersion, checkMissing, rewriteOverrides, fromSpace, log),
       fixScalaVersion2(dbuildDir, repoDir, arts),
       fixInterProjectResolver2bis(modules),
       fixCrossVersions2(crossVersion),
@@ -776,7 +776,7 @@ object DBuildRunner {
 
     def newSettings(oldSettings: Seq[Setting[_]]) =
       prepareCompileSettings(log, modules, dbuildDir, rewireInfo.in.localRepo, rewireInfo.in.artifacts,
-        oldSettings, rewireInfo.crossVersion, rewireInfo.checkMissing, rewireInfo.in.fromSpace) ++
+        oldSettings, rewireInfo.crossVersion, rewireInfo.checkMissing, rewireInfo.rewriteOverrides, rewireInfo.in.fromSpace) ++
         publishSettings(oldSettings) ++ restore(oldSettings)
 
     // The property "dbuild.sbt-runner.last-msg" is normally be set by SbtRunner. However, rewire() may

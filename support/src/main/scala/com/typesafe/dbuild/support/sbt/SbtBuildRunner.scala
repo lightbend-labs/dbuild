@@ -29,7 +29,7 @@ import com.typesafe.dbuild.utils.TrackedProcessBuilder
  *                     detected or not while rewiring.
  */
 case class RewireInput(in: BuildArtifactsIn, subproj: Seq[String],
-  crossVersion: String, checkMissing: Boolean, debug: Boolean)
+  crossVersion: String, checkMissing: Boolean, rewriteOverrides: Boolean, debug: Boolean)
 /**
  * Input to generateArtifacts()
  */
@@ -133,9 +133,9 @@ object SbtBuilder {
     }
     val rewriteOverridesStream = rewriteOver.toStream ++ defaultRewriteOverrides.drop(rewriteOver.length)
     // .zipped works on three elements at most, hence the nesting
-    val inputDataAll = ((ins, subprojs).zipped, crossVersionStream, checkMissingStream).zipped map {
-      case ((in, subproj), cross, checkMissing) =>
-        RewireInput(in, subproj, cross, checkMissing, debug)
+    val inputDataAll = ((ins, subprojs, crossVersionStream).zipped, checkMissingStream, rewriteOverridesStream).zipped map {
+      case ((in, subproj, cross), checkMissing, rewriteOver) =>
+        RewireInput(in, subproj, cross, checkMissing, rewriteOver, debug)
     }
     SbtRunner.placeInputFiles(projectDir, rewireInputFileName, inputDataAll.toSeq, log, debug)
   }

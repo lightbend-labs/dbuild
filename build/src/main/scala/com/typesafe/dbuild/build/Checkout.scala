@@ -105,7 +105,8 @@ object Checkout {
         // Ready to go!
         val info = BuildInput(dependencies, version, subprojs, writeRepo, projectName)
         val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."),
-            project.config.checkMissing getOrElse sys.error("Internal error: checkMissing not expanded in runBuild."), info)
+            project.config.checkMissing getOrElse sys.error("Internal error: checkMissing not expanded in runBuild."),
+            project.config.rewriteOverrides getOrElse sys.error("Internal error: rewriteOverrides not expanded in runBuild."), info)
         val tracker = new TrackedProcessBuilder
         val artsOut = com.typesafe.dbuild.support.sbt.SbtBuilder.buildSbtProject(repos, sbtRunner)(projDir, config, tracker, log, debug, customProcess = Some({
           (_, _, _, _, cmd: Seq[String]) =>

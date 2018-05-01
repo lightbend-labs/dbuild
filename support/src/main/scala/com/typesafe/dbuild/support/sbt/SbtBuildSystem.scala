@@ -91,7 +91,8 @@ class SbtBuildSystem(repos: List[xsbti.Repository], workingDir: File, debug: Boo
     val name = project.config.name
     val projDir = SbtBuildSystem.projectDir(dir, ec)
     val config = SbtBuildConfig(ec, project.config.crossVersion getOrElse sys.error("Internal error: crossVersion not expanded in runBuild."),
-      project.config.checkMissing getOrElse sys.error("Internal error: checkMissing not expanded in runBuild."), info)
+      project.config.checkMissing getOrElse sys.error("Internal error: checkMissing not expanded in runBuild."),
+      project.config.rewriteOverrides getOrElse sys.error("Internal error: rewriteOverrides not expanded in runBuild."), info)
     SbtBuilder.buildSbtProject(repos, runner)(projDir, config, tracker, buildData.log, buildData.debug)
     readValue[BuildArtifactsOut](buildArtsFile(projDir))
   }

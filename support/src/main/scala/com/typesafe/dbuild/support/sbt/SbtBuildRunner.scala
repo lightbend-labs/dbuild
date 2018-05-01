@@ -52,8 +52,9 @@ object SbtBuilder {
     val subprojs = config.info.subproj
     val crossVers = config.crossVersion
     val checkMissing = config.checkMissing
+    val rewriteOverrides = config.rewriteOverrides
     val settings = config.config.settings.expand
-    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, checkMissing, settings, log, debug)
+    prepareRewireFilesAndDirs(projectDir, arts, subprojs, crossVers, checkMissing, rewriteOverrides, settings, log, debug)
 
     // preparation of the input data to generateArtifacts()
     // This is for the first level only
@@ -93,7 +94,7 @@ object SbtBuilder {
   }
 
   def prepareRewireFilesAndDirs(projectDir: File, artifacts: BuildArtifactsInMulti,
-    subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean], sbtSettings: Seq[Seq[String]],
+    subprojs: Seq[Seq[String]], crossVers: Seq[String], checkMiss: Seq[Boolean], rewriteOver: Seq[Boolean], sbtSettings: Seq[Seq[String]],
     log: SbtLogger, debug: Boolean): Unit = {
     // we do the rewiring on each level using onLoad; we generate the artifacts at the end
     // Note:  Because the user could configure settings/projects for build levels which do not have configuration,
@@ -122,12 +123,15 @@ object SbtBuilder {
     val ins = artifacts.materialized
     // The defaults are: "disabled","standard","standard"....
     val defaultCrossVersions = CrossVersionsDefaults.defaults
+    // The defaults are: true, true, true, ...
+    val defaultRewriteOverrides = RewriteOverridesDefaults.defaults
     val crossVersionStream = crossVers.toStream ++ defaultCrossVersions.drop(crossVers.length)
     val checkMissingStream = checkMiss.toStream ++ crossVersionStream.drop(checkMiss.length).map {
       // The default value for checkMissing is true, except if crossVersion is "standard", as
       // we are unable to perform the check in that case.
       _ != "standard"
     }
+    val rewriteOverridesStream = rewriteOver.toStream ++ defaultRewriteOverrides.drop(rewriteOver.length)
     // .zipped works on three elements at most, hence the nesting
     val inputDataAll = ((ins, subprojs).zipped, crossVersionStream, checkMissingStream).zipped map {
       case ((in, subproj), cross, checkMissing) =>

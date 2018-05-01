@@ -40,6 +40,8 @@ case class ProjectBuildConfig(name: String,
   @JsonProperty("cross-version") crossVersion: Option[Seq /*Levels*/ [String]] = None,
   // the default checkMissing None: works in the same manner as crossVersion
   @JsonProperty("check-missing") checkMissing: Option[Seq /*Levels*/ [Boolean]] = None,
+  // the default rewriteOverrides None: works in the same manner as crossVersion
+  @JsonProperty("rewrite-overrides") rewriteOverrides: Option[Seq /*Levels*/ [Boolean]] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = None,
   extra: Option[ExtraConfig]) {
@@ -75,13 +77,19 @@ case class ProjectBuildConfig(name: String,
     case None | Some(Seq()) => getCrossVersionHead != "standard"
     case Some(cm) => cm.head
   }
+  // call getRewriteOverridesHead() only after defaults expansion (if at all)
+  def getRewriteOverridesHead = rewriteOverrides match {
+    case None | Some(Seq()) => RewriteOverridesDefaults.defaults.head
+    case Some(ro) => ro.head
+  }
 
   def expandDefaults(defaults: ProjectOptions) = {
     val cv = crossVersion getOrElse defaults.crossVersion: Seq[String]
     val cm = checkMissing getOrElse defaults.checkMissing: Seq[Boolean]
+    val ro = rewriteOverrides getOrElse defaults.rewriteOverrides: Seq[Boolean]
     val jg = useJGit getOrElse defaults.useJGit
     val sp = space getOrElse defaults.space
-    copy(crossVersion = Some(cv), checkMissing = Some(cm), useJGit = Some(jg), space = Some(sp))
+    copy(crossVersion = Some(cv), checkMissing = Some(cm), rewriteOverrides = Some(ro), useJGit = Some(jg), space = Some(sp))
   }
 
   def getCommit = try Option((new java.net.URI(uri)).getFragment) catch {
@@ -94,6 +102,9 @@ case class ProjectBuildConfig(name: String,
 object CrossVersionsDefaults {
   def defaults = "disabled" +: Stream.continually("standard")
 }
+object RewriteOverridesDefaults {
+  def defaults = Stream.continually(true)
+}
 
 // Do keep the one above and the one below in sync
 private case class ProjectBuildConfigShadow(name: String,
@@ -104,6 +115,7 @@ private case class ProjectBuildConfigShadow(name: String,
   deps: SeqDepsModifiers = Seq.empty,
   @JsonProperty("cross-version") crossVersion: Option[SeqString /*Levels*/ ] = None,
   @JsonProperty("check-missing") checkMissing: Option[SeqBoolean /*Levels*/ ] = None,
+  @JsonProperty("rewrite-overrides") rewriteOverrides: Option[SeqBoolean /*Levels*/ ] = None,
   @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
   space: Option[Space] = None,
   extra: JsonNode = null)
@@ -290,6 +302,7 @@ case class DBuildConfig(projects: Seq[ProjectBuildConfig],
   // if "standard" (the default), use whatever sbt version is defined by the project. If none is defined, stop and ask for one.
   @JsonProperty("check-missing") checkMissing: SeqBoolean /*Levels*/ = Seq.empty, //all missing values will be determined
   // according to the corresponding value of cross-version: if "standard", then false, else true.
+  @JsonProperty("rewrite-overrides") rewriteOverrides: SeqBoolean /*Levels*/ = Seq.empty, //all missing values will be true
   @JsonProperty("sbt-version") sbtVersion: String = "standard",
   // This option applies to all sbt-based projects, unless overridden.
   // see SbtExtraConfig for details.
@@ -579,7 +592,8 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
       cls.cast(ctx.findContextualValueDeserializer(tf.constructType(cls), null).deserialize(jp, ctx))
     })
     ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.setVersionSuffix,
-      generic.deps, generic.crossVersion map { _.s }, generic.checkMissing map { _.s }, generic.useJGit, generic.space, newData)
+      generic.deps, generic.crossVersion map { _.s }, generic.checkMissing map { _.s },
+      generic.rewriteOverrides map { _.s }, generic.useJGit, generic.space, newData)
   }
 }
 /**
@@ -821,6 +835,7 @@ trait ExtraOptions {
 trait ProjectOptions {
   def crossVersion: SeqString /*Levels*/
   def checkMissing: SeqBoolean /*Levels*/
+  def rewriteOverrides: SeqBoolean /*Levels*/
   def useJGit: Boolean
   def space: Space
 }

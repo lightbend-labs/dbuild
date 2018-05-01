@@ -6,4 +6,5 @@ case class SbtBuildConfig(
   config: SbtExtraConfig,
   crossVersion: Seq /*Levels*/ [String],
   checkMissing: Seq /*Levels*/ [Boolean],
+  rewriteOverrides: Seq /*Levels*/ [Boolean],
   info: BuildInput)

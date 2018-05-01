@@ -336,7 +336,6 @@ object DBuildRunner {
     }
   }
 
-
   // Altering allDependencies, rather than libraryDependencies, will also affect projectDependencies.
   // This is necessary in case some required inter-project dependencies have been explicitly excluded.
   def fixDependencies2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
@@ -354,7 +353,7 @@ object DBuildRunner {
     checkMissing: Boolean, rewriteOverrides: Boolean, fromSpace: String, log: Logger) =
     if (!rewriteOverrides)
       { (settings:Seq[sbt.Setting[_]], _:sbt.Logger) => Seq.empty }
-    else fixGenericTransform2(Keys.dependencyOverrides) { r: Setting[Set[sbt.ModuleID]] =>
+    else fixGenericTransform2(Keys.dependencyOverrides) { r: Setting[_] =>
       val sc = r.key.scope
       Keys.dependencyOverrides in sc := {
         val old = (Keys.dependencyOverrides in sc).value

@@ -152,6 +152,7 @@ Each project descriptions has this structure:
     "deps"               : <optional-dependencies-modifiers>
     "cross-version"      : <cross-version-selector>
     "check-missing"      : <check-missing-flag>
+    "rewrite-overrides"  : <rewrite-overrides-flag>
     "use-jgit"           : <jgit-selector>
     "extra"              : <optional-extra-build-parameters>
    }
@@ -289,6 +290,12 @@ check-missing
   When set to true, dbuild will try to detect whether any of the Scala-based dependent
   libraries of this project are not part of the configuration file. Please refer to the
   description at :doc:`buildOptions` for further details.
+
+rewrite-overrides
+  When set to false, dbuild will not try to rewrite the dependencies that have been
+  forced at a specific version by using sbt's "dependencyOverrides" setting. By default,
+  dbuild will rewrite all dependencies. Please refer to the description at
+  :doc:`buildOptions` for further details.
 
 use-jgit
   It controls whether, for special applications, jgit should be used in place of the

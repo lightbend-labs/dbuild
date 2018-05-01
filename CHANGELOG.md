@@ -1,6 +1,19 @@
 # dbuild release notes
 
 
+### 0.9.12
+
+- Now dbuild takes into account the new "skip in publish"
+  flag, available in recent sbt releases.
+
+- Added a new flat "rewrite-overrides". In those projects
+  that, in addition to libraryDependencies or
+  "allDependencies", also modify "dependencyOverrides",
+  dbuild will now rewrite the latter as well, unless the
+  flag "rewrite-overrides" is explicitly set to "false".
+  The flag can be specified per sbt build level, just like
+  "check-missing" or "cross-version".
+
 ### 0.9.11
 
 - Hotfix to the deploy code, in case the target is Bintray

@@ -14,6 +14,7 @@ default for all of the projects enclosed in the same section. The available opti
    build: {
     cross-version       : <cross-version-level>
     check-missing       : <check-missing-flag>
+    rewrite-overrides   : <rewrite-overrides-flag>
     sbt-version         : <sbt-version>
     sbt-commands        : [<command1>,<command2>,...]
     sbt-post-commands   : [<command1>,<command2>,...]
@@ -109,6 +110,14 @@ check-missing
   correct cross-version suffix. However, the option "cross-version" should normally
   be omitted during normal use, as the use of "cross-version:standard" will cause
   the missing dependencies check to become ineffective.
+
+rewrite-overrides
+  Some build systems may specify, in addition to a list of dependencies, a list
+  of "forced" dependency versions. For instance, in sbt there is the
+  "dependencyOverrides" setting for this purpose. By default, dbuild will also
+  rewrite those overridden dependencies, unless this flag is explicitly set
+  to false. It is not normally necessary to specify this option; it is currently
+  only supported when building a project using sbt.
 
 sbt-version
   You can optionally specify here the sbt version that should be used to compile

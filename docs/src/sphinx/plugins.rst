@@ -140,6 +140,11 @@ the main artifacts, are the following:
   between cross-version and check-missing is explained in detail
   at :doc:`buildOptions`.
 
+``rewrite-overrides``
+  The default value is "true" for all the elements, meaning that
+  dbuild will rewrite all dependencies by default. Please check
+  :doc:`buildOptions` for further details.
+
 ``deps``
   The dependency modifiers (``deps.inject`` and ``deps.ignore``)
   can also be applied to plugins, by specifying as a value for

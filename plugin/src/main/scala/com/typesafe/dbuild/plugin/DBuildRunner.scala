@@ -101,7 +101,7 @@ object DBuildRunner {
   // cross version suffix attached to its "name" field; therefore, we apply
   // fixName() only to the ModuleID we are trying to rewrite right now.
   def fixModule(arts: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
-    checkMissing: Boolean, fromSpace: String, log: Logger, currentName: String, currentOrg: String)(m: ModuleID): ModuleID = {
+    checkMissing: Boolean, fromSpace: String, log: Logger)(m: ModuleID): ModuleID = {
     def expandName(a: Artifact) = {
       import a._
       classifier match {
@@ -345,9 +345,7 @@ object DBuildRunner {
       val sc = r.key.scope
       Keys.allDependencies in sc := {
         val old = (Keys.allDependencies in sc).value
-        val n = (Keys.name in sc).value
-        val o = (Keys.organization in sc).value
-        old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log, n.toLowerCase, o.toLowerCase)
+        old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log)
       }
     }("Updating dependencies") _
 
@@ -360,9 +358,7 @@ object DBuildRunner {
       val sc = r.key.scope
       Keys.dependencyOverrides in sc := {
         val old = (Keys.dependencyOverrides in sc).value
-        val n = (Keys.name in sc).value
-        val o = (Keys.organization in sc).value
-        old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log, n.toLowerCase, o.toLowerCase)
+        old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log)
       }
     }("Updating overrides") _
 

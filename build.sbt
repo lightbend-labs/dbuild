@@ -122,7 +122,7 @@ lazy val repo = (
   SubProj("repo")
   dependsOn(http, adapter, metadata, logging)
   dependsOnRemote(mvnAether, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
-  dependsOnSbtProvided(sbtIo, dbuildLaunchInt, sbtLogging, sbtSbt)
+  dependsOnSbt(sbtIo, dbuildLaunchInt, sbtLogging, sbtSbt)
 )
 
 lazy val http = (

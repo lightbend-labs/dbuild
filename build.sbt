@@ -1,7 +1,7 @@
 import Dependencies._
 import RemoteDepHelper._
 
-def MyVersion: String = "0.9.12"
+def MyVersion: String = "0.9.12-SNAPSHOT"
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
@@ -51,7 +51,7 @@ lazy val root = (
   aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := Def.task {}, publishLocal := Def.task {}, version := MyVersion)
-  settings(crossSbtVersions := Seq("0.13.16","1.0.4"), selectScalaVersion)
+  settings(crossSbtVersions := Seq("0.13.16", "1.2.0-RC3"), selectScalaVersion)
 )
 
 // This subproject only has dynamically
@@ -129,7 +129,7 @@ lazy val http = (
   SubProj("http")
   dependsOn(adapter)
   dependsOnRemote(dispatch _)
-  dependsOnSbtProvided(sbtIo, sbtIvy)
+  dependsOnSbtProvided(sbtIo, sbtIvy, sbtSbt)
 )
 
 lazy val core = (

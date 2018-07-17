@@ -68,6 +68,11 @@ object Adapter {
   def defaultID(base: File, prefix: String = "default") =
    sbt.dbuild.hack.DbuildHack.defaultID(base, prefix)
 
+  def reapplySettings(newSettings: Seq[sbt.Def.Setting[_]],
+    structure: sbt.internal.BuildStructure,
+    log: sbt.util.Logger)(implicit display: sbt.util.Show[sbt.Def.ScopedKey[_]]): sbt.internal.BuildStructure = {
+      Load.reapply(newSettings, structure, log)
+    }
 
 // These bits are inappropriately copied from various versions of zinc; some have been
 // removed and some made private, but we need them.

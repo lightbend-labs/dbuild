@@ -6,6 +6,7 @@ import Adapter.{ProjectResolver,scalaInstance,allPaths,Load,applyCross,ScalaInst
 import Adapter.{moduleWithName,moduleWithRevision,moduleWithCrossVersion,moduleWithExplicitArtifacts}
 import Adapter.{moduleWithExtraAttributes,ivyScalaWithCheckExplicit,artifactWithClassifier}
 import Adapter.{crossDisabled,crossFull,crossBinary,newIvyPaths,keyIvyScala,interProjectResolver}
+import Adapter.reapplySettings
 import com.typesafe.dbuild.model
 import com.typesafe.dbuild.support.sbt.SbtBuildConfig
 import com.typesafe.dbuild.model.ArtifactLocation
@@ -733,7 +734,7 @@ object DBuildRunner {
     val newSessionSettings = newSettings map (a => (a, List("// dbuild-setup: " + a.key.toString)))
     // TODO - Should we honor build transformers? See transformSettings() in sbt's "Extracted.append()"
     val newSession = session.appendSettings(newSessionSettings)
-    val newStructure = Load.reapply(oldSettings ++ newSettings, structure) // ( Project.showContextKey(newSession, structure) )
+    val newStructure = reapplySettings(oldSettings ++ newSettings, structure, state.log) // ( Project.showContextKey(newSession, structure) )
     // NB: setProject calls onLoad, which is why we restore it beforehand
     // (see calls in this file to restorePreviousOnLoad() )
     val newState = Project.setProject(newSession, newStructure, state)

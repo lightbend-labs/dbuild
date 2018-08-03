@@ -72,6 +72,13 @@ object Adapter {
    sbt.CrossVersion.applyCross
   def defaultID(base: File, prefix: String = "default") =
    sbt.Build.defaultID(base, prefix)
+
+  def reapplySettings(newSettings: Seq[sbt.Def.Setting[_]],
+    structure: sbt.BuildStructure,
+    log: sbt.Logger)(implicit display: sbt.Show[sbt.Def.ScopedKey[_]]): sbt.BuildStructure = {
+      Load.reapply(newSettings, structure)
+    }
+
   def scalaInstance(libraryJar: File, compilerJar: File, launcher: xsbti.Launcher, extraJars: File*): ScalaInstance =
     ScalaInstance(libraryJar, compilerJar, launcher, extraJars:_*)
 }

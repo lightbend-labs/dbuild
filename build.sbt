@@ -122,14 +122,14 @@ lazy val repo = (
   SubProj("repo")
   dependsOn(http, adapter, metadata, logging)
   dependsOnRemote(mvnAether, aether, aetherApi, aetherSpi, aetherUtil, aetherImpl, aetherConnectorBasic, aetherFile, aetherHttp, aetherWagon, mvnAether)
-  dependsOnSbt(sbtIo, dbuildLaunchInt, sbtLogging, sbtSbt)
+  dependsOnSbtProvided(sbtIo, dbuildLaunchInt, sbtLogging, sbtSbt)
 )
 
 lazy val http = (
   SubProj("http")
   dependsOn(adapter)
   dependsOnRemote(dispatch _)
-  dependsOnSbtProvided(sbtIo, sbtIvy)
+  dependsOnSbtProvided(sbtIo, sbtIvy, sbtSbt)
 )
 
 lazy val core = (
@@ -143,7 +143,7 @@ lazy val proj = (
   SubProj("proj")
   dependsOn(core, repo, logging)
   dependsOnRemote(javaMail, commonsIO)
-  dependsOnSbtProvided(sbtIo, sbtIvy)
+  dependsOnSbtProvided(sbtIo, sbtIvy, sbtSbt, sbtLogging, dbuildLaunchInt)
 )
 
 lazy val actorProj = (

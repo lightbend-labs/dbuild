@@ -1,6 +1,19 @@
 # dbuild release notes
 
 
+### 0.9.13
+
+- A change in an internal call within sbt 1.2.0 caused
+  dbuild to be imcompatible with that version. This new
+  version of dbuild will automatically select the correct
+  version of the call, and is compatible with sbt 1.2.0.
+
+- Fix for an incorrect internal dependency on sbt modules,
+  where sometimes multiple versions of modules might have
+  appeared on the classpath.
+
+- Some other internal improvements.
+
 ### 0.9.12
 
 - Now dbuild takes into account the new "skip in publish"

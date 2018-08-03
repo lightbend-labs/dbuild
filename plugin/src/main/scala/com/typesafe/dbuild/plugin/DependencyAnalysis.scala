@@ -296,7 +296,7 @@ object DependencyAnalysis {
     }
 
     saveLastMsg(lastMsgFile, printDependencies(_, extractionInput, resultFile,
-      log))(DBuildRunner.newState(state, extracted, prepareExtractionSettings))
+      log))(DBuildRunner.newState(state, extracted, prepareExtractionSettings, log))
   }
 
 }

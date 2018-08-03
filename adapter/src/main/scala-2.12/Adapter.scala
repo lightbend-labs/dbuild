@@ -68,6 +68,20 @@ object Adapter {
   def defaultID(base: File, prefix: String = "default") =
    sbt.dbuild.hack.DbuildHack.defaultID(base, prefix)
 
+  def reapplySettings(newSettings: Seq[sbt.Def.Setting[_]],
+    structure: sbt.internal.BuildStructure,
+    log: sbt.util.Logger)(implicit display: sbt.util.Show[sbt.Def.ScopedKey[_]]): sbt.internal.BuildStructure = {
+      val ru = scala.reflect.runtime.universe
+      val rm = ru.runtimeMirror(getClass.getClassLoader)
+      val im = rm.reflect(Load)
+      val reapplySymbol = ru.typeOf[Load.type].decl(ru.TermName("reapply")).asMethod
+      val reapply = im.reflectMethod(reapplySymbol)
+      (if (reapplySymbol.paramLists(0).size == 3)
+        reapply(newSettings, structure, log, display)
+       else
+        reapply(newSettings, structure, display)
+      ).asInstanceOf[sbt.internal.BuildStructure]
+    }
 
 // These bits are inappropriately copied from various versions of zinc; some have been
 // removed and some made private, but we need them.

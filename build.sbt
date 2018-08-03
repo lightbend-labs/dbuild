@@ -43,7 +43,7 @@ def skip212 = Seq(
 def selectScalaVersion =
   scalaVersion := {
     val sb = (sbtVersion in pluginCrossBuild).value
-    if (sb.startsWith("0.13")) "2.10.7" else "2.12.4"
+    if (sb.startsWith("0.13")) "2.10.7" else "2.12.6"
   }
 
 lazy val root = (

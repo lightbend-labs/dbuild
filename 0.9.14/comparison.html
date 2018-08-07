@@ -1,0 +1,144 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Comparing artifacts &#8212; dbuild Documentation</title>
+    <link rel="stylesheet" href="_static/style.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/issuetracker.css" type="text/css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.9.14',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  false,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="../versions.js"></script>
+    <script type="text/javascript" src="_static/set-versions.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Repositories" href="repositories.html" />
+    <link rel="prev" title="Notifications" href="notifications.html" /> 
+  </head>
+  <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="http://github.com/lightbend/dbuild">GitHub Project</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Comparing artifacts</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="repositories.html">Repositories</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="notifications.html">Notifications</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.14">Version 0.9.14</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <div class="section" id="comparing-artifacts">
+<h1>Comparing artifacts<a class="headerlink" href="#comparing-artifacts" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-compare-section">
+<span id="section-compare"></span><h2>The <code class="docutils literal"><span class="pre">compare</span></code> section<a class="headerlink" href="#the-compare-section" title="Permalink to this headline">¶</a></h2>
+<p>If you used spaces to build multiple versions of the same artifacts, you can also
+automatically compare them, to make sure their content is identical. The &quot;compare&quot;
+section implements an automatic artifact comparison. The content of the corresponding
+section is the following:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span></span><span class="p">{</span>
+ <span class="nx">build</span><span class="o">:</span> <span class="p">{</span><span class="nx">projects</span><span class="o">:</span><span class="p">...,</span> <span class="nx">options</span><span class="o">:</span><span class="p">...}</span>
+
+ <span class="nx">options</span><span class="o">:</span> <span class="p">{</span>
+  <span class="nx">deploy</span><span class="o">:</span> <span class="p">...</span>
+
+  <span class="nx">compare</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="nx">a</span> <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">project1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">project2</span><span class="o">&gt;</span><span class="p">,...]</span>
+    <span class="nx">b</span> <span class="o">:</span> <span class="p">[</span><span class="o">&lt;</span><span class="nx">project1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">project2</span><span class="o">&gt;</span><span class="p">,...]</span>
+    <span class="nx">skip</span> <span class="o">:</span> <span class="p">[</span> <span class="o">&lt;</span><span class="nx">glob1</span><span class="o">&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">glob2</span><span class="o">&gt;</span><span class="p">,...</span> <span class="p">]</span>
+  <span class="p">},</span> <span class="p">...</span> <span class="p">]</span>
+ <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The specification of the lists of projects is the same previously described in <a class="reference internal" href="deploy.html#section-deploy"><span class="std std-ref">The deploy section</span></a>.
+At the end of the compilation, dbuild will compare the jars generated by the two lists of projects.
+If the comparison fails, a report of the differences will be printed,
+and the final build outcome will reflect the error condition. The two sides are always identified
+by using &quot;a&quot; and &quot;b&quot; as labels.</p>
+<p>The (optional) list of strings in skip can be used to exclude certain files from the comparison.
+The files, within each jar, whose path match the given pattern will be excluded. The patterns
+are specified in a shell-stype glob format, for instance:</p>
+<div class="highlight-text"><div class="highlight"><pre><span></span>skip: [ &quot;*.properties&quot;, &quot;*.html&quot;, &quot;META-INF/MANIFEST.MF&quot;, &quot;dir?/src/*&quot; ]
+</pre></div>
+</div>
+<p>Further details on the supported glob syntax can be found
+<a class="reference external" href="https://svn.apache.org/repos/asf/jakarta/oro/tags/oro-2.0.9-dev-1/docs/api/org/apache/oro/text/GlobCompiler.html">here</a>.</p>
+<p>Note that only the jars of the artifacts are compared; the POM or ivy.xml files,
+or other files generated as part of the artifacts, are not inspected for equality.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>Next:</em> <a class="reference internal" href="repositories.html"><span class="doc">Repositories</span></a>.</p>
+</div>
+</div>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Comparing artifacts</a><ul>
+<li><a class="reference internal" href="#the-compare-section">The <code class="docutils literal"><span class="pre">compare</span></code> section</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

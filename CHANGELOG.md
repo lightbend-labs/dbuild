@@ -1,6 +1,10 @@
 # dbuild release notes
 
 
+### 0.9.14
+
+- This version adds compatibility with sbt 1.2.1.
+
 ### 0.9.13
 
 - A change in an internal call within sbt 1.2.0 caused

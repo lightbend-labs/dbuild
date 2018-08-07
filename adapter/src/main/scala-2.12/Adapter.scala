@@ -74,7 +74,11 @@ object Adapter {
       val ru = scala.reflect.runtime.universe
       val rm = ru.runtimeMirror(getClass.getClassLoader)
       val im = rm.reflect(Load)
-      val reapplySymbol = ru.typeOf[Load.type].decl(ru.TermName("reapply")).asMethod
+      val reapplyAlternatives = ru.typeOf[Load.type].decl(ru.TermName("reapply")).
+         asTerm.alternatives.map { s => s.asMethod }
+      val reapplySymbol = reapplyAlternatives.find(_.paramLists(0).size == 2).
+        getOrElse(reapplyAlternatives.find(_.paramLists(0).size == 3).
+        getOrElse(sys.error("Internal error: no known reapply() found.")))
       val reapply = im.reflectMethod(reapplySymbol)
       (if (reapplySymbol.paramLists(0).size == 3)
         reapply(newSettings, structure, log, display)

@@ -434,7 +434,31 @@ object SeqSeqStringH {
   implicit def SeqToSeqSeqString(s: Seq[SeqString]): SeqSeqString = SeqSeqString(s)
   implicit def SeqSeqStringToSeq(a: SeqSeqString): Seq[SeqString] = a.s
 }
-class SeqSeqStringSerializer extends SeqFlexSerializer[SeqString]
+
+// Note: it is not enough to extends SeqFlexSerializer[SeqString].
+// For instance, in the case in which the object to be deserialized
+// is SeqSeqString(List(List(aaa), List(bbb))), just deserializing
+// using Flex would lead to a List of two SeqString, which would
+// then automatically deserialized to single strings. The result
+// is a ["aaa","bbb"] in the deserialized form, which is then
+// re-serialized as List(List(aaa,bbb)).
+// To avoid that, in the case in which the SeqSeqString contains
+// more than one element, we skip the SeqString and convert it
+// directly to a Seq[Seq[String]], which is then deserialized
+// into the JSON representation [["aaa"],["bbb"]].
+class SeqSeqStringSerializer extends JsonSerializer[SeqSeqString] {
+  override def serialize(value: SeqSeqString, g: JsonGenerator, p: SerializerProvider) {
+    value.s.length match {
+      case 1 =>
+        val vs = p.findValueSerializer(classOf[SeqString], null)
+        vs.serialize(value.s(0), g, p)
+      case _ =>
+        val vs = p.findValueSerializer(classOf[Seq[Seq[String]]], null)
+        vs.serialize(value.s map {_.s}, g, p)
+    }
+  }
+}
+
 // Flex cannot cope with the special case of SeqSeqString deserialization; we write a custom one.
 class SeqSeqStringDeserializer extends JsonDeserializer[SeqSeqString] {
   override def deserialize(p: JsonParser, ctx: DeserializationContext): SeqSeqString = {

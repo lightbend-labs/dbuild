@@ -338,7 +338,7 @@ object ScalaBuildSystem extends BuildSystemCore {
     val readMetaInfo = readMeta.projInfo.headOption getOrElse sys.error("Internal error: readMeta had no projInfo")
     val metaInfo = if (exclude.nonEmpty) {
       val notFound = exclude.diff(allSubProjects)
-      if (notFound.nonEmpty) sys.error(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
+      if (notFound.nonEmpty) log.warn(notFound.mkString("These subprojects were not found in scala: ", ", ", ""))
       val subProjects = allSubProjects.diff(exclude)
       // Note: Here subProjects contains a list of subprojects in the order
       // in which the names appear in the list of meta "projects". This does not

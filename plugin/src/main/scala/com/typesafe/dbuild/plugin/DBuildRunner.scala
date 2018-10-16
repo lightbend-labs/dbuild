@@ -76,7 +76,7 @@ object DBuildRunner {
       val availableProjects = normalizedProjectNames(refs, baseDirectory)
       val notAvailable = requestedProjects.toSet -- availableProjects
       if (notAvailable.nonEmpty)
-        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
+        System.err.println("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
           " Found: " + availableProjects.mkString("\"", "\", \"", "\". "))
     } else sys.error("Internal error: subproject list is empty")
   }

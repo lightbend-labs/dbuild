@@ -96,7 +96,7 @@ object DBuildRunner {
       // valid sbt project IDs, and are *not* patterns, are actually names of existing subprojects.
       val notAvailable = requestedNames.toSet -- availableProjects
       if (notAvailable.nonEmpty)
-        sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
+        System.err.println("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
           " Found: " + availableProjects.mkString("\"", "\", \"", "\". "))
     } else sys.error("Internal error: subproject list is empty")
   }

@@ -31,6 +31,7 @@ import com.typesafe.dbuild.support.sbt.{ RewireInput, GenerateArtifactsInput }
 import com.typesafe.dbuild.support.SbtUtil.{ pluginAttrs, fixAttrs }
 import com.typesafe.dbuild.model.SbtPluginAttrs
 import scala.reflect.ClassManifest
+import org.apache.oro.text.regex
 
 object DBuildRunner {
 
@@ -56,7 +57,7 @@ object DBuildRunner {
     val Some(baseDirectory) = Keys.baseDirectory in ThisBuild get structure.data
     val refs = getProjectRefs(extracted)
     // I need a subset of refs, a sequence in the order specified by "project"
-    val newRefs = getSortedProjects(projects, refs, baseDirectory)
+    val newRefs = getSortedProjects(projects, refs, baseDirectory, acceptPatterns = false)
     newRefs.foldLeft[(State, Q)](state -> init) {
       case ((state, current), ref) =>
         val (state2, next) =
@@ -66,24 +67,55 @@ object DBuildRunner {
     }
   }
 
-  // verify that the requested projects in SbtBuildConfig actually exist
-  def verifySubProjects(requestedProjects: Seq[String], refs: Seq[sbt.ProjectRef], baseDirectory: File): Unit = {
+  //
+  // The methods getSortedProjects and verifySubProjects are listed here, but are also
+  // called by DependencyAnalysis.
+  //
+  // During DependencyAnalysis, we use getSortedProjects (and therefore verifySubProjects)
+  // over the requested and excluded lists, as described by the user, and those lists may
+  // contain patterns. However, when called during the build from runAggregate(), the list
+  // of projects should already be resolved: if a pattern is found, then we have an internal
+  // error of some sort.
+  //
+
+  // Verify that the requested projects in SbtBuildConfig actually exist.
+  def verifySubProjects(requestedProjects: Seq[String], refs: Seq[sbt.ProjectRef], baseDirectory: File, acceptPatterns: Boolean): Unit = {
     if (requestedProjects.nonEmpty) {
       val uniq = requestedProjects.distinct
       if (uniq.size != requestedProjects.size) {
         sys.error("Some subprojects are listed twice: " + (requestedProjects.diff(uniq)).mkString("\"", "\", \"", "\"."))
       }
       val availableProjects = normalizedProjectNames(refs, baseDirectory)
-      val notAvailable = requestedProjects.toSet -- availableProjects
+      // Can we accept patterns? If not, check that none is present
+      val (requestedNames, requestedPatterns) = requestedProjects.toSet.partition {sbt.Project.validProjectID(_).isEmpty}
+      if (requestedPatterns.nonEmpty && !acceptPatterns) {
+        sys.error("Internal error: while building, the subproject list contains invalid project IDs; please report. Invalid: " +
+          requestedProjects.mkString("\"", "\", \"", "\"."))
+      }
+      // requestedProjects may contain patterns. We only check that the strings that represent
+      // valid sbt project IDs, and are *not* patterns, are actually names of existing subprojects.
+      val notAvailable = requestedNames.toSet -- availableProjects
       if (notAvailable.nonEmpty)
         sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
           " Found: " + availableProjects.mkString("\"", "\", \"", "\". "))
     } else sys.error("Internal error: subproject list is empty")
   }
 
-  def getSortedProjects(projects: Seq[String], refs: Seq[ProjectRef], baseDirectory: File): Seq[ProjectRef] = {
-    verifySubProjects(projects, refs, baseDirectory)
-    projects map { p => refs.find(ref => (p == normalizedProjectName(ref, baseDirectory))).get }
+  def getSortedProjects(projects: Seq[String], refs: Seq[ProjectRef], baseDirectory: File, acceptPatterns: Boolean): Seq[ProjectRef] = {
+    verifySubProjects(projects, refs, baseDirectory, acceptPatterns)
+    val matcher = new regex.Perl5Matcher()
+    // We want the refs that match projects *in the order specified by projects*
+    // The code below will work regardless of whether there are patterns or not in projects.
+    projects.map { p =>
+      val pattern = new org.apache.oro.text.GlobCompiler().compile(p)
+      val filtered = refs.filter { ref =>
+        matcher.matches(normalizedProjectName(ref, baseDirectory), pattern)
+      }
+      if (filtered.isEmpty) {
+        println("*** Warning: \"" + p + "\" does not match any known subproject")
+      }
+      filtered
+    }.flatten
   }
 
   def makeBuildResults(artifacts: Seq[BuildSubArtifactsOut], localRepo: File): model.BuildArtifactsOut =

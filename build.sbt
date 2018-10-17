@@ -188,6 +188,7 @@ lazy val plugin = (
   SubProj("plugin") 
   settings(sbtPlugin := true)
   dependsOn(adapter, support, metadata)
+  dependsOnRemote(oro)
   dependsOnSbtProvided(sbtIo)
 )
 

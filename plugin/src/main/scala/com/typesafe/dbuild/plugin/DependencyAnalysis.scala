@@ -8,7 +8,7 @@ import com.typesafe.dbuild.model
 import com.typesafe.dbuild.plugin.StateHelpers._
 import com.typesafe.dbuild.support.sbt.ExtractionInput
 import com.typesafe.dbuild.support.NameFixer.fixName
-import DBuildRunner.{ getSortedProjects, verifySubProjects }
+import DBuildRunner.getSortedProjects
 import com.typesafe.dbuild.model.Utils.{ writeValue, readValue }
 import org.apache.commons.io.FileUtils.writeStringToFile
 
@@ -110,7 +110,7 @@ object DependencyAnalysis {
     // if anything in the passed projects list is incorrect. But don't call getSortedProjects() or verifySubProjects() if the
     // projects list is empty.
     val excluded = if (excludedProjects.nonEmpty)
-      getSortedProjects(excludedProjects, allRefs, baseDirectory)
+      getSortedProjects(excludedProjects, allRefs, baseDirectory, acceptPatterns = true)
     else
       Seq.empty
 
@@ -118,7 +118,7 @@ object DependencyAnalysis {
       if (projects.isEmpty)
         allRefs.diff(excluded)
       else {
-        val requestedPreExclusion = getSortedProjects(projects, allRefs, baseDirectory)
+        val requestedPreExclusion = getSortedProjects(projects, allRefs, baseDirectory, acceptPatterns = true)
         if (requestedPreExclusion.intersect(excluded).nonEmpty) {
           log.warn(normalizedProjectNames(requestedPreExclusion.intersect(excluded))
             mkString ("*** Warning *** You are simultaneously requesting and excluding some subprojects; they will be excluded. They are: ", ",", ""))

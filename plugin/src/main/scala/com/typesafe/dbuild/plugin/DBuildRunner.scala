@@ -89,7 +89,7 @@ object DBuildRunner {
       // Can we accept patterns? If not, check that none is present
       val (requestedNames, requestedPatterns) = requestedProjects.toSet.partition {sbt.Project.validProjectID(_).isEmpty}
       if (requestedPatterns.nonEmpty && !acceptPatterns) {
-        sys.error("Internal error: found pattern in the list of subprojects, but there should not be any. Please report. Subprojects: " +
+        sys.error("Internal error: while building, the subproject list contains invalid project IDs; please report. Invalid: " +
           requestedProjects.mkString("\"", "\", \"", "\"."))
       }
       // requestedProjects may contain patterns. We only check that the strings that represent
@@ -108,9 +108,13 @@ object DBuildRunner {
     // The code below will work regardless of whether there are patterns or not in projects.
     projects.map { p =>
       val pattern = new org.apache.oro.text.GlobCompiler().compile(p)
-      refs.filter { ref =>
+      val filtered = refs.filter { ref =>
         matcher.matches(normalizedProjectName(ref, baseDirectory), pattern)
       }
+      if (filtered.isEmpty) {
+        println("*** Warning: \"" + p + "\" does not match any known subproject")
+      }
+      filtered
     }.flatten
   }
 

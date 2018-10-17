@@ -367,18 +367,30 @@ projects
   of the specified subprojects, dbuild will also add recursively all of the
   subprojects that are in the same project and that are required dependencies
   of the specified ones; if the subproject is an sbt aggregate, its components
-  will also be added. If the "projects" clause is not present, all of the
+  will also be added. If the "projects" clause is absent, all of the
   subprojects will be included.
 
-  If the project uses sbt's default projects, the actual subproject name may
-  vary over time and take forms like "default-e3c4f7". In order to refer to
-  sbt's default subproject, you can use the predefined name `"default-sbt-project"`.
+  In place of a fixed name, each element of the list can also be a pattern. In that
+  case, all of the sbt subprojects that match the given pattern will be be selected.
+  Patterns may also be used to match subprojects that may or may not be
+  present. The syntax is the shell-stype glob format, for instance
+  `some?patte[rR]n*`. You can find
+  `here <https://svn.apache.org/repos/asf/jakarta/oro/tags/oro-2.0.9-dev-1/docs/api/org/apache/oro/text/GlobCompiler.html>`_
+  the full description of the supported syntax.
+
+  Note: if the sbt build file of your project does not specify any subproject name,
+  sbt will generate a default subproject with a default name, which is not known in advance.
+  That name may vary over time and may take arbitrary forms like "default-e3c4f7". If you need to
+  refer to that subproject, you can use the predefined name `"default-sbt-project"`, and
+  dbuild will automatically resolve it to sbt's default subproject.
 
 exclude
   Sometimes it may be useful to split a single project into two or more parts.
   This clause can be used to exclude explicitly one or more of the subprojects, which
   can then be compiled in a different project within the same configuration file,
-  using a different project name but using the same uri.
+  using a different project name but using the same uri. Patterns may also be used
+  to exclude a group of subprojects, which may or may not be present, with the same
+  syntax as above.
 
 run-tests
   Boolean value: if set to false, the project will be built but no tests will be run.

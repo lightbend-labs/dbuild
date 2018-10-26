@@ -157,7 +157,6 @@ case class RepeatableDBuildConfig(builds: Seq[ProjectConfigAndExtracted]) {
       }
       sys.error(msgs.mkString("\n\nFatal: multiple projects have the same artifacts visible in the same space.\n\n", "\n", "\n"))
     }
-    graph.checkCycles()
   }
 }
 

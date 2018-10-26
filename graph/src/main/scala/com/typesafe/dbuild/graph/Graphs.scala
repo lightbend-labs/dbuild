@@ -100,7 +100,7 @@ abstract class Graph[N, E] extends GraphCore[N, E] {
    * Returns a topological ordering of a graph, or the
    * empty set if the graph is cyclic.
    */
-  def topological: Seq[Node[N]] =
+  lazy val topological: Seq[Node[N]] =
     if (nodes.isEmpty) Seq.empty
     else {
       val sequence = collection.mutable.ArrayBuffer.empty[Node[N]]

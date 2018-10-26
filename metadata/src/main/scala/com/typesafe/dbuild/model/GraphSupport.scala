@@ -65,4 +65,5 @@ class BuildGraph(builds: Seq[ProjectConfigAndExtracted]) extends Graph[ProjectCo
       // store in the value the witness by which we reached m from n 
     } yield BuildEdge(n, m, EdgeData(d, level, nSpace))).toSet.toSeq // n depends on m (n.deps contains something provided by m)
   }
+  checkCycles()
 }

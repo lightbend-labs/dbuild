@@ -20,15 +20,15 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
         (new _root_.java.io.File(uri.getPath()) / ".git").exists))
   }
 
-  /** 
+  /**
    *  Use the scheme "jgit" if you prefer jgit (will not use hardlinks, hence more disk space will be used).
    *  The regular scheme "git" will use the command line tool by default.
    */
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: Logger): ProjectBuildConfig = {
-    val git: GitImplementation = if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
-      GitJGit
-    else
-      GitGit
+    if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
+      sys.error("JGit is no longer supported; please use regular git (\"use-jgit: false\").")
+
+    val git = GitGit
 
     val uri = new _root_.java.net.URI(config.uri)
     val uriString = UriUtil.dropFragment(uri).toASCIIString
@@ -41,26 +41,38 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
     // working files checked out in the cache clone: the directories
     // contain only a ".git" subdirectory.
     // TODO: locking
-    val clone = if (!cloneDir.exists) {
-      cloneDir.mkdirs()
-      git.clone(uriString, cloneDir, log)
-    } else {
-      git.getRepo(cloneDir)
-    }
-    git.fetch(clone, true /* ignore failures */ , log)
+    val clone = git.getRepo(cloneDir) getOrElse git.create(uriString, cloneDir, log)
+    if (skipGitUpdates)
+      log.info("Skipping remote git update")
+    else
+      git.fetchOne(clone, ref, true /* ignore failures */ , log)
+    // the central clone, as well as the build/extract clones, are initially
+    // without any files checked out; an explicit reset() follows in prepare()
+    // to set up files into the build/extracted dirs.
 
-    // Now: clone that cache into the local directory
-    if (!dir.exists) dir.mkdirs()
-    // NB: clone does not check out anything in particular.
-    // An explicit checkout follows later
-    val localRepo = if (!(dir / ".git").exists) git.clone(cloneDir.getCanonicalPath, dir, log) else git.getRepo(dir)
+    // Now: use that cache to initialize the local build/extract directory
+    // (note that we do not check out any files, yet. We'll do that in prepare())
+    val localRepo = git.getRepo(dir) getOrElse git.create(cloneDir.getCanonicalPath, dir, log)
 
-    git.fetch(localRepo, false /* stop on failures */ , log)
-    // scrub the dir from all extraneous stuff before returning
-    git.clean(localRepo, log)
-
-    val sha = git.checkoutRef(localRepo, ref, log)
+    // fetchOne will return the resolved commit for ref
+    val sha = git.fetchOne(localRepo, ref, false /* stop on failures */ , log)
     val newUri = UriUtil.dropFragment(uri).toASCIIString + "#" + sha
     config.copy(uri = newUri)
+  }
+
+  override def prepare(config: ProjectBuildConfig, dir: _root_.java.io.File, log: Logger) = {
+    if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
+      sys.error("JGit is no longer supported; please use regular git (\"use-jgit: false\").")
+
+    val git = GitGit
+
+    val localRepo = git.getRepo(dir) getOrElse
+      sys.error("Internal error, prepare() without resolve()? .git does not exist in "+dir.getCanonicalPath)
+
+    val uri = new _root_.java.net.URI(config.uri)
+    val sha = Option(uri.getFragment()) getOrElse sys.error("Internal error in git/prepare: no sha?")
+
+    // perform a hard reset to the desired sha
+    git.prepareFiles(localRepo, sha, log)
   }
 }

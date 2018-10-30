@@ -49,7 +49,11 @@ class LocalBuildRunner(builder: BuildRunner,
       // which will again call this method, thereby resolve()ing each project right before building it.
       val log = buildData.log
       log.info("Resolving: " + build.config.uri + " in directory: " + dir)
-      extractor.resolver.resolve(build.config, dir, log)
+      val config2 = extractor.resolver.resolve(build.config, dir, log)
+      if (config2 != build.config)
+        sys.error("Internal error: during build, resolve changed the configuration. Please report. Before: " +
+                  build.config + ", after: " + config2)
+      extractor.resolver.prepare(build.config, dir, log)
       val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(repository, build, outProjects, dir, log, buildData.debug)
       log.debug("Running local build: " + build.config + " in directory: " + dir)
       LocalRepoHelper.publishProjectInfo(build, repository, log)

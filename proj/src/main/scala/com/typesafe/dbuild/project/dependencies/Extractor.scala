@@ -97,6 +97,7 @@ class Extractor(
     val build = config.buildConfig
     cachedExtractOr(config, logger) {
       logger.info("Extracting dependencies for: " + build.name)
+      // extract() will do the prepare() beforehand
       val extractedDeps = dependencyExtractor.extract(config, tracker, dir, this, logger, debug)
       // process deps.ignore clauses
       val deps = modifiedDeps(config.buildConfig.deps, extractedDeps, logger)

@@ -56,7 +56,8 @@ object Checkout {
           new com.typesafe.dbuild.support.svn.SvnProjectResolver))
         if (!resolver.canResolve(project.config.uri))
           sys.error("\"dbuild checkout\" cannot be used with this project; only git and svn URIs are supported. Found: " + project.config.uri)
-        resolver.resolve(project.config, dir, log)
+        val config2 = resolver.resolve(project.config, dir, log)
+        resolver.prepare(config2, dir, log)
 
         // it is now time to set up the project, exactly as we would before the build stage in dbuild
         val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(cache, project,

@@ -48,7 +48,7 @@ def selectScalaVersion =
 
 lazy val root = (
   SubProj("root")
-  aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
+  aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http, utils,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := Def.task {}, publishLocal := Def.task {}, version := MyVersion)
   settings(crossSbtVersions := Seq("0.13.17", "1.2.1"), selectScalaVersion)
@@ -134,9 +134,13 @@ lazy val http = (
 
 lazy val core = (
   SubProj("core")
-  dependsOnRemote(javaMail)
-  dependsOn(adapter,metadata, graph, hashing, logging, repo)
+  dependsOn(adapter,metadata, graph, hashing, logging, repo, utils)
   dependsOnSbtProvided(sbtIo, sbtLogging)
+)
+
+lazy val utils = (
+  SubProj("utils")
+  dependsOnRemote(javaMail)
 )
 
 lazy val proj = (

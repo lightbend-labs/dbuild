@@ -4,6 +4,7 @@ import Utils.{ writeValue, canSeeSpace }
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.typesafe.dbuild.hashing
 import com.typesafe.dbuild.model.SeqStringH._
+import com.typesafe.dbuild.utils.Time.timed
 
 /**
  * Information on how to build a project.  Consists of both dbuild
@@ -81,7 +82,8 @@ case class RepeatableDBuildConfig(builds: Seq[ProjectConfigAndExtracted]) {
   def uuid: String = hashing sha1 (repeatableBuilds map (_.uuid))
 
   /** Our own graph helper for interacting with the build meta information. */
-  lazy val graph = new BuildGraph(builds)
+  lazy val (graph, graphBuildTime) = timed(new BuildGraph(builds))
+
   /** All of our repeatable build configuration in build order. */
   lazy val buildMap = repeatableBuilds.map(b => b.configAndExtracted.config.name -> b).toMap
   lazy val repeatableBuilds: Seq[RepeatableProjectBuild] = {

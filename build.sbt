@@ -114,7 +114,7 @@ lazy val actorLogging = (
 
 lazy val metadata = (
   SubProj("metadata")
-  dependsOn(graph, hashing, indexmeta, deploy)
+  dependsOn(graph, hashing, indexmeta, deploy, utils)
   dependsOnRemote(jackson, typesafeConfig, commonsLang, jacks)
 )
 

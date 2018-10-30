@@ -33,7 +33,8 @@ import com.typesafe.dbuild.model.SeqStringH._
  *  they alter secondary details of the build process in various ways (for example, the logging
  *  level, or how frequently old data is deleted).
  */
-case class BuildRunOptions(cleanup: CleanupOptions, timeouts: Timeouts, debug: Boolean, defaultNotifications: Boolean)
+case class BuildRunOptions(cleanup: CleanupOptions, timeouts: Timeouts,
+                           debug: Boolean, defaultNotifications: Boolean, skipGitUpdates: Boolean)
 
 /** An Sbt buiild runner. */
 class SbtBuildMain extends xsbti.AppMain {
@@ -97,6 +98,7 @@ class SbtBuildMain extends xsbti.AppMain {
       val noResolvers = opt[Boolean](short = 'r', descr = "Disable the parsing of the \"options.resolvers\" section from the dbuild configuration file: only use the resolvers defined in dbuild.properties")
       val noNotify = opt[Boolean](short = 'n', descr = "Disable the notifications defined in the configuration file, and only print a report on the console")
       val local = opt[Boolean](short = 'l', descr = "Equivalent to: --no-resolvers --no-notify")
+      val skipGitUpdates = opt[Boolean](short = 's', descr = "Skips any remote git updates, and only use locally cached repository information (if available)")
       val checkout = new Subcommand("checkout") {
         banner("""Use "dbuild checkout" to check out one project from a previously compiled
                  |build, preparing sbt for a debugging session.
@@ -115,6 +117,7 @@ class SbtBuildMain extends xsbti.AppMain {
     try {
       val useLocalResolvers = conf.noResolvers() || conf.local()
       val defaultNotifications = conf.noNotify() || conf.local()
+      val skipGitUpdates = conf.skipGitUpdates()
       // These are the repositories defined in dbuild.properties:
       val localRepos = configuration.provider.scalaProvider.launcher.ivyRepositories.toList
       // Are we running "dbuild checkout"?
@@ -250,7 +253,7 @@ class SbtBuildMain extends xsbti.AppMain {
         val finalConfig = config.copy(options = config.options.copy(resolvers = repoMap))
 
         val main = new LocalBuildMain(repos, BuildRunOptions(finalConfig.options.cleanup,
-          finalConfig.options.timeouts, debug, defaultNotifications))
+          finalConfig.options.timeouts, debug, defaultNotifications, skipGitUpdates))
 
         // Make extra certain that the processes spawned by extractor and builder
         // will be terminated upon exit, even in case of a sudden ctrl-C.

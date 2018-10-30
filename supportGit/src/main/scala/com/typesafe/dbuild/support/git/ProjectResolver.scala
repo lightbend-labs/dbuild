@@ -12,7 +12,7 @@ import com.typesafe.dbuild.hashing
  * This class knows how to resolve Git projects and
  * update the build configuration for repeatable checkouts.
  */
-class GitProjectResolver extends ProjectResolver {
+class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
   def canResolve(configUri: String): Boolean = {
     val uri = new _root_.java.net.URI(configUri)
     (uri.getPath != null) && ((uri.getScheme == "git") || (uri.getScheme == "jgit") ||

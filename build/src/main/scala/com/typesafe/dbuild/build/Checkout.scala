@@ -52,7 +52,7 @@ object Checkout {
 
         // We should be good now: we can resolve the project.
         val resolver = new AggregateProjectResolver(Seq(
-          new com.typesafe.dbuild.support.git.GitProjectResolver,
+          new com.typesafe.dbuild.support.git.GitProjectResolver(skipGitUpdates = false),
           new com.typesafe.dbuild.support.svn.SvnProjectResolver))
         if (!resolver.canResolve(project.config.uri))
           sys.error("\"dbuild checkout\" cannot be used with this project; only git and svn URIs are supported. Found: " + project.config.uri)

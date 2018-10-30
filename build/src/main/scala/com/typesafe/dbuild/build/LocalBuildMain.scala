@@ -43,7 +43,7 @@ class LocalBuildMain(repos: List[xsbti.Repository], options: BuildRunOptions) {
 
   val targetDir = GlobalDirs.targetDir
   val resolvers = Seq(
-    new support.git.GitProjectResolver,
+    new support.git.GitProjectResolver(options.skipGitUpdates),
     new support.svn.SvnProjectResolver,
     new support.ivy.IvyProjectResolver(repos),
     new support.test.TestProjectResolver,

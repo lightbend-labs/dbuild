@@ -272,8 +272,8 @@ class SimpleBuildActor(extractor: ActorRef, builder: ActorRef, repository: Repos
       }
       */
       log.info((b.depInfo.flatMap(_.dependencyNames).distinct) mkString ("  depends on: ", ", ", ""))
-      log.info("Graph building took: " + build.graphBuildTime)
     }
+    log.debug("Graph building took: " + build.graphBuildTime)
     log.info("---== End Dependency Information ===---")
   }
 

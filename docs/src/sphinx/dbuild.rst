@@ -196,6 +196,17 @@ uri
   the ssh scheme, and configure your GitHub account with the necessary keys. The uri will
   then have the form: ``ssh://git@github.com/account/project.git``
 
+  Since version 0.10.0, dbuild will try to fetch from the remote git repositories
+  the minimum amount of information possible, creating a shallow copy with the single commit
+  related to the branch, tag, or pull request required.
+
+  Some projects may rely on the full git history in order to determine the latest tag used,
+  or to build their version number. In that case, you can request a full clone by specifying
+  a query portion `?shallow=false` in the git repo URI. If both a fragment and a query portions are
+  present, the query must come last, as in `git://some.server.com/repo.git#branch?shallow=false`.
+  Please note that if a commit hash is specified in the URI, a full clone will be used
+  in any case.
+
 set-version
   This component is optional, and normally not used. During compilation, dbuild automatically
   generates a special version string that is used while producing the various artifacts of each

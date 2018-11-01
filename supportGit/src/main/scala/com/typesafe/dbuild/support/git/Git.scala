@@ -37,9 +37,11 @@ sealed abstract class GitImplementation {
     * have to fetch the full history for all branches/tags/PRs anyway; that is
     * due to a Git limitation.
     *
+    * If shallowAllowed is false, fetch all in any case.
+    *
     * fetchOne() returns the resolved commit sha of the requested ref.
     */
-  def fetchOne(repo: Repo, ref: String, ignoreFailures: Boolean, log: Logger): String
+  def fetchOne(repo: Repo, ref: String, ignoreFailures: Boolean, shallowAllowed: Boolean, log: Logger): String
   /**
     * fetchAll () will fetch all of the remote branches, tags, and pull request
     * references from the remote repository, complete with full history.
@@ -104,38 +106,48 @@ object GitGit extends GitImplementation {
     }
   }
 
-  def fetchOne(repo: GitRepo, ref: String, ignoreFailures: Boolean, log: Logger): String = {
-    log.info("Fetching info for reference \"" + ref + "\" from " + repo.sourceURI)
-    log.info("into " + repo.dir.getCanonicalPath)
-    // ref can be a branch, a tag, a pull request, or a commit sha.
-    // We can distinguish pull requests because we expect them to be in the form
-    // "pull/nnn/head", so that is easy.
-    // Otherwise, ref could be a branch, tag, or commit. We need to try each one
-    // in turn. If it is neither a branch or a tag, then we need to perform a
-    // *full* fetch, since git servers won't in general allow us to fetch a specific
-    // single commit (there is a git server option, but it is not available on GitHub,
-    // for example).
-    if (ref.startsWith("pull/") && ref.endsWith("/head")) {
-      attemptFetchOne(repo, "refs/" + ref, log) getOrElse
-        sys.error("Reference " + ref + " looks like a pull request, but was not found in remote")
-    }
-    // tag or branch?
-    attemptFetchOne(repo, "refs/heads/" + ref, log) getOrElse
-    (attemptFetchOne(repo, "refs/tags/" + ref, log) getOrElse {
-      // Hm. Does it at least /look/ like a commit hash?
-      if (ref.matches("[a-fA-F0-9]{4,40}")) {
-        log.info("Reference \"" + ref + "\" looks like a commit, performing full fetch...")
-        fetchAll(repo, ignoreFailures, log)
-        try {
-          revparse(repo.dir, ref)
-        } catch {
-          case t: Exception =>
-            sys.error("The reference \"" + ref + "\" looks like a commit hash, but wasn't found among the known hashes in the remote repo.")
-        }
-      } else {
-        sys.error("The reference \"" + ref + "\" was not a known branch, tag, or pull request, and doesn't look like a commit hash either.")
+  def fetchOne(repo: GitRepo, ref: String, ignoreFailures: Boolean, shallowAllowed: Boolean, log: Logger): String = {
+    if (shallowAllowed) {
+      log.info("Fetching info for reference \"" + ref + "\" from " + repo.sourceURI)
+      log.info("into " + repo.dir.getCanonicalPath)
+      // ref can be a branch, a tag, a pull request, or a commit sha.
+      // We can distinguish pull requests because we expect them to be in the form
+      // "pull/nnn/head", so that is easy.
+      // Otherwise, ref could be a branch, tag, or commit. We need to try each one
+      // in turn. If it is neither a branch or a tag, then we need to perform a
+      // *full* fetch, since git servers won't in general allow us to fetch a specific
+      // single commit (there is a git server option, but it is not available on GitHub,
+      // for example).
+      if (ref.startsWith("pull/") && ref.endsWith("/head")) {
+        attemptFetchOne(repo, "refs/" + ref, log) getOrElse
+          sys.error("Reference " + ref + " looks like a pull request, but was not found in remote")
       }
-    })
+      // tag or branch?
+      attemptFetchOne(repo, "refs/heads/" + ref, log) getOrElse
+      (attemptFetchOne(repo, "refs/tags/" + ref, log) getOrElse {
+        // Hm. Does it at least /look/ like a commit hash?
+        if (ref.matches("[a-fA-F0-9]{4,40}")) {
+          log.info("Reference \"" + ref + "\" looks like a commit, performing full fetch...")
+          fetchAll(repo, ignoreFailures, log)
+          try {
+            revparse(repo.dir, ref)
+          } catch {
+            case t: Exception =>
+              sys.error("The reference \"" + ref + "\" looks like a commit hash, but wasn't found among the known hashes in the remote repo.")
+          }
+        } else {
+          sys.error("The reference \"" + ref + "\" was not a known branch, tag, or pull request, and doesn't look like a commit hash either.")
+        }
+      })
+    } else {
+      fetchAll(repo, ignoreFailures, log)
+      try {
+        revparse(repo.dir, ref)
+      } catch {
+        case t: Exception =>
+          sys.error("The reference \"" + ref + "\" is not a known branch, tag, pull request, or commit of the requested repository")
+      }
+    }
   }
 
   protected def tryFetch(ignoreFailures: Boolean, log: Logger, uriString: String)(fetch: => Unit): Unit = {

@@ -34,6 +34,7 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
     val baseName = ({s:String => if (s.endsWith(".git")) s.dropRight(4) else s})(uri.getRawPath().split("/").last)
     val cloneDir = com.typesafe.dbuild.repo.core.GlobalDirs.clonesDir / ((hashing sha1 uriString) + "-" + baseName)
     val ref = Option(uri.getFragment()) getOrElse "master"
+    val shallowAllowed = !(Option(uri.getQuery()).getOrElse("").split("&").contains("shallow=false"))
 
     // We cache a single git clone for this repository URI (sans fragment),
     // then we re-clone just the local clone. Note that there are never
@@ -44,7 +45,7 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
     if (skipGitUpdates)
       log.info("Skipping remote git update")
     else
-      git.fetchOne(clone, ref, true /* ignore failures */ , log)
+      git.fetchOne(clone, ref, ignoreFailures = true /* no network? continue with what we already have */, shallowAllowed, log)
     // the central clone, as well as the build/extract clones, are initially
     // without any files checked out; an explicit reset() follows in prepare()
     // to set up files into the build/extracted dirs.
@@ -54,7 +55,7 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
     val localRepo = git.getRepo(dir) getOrElse git.create(cloneDir.getCanonicalPath, dir, log)
 
     // fetchOne will return the resolved commit for ref
-    val sha = git.fetchOne(localRepo, ref, false /* stop on failures */ , log)
+    val sha = git.fetchOne(localRepo, ref, ignoreFailures = false /* stop on failures */ , shallowAllowed, log)
     val newUri = UriUtil.dropFragment(uri).toASCIIString + "#" + sha
     config.copy(uri = newUri)
   }

@@ -30,11 +30,11 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
     val git = GitGit
 
     val uri = new _root_.java.net.URI(config.uri)
-    val uriString = UriUtil.dropFragment(uri).toASCIIString
-    val baseName = ({s:String => if (s.endsWith(".git")) s.dropRight(4) else s})(uri.getRawPath().split("/").last)
-    val cloneDir = com.typesafe.dbuild.repo.core.GlobalDirs.clonesDir / ((hashing sha1 uriString) + "-" + baseName)
     val ref = Option(uri.getFragment()) getOrElse "master"
     val shallowAllowed = !(Option(uri.getQuery()).getOrElse("").split("&").contains("shallow=false"))
+    val uriString = UriUtil.dropFragmentAndQuery(uri).toASCIIString
+    val baseName = ({s:String => if (s.endsWith(".git")) s.dropRight(4) else s})(uri.getRawPath().split("/").last)
+    val cloneDir = com.typesafe.dbuild.repo.core.GlobalDirs.clonesDir / ((hashing sha1 uriString) + "-" + baseName)
 
     // We cache a single git clone for this repository URI (sans fragment),
     // then we re-clone just the local clone. Note that there are never
@@ -56,7 +56,7 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
 
     // fetchOne will return the resolved commit for ref
     val sha = git.fetchOne(localRepo, ref, ignoreFailures = false /* stop on failures */ , shallowAllowed, log)
-    val newUri = UriUtil.dropFragment(uri).toASCIIString + "#" + sha
+    val newUri = UriUtil.dropFragment(uri).toASCIIString + "#" + sha // keep query if present
     config.copy(uri = newUri)
   }
 

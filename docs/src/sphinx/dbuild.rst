@@ -203,7 +203,7 @@ uri
   Some projects may rely on the full git history in order to determine the latest tag used,
   or to build their version number. In that case, you can request a full clone by specifying
   a query portion `?shallow=false` in the git repo URI. If both a fragment and a query portions are
-  present, the query must come last, as in `git://some.server.com/repo.git#branch?shallow=false`.
+  present, the query must come first, as in `git://some.server.com/repo.git?shallow=false#branch`.
   Please note that if a commit hash is specified in the URI, a full clone will be used
   in any case.
 

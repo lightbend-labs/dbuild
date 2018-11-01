@@ -1,6 +1,14 @@
 # dbuild release notes
 
 
+### 0.10.0
+
+- The old JGit resolver was intrinsically inefficient,
+  and has been dropped. The updated standard Git resolver is
+  now even more efficient, and has improved functionality.
+
+...TODO...
+
 ### 0.9.14
 
 - This version adds compatibility with sbt 1.2.1.

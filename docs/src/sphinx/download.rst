@@ -65,12 +65,12 @@ Command line options
 --------------------
 
 A summary of the command line options can be obtained at any time by typing ``dbuild --help``. As of
-version 0.9.0, the options are:
+version 0.10.0, the options are:
 
 .. code-block:: text
 
    $ bin/dbuild --help
-   Typesafe dbuild 0.9.0
+   Typesafe dbuild 0.10.0
    Usage: dbuild [OPTIONS] config-file [target]
    dbuild is a multi-project build tool that can verify the compatibility
    of multiple related projects, by building each one on top of the others.
@@ -84,6 +84,8 @@ version 0.9.0, the options are:
                                   console
      -r, --no-resolvers           Disable the parsing of the "options.resolvers"
                                   section from the dbuild configuration file: only
+     -s, --skip-git-updates       Skips any remote git updates, and only use locally
+                                  cached repository information (if available)
                                   use the resolvers defined in dbuild.properties
          --help                   Show help message
          --version                Show version of this program

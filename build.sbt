@@ -1,7 +1,7 @@
 import Dependencies._
 import RemoteDepHelper._
 
-def MyVersion: String = "0.9.16"
+def MyVersion: String = "0.10.0-SNAPSHOT"
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))

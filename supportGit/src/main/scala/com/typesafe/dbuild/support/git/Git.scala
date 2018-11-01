@@ -5,23 +5,8 @@ import _root_.java.io.File
 import _root_.java.net.URI
 import _root_.sbt.Path._
 import com.typesafe.dbuild.logging.Logger
-import org.eclipse.jgit.api.{ Git => JGit, _ }
-import org.eclipse.jgit.storage.file._
-import org.eclipse.jgit.transport._
-import org.eclipse.jgit.transport.TagOpt._
-import org.eclipse.jgit.lib.ProgressMonitor
-import org.eclipse.jgit.lib.TextProgressMonitor
-import org.eclipse.jgit.lib.NullProgressMonitor
-import org.eclipse.jgit.lib.ThreadSafeProgressMonitor
 import collection.JavaConverters._
 import java.io.CharArrayWriter
-import org.eclipse.jgit.api.ListBranchCommand.ListMode._
-import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode._
-import org.eclipse.jgit.revwalk.RevCommit
-import org.eclipse.jgit.revwalk.RevWalk
-import org.eclipse.jgit.lib.ObjectId
-import org.eclipse.jgit.api.ResetCommand.ResetType.HARD
-import org.eclipse.jgit.lib.Constants.HEAD
 import com.typesafe.dbuild.utils.Time.timed
 import com.typesafe.dbuild.support.OS
 

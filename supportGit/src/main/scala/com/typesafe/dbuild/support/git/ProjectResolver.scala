@@ -15,18 +15,17 @@ import com.typesafe.dbuild.hashing
 class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
   def canResolve(configUri: String): Boolean = {
     val uri = new _root_.java.net.URI(configUri)
-    (uri.getPath != null) && ((uri.getScheme == "git") || (uri.getScheme == "jgit") ||
+    if (uri.getScheme == "jgit") {
+      sys.error("JGit is no longer supported; please use the regular git instead.")
+    }
+    (uri.getPath != null) && ((uri.getScheme == "git") ||
       (uri.getPath endsWith ".git") || ((uri.getScheme == "file") &&
         (new _root_.java.io.File(uri.getPath()) / ".git").exists))
   }
 
-  /**
-   *  Use the scheme "jgit" if you prefer jgit (will not use hardlinks, hence more disk space will be used).
-   *  The regular scheme "git" will use the command line tool by default.
-   */
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: Logger): ProjectBuildConfig = {
     if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
-      sys.error("JGit is no longer supported; please use regular git (\"use-jgit: false\").")
+      sys.error("JGit is no longer supported; please use the regular git instead.")
 
     val git = GitGit
 
@@ -62,7 +61,7 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
 
   override def prepare(config: ProjectBuildConfig, dir: _root_.java.io.File, log: Logger) = {
     if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
-      sys.error("JGit is no longer supported; please use regular git (\"use-jgit: false\").")
+      sys.error("JGit is no longer supported; please use the regular git instead.")
 
     val git = GitGit
 

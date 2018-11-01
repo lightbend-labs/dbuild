@@ -21,7 +21,6 @@ default for all of the projects enclosed in the same section. The available opti
     sbt-settings        : [<setting1>,<setting2>,...]
     sbt-java-options    : [<jopt1>,<jopt2>,...]
     extraction-version  : <compiler-version-string>
-    use-jgit            : <true-or-false>
     space               : <space-definition>
 
     projects: [...]
@@ -165,13 +164,6 @@ sbt-java-options
 extraction-version
   Specifies the version of the compiler that should be used during dependency
   extraction; please refer to the section :ref:`sbt-options`.
-
-use-jgit
-  The default is false: dbuild will normally invoke the regular git command in
-  order to resolve a git repository. As an alternative, a jgit-based implementation
-  can also be selected by setting this flag to true. Be aware that, due to the
-  lack of hard-linking in jgit, more disk space will be necessary in order to
-  compile the projects.
 
 space-definition
   This option specifies the space that will be used to build the contained projects;

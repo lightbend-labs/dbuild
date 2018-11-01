@@ -153,7 +153,6 @@ Each project descriptions has this structure:
     "cross-version"      : <cross-version-selector>
     "check-missing"      : <check-missing-flag>
     "rewrite-overrides"  : <rewrite-overrides-flag>
-    "use-jgit"           : <jgit-selector>
     "extra"              : <optional-extra-build-parameters>
    }
 
@@ -296,10 +295,6 @@ rewrite-overrides
   forced at a specific version by using sbt's "dependencyOverrides" setting. By default,
   dbuild will rewrite all dependencies. Please refer to the description at
   :doc:`buildOptions` for further details.
-
-use-jgit
-  It controls whether, for special applications, jgit should be used in place of the
-  standard git utility. This option is not normally needed. 
 
 extra
   The "extra" component is optional, as are all of its sub-components; it describes additional

@@ -37,8 +37,6 @@ object Dependencies {
   val oro            = "org.apache.servicemix.bundles" % "org.apache.servicemix.bundles.oro" % "2.0.8_6"
   val scallop        = "org.rogach" %% "scallop" % "1.0.0"
 
-  val jgit           = "org.eclipse.jgit" % "org.eclipse.jgit" % "3.1.0.201310021548-r"
-
   val slf4jSimple    = "org.slf4j" % "slf4j-simple" % "1.7.7"
 
 

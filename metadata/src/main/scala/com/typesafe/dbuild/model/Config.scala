@@ -89,6 +89,9 @@ case class ProjectBuildConfig(name: String,
     val ro = rewriteOverrides getOrElse defaults.rewriteOverrides: Seq[Boolean]
     val jg = useJGit getOrElse defaults.useJGit
     val sp = space getOrElse defaults.space
+    if (jg) {
+      sys.error("JGit is no longer supported; please use the regular git instead.")
+    }
     copy(crossVersion = Some(cv), checkMissing = Some(cm), rewriteOverrides = Some(ro), useJGit = Some(jg), space = Some(sp))
   }
 

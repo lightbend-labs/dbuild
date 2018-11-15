@@ -207,6 +207,27 @@ uri
   Please note that if a commit hash is specified in the URI, a full clone will be used
   in any case.
 
+.. note::
+  Git version 2.18 introduced a server protocol v2, which optimizes certain operations. To use
+  the new protocol with dbuild, make sure that you are using git version 2.18 or more recent, and
+  that the new protocol is enabled. For instance, to install the latest stable git in Ubuntu,
+  you can use this ppa:
+
+  .. code-block:: text
+
+    sudo add-apt-repository ppa:git-core/ppa
+    sudo apt-get update
+    sudo install git
+
+  Then, to enable the new git communication protocol:
+
+  .. code-block:: text
+
+    git config --global protocol.version 2
+
+  You should see a somewhat faster operation (up to 25-30%) in git fetch operations
+  that work with repositories that have a large number of tags/branches.
+
 set-version
   This component is optional, and normally not used. During compilation, dbuild automatically
   generates a special version string that is used while producing the various artifacts of each

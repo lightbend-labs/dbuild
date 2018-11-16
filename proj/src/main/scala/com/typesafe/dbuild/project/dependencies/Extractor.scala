@@ -1,12 +1,14 @@
 package com.typesafe.dbuild.project.dependencies
 
 import com.typesafe.dbuild.adapter.Adapter
-import Adapter.IO
+import Adapter.{IO,toFF}
 import Adapter.Path._
+import Adapter.syntaxio._
 import java.io.File
 import com.typesafe.dbuild.project.resolve.ProjectResolver
 import com.typesafe.dbuild.model.{ ProjectConfigAndExtracted, ProjectBuildConfig, ExtractedBuildMeta, SeqDepsModifiers }
 import com.typesafe.dbuild.model.{ ExtractionOK, ExtractionOutcome, ExtractionFailed, ExtractionConfig, DepsModifiers }
+import com.typesafe.dbuild.model.CleanupExpirations
 import com.typesafe.dbuild.logging._
 import com.typesafe.dbuild.repo.core.Repository
 import com.typesafe.dbuild.model.Utils.{ writeValue, readValue }
@@ -70,23 +72,33 @@ class Extractor(
   }
 
   /** Given an initial build configuration, extract *ALL* information needed for a full build. */
-  def extract(tdir: File, extractionConfig: ExtractionConfig, tracker: TrackedProcessBuilder, logger: Logger, debug: Boolean): ExtractionOutcome = {
+  def extract(tdir: File, extractionConfig: ExtractionConfig, tracker: TrackedProcessBuilder,
+              logger: Logger, debug: Boolean, exp: CleanupExpirations): ExtractionOutcome = {
     val build = extractionConfig.buildConfig
     ExtractionDirs.useProjectExtractionDirectory(extractionConfig, tdir) { dir =>
-      updateTimeStamp(dir)
-      // NB: while resolving projects:
-      // extractor.resolver.resolve() only resolves the main URI,
-      // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
-      logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
-      val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, dir, this, logger))
-      config.buildConfig.getCommit foreach { s: String => logger.info("Commit: " + s) }
-      logger.debug("Repeatable Config: " + writeValue(config))
-      val outcome = extractedResolvedWithCache(config, tracker, dir, logger, debug)
-      outcome match {
-        case _: ExtractionOK => markSuccess(dir)
-        case _ =>
+      try {
+        updateTimeStamp(dir)
+        // NB: while resolving projects:
+        // extractor.resolver.resolve() only resolves the main URI,
+        // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
+        logger.debug("Resolving " + build.name + " in " + dir.getAbsolutePath)
+        val config = ExtractionConfig(dependencyExtractor.resolve(extractionConfig.buildConfig, dir, this, logger))
+        config.buildConfig.getCommit foreach { s: String => logger.info("Commit: " + s) }
+        logger.debug("Repeatable Config: " + writeValue(config))
+        val outcome = extractedResolvedWithCache(config, tracker, dir, logger, debug)
+        outcome match {
+          case _: ExtractionOK =>
+            if (exp.success < 0) IO.delete(dir.*(toFF("*")).get)
+            markSuccess(dir)
+          case _ =>
+            if (exp.failure < 0) IO.delete(dir.*(toFF("*")).get)
+        }
+        outcome
+      } catch {
+        case t: Throwable =>
+          if (exp.failure < 0) IO.delete(dir.*(toFF("*")).get)
+          throw t
       }
-      outcome
     }
   }
 

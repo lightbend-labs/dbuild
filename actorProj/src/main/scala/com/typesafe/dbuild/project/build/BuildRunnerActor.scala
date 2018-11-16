@@ -45,7 +45,7 @@ class BuildRunnerActor(builder: LocalBuildRunner, target: File, exp: CleanupExpi
     case RunBuild(build, outProjects, children, buildData@BuildData(log, _)) =>
       log info ("--== Building %s ==--" format (build.config.name))
       sender ! (try {
-        builder.checkCacheThenBuild(target, build, tracker, outProjects, children, buildData)
+        builder.checkCacheThenBuild(target, build, tracker, outProjects, children, buildData, exp)
       } catch {
         case t:Throwable =>
           BuildFailed(build.config.name, children, prepareLogMsg(log, t))

@@ -76,7 +76,7 @@ class ExtractorActor(e: Extractor, target: File, exp: CleanupExpirations, tracke
     case ExtractBuildDependencies(build, uuidDir, log, debug) =>
       log info ("--== Extracting dependencies for %s ==--" format (build.buildConfig.name))
       sender ! (try {
-        e.extract(extractionDir(target) / uuidDir, build, tracker, log, debug)
+        e.extract(extractionDir(target) / uuidDir, build, tracker, log, debug, exp)
       } catch {
         case t:Throwable =>
           ExtractionFailed(build.buildConfig.name, Seq.empty, prepareLogMsg(log, t))

@@ -259,7 +259,8 @@ object AssembleBuildSystem extends BuildSystemCore {
           // remove all dependencies, and pretend that this project stands alone))
           partConfigAndExtracted.extracted.projInfo.map { pm => RepeatableDepInfo(pm.version, Seq.empty, Seq.empty) })
         val outcome = localBuildRunner.checkCacheThenBuild(projectsDir(dir, p), repeatableProjectBuild,
-          tracker, Seq.empty, Seq.empty, BuildData(log.newNestedLogger(p.name, p.name), buildData.debug))
+          tracker, Seq.empty, Seq.empty, BuildData(log.newNestedLogger(p.name, p.name), buildData.debug),
+          CleanupExpirations(2147483647, 2147483647)) // we do not do auto-cleanup of nested builds, so just pretend.
         val artifactsOut = outcome match {
           case o: BuildGood => o.artsOut
           case o: BuildBad => sys.error("Part " + p.name + ": " + o.status)

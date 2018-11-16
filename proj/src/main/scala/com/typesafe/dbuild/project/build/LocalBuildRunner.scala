@@ -7,7 +7,9 @@ import Logger.prepareLogMsg
 import java.io.File
 import com.typesafe.dbuild.repo.core._
 import com.typesafe.dbuild.adapter.Adapter
+import Adapter.{IO,toFF}
 import Adapter.Path._
+import Adapter.syntaxio._
 import com.typesafe.dbuild.project.dependencies.Extractor
 import com.typesafe.dbuild.project.cleanup.Recycling.{ updateTimeStamp, markSuccess }
 import com.typesafe.dbuild.project.BuildData
@@ -23,7 +25,7 @@ class LocalBuildRunner(builder: BuildRunner,
   val repository: Repository) {
 
   def checkCacheThenBuild(target: File, build: RepeatableProjectBuild, tracker: TrackedProcessBuilder,
-      outProjects: Seq[Project], children: Seq[BuildOutcome], buildData: BuildData): BuildOutcome = {
+      outProjects: Seq[Project], children: Seq[BuildOutcome], buildData: BuildData, exp: CleanupExpirations): BuildOutcome = {
     val log = buildData.log
     try {
       val artifactsOut = LocalRepoHelper.getPublishedDeps(build.uuid, repository, log) // will throw exception if not in cache yet
@@ -34,35 +36,42 @@ class LocalBuildRunner(builder: BuildRunner,
         log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
         //log.trace(t)
         BuildSuccess(build.config.name, children, runLocalBuild(target, build, tracker, outProjects,
-          buildData))
+          buildData, exp))
     }
   }
 
   def runLocalBuild(target: File, build: RepeatableProjectBuild, tracker: TrackedProcessBuilder,
-    outProjects: Seq[Project], buildData: BuildData): BuildArtifactsOut =
+    outProjects: Seq[Project], buildData: BuildData, exp: CleanupExpirations): BuildArtifactsOut =
     useProjectUniqueBuildDir(build.config.name + "-" + build.uuid, target) { dir =>
-      updateTimeStamp(dir)
-      // extractor.resolver.resolve() only resolves the main URI,
-      // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
-      // here we only resolve the ROOT project, as we will later call the runBuild()
-      // of the build system, which in turn will call checkCacheThenBuild(), above, on all subprojects,
-      // which will again call this method, thereby resolve()ing each project right before building it.
-      val log = buildData.log
-      log.info("Resolving: " + build.config.uri + " in directory: " + dir)
-      val config2 = extractor.resolver.resolve(build.config, dir, log)
-      if (config2 != build.config)
-        sys.error("Internal error: during build, resolve changed the configuration. Please report. Before: " +
-                  build.config + ", after: " + config2)
-      extractor.resolver.prepare(build.config, dir, log)
-      val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(repository, build, outProjects, dir, log, buildData.debug)
-      log.debug("Running local build: " + build.config + " in directory: " + dir)
-      LocalRepoHelper.publishProjectInfo(build, repository, log)
-      if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
-      val results = builder.runBuild(build, tracker, dir,
-        BuildInput(dependencies, version, build.configAndExtracted.extracted.projInfo.map{_.subproj}, writeRepo, build.config.name), this, buildData)
-      LocalRepoHelper.publishArtifactsInfo(build, results, writeRepo, repository, log)
-      markSuccess(dir)
-      results
+      try {
+        updateTimeStamp(dir)
+        // extractor.resolver.resolve() only resolves the main URI,
+        // extractor.dependencyExtractor.resolve() also resolves the nested ones, recursively
+        // here we only resolve the ROOT project, as we will later call the runBuild()
+        // of the build system, which in turn will call checkCacheThenBuild(), above, on all subprojects,
+        // which will again call this method, thereby resolve()ing each project right before building it.
+        val log = buildData.log
+        log.info("Resolving: " + build.config.uri + " in directory: " + dir)
+        val config2 = extractor.resolver.resolve(build.config, dir, log)
+        if (config2 != build.config)
+          sys.error("Internal error: during build, resolve changed the configuration. Please report. Before: " +
+                    build.config + ", after: " + config2)
+        extractor.resolver.prepare(build.config, dir, log)
+        val (dependencies, version, writeRepo) = LocalBuildRunner.prepareDepsArtifacts(repository, build, outProjects, dir, log, buildData.debug)
+        log.debug("Running local build: " + build.config + " in directory: " + dir)
+        LocalRepoHelper.publishProjectInfo(build, repository, log)
+        if (build.depInfo.isEmpty) sys.error("Internal error: depInfo is empty!")
+        val results = builder.runBuild(build, tracker, dir,
+          BuildInput(dependencies, version, build.configAndExtracted.extracted.projInfo.map{_.subproj}, writeRepo, build.config.name), this, buildData)
+        LocalRepoHelper.publishArtifactsInfo(build, results, writeRepo, repository, log)
+        if (exp.success < 0) IO.delete(dir.*(toFF("*")).get)
+        markSuccess(dir)
+        results
+      } catch {
+        case t: Throwable =>
+          if (exp.failure < 0) IO.delete(dir.*(toFF("*")).get)
+          throw t
+      }
     }
 }
 object LocalBuildRunner {

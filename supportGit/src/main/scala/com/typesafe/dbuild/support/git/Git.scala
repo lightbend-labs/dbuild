@@ -120,7 +120,7 @@ object GitGit extends GitImplementation {
   // clone. If it is not already there, perform a full fetch (if we are not skipping updates)
   // and try again. If we don't find it even after a full fetch, abort.
   def lookupHash(repo: GitRepo, ref: String, skipUpdates: Boolean, log: Logger): String = {
-    log.info("Reference \"" + ref + "\" looks like a commit. Maybe it's already available?")
+    log.debug("Reference \"" + ref + "\" looks like a commit. Maybe it's already available?")
     try {
       revparse(repo.dir, ref)
     } catch {
@@ -128,7 +128,7 @@ object GitGit extends GitImplementation {
         if (skipUpdates) {
           sys.error("The reference \"" + ref + "\" looks like a commit hash, but was not found among the hashes already present in our cache of the remote repo.")
         } else {
-          log.info("Reference \"" + ref + "\" was not available, performing full fetch...")
+          log.debug("Reference \"" + ref + "\" was not available, performing full fetch...")
           fetchAll(repo, log)
           try {
             revparse(repo.dir, ref)
@@ -177,7 +177,7 @@ object GitGit extends GitImplementation {
       })
     } else {
       if (!skipUpdates) {
-        log.info("Performing full fetch...")
+        log.debug("Performing full fetch...")
         fetchAll(repo, log)
       }
       try {
@@ -204,7 +204,7 @@ object GitGit extends GitImplementation {
         else
           apply(Seq("fetch", "-f", "-u", "-q", "origin") ++ refSpecs, repo.dir, log)
       )
-      log.info("Took: " + time)
+      log.debug("Took: " + time)
     } catch {
       case t: Exception =>
         debugExceptionMessage(t, log)

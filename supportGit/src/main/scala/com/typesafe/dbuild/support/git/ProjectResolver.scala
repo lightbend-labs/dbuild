@@ -49,6 +49,7 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
     // TODO: clones of no longer used projects will hang around in the clones dir forever
     val cloneRepo = git.getRepo(cloneDir) getOrElse git.create(uriString, cloneDir, log)
     val sha = git.fetchOne(cloneRepo, ref, shallowAllowed, skipGitUpdates, log)
+    log.info ("Reference \"" + ref + "\" resolves to " + sha)
     val newUri = UriUtil.dropFragment(uri).toASCIIString + "#" + sha // keep query if present
     config.copy(uri = newUri)
   }

@@ -15,9 +15,6 @@ import com.typesafe.dbuild.hashing
 class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
   def canResolve(configUri: String): Boolean = {
     val uri = new _root_.java.net.URI(configUri)
-    if (uri.getScheme == "jgit") {
-      sys.error("JGit is no longer supported; please use the regular git instead.")
-    }
     (uri.getPath != null) && ((uri.getScheme == "git") ||
       (uri.getPath endsWith ".git") || ((uri.getScheme == "file") &&
         (new _root_.java.io.File(uri.getPath()) / ".git").exists))
@@ -37,11 +34,7 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
   }
 
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: Logger): ProjectBuildConfig = {
-    if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
-      sys.error("JGit is no longer supported; please use the regular git instead.")
-
     val git = GitGit
-
     // We cache a single git bare clone for this repository URI (sans fragment),
     // then we check out just the files in the various work trees.
     // TODO: locking
@@ -49,30 +42,42 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
 
     val (uri, uriString) = uriAndString(config)
     val ref = Option(uri.getFragment()) getOrElse "master"
-    val shallowAllowed = !(Option(uri.getQuery()).getOrElse("").split("&").contains("shallow=false"))
+
+    // If we want a full clone, we cannot allow shallow clones
+    val shallowAllowed = !config.gitFullClone
 
     // TODO: clones of no longer used projects will hang around in the clones dir forever
     val cloneRepo = git.getRepo(cloneDir) getOrElse git.create(uriString, cloneDir, log)
-    val sha = git.fetchOne(cloneRepo, ref, skipGitUpdates, shallowAllowed, log)
+    val sha = git.fetchOne(cloneRepo, ref, shallowAllowed, skipGitUpdates, log)
     val newUri = UriUtil.dropFragment(uri).toASCIIString + "#" + sha // keep query if present
     config.copy(uri = newUri)
   }
 
   override def prepare(config: ProjectBuildConfig, workDir: _root_.java.io.File, log: Logger) = {
-    if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
-      sys.error("JGit is no longer supported; please use the regular git instead.")
-
     val git = GitGit
     val cloneDir = findCloneDir(config)
 
-    val uri = new _root_.java.net.URI(config.uri)
+    val (uri, uriString) = uriAndString(config)
     val cloneRepo = git.getRepo(cloneDir) getOrElse
       sys.error("Internal error: no git clone at " + cloneDir.getCanonicalPath +
       ", prepare() without resolve()?")
 
     val sha = Option(uri.getFragment()) getOrElse sys.error("Internal error in git/prepare: no sha?")
 
+    // If we request a full clone, a complete git clone (not shallow) will appear in the work tree,
+    // and the checkout will be taken from there
+    val repo = if (config.gitFullClone) {
+      val localRepoDir = workDir / ".git"
+      val localRepo = git.getRepo(localRepoDir) getOrElse git.create(cloneDir.getCanonicalPath(), localRepoDir, log)
+      // At this point we still have a bare repo.
+      // We convert it into a non-bare, and even redirect origin to the original uri, just in case
+      git.unbare(localRepo, newOrigin = UriUtil.dropFragment(uri).toASCIIString, log)
+      // when shallowAllowed is false, this is actually a fetchAll
+      git.fetchOne(localRepo, sha, shallowAllowed = false, skipUpdates = false, log)
+      localRepo
+    } else cloneRepo
+
     // perform a hard reset to the desired sha
-    git.prepareFiles(cloneRepo, workDir, sha, log)
+    git.prepareFiles(repo, workDir, sha, log)
   }
 }

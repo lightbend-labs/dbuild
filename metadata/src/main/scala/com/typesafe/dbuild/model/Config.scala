@@ -42,7 +42,7 @@ case class ProjectBuildConfig(name: String,
   @JsonProperty("check-missing") checkMissing: Option[Seq /*Levels*/ [Boolean]] = None,
   // the default rewriteOverrides None: works in the same manner as crossVersion
   @JsonProperty("rewrite-overrides") rewriteOverrides: Option[Seq /*Levels*/ [Boolean]] = None,
-  @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
+  @JsonProperty("git-full-clone") gitFullClone: Boolean = false,
   space: Option[Space] = None,
   extra: Option[ExtraConfig]) {
   // after the initial expansion
@@ -87,12 +87,8 @@ case class ProjectBuildConfig(name: String,
     val cv = crossVersion getOrElse defaults.crossVersion: Seq[String]
     val cm = checkMissing getOrElse defaults.checkMissing: Seq[Boolean]
     val ro = rewriteOverrides getOrElse defaults.rewriteOverrides: Seq[Boolean]
-    val jg = useJGit getOrElse defaults.useJGit
     val sp = space getOrElse defaults.space
-    if (jg) {
-      sys.error("JGit is no longer supported; please use the regular git instead.")
-    }
-    copy(crossVersion = Some(cv), checkMissing = Some(cm), rewriteOverrides = Some(ro), useJGit = Some(jg), space = Some(sp))
+    copy(crossVersion = Some(cv), checkMissing = Some(cm), rewriteOverrides = Some(ro), space = Some(sp))
   }
 
   def getCommit = try Option((new java.net.URI(uri)).getFragment) catch {
@@ -119,7 +115,7 @@ private case class ProjectBuildConfigShadow(name: String,
   @JsonProperty("cross-version") crossVersion: Option[SeqString /*Levels*/ ] = None,
   @JsonProperty("check-missing") checkMissing: Option[SeqBoolean /*Levels*/ ] = None,
   @JsonProperty("rewrite-overrides") rewriteOverrides: Option[SeqBoolean /*Levels*/ ] = None,
-  @JsonProperty("use-jgit") useJGit: Option[Boolean] = None,
+  @JsonProperty("git-full-clone") gitFullClone: Boolean = false,
   space: Option[Space] = None,
   extra: JsonNode = null)
 
@@ -310,11 +306,6 @@ case class DBuildConfig(projects: Seq[ProjectBuildConfig],
   // This option applies to all sbt-based projects, unless overridden.
   // see SbtExtraConfig for details.
   @JsonProperty("extraction-version") extractionVersion: String = "standard",
-  // Select jgit rather than the command-line git. It is in the BuildOptions,
-  // rather than in the GeneralOptions, as its value may conceivably have
-  // an effect on building (for instance due to a difference in checkout because
-  // of an implementation bug)
-  @JsonProperty("use-jgit") useJGit: Boolean = false,
   // settings for sbt-based builds
   // Note on the default value: it must contain a single empty SeqString. Using as a
   // default value an empty Seq[SeqString] will result in the value obtained after
@@ -620,7 +611,7 @@ class BuildConfigDeserializer extends JsonDeserializer[ProjectBuildConfig] {
     })
     ProjectBuildConfig(generic.name, system, generic.uri, generic.setVersion, generic.setVersionSuffix,
       generic.deps, generic.crossVersion map { _.s }, generic.checkMissing map { _.s },
-      generic.rewriteOverrides map { _.s }, generic.useJGit, generic.space, newData)
+      generic.rewriteOverrides map { _.s }, generic.gitFullClone, generic.space, newData)
   }
 }
 /**
@@ -863,7 +854,6 @@ trait ProjectOptions {
   def crossVersion: SeqString /*Levels*/
   def checkMissing: SeqBoolean /*Levels*/
   def rewriteOverrides: SeqBoolean /*Levels*/
-  def useJGit: Boolean
   def space: Space
 }
 abstract class BuildOptions extends ExtraOptions with ProjectOptions

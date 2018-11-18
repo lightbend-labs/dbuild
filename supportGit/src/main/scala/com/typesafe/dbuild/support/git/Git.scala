@@ -42,6 +42,7 @@ sealed abstract class GitImplementation {
     * fetchOne() returns the resolved commit sha of the requested ref.
     */
   def fetchOne(repo: Repo, ref: String, shallowAllowed: Boolean, skipUpdates: Boolean, log: Logger): String
+
   /**
     * prepareFiles() will check out the files in the repository to match
     * the supplied commit sha. Only commit shas can be used as references.
@@ -49,6 +50,12 @@ sealed abstract class GitImplementation {
     * the directory, but do not belong to the checkout, will be removed.
     */
   def prepareFiles(repo: Repo, workDir: File, sha: String, log: Logger): Unit
+
+  /**
+    * Convert a bare git repo into a non-bare one.
+    * Also, rewrite the origin url as specified.
+    */
+  def unbare(repo: Repo, newOrigin: String, log: Logger): Unit
 }
 
 /** A git runner */
@@ -67,11 +74,13 @@ object GitGit extends GitImplementation {
   }
 
   def getRepo(dir: File) = {
-    val isGitDir = this.read(Seq("rev-parse", "--is-inside-git-dir"), dir).trim
-    if (isGitDir == "true")
-      Some(GitRepo(read(Seq("config", "--get", "remote.origin.url"), dir).trim, dir))
-    else
-      None
+    if (!dir.exists) None else {
+      val isGitDir = this.read(Seq("rev-parse", "--is-inside-git-dir"), dir).trim
+      if (isGitDir == "true")
+        Some(GitRepo(read(Seq("config", "--get", "remote.origin.url"), dir).trim, dir))
+      else
+        None
+    }
   }
 
   def create(base: String, dir: File, log: Logger) = {
@@ -186,6 +195,13 @@ object GitGit extends GitImplementation {
     apply(where ++ Seq("update-ref", "--no-deref", "HEAD", sha), workDir, log)
     apply(where ++ Seq("reset", "-q", "--hard", "HEAD"), workDir, log)
     apply(where ++ Seq("clean", "-fdxq"), workDir, log)
+  }
+
+  def unbare(repo: Repo, newOrigin: String, log: Logger): Unit = {
+    val repoDir = repo.dir
+    apply(Seq("config", "--local", "--bool", "core.bare", "false"), repoDir, log)
+    apply(Seq("config", "--local", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"), repoDir, log)
+    apply(Seq("remote", "set-url", "origin", newOrigin), repoDir, log)
   }
 
   // if ref is not a commit, derefence until a commit is found

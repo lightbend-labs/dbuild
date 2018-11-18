@@ -160,21 +160,21 @@ object GitGit extends GitImplementation {
       // for example).
       if (ref.matches("[a-fA-F0-9]{40}")) {
         lookupHash(repo, ref, skipUpdates, log)
-      }
-      if (ref.startsWith("pull/") && ref.endsWith("/head")) {
+      } else if (ref.startsWith("pull/") && ref.endsWith("/head")) {
         attemptFetchOne(repo, "refs/" + ref, skipUpdates, log) getOrElse
           sys.error("Reference " + ref + " looks like a pull request, but was not found in remote")
+      } else {
+        // tag or branch?
+        attemptFetchOne(repo, "refs/heads/" + ref, skipUpdates, log) getOrElse
+        (attemptFetchOne(repo, "refs/tags/" + ref, skipUpdates, log) getOrElse {
+          // Hm. Does it at least /look/ like a commit hash?
+          if (ref.matches("[a-fA-F0-9]{4,40}")) {
+            lookupHash(repo, ref, skipUpdates, log)
+          } else {
+            sys.error("The reference \"" + ref + "\" was not a known branch, tag, or pull request, and doesn't look like a commit hash either.")
+          }
+        })
       }
-      // tag or branch?
-      attemptFetchOne(repo, "refs/heads/" + ref, skipUpdates, log) getOrElse
-      (attemptFetchOne(repo, "refs/tags/" + ref, skipUpdates, log) getOrElse {
-        // Hm. Does it at least /look/ like a commit hash?
-        if (ref.matches("[a-fA-F0-9]{4,40}")) {
-          lookupHash(repo, ref, skipUpdates, log)
-        } else {
-          sys.error("The reference \"" + ref + "\" was not a known branch, tag, or pull request, and doesn't look like a commit hash either.")
-        }
-      })
     } else {
       if (!skipUpdates) {
         log.debug("Performing full fetch...")

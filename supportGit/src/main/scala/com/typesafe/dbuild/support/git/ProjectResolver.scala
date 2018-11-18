@@ -70,10 +70,13 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
       val localRepoDir = workDir / ".git"
       val localRepo = git.getRepo(localRepoDir) getOrElse git.create(cloneDir.getCanonicalPath(), localRepoDir, log)
       // At this point we still have a bare repo.
-      // We convert it into a non-bare, and even redirect origin to the original uri, just in case
-      git.unbare(localRepo, newOrigin = UriUtil.dropFragment(uri).toASCIIString, log)
+      // We convert it into a non-bare
+      git.unbare(localRepo, log)
       // when shallowAllowed is false, this is actually a fetchAll
       git.fetchOne(localRepo, sha, shallowAllowed = false, skipUpdates = false, log)
+      // We perform a local fetch. Once that is done,
+      // we also redirect origin to the original uri, just in case
+      git.setOrigin(localRepo, newOrigin = UriUtil.dropFragment(uri).toASCIIString, log)
       localRepo
     } else cloneRepo
 

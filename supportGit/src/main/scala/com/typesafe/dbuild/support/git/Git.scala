@@ -53,9 +53,13 @@ sealed abstract class GitImplementation {
 
   /**
     * Convert a bare git repo into a non-bare one.
-    * Also, rewrite the origin url as specified.
     */
-  def unbare(repo: Repo, newOrigin: String, log: Logger): Unit
+  def unbare(repo: Repo, log: Logger): Unit
+
+  /**
+    * Rewrite the origin url as specified.
+    */
+  def setOrigin(repo: Repo, newOrigin: String, log: Logger): Unit
 }
 
 /** A git runner */
@@ -197,11 +201,13 @@ object GitGit extends GitImplementation {
     apply(where ++ Seq("clean", "-fdxq"), workDir, log)
   }
 
-  def unbare(repo: Repo, newOrigin: String, log: Logger): Unit = {
-    val repoDir = repo.dir
-    apply(Seq("config", "--local", "--bool", "core.bare", "false"), repoDir, log)
-    apply(Seq("config", "--local", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"), repoDir, log)
-    apply(Seq("remote", "set-url", "origin", newOrigin), repoDir, log)
+  def unbare(repo: Repo, log: Logger): Unit = {
+    apply(Seq("config", "--local", "--bool", "core.bare", "false"), repo.dir, log)
+    apply(Seq("config", "--local", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"), repo.dir, log)
+  }
+
+  def setOrigin(repo: Repo, newOrigin: String, log: Logger): Unit = {
+    apply(Seq("remote", "set-url", "origin", newOrigin), repo.dir, log)
   }
 
   // if ref is not a commit, derefence until a commit is found

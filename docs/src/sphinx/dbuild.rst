@@ -153,6 +153,7 @@ Each project descriptions has this structure:
     "cross-version"      : <cross-version-selector>
     "check-missing"      : <check-missing-flag>
     "rewrite-overrides"  : <rewrite-overrides-flag>
+    "git-full-clone"     : <true-or-false>
     "extra"              : <optional-extra-build-parameters>
    }
 
@@ -197,15 +198,15 @@ uri
   then have the form: ``ssh://git@github.com/account/project.git``
 
   Since version 0.10.0, dbuild will try to fetch from the remote git repositories
-  the minimum amount of information possible, creating a shallow copy with the single commit
-  related to the branch, tag, or pull request required. Due to a Git limitation, if the
-  requested reference is a commit hash, the copy will full rather than shallow.
+  the minimum amount of information possible, whenever possible. If the requested
+  reference is a commit hash, it will download and cache the full history, however,
+  due to git protocol limitations.
 
   Some projects may rely on the full git history in order to determine, for instance, the latest
-  tag used, or to build their version number. If you specify the flag `git-full-clone` for that
-  project, the local dbuild clone will be a full clone, rather than shallow. In addition, the
-  work dir will also contain a ".git" directory. Obtaining a full clone take a bit more time
-  than the default shallow copy.
+  tag used, or to build their version number. If you set the flag `git-full-clone` to true for that
+  project, the local work directory will be set up as a full git clone, complete with the '.git'
+  subdirectory and all the history. By default, dbuild will simply set up the source files, without
+  the '.git' subdirectory, in order to save time and disk space.
 
 .. note::
   Git version 2.18 introduced a server protocol v2, which optimizes certain operations. To use
@@ -327,6 +328,15 @@ rewrite-overrides
   forced at a specific version by using sbt's "dependencyOverrides" setting. By default,
   dbuild will rewrite all dependencies. Please refer to the description at
   :doc:`buildOptions` for further details.
+
+git-full-clone
+  If you are using git to access your remote repository, by default dbuild will fetch
+  only a small amount of data, necessary to reconstruct the source directory tree. In
+  particular, it will not leave a '.git' subdirectory in the work tree. However, some
+  projects may rely on the presence of git history data during compilation. If you
+  set this flag to true, dbuild will fetch the entire git history, and create a proper
+  git clone in the work directory, so that the project can access it. This will of course
+  require some more time in order to download and prepare all of the necessary data.
 
 extra
   The "extra" component is optional, as are all of its sub-components; it describes additional

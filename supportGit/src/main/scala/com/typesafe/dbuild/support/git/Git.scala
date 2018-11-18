@@ -141,15 +141,23 @@ object GitGit extends GitImplementation {
       (attemptFetchOne(repo, "refs/tags/" + ref, skipUpdates, log) getOrElse {
         // Hm. Does it at least /look/ like a commit hash?
         if (ref.matches("[a-fA-F0-9]{4,40}")) {
-          if (!skipUpdates) {
-            log.info("Reference \"" + ref + "\" looks like a commit, performing full fetch...")
-            fetchAll(repo, log)
-          }
+          log.info("Reference \"" + ref + "\" looks like a commit. Maybe it's already available?")
           try {
             revparse(repo.dir, ref)
           } catch {
             case t: Exception =>
-              sys.error("The reference \"" + ref + "\" looks like a commit hash, but wasn't found among the known hashes in the remote repo.")
+              if (!skipUpdates) {
+                log.info("Reference \"" + ref + "\" was not available, performing full fetch...")
+                fetchAll(repo, log)
+                try {
+                  revparse(repo.dir, ref)
+                } catch {
+                  case t: Exception =>
+                    sys.error("The reference \"" + ref + "\" looks like a commit hash, but was not found among the known hashes in the remote repo.")
+                }
+              } else {
+                sys.error("The reference \"" + ref + "\" looks like a commit hash, but was not found among the hashes already present in our cache of the remote repo.")
+              }
           }
         } else {
           sys.error("The reference \"" + ref + "\" was not a known branch, tag, or pull request, and doesn't look like a commit hash either.")

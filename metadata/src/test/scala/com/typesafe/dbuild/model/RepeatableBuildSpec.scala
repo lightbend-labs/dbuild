@@ -14,7 +14,7 @@ object RepeatableDBuildConfigSpec extends Specification {
     val defSpace = Some(new Space("default"))
     val sample = RepeatableDBuildConfig(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "a",
@@ -23,7 +23,7 @@ object RepeatableDBuildConfigSpec extends Specification {
                     dependencies = Seq.empty)
                   ))))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1-test1", 
                   Seq(Project(
                     name = "b",
@@ -32,7 +32,7 @@ object RepeatableDBuildConfigSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "scala", "uri3", None, None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("c", "scala", "uri3", None, None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "c",
@@ -41,7 +41,7 @@ object RepeatableDBuildConfigSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("d", "scala", "uri4", None, None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("d", "scala", "uri4", None, None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1-beta1", 
                   Seq(Project(
                     name = "d",
@@ -50,7 +50,7 @@ object RepeatableDBuildConfigSpec extends Specification {
                     dependencies = Seq(ProjectRef("c", "c"), ProjectRef("b", "b"))
                   )))))),
         ProjectConfigAndExtracted(
-              ProjectBuildConfig("e", "scala", "uri5", None, None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("e", "scala", "uri5", None, None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("3.0", 
                   Seq(Project(
                     name = "e",
@@ -62,7 +62,7 @@ object RepeatableDBuildConfigSpec extends Specification {
     
     val sample2 = RepeatableDBuildConfig(Seq(
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("a", "scala", "uri", None, None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "a",
@@ -71,7 +71,7 @@ object RepeatableDBuildConfigSpec extends Specification {
                     dependencies = Seq.empty)
                   ))))),
           ProjectConfigAndExtracted(
-              ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("b", "scala", "uri2", Some("2.0"), None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1-test1", 
                   Seq(Project(
                     name = "b",
@@ -80,7 +80,7 @@ object RepeatableDBuildConfigSpec extends Specification {
                     dependencies = Seq(ProjectRef("a", "a"))
                   )))))),
          ProjectConfigAndExtracted(
-              ProjectBuildConfig("c", "scala", "uri3", None, None, None, None, None, None, None, defSpace, None),
+              ProjectBuildConfig("c", "scala", "uri3", None, None, None, None, None, None, false, defSpace, None),
               ExtractedBuildMeta(Seq(ProjMeta("0.1", 
                   Seq(Project(
                     name = "c",

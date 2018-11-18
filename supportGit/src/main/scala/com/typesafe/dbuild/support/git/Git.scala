@@ -41,20 +41,14 @@ sealed abstract class GitImplementation {
     *
     * fetchOne() returns the resolved commit sha of the requested ref.
     */
-  def fetchOne(repo: Repo, ref: String, ignoreFailures: Boolean, shallowAllowed: Boolean, log: Logger): String
-  /**
-    * fetchAll () will fetch all of the remote branches, tags, and pull request
-    * references from the remote repository, complete with full history.
-    */
-  def fetchAll(repo: Repo, ignoreFailures: Boolean, log: Logger): Unit
+  def fetchOne(repo: Repo, ref: String, shallowAllowed: Boolean, skipUpdates: Boolean, log: Logger): String
   /**
     * prepareFiles() will check out the files in the repository to match
     * the supplied commit sha. Only commit shas can be used as references.
     * At the end of prepareFiles(), any files that may have been present in
-    * the directory, but do not belong to the checkout, will be removed
-    * (except for the .git directory)
+    * the directory, but do not belong to the checkout, will be removed.
     */
-  def prepareFiles(repo: Repo, sha: String, log: Logger): Unit
+  def prepareFiles(repo: Repo, workDir: File, sha: String, log: Logger): Unit
 }
 
 /** A git runner */
@@ -73,7 +67,8 @@ object GitGit extends GitImplementation {
   }
 
   def getRepo(dir: File) = {
-    if ((dir / ".git").exists)
+    val isGitDir = this.read(Seq("rev-parse", "--is-inside-git-dir"), dir).trim
+    if (isGitDir == "true")
       Some(GitRepo(read(Seq("config", "--get", "remote.origin.url"), dir).trim, dir))
     else
       None
@@ -82,7 +77,7 @@ object GitGit extends GitImplementation {
   def create(base: String, dir: File, log: Logger) = {
     if (!dir.exists) dir.mkdirs()
     log.debug("Preparing empty git repo in " + dir.getCanonicalPath)
-    apply(Seq("init", "-q"), dir, log)
+    apply(Seq("init", "-q", "--bare"), dir, log)
     log.debug("Setting origin to " + base)
     apply(Seq("remote", "add", "origin", base), dir, log)
     GitRepo(base, dir)
@@ -91,11 +86,13 @@ object GitGit extends GitImplementation {
 
   // returns None if failed, Some(sha) if fetch worked.
   // fullRef is the full ref path, for instance "heads/<branch>" or "tags/<tag>"
-  protected def attemptFetchOne(repo: GitRepo, fullRef: String, log: Logger): Option[String] = {
+  protected def attemptFetchOne(repo: GitRepo, fullRef: String, skipUpdates: Boolean, log: Logger): Option[String] = {
     try {
-      apply(Seq("fetch", "-f", "-u", "-q", "--depth=1", "origin") :+
-        ("+" + fullRef + ":" + fullRef), repo.dir, log)
-      log.debug("fetch succeeded")
+      if (!skipUpdates) {
+        apply(Seq("fetch", "-f", "-u", "-q", "--depth=1", "origin") :+
+          ("+" + fullRef + ":" + fullRef), repo.dir, log)
+        log.debug("fetch succeeded")
+      }
       val sha = revparse(repo.dir, fullRef)
       log.debug("ref resolves to: " + sha)
       Some(sha)
@@ -106,10 +103,14 @@ object GitGit extends GitImplementation {
     }
   }
 
-  def fetchOne(repo: GitRepo, ref: String, ignoreFailures: Boolean, shallowAllowed: Boolean, log: Logger): String = {
-    if (shallowAllowed) {
+  def fetchOne(repo: GitRepo, ref: String, shallowAllowed: Boolean, skipUpdates: Boolean, log: Logger): String = {
+    if (!skipUpdates) {
       log.info("Fetching info for reference \"" + ref + "\" from " + repo.sourceURI)
       log.info("into " + repo.dir.getCanonicalPath)
+    } else {
+      log.info("Skipping git updates; trying to locate reference \"" + ref + "\"...")
+    }
+    if (shallowAllowed) {
       // ref can be a branch, a tag, a pull request, or a commit sha.
       // We can distinguish pull requests because we expect them to be in the form
       // "pull/nnn/head", so that is easy.
@@ -119,16 +120,18 @@ object GitGit extends GitImplementation {
       // single commit (there is a git server option, but it is not available on GitHub,
       // for example).
       if (ref.startsWith("pull/") && ref.endsWith("/head")) {
-        attemptFetchOne(repo, "refs/" + ref, log) getOrElse
+        attemptFetchOne(repo, "refs/" + ref, skipUpdates, log) getOrElse
           sys.error("Reference " + ref + " looks like a pull request, but was not found in remote")
       }
       // tag or branch?
-      attemptFetchOne(repo, "refs/heads/" + ref, log) getOrElse
-      (attemptFetchOne(repo, "refs/tags/" + ref, log) getOrElse {
+      attemptFetchOne(repo, "refs/heads/" + ref, skipUpdates, log) getOrElse
+      (attemptFetchOne(repo, "refs/tags/" + ref, skipUpdates, log) getOrElse {
         // Hm. Does it at least /look/ like a commit hash?
         if (ref.matches("[a-fA-F0-9]{4,40}")) {
-          log.info("Reference \"" + ref + "\" looks like a commit, performing full fetch...")
-          fetchAll(repo, ignoreFailures, log)
+          if (!skipUpdates) {
+            log.info("Reference \"" + ref + "\" looks like a commit, performing full fetch...")
+            fetchAll(repo, log)
+          }
           try {
             revparse(repo.dir, ref)
           } catch {
@@ -140,7 +143,10 @@ object GitGit extends GitImplementation {
         }
       })
     } else {
-      fetchAll(repo, ignoreFailures, log)
+      if (!skipUpdates) {
+        log.info("Performing full fetch...")
+        fetchAll(repo, log)
+      }
       try {
         revparse(repo.dir, ref)
       } catch {
@@ -150,43 +156,36 @@ object GitGit extends GitImplementation {
     }
   }
 
-  protected def tryFetch(ignoreFailures: Boolean, log: Logger, uriString: String)(fetch: => Unit): Unit = {
-    try {
-      fetch
-    } catch {
-      case t: Exception =>
-        debugExceptionMessage(t, log)
-        if (ignoreFailures) {
-          log.warn("WARNING: could not fetch up-to-date repository data for " + uriString)
-        } else throw t
-    }
-  }
-
-  // From github to our cache clone we allow failures, which may happen if we are offline
-  // but we want to use our current local cache. The flag "ignoreFailures" reflects that.
-  def fetchAll(repo: GitRepo, ignoreFailures: Boolean, log: Logger): Unit = {
+  /**
+    * fetchAll () will fetch all of the remote branches, tags, and pull request
+    * references from the remote repository, complete with full history.
+    */
+  protected def fetchAll(repo: GitRepo, log: Logger): Unit = {
     val refSpecs = Seq("+refs/pull/*/head:refs/pull/*/head", "+refs/tags/*:refs/tags/*", "+refs/heads/*:refs/heads/*")
-    log.info("Fetching " + repo.sourceURI)
-    log.info("into " + repo.dir.getCanonicalPath)
-    tryFetch(ignoreFailures, log, repo.sourceURI) {
+    try {
       val (ret, time) = timed(
         // is the repo shallow? if so, unshallow
-        if ((repo.dir / ".git" / "shallow" ).exists)
+        if ((repo.dir / "shallow" ).exists)
           // will automatically fix all branches, tags, and pull/* refs
           apply(Seq("fetch", "--unshallow", "-f", "-u", "-q", "origin") ++ refSpecs, repo.dir, log)
         else
           apply(Seq("fetch", "-f", "-u", "-q", "origin") ++ refSpecs, repo.dir, log)
       )
       log.info("Took: " + time)
+    } catch {
+      case t: Exception =>
+        debugExceptionMessage(t, log)
     }
   }
 
-  def prepareFiles(repo: Repo, sha: String, log: Logger): Unit = {
+  def prepareFiles(repo: Repo, workDir: File, sha: String, log: Logger): Unit = {
     if (!sha.matches("[a-fA-F0-9]{40}"))
       sys.error("Internal error: this does not look like a 40-char sha: " + sha)
-    apply(Seq("update-ref", "--no-deref", "HEAD", sha), repo.dir, log)
-    apply(Seq("reset", "-q", "--hard", "HEAD"), repo.dir, log)
-    apply(Seq("clean", "-fdxq"), repo.dir, log)
+    val where = Seq("--work-tree=" + workDir.getCanonicalPath(), "--git-dir=" + repo.dir.getCanonicalPath())
+    workDir.mkdirs()
+    apply(where ++ Seq("update-ref", "--no-deref", "HEAD", sha), workDir, log)
+    apply(where ++ Seq("reset", "-q", "--hard", "HEAD"), workDir, log)
+    apply(where ++ Seq("clean", "-fdxq"), workDir, log)
   }
 
   // if ref is not a commit, derefence until a commit is found

@@ -23,56 +23,56 @@ class GitProjectResolver(skipGitUpdates: Boolean) extends ProjectResolver {
         (new _root_.java.io.File(uri.getPath()) / ".git").exists))
   }
 
+  private def uriAndString(config: ProjectBuildConfig) = {
+    val uri = new _root_.java.net.URI(config.uri)
+    val uriString = UriUtil.dropFragmentAndQuery(uri).toASCIIString
+    (uri, uriString)
+  }
+
+  // returns the directory where the clone dir for this project will live, and
+  private def findCloneDir(config: ProjectBuildConfig) = {
+    val (uri, uriString) = uriAndString(config)
+    val baseName = ({s:String => if (s.endsWith(".git")) s.dropRight(4) else s})(uri.getRawPath().split("/").last)
+    com.typesafe.dbuild.repo.core.GlobalDirs.clonesDir / ((hashing sha1 uriString) + "-" + baseName)
+  }
+
   def resolve(config: ProjectBuildConfig, dir: _root_.java.io.File, log: Logger): ProjectBuildConfig = {
     if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
       sys.error("JGit is no longer supported; please use the regular git instead.")
 
     val git = GitGit
 
-    val uri = new _root_.java.net.URI(config.uri)
+    // We cache a single git bare clone for this repository URI (sans fragment),
+    // then we check out just the files in the various work trees.
+    // TODO: locking
+    val cloneDir = findCloneDir(config)
+
+    val (uri, uriString) = uriAndString(config)
     val ref = Option(uri.getFragment()) getOrElse "master"
     val shallowAllowed = !(Option(uri.getQuery()).getOrElse("").split("&").contains("shallow=false"))
-    val uriString = UriUtil.dropFragmentAndQuery(uri).toASCIIString
-    val baseName = ({s:String => if (s.endsWith(".git")) s.dropRight(4) else s})(uri.getRawPath().split("/").last)
-    val cloneDir = com.typesafe.dbuild.repo.core.GlobalDirs.clonesDir / ((hashing sha1 uriString) + "-" + baseName)
 
-    // We cache a single git clone for this repository URI (sans fragment),
-    // then we re-clone just the local clone. Note that there are never
-    // working files checked out in the cache clone: the directories
-    // contain only a ".git" subdirectory.
-    // TODO: locking
-    val clone = git.getRepo(cloneDir) getOrElse git.create(uriString, cloneDir, log)
-    if (skipGitUpdates)
-      log.info("Skipping remote git update")
-    else
-      git.fetchOne(clone, ref, ignoreFailures = true /* no network? continue with what we already have */, shallowAllowed, log)
-    // the central clone, as well as the build/extract clones, are initially
-    // without any files checked out; an explicit reset() follows in prepare()
-    // to set up files into the build/extracted dirs.
-
-    // Now: use that cache to initialize the local build/extract directory
-    // (note that we do not check out any files, yet. We'll do that in prepare())
-    val localRepo = git.getRepo(dir) getOrElse git.create(cloneDir.getCanonicalPath, dir, log)
-
-    // fetchOne will return the resolved commit for ref
-    val sha = git.fetchOne(localRepo, ref, ignoreFailures = false /* stop on failures */ , shallowAllowed, log)
+    // TODO: clones of no longer used projects will hang around in the clones dir forever
+    val cloneRepo = git.getRepo(cloneDir) getOrElse git.create(uriString, cloneDir, log)
+    val sha = git.fetchOne(cloneRepo, ref, skipGitUpdates, shallowAllowed, log)
     val newUri = UriUtil.dropFragment(uri).toASCIIString + "#" + sha // keep query if present
     config.copy(uri = newUri)
   }
 
-  override def prepare(config: ProjectBuildConfig, dir: _root_.java.io.File, log: Logger) = {
+  override def prepare(config: ProjectBuildConfig, workDir: _root_.java.io.File, log: Logger) = {
     if (config.useJGit.getOrElse(sys.error("Internal error: usejgit is None. Please report.")))
       sys.error("JGit is no longer supported; please use the regular git instead.")
 
     val git = GitGit
-
-    val localRepo = git.getRepo(dir) getOrElse
-      sys.error("Internal error, prepare() without resolve()? .git does not exist in "+dir.getCanonicalPath)
+    val cloneDir = findCloneDir(config)
 
     val uri = new _root_.java.net.URI(config.uri)
+    val cloneRepo = git.getRepo(cloneDir) getOrElse
+      sys.error("Internal error: no git clone at " + cloneDir.getCanonicalPath +
+      ", prepare() without resolve()?")
+
     val sha = Option(uri.getFragment()) getOrElse sys.error("Internal error in git/prepare: no sha?")
 
     // perform a hard reset to the desired sha
-    git.prepareFiles(localRepo, sha, log)
+    git.prepareFiles(cloneRepo, workDir, sha, log)
   }
 }

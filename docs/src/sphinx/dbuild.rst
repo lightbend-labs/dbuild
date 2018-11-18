@@ -198,14 +198,14 @@ uri
 
   Since version 0.10.0, dbuild will try to fetch from the remote git repositories
   the minimum amount of information possible, creating a shallow copy with the single commit
-  related to the branch, tag, or pull request required.
+  related to the branch, tag, or pull request required. Due to a Git limitation, if the
+  requested reference is a commit hash, the copy will full rather than shallow.
 
-  Some projects may rely on the full git history in order to determine the latest tag used,
-  or to build their version number. In that case, you can request a full clone by specifying
-  a query portion `?shallow=false` in the git repo URI. If both a fragment and a query portions are
-  present, the query must come first, as in `git://some.server.com/repo.git?shallow=false#branch`.
-  Please note that if a commit hash is specified in the URI, a full clone will be used
-  in any case.
+  Some projects may rely on the full git history in order to determine, for instance, the latest
+  tag used, or to build their version number. If you specify the flag `git-full-clone` for that
+  project, the local dbuild clone will be a full clone, rather than shallow. In addition, the
+  work dir will also contain a ".git" directory. Obtaining a full clone take a bit more time
+  than the default shallow copy.
 
 .. note::
   Git version 2.18 introduced a server protocol v2, which optimizes certain operations. To use

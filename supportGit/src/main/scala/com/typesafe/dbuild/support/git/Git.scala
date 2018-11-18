@@ -116,22 +116,51 @@ object GitGit extends GitImplementation {
     }
   }
 
+  // lookup the ref, which we must have already decided is a commit hash, in the local
+  // clone. If it is not already there, perform a full fetch (if we are not skipping updates)
+  // and try again. If we don't find it even after a full fetch, abort.
+  def lookupHash(repo: GitRepo, ref: String, skipUpdates: Boolean, log: Logger): String = {
+    log.info("Reference \"" + ref + "\" looks like a commit. Maybe it's already available?")
+    try {
+      revparse(repo.dir, ref)
+    } catch {
+      case t: Exception =>
+        if (skipUpdates) {
+          sys.error("The reference \"" + ref + "\" looks like a commit hash, but was not found among the hashes already present in our cache of the remote repo.")
+        } else {
+          log.info("Reference \"" + ref + "\" was not available, performing full fetch...")
+          fetchAll(repo, log)
+          try {
+            revparse(repo.dir, ref)
+          } catch {
+            case t: Exception =>
+              sys.error("The reference \"" + ref + "\" looks like a commit hash, but was not found among the known hashes in the remote repo.")
+          }
+        }
+    }
+  }
+
   def fetchOne(repo: GitRepo, ref: String, shallowAllowed: Boolean, skipUpdates: Boolean, log: Logger): String = {
-    if (!skipUpdates) {
+    if (skipUpdates) {
+      log.info("Skipping git updates; trying to locate reference \"" + ref + "\"...")
+    } else {
       log.info("Fetching info for reference \"" + ref + "\" from " + repo.sourceURI)
       log.info("into " + repo.dir.getCanonicalPath)
-    } else {
-      log.info("Skipping git updates; trying to locate reference \"" + ref + "\"...")
     }
     if (shallowAllowed) {
       // ref can be a branch, a tag, a pull request, or a commit sha.
-      // We can distinguish pull requests because we expect them to be in the form
+      // If it looks like a commit hash and it is exactly 40 characters, we assume
+      // it is indeed a commit sha, probably already resolved (fingers crossed).
+      // Then, we can distinguish pull requests because we expect them to be in the form
       // "pull/nnn/head", so that is easy.
       // Otherwise, ref could be a branch, tag, or commit. We need to try each one
-      // in turn. If it is neither a branch or a tag, then we need to perform a
+      // in turn. If it is neither a branch or a tag, then we may need to perform a
       // *full* fetch, since git servers won't in general allow us to fetch a specific
       // single commit (there is a git server option, but it is not available on GitHub,
       // for example).
+      if (ref.matches("[a-fA-F0-9]{40}")) {
+        lookupHash(repo, ref, skipUpdates, log)
+      }
       if (ref.startsWith("pull/") && ref.endsWith("/head")) {
         attemptFetchOne(repo, "refs/" + ref, skipUpdates, log) getOrElse
           sys.error("Reference " + ref + " looks like a pull request, but was not found in remote")
@@ -141,24 +170,7 @@ object GitGit extends GitImplementation {
       (attemptFetchOne(repo, "refs/tags/" + ref, skipUpdates, log) getOrElse {
         // Hm. Does it at least /look/ like a commit hash?
         if (ref.matches("[a-fA-F0-9]{4,40}")) {
-          log.info("Reference \"" + ref + "\" looks like a commit. Maybe it's already available?")
-          try {
-            revparse(repo.dir, ref)
-          } catch {
-            case t: Exception =>
-              if (!skipUpdates) {
-                log.info("Reference \"" + ref + "\" was not available, performing full fetch...")
-                fetchAll(repo, log)
-                try {
-                  revparse(repo.dir, ref)
-                } catch {
-                  case t: Exception =>
-                    sys.error("The reference \"" + ref + "\" looks like a commit hash, but was not found among the known hashes in the remote repo.")
-                }
-              } else {
-                sys.error("The reference \"" + ref + "\" looks like a commit hash, but was not found among the hashes already present in our cache of the remote repo.")
-              }
-          }
+          lookupHash(repo, ref, skipUpdates, log)
         } else {
           sys.error("The reference \"" + ref + "\" was not a known branch, tag, or pull request, and doesn't look like a commit hash either.")
         }

@@ -98,7 +98,7 @@ object DBuildRunner {
       if (notAvailable.nonEmpty)
         sys.error("These subprojects were not found: " + notAvailable.mkString("\"", "\", \"", "\". ") +
           " Found: " + availableProjects.mkString("\"", "\", \"", "\". "))
-    } else sys.error("Internal error: subproject list is empty")
+    }
   }
 
   def getSortedProjects(projects: Seq[String], refs: Seq[ProjectRef], baseDirectory: File, acceptPatterns: Boolean): Seq[ProjectRef] = {

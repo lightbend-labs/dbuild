@@ -52,6 +52,14 @@ case class BuildUnchanged(project: String, outcomes: Seq[BuildOutcome], artsOut:
   override def whenIDs: Seq[String] = "unchanged" +: super.whenIDs
 }
 
+/** It was not necessary to run this build, since no projects were selected. */
+case class BuildEmpty(project: String, outcomes: Seq[BuildOutcome], artsOut: BuildArtifactsOut) extends BuildGood {
+  def withOutcomes(os:Seq[BuildOutcome])=copy(outcomes=os)
+  override def toString() = "BuildEmpty(" + project + ")"
+  def status() = "SUCCESS (empty: no subprojects selected)"
+  override def whenIDs: Seq[String] = "empty" +: super.whenIDs
+}
+
 /** This build was attempted, but an error condition occurred while executing it. */
 case class BuildFailed(project: String, outcomes: Seq[BuildOutcome], cause: String) extends BuildBad {
   def withOutcomes(os:Seq[BuildOutcome])=copy(outcomes=os)

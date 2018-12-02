@@ -107,12 +107,8 @@ object DependencyAnalysis {
 
     // now let's get the list of projects excluded and requested, as specified in the dbuild configuration file
     // note that getSortedProjects() already calls verifySubProjects(), which checks all arguments for sanity, printing messages
-    // if anything in the passed projects list is incorrect. But don't call getSortedProjects() or verifySubProjects() if the
-    // projects list is empty.
-    val excluded = if (excludedProjects.nonEmpty)
-      getSortedProjects(excludedProjects, allRefs, baseDirectory, acceptPatterns = true)
-    else
-      Seq.empty
+    // if anything in the passed projects list is incorrect.
+    val excluded = getSortedProjects(excludedProjects, allRefs, baseDirectory, acceptPatterns = true)
 
     val requested = {
       if (projects.isEmpty)
@@ -223,40 +219,36 @@ object DependencyAnalysis {
       // is performed on exclusions.
       // (if we are building all subprojects, and there are no exclusions, skip this step)
 
-      if (projects.isEmpty && excluded.isEmpty) {
-        val result = allProjSorted.map { _.value }.diff(excluded)
-        log.info(normalizedProjectNames(result).mkString("These subprojects will be built: ", ", ", ""))
-        result
-      } else {
-        val needed = requested.foldLeft(Set[Node[ProjectRef]]()) { (set, node) =>
-          set ++ allProjGraph.subGraphFrom(allProjGraph.nodeMap(node))
-        } map { _.value }
+      val needed = requested.foldLeft(Set[Node[ProjectRef]]()) { (set, node) =>
+        set ++ allProjGraph.subGraphFrom(allProjGraph.nodeMap(node))
+      } map { _.value }
 
-        // In the end, our final sorted list (prior to explicit exclusions) is:
-        // (keep the order of allProjSorted)
-        val result = allProjSorted map { _.value } intersect needed.toSeq diff excluded
+      // In the end, our final sorted list (prior to explicit exclusions) is:
+      // (keep the order of allProjSorted)
+      val result = allProjSorted map { _.value } intersect needed.toSeq diff excluded
 
-        // Have we introduced new subprojects? (likely). If so, warn the user.
-        if (result.size != requested.size) {
-          log.warn("*** Warning *** Some additional subprojects will be included, as they are needed by the requested subprojects.")
-          log.warn(normalizedProjectNames(requested).mkString("Originally requested: ", ", ", ""))
-          log.warn(normalizedProjectNames(result diff requested).mkString("Now added: ", ", ", ""))
-        } else {
-          log.info(normalizedProjectNames(result).mkString("These subprojects will be built: ", ", ", ""))
-        }
-
-        // Have some of the needed subprojects been excluded? If so, print a warning.
-        if (needed.intersect(excluded.toSet).nonEmpty) {
-          log.warn("*** Warning *** Some subprojects are dependencies, but have been explicitly excluded.")
-          log.warn("You may have to build them in a different project.")
-          log.warn(normalizedProjectNames(needed.intersect(excluded.toSet).toSeq).mkString("Needed: ", ", ", ""))
-        }
-
-        result
+      // Have we introduced new subprojects? (likely). If so, warn the user.
+      if (result.size != requested.size) {
+        log.warn("*** Warning *** Some additional subprojects will be included, as they are needed by the requested subprojects.")
+        log.warn(normalizedProjectNames(requested).mkString("Originally requested: ", ", ", ""))
+        log.warn(normalizedProjectNames(result diff requested).mkString("Now added: ", ", ", ""))
       }
+
+      // Have some of the needed subprojects been excluded? If so, print a warning,
+      // but only if the user did specify an explicit list of requested subprojects.
+      if (projects.nonEmpty && needed.intersect(excluded.toSet).nonEmpty) {
+        log.warn("*** Warning *** Some subprojects are dependencies, but have been explicitly excluded.")
+        log.warn("You may have to build them in a different project.")
+        log.warn(normalizedProjectNames(needed.intersect(excluded.toSet).toSeq).mkString("Needed: ", ", ", ""))
+      }
+
+      result
     }.reverse // from the leaves to the roots
 
-    if (refs.isEmpty) sys.error("Fatal: no subprojects will be compiled in this project")
+    if (refs.isEmpty)
+      log.warn("*** Warning*** No subprojects will be compiled in this project")
+    else
+      log.info(normalizedProjectNames(refs).mkString("These subprojects will be built (in this order): ", ", ", ""))
 
     val deps = getProjectInfos(extracted, state, refs)
 

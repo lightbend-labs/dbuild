@@ -33,8 +33,11 @@ class LocalBuildRunner(builder: BuildRunner,
       case t: RepositoryException =>
         log.debug("Failed to resolve: " + build.uuid + " from " + build.config.name)
         //log.trace(t)
-        BuildSuccess(build.config.name, children, runLocalBuild(target, build, tracker, outProjects,
-          buildData))
+        val artifactsOut = runLocalBuild(target, build, tracker, outProjects, buildData)
+        if (artifactsOut.results.isEmpty)
+          BuildEmpty(build.config.name, children, artifactsOut)
+        else
+          BuildSuccess(build.config.name, children, artifactsOut)
     }
   }
 

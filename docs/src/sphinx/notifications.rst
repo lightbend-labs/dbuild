@@ -137,6 +137,8 @@ matches the "when" selector. The possible outcomes are arranged in a tree, as fo
    +----- good +---- success
    |           |
    |           +---- unchanged
+   |           |
+   |           +---- empty
    |
    +------ bad +---- failed
                |
@@ -186,6 +188,15 @@ unchanged
   dbuild (project ".") is always executed, therefore its outcome cannot
   be "unchanged": if all its projects are unchanged and all the accessory tasks
   completed successfully, its final outcome will be "success".
+
+empty
+  It means that a project was not rebuilt, since no subprojects were selected.
+  That may happen if the list of subprojects contained patterns which matched
+  nothing, or if the exclusion list excludes all of the subprojects that would
+  be built according to the requested list.
+  Please remember that an empty requested list ("projects"), by itself, is
+  interpreted as "build all subprojects"; in that case, the outcome can be
+  empty only if "excludes" explicitly lists all of the available subprojects.
 
 failed
   This outcome means that dbuild reached the point in which the actual project

@@ -383,14 +383,14 @@ object DBuildRunner {
 
   // We may want to override overrides as well
   def fixOverrides2(locs: Seq[model.ArtifactLocation], modules: Seq[ModuleRevisionId], crossVersion: String,
-    checkMissing: Boolean, rewriteOverrides: Boolean, fromSpace: String, log: Logger) =
+    rewriteOverrides: Boolean, fromSpace: String, log: Logger) =
     if (!rewriteOverrides)
       { (settings:Seq[sbt.Setting[_]], _:sbt.Logger) => Seq.empty }
     else fixGenericTransform2(Keys.dependencyOverrides) { r: Setting[_] =>
       val sc = r.key.scope
       Keys.dependencyOverrides in sc := {
         val old = (Keys.dependencyOverrides in sc).value
-        old map fixModule(locs, modules, crossVersion, checkMissing, fromSpace, log)
+        old map fixModule(locs, modules, crossVersion, checkMissing = false, fromSpace, log)
       }
     }("Updating overrides") _
 
@@ -742,7 +742,7 @@ object DBuildRunner {
     Seq[Fixer](
       fixResolvers2(repoDir, log),
       fixDependencies2(arts, modules, crossVersion, checkMissing, fromSpace, log),
-      fixOverrides2(arts, modules, crossVersion, checkMissing, rewriteOverrides, fromSpace, log),
+      fixOverrides2(arts, modules, crossVersion, rewriteOverrides, fromSpace, log),
       fixScalaVersion2(dbuildDir, repoDir, arts),
       fixInterProjectResolver2bis(modules),
       fixCrossVersions2(crossVersion),

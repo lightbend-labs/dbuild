@@ -189,7 +189,9 @@ object DBuildRunner {
       if (!(modules exists { i => i.getOrganisation == m.organization && fixName(i.getName) == fixName(m.name) })) {
         // Do we have a Scala-based library dependency that was not rewritten? We can recognize it
         // since there is a cross version suffix attached to the name, hence m.name != fixName(m.name)
-        if ((m.name != fixName(m.name) || m.crossVersion != crossDisabled)) {
+        // Note: but ignore scripted (as of sbt 1 scripted is crossBinary & as of 1.2+ sbt's main depends on it)
+        if ((m.name != fixName(m.name) || m.crossVersion != crossDisabled)
+          && !(m.organization == "org.scala-sbt" && m.name.startsWith("scripted-"))) {
           // If we are here, it means that this is a library dependency that is required,
           // that refers to an artifact that is not provided by any project in this build,
           // and that needs a certain Scala version (range) in order to work as intended.

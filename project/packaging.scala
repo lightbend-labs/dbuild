@@ -25,7 +25,7 @@ object Packaging {
      name in Universal := name.value + "-" + version.value,
      rpmRelease := "1",
      rpmVendor := "typesafe",
-     rpmUrl := Some("http://github.com/lightbend/dbuild"),
+     rpmUrl := Some("https://github.com/lightbend/dbuild"),
      rpmLicense := Some("BSD"),
 
      // NB: A clean must be executed before both packageZipTarball and packageZipTarball,

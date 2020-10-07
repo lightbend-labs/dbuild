@@ -10,7 +10,7 @@ all the requested projects, and makes sure that they all work together, even
 though each of them may evolve independently.
 
 You can find the complete dbuild documentation at the
-[dbuild web site](http://lightbend.github.io/dbuild).
+[dbuild web site](https://lightbend.github.io/dbuild).
 
 This project is active, but unsupported. It is maintained by the Tooling Team at Lightbend.
 
@@ -38,7 +38,7 @@ If you would like to publish instead to Artifactory, for instance if you
 you need to publish dbuild snapshots, or if you do not have an account on
 Bintray yet, you can use:
 
-    set every publishTo := Some(Resolver.url("somelabel", new URL("http://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
+    set every publishTo := Some(Resolver.url("somelabel", new URL("https://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
     set every credentials := Seq(Credentials(Path.userHome / "some" / "path" / "credentials-file"))
 
 Then, proceed with "^publish" as usual to issue the snapshot to your Artifactory server.
@@ -51,7 +51,7 @@ You can also publish a test version locally to any directory of your choice, by 
 
 ## Get Involved
 
-dbuild has a [mailing list](http://groups.google.com/d/forum/dbuild) for help.  Additionally, issues can be
+dbuild has a [mailing list](https://groups.google.com/d/forum/dbuild) for help.  Additionally, issues can be
 reported to [github issue tracker](https://github.com/lightbend/dbuild/issues).
 
 ## Release Notes

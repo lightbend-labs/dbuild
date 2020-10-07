@@ -107,7 +107,7 @@ version 0.9.0, the options are:
      project (required)   name of the project
      path (required)      path into which the source will be checked out
    
-   For more information: http://lightbend.github.io/dbuild
+   For more information: https://lightbend.github.io/dbuild
 
 During common usage, the most common ways to invoke dbuild are ``dbuild file.dbuild`` (to run
 a build using a configuration file), and ``dbuild checkout uuid project dir`` (to debug

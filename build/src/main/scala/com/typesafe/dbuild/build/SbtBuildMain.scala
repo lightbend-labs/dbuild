@@ -89,7 +89,7 @@ class SbtBuildMain extends xsbti.AppMain {
                |of multiple related projects, by building each one on top of the others.
                |Options:
                |""".stripMargin)
-      footer("\nFor more information: http://lightbend.github.io/dbuild")
+      footer("\nFor more information: https://lightbend.github.io/dbuild")
       val properties = props[String](descr = "One or more Java-style properties")
       val configFile = trailArg[String](required = false, descr = "The name of the dbuild configuration file")
       val target = trailArg[String](required = false, descr = "If a target project name is specified, dbuild will build only that project and its dependencies. Multiple targets are also possible, supplying a comma separated list (with no blanks).")

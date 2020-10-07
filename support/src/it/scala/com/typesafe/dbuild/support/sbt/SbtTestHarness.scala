@@ -30,9 +30,9 @@ object SbtTestHarness {
 
       PredefRepo(xsbti.Predefined.MavenCentral),
 
-      MvnRepo("typesafe-mvn-releases", new java.net.URL("http://repo.typesafe.com/typesafe/releases")),
-      IvyRepo("typesafe-ivy-releases", new java.net.URL("http://repo.typesafe.com/typesafe/releases")),
-      IvyRepo("dbuild-snapshots", new java.net.URL("http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots"))
+      MvnRepo("typesafe-mvn-releases", new java.net.URL("https://repo.typesafe.com/typesafe/releases")),
+      IvyRepo("typesafe-ivy-releases", new java.net.URL("https://repo.typesafe.com/typesafe/releases")),
+      IvyRepo("dbuild-snapshots", new java.net.URL("https://repo.typesafe.com/typesafe/temp-distributed-build-snapshots"))
     )
 
 

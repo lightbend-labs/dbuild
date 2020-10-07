@@ -352,7 +352,7 @@ sbt-version
   repository, which should be added to your list of resolvers or to your
   Artifactory/Nexus proxy:
 
-  ``http://repo.typesafe.com/typesafe/temp-distributed-build-snapshots``
+  ``https://repo.typesafe.com/typesafe/temp-distributed-build-snapshots``
 
 projects
   A sequence of strings (or a single string) that identifies a subset of the sbt

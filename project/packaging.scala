@@ -25,7 +25,7 @@ object Packaging {
      name in Universal := name.value + "-" + version.value,
      rpmRelease := "1",
      rpmVendor := "typesafe",
-     rpmUrl := Some("http://github.com/lightbend/dbuild"),
+     rpmUrl := Some("https://github.com/lightbend/dbuild"),
      rpmLicense := Some("BSD"),
 
      // NB: A clean must be executed before both packageZipTarball and packageZipTarball,
@@ -101,13 +101,13 @@ object Packaging {
   sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots
   sonatype-releases: https://oss.sonatype.org/content/repositories/releases
   jcenter: https://jcenter.bintray.com/
-  java-annoying-cla-shtuff: http://download.java.net/maven/2/
-  typesafe-releases: http://repo.typesafe.com/typesafe/releases
-  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  typesafe-ivy-snapshots: http://repo.typesafe.com/typesafe/ivy-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  sbt-plugin-releases: http://repo.scala-sbt.org/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-  jgit-repo: http://download.eclipse.org/jgit/maven
-  scala-fresh-2.10.x: http://repo.typesafe.com/typesafe/scala-fresh-2.10.x/
+  java-annoying-cla-shtuff: https://download.java.net/maven/2/
+  typesafe-releases: https://repo.typesafe.com/typesafe/releases
+  typesafe-ivy-releases: https://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  typesafe-ivy-snapshots: https://repo.typesafe.com/typesafe/ivy-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  sbt-plugin-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
+  jgit-repo: https://download.eclipse.org/jgit/maven
+  scala-fresh-2.10.x: https://repo.typesafe.com/typesafe/scala-fresh-2.10.x/
 
 [boot]
  directory: ${dbuild.boot.directory-${dbuild.global.base-${user.home}/.dbuild}/boot/}

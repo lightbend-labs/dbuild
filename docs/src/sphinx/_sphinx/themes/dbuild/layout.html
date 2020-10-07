@@ -13,7 +13,7 @@
 {% set css_files = css_files + ['_static/base.css'] %}
 {% set css_files = css_files + ['_static/docs.css'] %}
 {% set css_files = css_files + ['_static/syntax.css'] %}
-{% set css_files = css_files + ['http://fonts.googleapis.com/css?family=Exo:300,400,600,700'] %}
+{% set css_files = css_files + ['https://fonts.googleapis.com/css?family=Exo:300,400,600,700'] %}
 
 {# do not display relbars #}
 {% block relbar1 %}{% endblock %}
@@ -26,12 +26,12 @@
       <div class="container">
         <ul class="nav">
           {%- if home_site is sameas True %}
-          <li><a href="http://lightbend.github.io/dbuild">Home</a></li>
+          <li><a href="https://lightbend.github.io/dbuild">Home</a></li>
           {%- else %}
           <li><a href="{{ pathto('index') }}">Home</a></li>
           {%- endif %}
           <li><a href="{{ pathto('download') }}">Download</a></li>
-          <li><a href="http://github.com/lightbend/dbuild">GitHub Project</a></li>
+          <li><a href="https://github.com/lightbend/dbuild">GitHub Project</a></li>
         </ul>
       </div>
     </div>
@@ -42,7 +42,7 @@
       <div class="page-title">{{ title }}</div>
       {%- if site_search_base %}
       <div class="search-box">
-        <form method="get" action="http://www.google.com/search" id="search">
+        <form method="get" action="https://www.google.com/search" id="search">
           <input type="search" placeholder="Search {{release}} on Google" name="q" results="10" size="29" id="search-input">
           <input type="hidden"  name="sitesearch" value="{{site_search_base}}/"> 
           <input type="submit" id="submit-search">

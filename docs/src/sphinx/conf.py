@@ -44,7 +44,7 @@ home_site = False
 # If empty, no search box is included
 # TODO: pass this as an argument to sphinx, use actual version instead of release 
 
-#site_search_base = 'http://www.scala-sbt.org/release/docs'
+#site_search_base = 'https://www.scala-sbt.org/release/docs'
 site_search_base = ''
 
 # passes variables to the template
@@ -68,5 +68,5 @@ rst_epilog = """
 """ % {
    'version': release,
    'project': project,
-   'dbuild_native_package_base': 'http://repo.typesafe.com/typesafe/ivy-releases/com.typesafe.dbuild',
+   'dbuild_native_package_base': 'https://repo.typesafe.com/typesafe/ivy-releases/com.typesafe.dbuild',
 }

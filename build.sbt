@@ -1,7 +1,7 @@
 import Dependencies._
 import RemoteDepHelper._
 
-def MyVersion: String = "0.9.16"
+def MyVersion: String = "0.9.17"
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
@@ -12,9 +12,9 @@ def SubProj(name: String) = (
     organization := "com.typesafe.dbuild",
     selectScalaVersion,
     resolvers += Resolver.typesafeIvyRepo("releases"),
-    resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+    resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
-    licenses += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
+    licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
     bintrayReleaseOnPublish := false,
     bintrayOrganization := Some("typesafe"),
     bintrayRepository := "ivy-releases",
@@ -51,7 +51,7 @@ lazy val root = (
   aggregate(adapter, graph, hashing, logging, actorLogging, proj, actorProj, deploy, http,
             core, plugin, build, support, supportGit, repo, metadata, docs, dist, indexmeta)
   settings(publish := Def.task {}, publishLocal := Def.task {}, version := MyVersion)
-  settings(crossSbtVersions := Seq("0.13.17", "1.2.1"), selectScalaVersion)
+  settings(crossSbtVersions := Seq("0.13.18", "1.2.1"), selectScalaVersion)
 )
 
 // This subproject only has dynamically

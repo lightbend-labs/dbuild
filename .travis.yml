@@ -1,12 +1,10 @@
+version: ~> 1.0 # needed for imports
+import: scala/scala-dev:travis/default.yml
+
 language: scala
 
-jdk:
-#  - openjdk6
-  - oraclejdk8
-
-sudo: false
-
 env:
+  - ADOPTOPENJDK=8
   global:
     - JVM_OPTS="-Xms1024m -Xmx1024m -XX:ReservedCodeCacheSize=128m -XX:MaxPermSize=256m"
 
@@ -17,4 +15,4 @@ script:
 
 notifications:
   email:
-    - tooling@lightbend.com
+    - seth.tisue@lightbend.com

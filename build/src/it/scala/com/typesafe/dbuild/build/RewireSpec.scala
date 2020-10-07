@@ -61,12 +61,12 @@ object RewireSpec extends Specification {
           "sonatype-snapshots: https://oss.sonatype.org/content/repositories/snapshots",
           "sonatype-releases: https://oss.sonatype.org/content/repositories/releases",
           "java-annoying-cla-shtuff: http://download.java.net/maven/2/",
-          "typesafe-releases: http://repo.typesafe.com/typesafe/releases",
-          "typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]",
-          "typesafe-ivy-snapshots: http://repo.typesafe.com/typesafe/ivy-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]",
-          "sbt-plugin-releases: http://repo.scala-sbt.org/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]",
+          "typesafe-releases: https://repo.typesafe.com/typesafe/releases",
+          "typesafe-ivy-releases: https://repo.typesafe.com/typesafe/ivy-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]",
+          "typesafe-ivy-snapshots: https://repo.typesafe.com/typesafe/ivy-snapshots, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]",
+          "sbt-plugin-releases: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]",
           "jgit-repo: http://download.eclipse.org/jgit/maven",
-          "scala-fresh-2.10.x: http://repo.typesafe.com/typesafe/scala-fresh-2.10.x/"
+          "scala-fresh-2.10.x: https://repo.typesafe.com/typesafe/scala-fresh-2.10.x/"
         )
         val repoRecords = repoStrings map {
                         _.split(":", 2) match {

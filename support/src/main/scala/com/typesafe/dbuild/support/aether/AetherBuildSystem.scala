@@ -301,7 +301,7 @@ class AetherBuildSystem(repos: List[xsbti.Repository], workingDir: File) extends
         // global one. It would be something like:
         Some(new RemoteRepository.Builder("Maven2 Local", "default", "file://" + System.getProperty("user.home") + "/.m2/repository/").build())
       case MavenCentral =>
-        Some(new RemoteRepository.Builder("Maven Central", "default", "http://repo1.maven.org/maven2/").build())
+        Some(new RemoteRepository.Builder("Maven Central", "default", "https://repo1.maven.org/maven2/").build())
       case Jcenter =>
         Some(new RemoteRepository.Builder("JCenter", "default", "https://jcenter.bintray.com/").build())
       case ScalaToolsReleases | SonatypeOSSReleases =>

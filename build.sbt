@@ -12,7 +12,7 @@ def SubProj(name: String) = (
     organization := "com.typesafe.dbuild",
     selectScalaVersion,
     resolvers += Resolver.typesafeIvyRepo("releases"),
-    resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+    resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
     licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
     bintrayReleaseOnPublish := false,

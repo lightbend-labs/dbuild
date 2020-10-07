@@ -10,7 +10,7 @@ env:
 
 script:
   - sbt "^test"
-  - sbt "publishLocal"
+  - sbt "^publishLocal"
   - sbt "it:test"
 
 notifications:

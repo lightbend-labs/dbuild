@@ -1,8 +1,6 @@
 # dbuild
 
-## Description
-
-*dbuild* is a build and debugging tool based on sbt.
+...is a build and debugging tool based on sbt.
 
 It is used to coordinate the development of multiple, independent projects
 that evolve in parallel: dbuild uses a multi-project definition file to build
@@ -10,9 +8,12 @@ all the requested projects, and makes sure that they all work together, even
 though each of them may evolve independently.
 
 You can find the complete dbuild documentation at the
-[dbuild web site](https://lightbend.github.io/dbuild).
+[dbuild web site](https://lightbend-labs.github.io/dbuild).
 
-This project is active, but unsupported. It is maintained by the Tooling Team at Lightbend.
+## Maintenance status
+
+dbuild is now only used by the [Scala 2 community build](http://github.com/scala/community-build).
+It receives only light maintenance, as needed, from the Scala team at Lightbend.
 
 ## Releasing
 
@@ -48,23 +49,6 @@ You can also publish a test version locally to any directory of your choice, by 
     set every publishTo := Some(Resolver.file("dbuild-publish-temp", new File("/home/user/here/"))(Resolver.ivyStylePatterns))
     ^publish
 
-
-## Get Involved
-
-dbuild has a [mailing list](https://groups.google.com/d/forum/dbuild) for help.  Additionally, issues can be
-reported to [github issue tracker](https://github.com/lightbend/dbuild/issues).
-
 ## Release Notes
 
 see [CHANGELOG.md](CHANGELOG.md)
-
-## License
-
-This software is licensed under the Apache 2 license.
-
-### Developed by Lightbend
-
-Maintained by the [Tooling Team](https://github.com/orgs/lightbend/teams/tooling-team)
-
-Feel free to ping above maintainers for code review or discussions. 
-Pull requests are very welcome–thanks in advance!

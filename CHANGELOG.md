@@ -1,5 +1,17 @@
 # dbuild release notes
 
+### 0.9.17
+
+- Use https not http
+- Allow for an empty selection of subprojects in an sbt-based project
+
+### 0.9.16
+
+- Allow patterns in "projects" and "exclude" for sbt projects
+
+### 0.9.15
+
+- Fix to SeqSeqString serialization
 
 ### 0.9.14
 

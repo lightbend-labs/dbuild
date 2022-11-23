@@ -66,12 +66,8 @@ object Packaging {
     if(!tdir.exists) tdir.mkdirs()
     val file = tdir / "dbuild-launcher.jar"
     log.info("Downloading dbuild launcher "+ uri +" to "+ file.getAbsolutePath() +"...")
-    val ht = new com.typesafe.dbuild.http.HttpTransfer(dbuildVersion)
-    try {
-      ht.download(uri, file) // uri from DbuildLauncher.scala
-    } finally {
-      ht.close()
-    }
+    import scala.sys.process._
+    url(uri).#>(file).!
     file -> "bin/dbuild-launcher.jar"
   }
 

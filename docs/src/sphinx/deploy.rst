@@ -57,20 +57,6 @@ repository-uri
     In order to use key-based authentication, the private key of the system on which
     dbuild runs must be in ``~/.ssh/id_rsa``; the passphrase must be empty.
 
-  ``bintray:/owner/repo/package/version[#release]``
-    The artifacts will be uploaded to Bintray, and optionally released. Exactly four parts
-    must be defined in the path, defining the Bintray parameters. You can optionally
-    append to the uri the fragment "#release" if you wish a release to be published
-    at the end of deploy; if the fragment is not present or is not "#release", the
-    artifacts will be left pending in the Bintray repository. If the uri contains the
-    query component "?override=1", then new artifacts will overwrite existing ones
-    with the same name and path already in the repository (if published within the
-    last 180 days), otherwise an attemp to overwrite artifacts will return a "409"
-    HTTP error code. Please note that if you have both a query and a fragment in the
-    uri, then the query must come first.
-    The uri format above will work for both generic as well as for Maven-style bintray
-    repositories.
-
   ``null:null``
     The artifacts will be ignored, without actually being uploaded anywhere. This
     option can be used in conjunction with the index generation facility, described
@@ -82,9 +68,7 @@ credentials
   value of the "host" property must match the hostname or the bucket name. In the case of
   Amazon S3, the property "user" contains the Access Key ID, while the property "password"
   contains the Secret Access Key. The credentials specification should be omitted for ``file``
-  repositories. For Bintray, the "host" must be "api.bintray.com", the Bintray username used
-  as "user", and the Bintray API key must be specified as the password. For Bintray the
-  credentials file may be the standard "/home/user/.bintray/.credentials" file.
+  repositories.
 
 projects
   An optional list of project names, from the ones specified in the same build configuration file.

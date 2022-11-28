@@ -68,13 +68,6 @@ class DeployBuild(options: GeneralOptions, log: Logger) extends OptionTask(log) 
               if (loadCreds(credsFile).host != uri.getHost)
                 sys.error("The credentials file " + credsFile + " does not contain information for host " + uri.getHost)
           }
-        case "bintray" =>
-          options.credentials match {
-            case None => sys.error("Credentials are required when deploying to " + uri)
-            case Some(credsFile) =>
-              if (loadCreds(credsFile).host != "api.bintray.com")
-                sys.error("The credentials file " + credsFile + " does not contain information for host api.bintray.com")
-          }
         case scheme => sys.error("Unknown scheme in deploy: " + scheme)
       }
     }

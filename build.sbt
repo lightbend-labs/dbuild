@@ -15,10 +15,7 @@ def SubProj(name: String) = (
     resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
     licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
-    bintrayReleaseOnPublish := false,
-    bintrayOrganization := Some("typesafe"),
-    bintrayRepository := "ivy-releases",
-    bintrayPackage := "dbuild"
+    publishTo := sonatypePublishTo.value
   )
   dependsOnRemote(specs2 _, jline)
 )

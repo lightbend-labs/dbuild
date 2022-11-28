@@ -1,31 +1,38 @@
-To create a dbuild release (if you belong to the Typesafe organization on Bintray):
+## Publishing (official)
 
-1. Type "^publish"
-2. Check https://bintray.com/typesafe/ivy-releases/dbuild/view to ensure files are as expected (Optional)
-3. Type "root/bintrayRelease" to make the release public
+You must have rights on Sonatype to publish under `com.typesafe`.
 
-*DO NOT* try to push snapshots to Bintray; instead, add your custom version
-suffix if necessary. The documentation pages on the dbuild website must be
-published separately (but only for final releases).
+You should have a `~/.sbt/0.13/sonatype.sbt` (or similar filename)
+with the right `credentials += ...`.
 
-If you are not part of the Typesafe organization on Bintray, use:
+To create a dbuild release,
 
-    set every bintrayOrganization := None
+1. Run `^publishSigned`
+2. Check the staging repo in the Sonatype web UI to ensure files are as expected (optional)
+3. Close and release the staging repo (using `sbt-sonatype` commands or the Sonatype web UI)
 
-to publish to "ivy-releases/dbuild" to your own Bintray repository
-(or to a different repository by changing the settings described
-in the bintray-sbt plugin documentation pages).
+Do not try to publish snapshots to Sonatype. Instead, add a custom version
+suffix (such as `-RC1`).
 
-If you would like to publish instead to Artifactory, for instance if you
-you need to publish dbuild snapshots, or if you do not have an account on
-Bintray yet, you can use:
+## Publishing (locally)
+
+You can publish a test version locally to any directory of your choice, by using:
+
+    set every publishTo := Some(Resolver.file("dbuild-publish-temp", new File("/home/user/here/"))(Resolver.ivyStylePatterns))
+    ^publish
+
+## Publishing (elsewhere)
+
+If you would like to publish to Artifactory instead, for instance if you
+you need to publish dbuild snapshots, or if you do not have the right
+permissions on Sonatype, you can use:
 
     set every publishTo := Some(Resolver.url("somelabel", new URL("https://artifactoryhost/artifactory/repository/"))(Resolver.ivyStylePatterns))
     set every credentials := Seq(Credentials(Path.userHome / "some" / "path" / "credentials-file"))
 
-Then, proceed with "^publish" as usual to issue the snapshot to your Artifactory server.
+Then, proceed with `^publish` as usual to issue the snapshot to your Artifactory server.
 
-You can also publish a test version locally to any directory of your choice, by using:
+## Documentation
 
-    set every publishTo := Some(Resolver.file("dbuild-publish-temp", new File("/home/user/here/"))(Resolver.ivyStylePatterns))
-    ^publish
+The documentation pages on the dbuild website must be published
+separately. (This is done only for final releases.)

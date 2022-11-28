@@ -14,8 +14,8 @@ def SubProj(name: String) = (
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
     publishMavenStyle := false,
-    licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0"))
-    // TODO  sonatypeProfileName := "com.typesafe",
+    licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
+    publishTo := sonatypePublishTo.value
   )
   dependsOnRemote(specs2 _, jline)
 )

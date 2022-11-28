@@ -1,4 +1,3 @@
-addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.2")
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.2")
 
 libraryDependencies ++= {

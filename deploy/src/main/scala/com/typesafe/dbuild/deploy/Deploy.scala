@@ -47,10 +47,7 @@ abstract class DeployTarget extends DeployInfo {
   val creds = credentials map loadCreds
   creds foreach { c =>
     val scheme = new _root_.java.net.URI(uri).getScheme
-    if (scheme == "bintray") {
-      if (c.host != "api.bintray.com")
-        sys.error("The credentials supplied to Deploy refer to host \"" + c.host + "\", but it must be \"api.bintray.com\" to be usable with a bintray uri.")
-    } else if (c.host != host)
+    if (c.host != host)
       sys.error("The credentials supplied to Deploy refer to host \"" + c.host + "\" but the uri refers to \"" + host + "\"")
   }
 }
@@ -72,7 +69,6 @@ object Deploy {
     val deployer = uri.getScheme match {
       case "file" => new DeployFiles(log, target)
       case "http" | "https" => new DeployHTTP(log, target)
-      case "bintray" => new DeployBintray(log, target)
       case "ssh" => new DeploySSH(log, target)
       case "s3" => new DeployS3(log, target)
       case "null" => new DeployNull(log, target)
@@ -303,51 +299,6 @@ class DeployHTTP(log: Logger, options: DeployInfo, timeOut: Duration = 20 minute
       }
     } catch {
        case e: NullPointerException => log.debug("Response: " + response)
-    }
-  }
-}
-
-// (pass to the constructor the deploy target uri as well)
-class DeployBintray(log: Logger, options: DeployInfo, timeOut: Duration = 20 minutes) extends DeployHTTP(log, options, timeOut) {
-  private val target = new java.net.URI(options.uri)
-  private val overrides = Option(target.getQuery()).getOrElse("").split("&").contains("override=1")
-  private val bintrayBase = "https://api.bintray.com/content/"
-
-  override protected def init() = {
-    val path = target.getPath
-    if (Option(path) == None) sys.error("In a Bintray deploy section, the uri path must begin with a '/' character")
-    val parts = (if (path.head == '/') path.tail else path).split("/")
-    if (parts.length != 4) sys.error("In a Bintray deploy section, the path must contain four elements")
-    log.debug("Deploying to Bintray")
-    log.debug("owner  : " + parts(0))
-    log.debug("repo   : " + parts(1))
-    log.debug("package: " + parts(2))
-    log.debug("version: " + parts(3))
-    Option(target.getFragment) match {
-      case Some("release") => log.debug("The uri fragment is \"release\", so we will release after deploy.")
-      case Some(fragment) => log.debug("The uri fragment is \""+fragment+"\", so we will not release after deploy (must be \"release\").")
-      case None => log.debug("There is no fragment, so we will not release after deploy.")
-    }
-    if (overrides) log.debug("The uri contains \"?override=1\", therefore new artifacts will overwrite existing ones.")
-  }
-  override protected def deployItem(handler: Unit, relative: String, file: File, uri: URI) = {
-    val path = uri.getPath
-    val dest = new java.net.URI(
-      bintrayBase +
-      (if (path.head == '/') path.tail else path) +
-      (if (overrides) "?override=1" else "")
-    )
-    super.deployItem(handler, relative, file, dest)
-  }
-  override protected def close(handler: Unit) = {
-    if (Option(target.getFragment) == Some("release")) {
-      val path = target.getPath
-      val dest = new java.net.URI(bintrayBase + (if (path.head == '/') path.tail else path) + "/publish")
-      val sender =
-        dispUrl(dest.toString).POST.as(credentials.user, credentials.pass)
-      val response = Await.result(Http(sender OK { response =>
-        Deploy.readSomePath[ArtifactoryResponse](response.getResponseBody)
-      }), timeOut)
     }
   }
 }

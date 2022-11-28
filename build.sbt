@@ -3,6 +3,10 @@ import RemoteDepHelper._
 
 def MyVersion: String = "0.9.18"
 
+// override to match what Scala 2.12.17 uses
+dependencyOverrides in ThisBuild +=
+  "org.scala-lang.modules" %% "scala-xml" % "2.1.0"
+
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
   configs( IntegrationTest )

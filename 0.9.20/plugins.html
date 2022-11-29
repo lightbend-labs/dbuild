@@ -1,0 +1,251 @@
+
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>sbt plugins support &#8212; dbuild Documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/style.css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="../versions.js"></script>
+    <script src="_static/set-versions.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Deploying" href="deploy.html" />
+    <link rel="prev" title="Spaces" href="spaces.html" /> 
+  </head><body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="https://github.com/lightbend-labs/dbuild">GitHub Project</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">sbt plugins support</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="deploy.html">Deploying</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="spaces.html">Spaces</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.20">Version 0.9.20</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <section id="sbt-plugins-support">
+<h1>sbt plugins support<a class="headerlink" href="#sbt-plugins-support" title="Permalink to this heading">¶</a></h1>
+<section id="working-with-sbt-plugins">
+<span id="section-sbtplugins"></span><h2>Working with sbt plugins<a class="headerlink" href="#working-with-sbt-plugins" title="Permalink to this heading">¶</a></h2>
+<p>Some of the dbuild “build systems” may need to operate simultaneously on
+completely independent sets of artifacts, living in entirely separate
+“universes” of files and dependencies. That is the case of the sbt build
+definitions, in which the usual compiled files and their dependencies
+are completely independent from the space in which the sbt plugins live.
+For instance, when using sbt 0.12, the sbt plugins are all compiled
+using Scala 2.9, while the main artifacts and their dependencies may
+be compiled using Scala 2.10 or 2.11.</p>
+<p>dbuild offers a native support for this case, offering a simple
+mechanism that can be used to compile, in the same configuration file,
+the main artifacts as well as sbt plugins. The mechanism relies on
+dbuild’s “spaces”, and is easily used via a small extension of the
+usual build configuration syntax.</p>
+</section>
+<section id="build-levels">
+<h2>Build levels<a class="headerlink" href="#build-levels" title="Permalink to this heading">¶</a></h2>
+<p>In order to specify which options apply to the main artifacts and which
+to plugins, some options can be defined as arrays of values, rather than
+individual values. If an array is used, then the first element will apply
+to the regular build, and the second element to the plugins space.</p>
+<p>Should it be ever needed, further elements can be even used to specify
+further sbt levels: plugins of the plugins build, and so on. You may refer to the
+sbt manual for further details on the recursive nature of sbt’s build definitions.</p>
+<p>In practice, here is an example of a (somewhat convoluted) build definition that
+operates on plugins as well:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>build: [{
+  space.to: default
+  space.from: [ default, sbtplugins ]
+  check-missing: [ true, false ]
+  cross-version: [ disabled, standard ]
+  extraction-version: &quot;2.11.0&quot;
+  projects: [
+  {
+    name: parboiled
+    uri: &quot;https://github.com/...&quot;
+  }
+  {
+    name: ...
+  } ... ]
+}
+{
+  space.to: sbtplugins
+  check-missing: [ true, false ]
+  cross-version: [ disabled, standard ]
+  space.from: [ sbtplugins, sbtplugins ]
+  sbt-version:   &quot;0.13.5&quot;
+  extraction-version: &quot;2.10.4&quot;
+  projects:[
+  {
+    name:   scala-210
+    system: scala
+    uri:    &quot;git://github.com/scala/scala.git#2.10.x&quot;
+  }
+  {
+    name: sbt-pgp
+    uri: &quot;git://github.com/sbt/sbt-pgp.git&quot;
+  } ... ]
+}]
+</pre></div>
+</div>
+<p>In this example, the build file is divided into two sections, each of which
+has certain defaults for the contained projects. The first section publishes
+to the space “default”, and compiles artifacts using Scala 2.11. The second
+section compiles its projects using Scala 2.10, and its results are published
+to the separate space “sbtplugins”.</p>
+<p>Notice how the options “check-missing”, “cross-version”, and “space.from”,
+which are usually single values, are now arrays. In each case, the first
+element applies to the main definition of each sbt-based project, while
+the second element applies to its plugins. Therefore, in the case of
+parboiled, its sbt plugins will be fetched from the space “sbtplugins”,
+and therefore it will use the artifacts of the sbt-pgp project listed
+below.</p>
+<p>Using this mechanism, it is possible to compile in the same configuration
+file a number of main community projects, and a number of projects that
+generate sbt plugins, making sure that the whole system works together
+even though it uses two different Scala versions, and two separate
+ecosystems of artifacts.</p>
+<p>Worth noting is that, in the example above, the sbtplugins space
+is used as a source space for both the main artifacts of plugins,
+as well as the source of the plugins used while compiling said
+plugins. So, if sbt-pgp is used as a plugin to compile another
+plugin, that will also work correctly.</p>
+<p>The file above is just an example; as described elsewhere in this
+guide, the options “cross-version” and “check-missing” should
+normally remain set to “disabled” and “true”, for plugins as well,
+unless the file is used for releasing.</p>
+</section>
+<section id="the-settings">
+<h2>The settings<a class="headerlink" href="#the-settings" title="Permalink to this heading">¶</a></h2>
+<p>The settings that can be extended to control sbt plugins, as well as
+the main artifacts, are the following:</p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">space.from</span></code></dt><dd><p>If multiple values are used, the corresponding artifacts
+for the main build, the plugins, and so on will be retrieved from
+the corresponding spaces.
+When a single element is used for “space.from”, the remaining
+elements default to the space “” (the empty string), meaning that
+the dependencies will not be rewritten at all (the standard
+behavior, for sbt plugins in a dbuild project).
+Please note that, even though “space.to” is also an array, it does
+not refer to different build levels: it just means that the project
+artifacts are published to all the listed spaces.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">check-missing</span></code></dt><dd><p>The default values are “true” for the first element,
+and “false” for the following. If you are planning to build in your
+configuration file also sbt plugins, you will probably want to use
+the setting <code class="docutils literal notranslate"><span class="pre">[true,true]</span></code>. In that case, you will also need to
+set cross-version accordingly, as described below.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">cross-version</span></code></dt><dd><p>The default values are “disabled” for the first
+element, and “standard” for the others. The values after the first
+will be used, if present,
+while sbt compiles its own internal build description structures.
+You will mostly see no direct effect, since the resulting build
+description is not published by sbt. However, you will need to
+set this explicitly to “disabled” or “full” for plugins in order
+to be able to set “check-missing” to true. The relationship
+between cross-version and check-missing is explained in detail
+at <a class="reference internal" href="buildOptions.html"><span class="doc">Build options</span></a>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">rewrite-overrides</span></code></dt><dd><p>The default value is “true” for all the elements, meaning that
+dbuild will rewrite all dependencies by default. Please check
+<a class="reference internal" href="buildOptions.html"><span class="doc">Build options</span></a> for further details.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">deps</span></code></dt><dd><p>The dependency modifiers (<code class="docutils literal notranslate"><span class="pre">deps.inject</span></code> and <code class="docutils literal notranslate"><span class="pre">deps.ignore</span></code>)
+can also be applied to plugins, by specifying as a value for
+<code class="docutils literal notranslate"><span class="pre">deps</span></code> an array, in which each element is a record containing
+one or both of <code class="docutils literal notranslate"><span class="pre">inject</span></code> and <code class="docutils literal notranslate"><span class="pre">ignore</span></code>, or an empty record if
+no modification is needed for that level of the build. The
+default value for <code class="docutils literal notranslate"><span class="pre">deps</span></code> is an empty sequence (no changes are
+applied to the detected dependencies). This is an advanced
+setting.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">settings</span></code> and <code class="docutils literal notranslate"><span class="pre">sbt-settings</span></code></dt><dd><p>Additional settings can be inserted into the main project definition,
+as well as into the plugins build definition, and further upper
+levels if needed.</p>
+<p>If you wish to inject settings for plugin definitions, these options
+may be written as an array of arrays of strings; some of the inner
+arrays may also be the empty array```[]```. In place of some of the
+inner arrays, simple strings can also be used as long as at least
+one of the inner elements is an array. For instance, possible
+definitions could be <code class="docutils literal notranslate"><span class="pre">`[xx,[yy,zz]]`</span></code>, or <code class="docutils literal notranslate"><span class="pre">`[[],fff]`</span></code>,
+where <code class="docutils literal notranslate"><span class="pre">[yy,zz]</span></code> and <code class="docutils literal notranslate"><span class="pre">fff</span></code> refer to plugins.</p>
+<p>If no inner arrays
+are detected, as for example in <code class="docutils literal notranslate"><span class="pre">[aa,bb,cc]</span></code>, then the specified
+settings will all be taken to refer to the main build level.</p>
+</dd>
+</dl>
+<p>You can use the example above as a starting point in order
+to experiment with building sbt plugins in a dbuild configuration file.</p>
+<p><em>Next:</em> <a class="reference internal" href="comparison.html"><span class="doc">Comparing artifacts</span></a>.</p>
+</section>
+</section>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">sbt plugins support</a><ul>
+<li><a class="reference internal" href="#working-with-sbt-plugins">Working with sbt plugins</a></li>
+<li><a class="reference internal" href="#build-levels">Build levels</a></li>
+<li><a class="reference internal" href="#the-settings">The settings</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

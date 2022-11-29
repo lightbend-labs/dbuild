@@ -1,0 +1,484 @@
+
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Spaces &#8212; dbuild Documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/style.css" />
+    <link rel="stylesheet" href="_static/base.css" type="text/css" />
+    <link rel="stylesheet" href="_static/docs.css" type="text/css" />
+    <link rel="stylesheet" href="_static/syntax.css" type="text/css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Exo:300,400,600,700" type="text/css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="../versions.js"></script>
+    <script src="_static/set-versions.js"></script>
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="sbt plugins support" href="plugins.html" />
+    <link rel="prev" title="Build options" href="buildOptions.html" /> 
+  </head><body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <ul class="nav">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="download.html">Download</a></li>
+          <li><a href="https://github.com/lightbend-labs/dbuild">GitHub Project</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="container">
+      <div class="page-title">Spaces</div>
+    </div>
+    <div class="main-container">
+      <div class="container">
+        <div class="row">
+          <div class="span12">
+            <ul class="breadcrumb">        
+              <li>
+                 <span class="divider">|</span> <a href="plugins.html">sbt plugins support</a> <span class="divider">»</span>
+              </li>
+              <li>
+              </li>
+              <li>
+                <a href="index.html">Contents</a>
+              </li>
+              <li>
+                <span class="divider">«</span> <a href="buildOptions.html">Build options</a> <span class="divider">|</span>
+              </li>
+              <li>
+                <select id="versions"><option selected value="0.9.20">Version 0.9.20</option></select>
+              </li>
+            </ul>         
+          </div>
+        </div>
+        <div class="row">
+          <div class="span9">
+            
+  <section id="spaces">
+<h1>Spaces<a class="headerlink" href="#spaces" title="Permalink to this heading">¶</a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">¶</a></h2>
+<p>Spaces are a powerful dbuild feature that allows you to describe the flow of dependencies
+across projects, and to group artifacts in independent sets within the same dbuild configuration
+file.</p>
+<p>They are quite easy to use. In principle, each project just contains an optional field
+“space”, that you can use to specify which logical space the project belongs to. If the field
+is not specified, the space “default” is used.</p>
+<p>For example, let’s assume that we want to compile two projects whose dependencies should not
+be related to one another. We can just write:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">one</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;git://a...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">two</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;git://b...&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>In this example, the dependencies of project “a” will be rewritten using only the other
+projects that are in the same space “one”; similarly for project “b”. Interestingly,
+the two projects could also generate the same, or overlapping sets of artifacts: since
+they are in two separate spaces, they will not interfere with one another.</p>
+</section>
+<section id="from-and-to">
+<h2>From and to<a class="headerlink" href="#from-and-to" title="Permalink to this heading">¶</a></h2>
+<p>When used as in the above example, independent spaces are a simple way to group together
+unrelated groups of projects. However, projects can use spaces in a much more flexible
+way, by specifying different source and target spaces for their artifacts. For example:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">first</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;git://a...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">first</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="nx">second</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;git://b...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">first</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="nx">third</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">c</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;git://c...&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>In this example, the artifacts that are found in the first space will be used to rewrite
+the dependencies of project “a”; its resulting artifacts will also be made available to
+the same first space. However, the projects “b” and “c” are publishing their artifacts
+instead to two different spaces: their artifacts are independent, but they can both use
+the artifacts compiled by “a”.</p>
+<p>To make a concrete example, if the first space contains a given Scala compiler and other
+libraries, including “a”, then the projects “b” and “c” could be two different commits of
+the same project. Both will then be tested using the same compiler, and the same
+ecosystem of libraries contained in the first spece.</p>
+</section>
+<section id="building-in-stages">
+<h2>Building in stages<a class="headerlink" href="#building-in-stages" title="Permalink to this heading">¶</a></h2>
+<p>An ideal application of spaces is building projects in stages, in order to bootstrap a
+build, for instance. In that case, you can set up a chain of spaces in which you have
+<code class="docutils literal notranslate"><span class="pre">{from:a,to:b}</span></code>, <code class="docutils literal notranslate"><span class="pre">{from:b,to:c}</span></code>, <code class="docutils literal notranslate"><span class="pre">{from:c,to:d}</span></code>, and so on until your
+artifacts are stable.</p>
+<p>You should be careful while handling dependencies, however, as you should make sure
+that each space at each stage contains all of the dependencies required by the
+following one, in order to avoid dependencies conflicts (see below for more).</p>
+</section>
+<section id="disabling-dependencies-rewriting">
+<h2>Disabling dependencies rewriting<a class="headerlink" href="#disabling-dependencies-rewriting" title="Permalink to this heading">¶</a></h2>
+<p>If you specify as a source space the empty string “”,
+dbuild will not change anything in the dependencies of your project,
+leaving everything to its normal defaults. You should of course be wary about
+possible dependencies conflict that may arise as a result, as explained below.</p>
+<p>If the target “to” space is “”, similarly, the set of published artifacts will
+become invisible to other projects; this can be useful for testing.</p>
+</section>
+<section id="copying-across-spaces">
+<h2>Copying across spaces<a class="headerlink" href="#copying-across-spaces" title="Permalink to this heading">¶</a></h2>
+<p>One additional application of spaces is republishing just-compiled artifacts
+using different version numbers, or cross-versioning suffixes, without
+having to do the round trip to a Maven repository. For example, using the Ivy
+build system, one can simply use:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="nx">yyy</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">  </span><span class="nx">system</span><span class="o">:</span><span class="w"> </span><span class="nx">ivy</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;ivy:org#name;version&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nx">set</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;1.9.31-RC5&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The artifact generated by some project in space xxx will simply be grabbed, renamed,
+and made available to space yyy. It can also be deployed to Maven/Artifactory/Nexus
+just by referring to project “a” by name.</p>
+</section>
+<section id="multiple-to-s">
+<h2>Multiple “to”s<a class="headerlink" href="#multiple-to-s" title="Permalink to this heading">¶</a></h2>
+<p>It is also possible to specify multiple destination spaces in one step. For example:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;git://a...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="nx">xxx</span><span class="p">,</span><span class="w"> </span><span class="nx">yyy</span><span class="w"> </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>This mechanism can be used to arrange spaces in a tree with minimal effort. The
+section below contains important details about using multiple spaces.</p>
+</section>
+<section id="organizing-spaces">
+<h2>Organizing spaces<a class="headerlink" href="#organizing-spaces" title="Permalink to this heading">¶</a></h2>
+<p>One important point to remember is that spaces are unrelated. Because of that,
+you should ensure that each project will have access to all of the artifacts it
+may need.</p>
+<p>If “cross-version: standard” is used, in particular, the missing artifacts may
+be grabbed from external repositories without control, potentially leading
+to dependency conflicts.</p>
+<p>Let’s make an example:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="nx">yyy</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">yyy</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">c</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>In this example, we have the artifacts of a, b that are visible in space xxx,
+while only b and c are visible in yyy.</p>
+<p>When rewriting the dependencies of project c, only the artifacts of b will be
+used. If b depends on a, project c will be unable to see the artifacts of a.</p>
+<p>That may cause dependencies conflicts: the pom file of b will contain a reference
+to a, while c may happen to pull in an unrelated version of the same artifacts,
+which may not be compatible.</p>
+<p>In order to avoid this sort of problems, all spaces should also contain all of the
+artifacts of the spaces that logically precede them: a first space contains
+some artifacts, then a second contains all of the above plus some others,
+a third again all of them plus a few more, and so on.</p>
+<p>That can be easily done by publishing to all of the needed children spaces, by using
+the multiple “to”s feature. In the case above, we would have:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">xxx</span><span class="p">,</span><span class="w"> </span><span class="nx">yyy</span><span class="p">,</span><span class="w"> </span><span class="nx">zzz</span><span class="p">]</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">xxx</span><span class="p">,</span><span class="w"> </span><span class="nx">yyy</span><span class="p">,</span><span class="w"> </span><span class="nx">zzz</span><span class="p">]</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">yyy</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">c</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">zzz</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">d</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Here we have that both c and d have access to the artifacts of a and b, as well
+as their own.</p>
+<p>Specifying “from” and “to” in each project may be a bit tedious however, which is
+why there is a handy shorthand syntax available.</p>
+</section>
+<section id="a-simpler-syntax">
+<h2>A simpler syntax<a class="headerlink" href="#a-simpler-syntax" title="Permalink to this heading">¶</a></h2>
+<p>We know that projects are described in general using the syntax:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">build</span><span class="p">.</span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[{...},{...}]</span><span class="w"></span>
+</pre></div>
+</div>
+<p>This is supplemented by a list of defaults, which are directly specified as fields
+of <code class="docutils literal notranslate"><span class="pre">build</span></code>:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">build</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nx">extraction</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">...</span><span class="w"></span>
+<span class="w">  </span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[{...},{...}]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Each project can provide their own value for “extraction-version”, “sbt-version”, etc,
+but if they do not, the value in <code class="docutils literal notranslate"><span class="pre">build</span></code> offers a handy default.</p>
+<p>The same syntax can also applied to spaces. For example:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">build</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">one</span><span class="w"></span>
+<span class="w">  </span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">  </span><span class="p">},{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">  </span><span class="p">}]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Unless a project defines its own space specification, the default (in this case “one”)
+will be used. If none is present the standard “default” space is used.</p>
+<p>In order to specify more easily lists of projects in unrelated spaces, the following
+syntax is also available:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">build</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">one</span><span class="w"></span>
+<span class="w">  </span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">},{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}]</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">two</span><span class="w"></span>
+<span class="w">  </span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">c</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">},{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">d</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}]</span><span class="w"></span>
+<span class="p">}]</span><span class="w"></span>
+</pre></div>
+</div>
+<p>If you need to publish a set of projects to multiple spaces, therefore, the syntax can be
+simply:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">build</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="nx">xxx</span><span class="p">,</span><span class="w"> </span><span class="nx">yyy</span><span class="p">,</span><span class="w"> </span><span class="nx">zzz</span><span class="p">]</span><span class="w"></span>
+<span class="w">  </span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">},{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">...</span><span class="w"></span>
+<span class="w">  </span><span class="p">}]</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">yyy</span><span class="w"></span>
+<span class="w">  </span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[...]</span><span class="w"></span>
+<span class="p">...</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you have a space specification in a specific project, it will completely override the general
+one in the “build” section. Therefore, you will need to specify in the project <em>both</em> the
+<code class="docutils literal notranslate"><span class="pre">space.from</span></code> and the <code class="docutils literal notranslate"><span class="pre">space.to</span></code> values: if you only specify one of the two, the other
+will not be inherited from the general build space specification.</p>
+</div>
+</section>
+<section id="hierarchical-spaces">
+<h2>Hierarchical spaces<a class="headerlink" href="#hierarchical-spaces" title="Permalink to this heading">¶</a></h2>
+<p>OK, we lied: spaces are not <em>all</em> independent: they can actually be arranged in a hierarchical
+structure. The discussion above was however crucial at introducing the reasons why they are
+useful, and the inherent dangers of using incomplete sets of dependencies.</p>
+<p>In order to use nested spaces, just name them with a dot-separated name. Projects in
+those spaces will be able to see all the artifacts of the projects that published in
+all enclosing spaces.</p>
+<p>For instance, if you have <code class="docutils literal notranslate"><span class="pre">space.from:</span> <span class="pre">&quot;aaa.bbb&quot;</span></code>, you will see all the dependencies
+published to <code class="docutils literal notranslate"><span class="pre">aaa.bbb</span></code>, as well as those published to <code class="docutils literal notranslate"><span class="pre">aaa</span></code>.</p>
+<p>The example above can now be simply rewritten as:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">a</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">b</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="p">.</span><span class="nx">yyy</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">c</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">},{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">xxx</span><span class="p">.</span><span class="nx">zzz</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">d</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>But wait, there’s more!</p>
+</section>
+<section id="variables-expansion">
+<h2>Variables expansion<a class="headerlink" href="#variables-expansion" title="Permalink to this heading">¶</a></h2>
+<p>Variables expansion works great in conjunction with spaces, in order to reduce
+verbosity and duplication. For example, let’s assume that we have a given project
+that needs to be built against multiple versions of Scala, each of which lives in
+a different space. We can easily define the common structure of the project once,
+then define the three occurrences. For example:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">vars</span><span class="p">.</span><span class="nx">p</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;git://github.com/user/repo#branch&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nx">sbt</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;0.13.0&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nx">extra</span><span class="p">.</span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;core&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">...</span><span class="nx">more</span><span class="w"> </span><span class="nx">stuff</span><span class="p">...</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="nx">build</span><span class="p">.</span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w"> </span><span class="nx">$</span><span class="p">{</span><span class="nx">vars</span><span class="p">.</span><span class="nx">p</span><span class="p">}</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">one</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">t1</span><span class="w"></span>
+<span class="w"> </span><span class="p">}</span><span class="w"></span>
+<span class="w"> </span><span class="nx">$</span><span class="p">{</span><span class="nx">vars</span><span class="p">.</span><span class="nx">p</span><span class="p">}</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">two</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">t2</span><span class="w"></span>
+<span class="w"> </span><span class="p">}</span><span class="w"></span>
+<span class="w"> </span><span class="nx">$</span><span class="p">{</span><span class="nx">vars</span><span class="p">.</span><span class="nx">p</span><span class="p">}</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="o">:</span><span class="w"> </span><span class="nx">three</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">t3</span><span class="w"></span>
+<span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Spaces work as artifact repositories of sorts. Each project has a single “from”,
+and only the dependent artifacts that are reachable within that particular space, also transitively,
+will be made available to the project, but not those in other spaces. The fact that cross-space transitive
+dependencies are not included is by design: it would be impossible to support bootstrap cycles
+otherwise.</p>
+</div>
+</section>
+<section id="republishing-artifacts">
+<h2>Republishing artifacts<a class="headerlink" href="#republishing-artifacts" title="Permalink to this heading">¶</a></h2>
+<p>A further application of spaces is the opportunity to republish existing artifacts in a
+different space, changing in the process the cross-versioning suffix and the version number.
+That can be accomplished by using the Aether build system, for example. Consider the following
+configuration:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">build</span><span class="p">.</span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">lib</span><span class="p">,</span><span class="w"> </span><span class="nx">system</span><span class="o">:</span><span class="w"> </span><span class="nx">aether</span><span class="p">,</span><span class="w"> </span><span class="nx">set</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;2.10.18&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;aether:org.scala-lang#scala-library;2.10.2&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;gpg-republish&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="nx">source</span><span class="w"></span>
+<span class="w">    </span><span class="nx">system</span><span class="o">:</span><span class="w"> </span><span class="nx">aether</span><span class="w"></span>
+<span class="w">    </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;aether:com.jsuereth#gpg-library_2.10;0.8.3&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="nx">cross</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="w"> </span><span class="nx">full</span><span class="w"></span>
+<span class="w">    </span><span class="nx">set</span><span class="o">-</span><span class="nx">version</span><span class="o">-</span><span class="nx">suffix</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;test&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">]</span><span class="w"></span>
+</pre></div>
+</div>
+<p>In this example, an external artifact will be republished locally as <code class="docutils literal notranslate"><span class="pre">com.jsuereth#gpg-library_2.10.18;0.8.3-test</span></code>.
+It is similarly possible to republish artifacts compiled by some other project. That requires a bit of attention, however.
+First, the version string specified in the uri must match that of an existing already published artifact. That is
+necessary since, during the initial extraction stage, dbuild needs to look somewhere in order to discover the
+project dependencies, and the source project has not been built yet at that point. Second, the project needs to be
+“injected” a dependency on itself. For example, let us consider the following project:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="nx">republishtest</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="kr">from</span><span class="o">:</span><span class="w"> </span><span class="nx">source</span><span class="w"></span>
+<span class="w">  </span><span class="nx">space</span><span class="p">.</span><span class="nx">to</span><span class="o">:</span><span class="w"> </span><span class="nx">dest</span><span class="w"></span>
+<span class="w">  </span><span class="nx">deps</span><span class="p">.</span><span class="nx">inject</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;com.jsuereth#gpg-library&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nx">system</span><span class="o">:</span><span class="w"> </span><span class="nx">aether</span><span class="w"></span>
+<span class="w">  </span><span class="nx">uri</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;aether:com.jsuereth#gpg-library_2.10;0.8.3&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="nx">cross</span><span class="o">-</span><span class="nx">version</span><span class="o">:</span><span class="w"> </span><span class="nx">disabled</span><span class="w"></span>
+<span class="w">  </span><span class="nx">set</span><span class="o">-</span><span class="nx">version</span><span class="o">-</span><span class="nx">suffix</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;fix&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>If we generated the <code class="docutils literal notranslate"><span class="pre">gpg-library</span></code> artifacts in the <code class="docutils literal notranslate"><span class="pre">source</span></code> space, either by downloading them or by generating
+them from source, they will now also be republished to the <code class="docutils literal notranslate"><span class="pre">dest</span></code> space with different cross-version suffix and
+version number. That may be useful in order to generate multiple copies of the same artifacts, with different
+version suffixes for example, in different spaces without the need to recompile them. In order to make sure that
+the projects are being republished correctly, you can check for the list of dependencies in the “Dependency
+Information” section of the log file.</p>
+<p><em>Next:</em> <a class="reference internal" href="plugins.html"><span class="doc">sbt plugins support</span></a>.</p>
+</section>
+</section>
+
+
+          </div>
+          <div class="span3"><p class="contents-title">Contents</p>
+              <div id="scroller-anchor">
+                <div id="scroller">
+                  <div id="toc"><ul>
+<li><a class="reference internal" href="#">Spaces</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#from-and-to">From and to</a></li>
+<li><a class="reference internal" href="#building-in-stages">Building in stages</a></li>
+<li><a class="reference internal" href="#disabling-dependencies-rewriting">Disabling dependencies rewriting</a></li>
+<li><a class="reference internal" href="#copying-across-spaces">Copying across spaces</a></li>
+<li><a class="reference internal" href="#multiple-to-s">Multiple “to”s</a></li>
+<li><a class="reference internal" href="#organizing-spaces">Organizing spaces</a></li>
+<li><a class="reference internal" href="#a-simpler-syntax">A simpler syntax</a></li>
+<li><a class="reference internal" href="#hierarchical-spaces">Hierarchical spaces</a></li>
+<li><a class="reference internal" href="#variables-expansion">Variables expansion</a></li>
+<li><a class="reference internal" href="#republishing-artifacts">Republishing artifacts</a></li>
+</ul>
+</li>
+</ul>
+</div>
+                </div>
+              </div></div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+
+  </body>
+</html>

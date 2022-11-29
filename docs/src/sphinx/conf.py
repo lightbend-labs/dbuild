@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import sys, os
+
+# so we can do the relative import, as per
+# https://stackoverflow.com/a/73932641/86485
+sys.path.append(__file__.rsplit("/", 1)[0])
+
 from version import release
 
 sys.path.append(os.path.abspath('_sphinx/exts'))
-extensions = ['sphinxcontrib.issuetracker', 'sphinx.ext.extlinks', 'howto']
+extensions = ['sphinx.ext.extlinks', 'howto']
 
 # Project variables
 
@@ -49,14 +54,6 @@ site_search_base = ''
 
 # passes variables to the template
 html_context = {'home_site': home_site, 'site_search_base': site_search_base}
-
-# Issues role
-
-issuetracker = 'github'
-issuetracker_project = 'lightbend/dbuild'
-issuetracker_plaintext_issues = True
-issuetracker_issue_pattern = r'\bgh-(\d+)\b'
-issuetracker_title_template = '#{issue.id}'
 
 rst_epilog = """
 .. role:: nv

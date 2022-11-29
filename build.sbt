@@ -1,11 +1,32 @@
 import Dependencies._
 import RemoteDepHelper._
 
-def MyVersion: String = "0.9.18"
+def MyVersion: String = "0.9.19"
 
 // override to match what Scala 2.12.17 uses
 dependencyOverrides in ThisBuild +=
   "org.scala-lang.modules" %% "scala-xml" % "2.1.0"
+
+// keep Maven Central happy
+developers in ThisBuild := List(
+  Developer(
+    id = "cunei",
+    name = "Antonio Cunei",
+    email = "antonio.cunei@typesafe.com",
+    url = url("https://www.lightbend.com")
+  ),
+  Developer(
+    id = "SethTisue",
+    name = "Seth Tisue",
+    email = "seth.tisue@lightbend.com",
+    url = url("https://www.lightbend.com")
+  ))
+homepage in ThisBuild := Some(url("http://lightbend-labs.github.io/dbuild/"))
+scmInfo in ThisBuild := Some(
+  ScmInfo(
+    url("https://github.com/lightbend-labs/dbuild"),
+    "scm:git:git@github.com:lightbend-labs/dbuild.git")
+)
 
 def SubProj(name: String) = (
   Project(name, file(if (name=="root") "." else name))
@@ -17,7 +38,6 @@ def SubProj(name: String) = (
     selectScalaVersion,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     resolvers += "Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/",
-    publishMavenStyle := false,
     licenses += ("Apache-2.0", url("https://opensource.org/licenses/Apache-2.0")),
     publishTo := sonatypePublishTo.value
   )

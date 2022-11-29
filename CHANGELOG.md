@@ -1,5 +1,15 @@
 # dbuild release notes
 
+### 0.9.19
+
+- Fix publishing
+
+### 0.9.18
+
+- Force scala-xml dependency to 2.x, for compatibility with sbt 1.8.0
+- Publish JARs to Maven Central (not Bintray)
+- Publish tarball to GitHub (not Cloudsmith)
+
 ### 0.9.17
 
 - Use https not http

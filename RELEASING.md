@@ -7,9 +7,11 @@ with the right `credentials += ...`.
 
 To create a dbuild release,
 
-1. Run `^publishSigned`
-2. Check the staging repo in the Sonatype web UI to ensure files are as expected (optional)
-3. Close and release the staging repo (using `sbt-sonatype` commands or the Sonatype web UI)
+1. Be sure you are running Java 8
+2. Run `sbt`
+3. In sbt, run `^publishSigned`
+4. Check the staging repo in the Sonatype web UI to ensure files are as expected (optional)
+5. Close and release the staging repo (using `sbt-sonatype` commands or the Sonatype web UI)
 
 Do not try to publish snapshots to Sonatype. Instead, add a custom version
 suffix (such as `-RC1`).

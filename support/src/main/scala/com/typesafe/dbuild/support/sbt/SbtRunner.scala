@@ -334,7 +334,7 @@ object SbtRunner {
    * The string needed to load the dbuild plugin
    */
   val addDBuildPlugin =
-    """libraryDependencySchemes in ThisBuild += "org.scala-lang.modules" %% "scala-xml" % "always"""" + "\n\n" +
+    """dependencyOverrides in ThisBuild += "org.scala-lang.modules" %% "scala-xml" % "2.1.0"""" + "\n\n" +
     """addSbtPlugin("com.typesafe.dbuild" % "plugin" % """ + '"' + Defaults.version + "\")\n\n"
 
   /** Perform a state transformation using onLoad() */

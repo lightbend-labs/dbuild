@@ -48,3 +48,8 @@ Then, proceed with `^publish` as usual to issue the snapshot to your Artifactory
 
 The documentation pages on the dbuild website must be published
 separately. (This is done only for final releases.)
+
+The command to build the doc is `docs/makeSite`, and it requires you
+have sphinx installed (e.g. with `pip3 install sphinx`).  On the
+gh-pages branch, add the generated files in a version-numbered
+directory and update `index.html` and `versions.js`.

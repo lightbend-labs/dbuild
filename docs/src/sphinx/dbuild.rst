@@ -740,7 +740,7 @@ In the case of the "scala" build system, the "extra" record is:
    {
     "build-number"   : <build-number>,
     "exclude"        : [ subproj1, subproj2,... ]
-    "targets"        : [ ["target1","path1"],["target2,"path2"],... ]
+    "targets"        : [ ["target1","path1"],["target2","path2"],... ]
     "build-options"  : [ opt1, opt2,... ]
    }
 

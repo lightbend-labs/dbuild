@@ -5,7 +5,7 @@ You must have rights on Sonatype to publish under `com.typesafe`.
 You should have a `~/.sbt/0.13/sonatype.sbt` (or similar filename)
 with the right `credentials += ...`.
 
-To create a dbuild release,
+To publish a dbuild release,
 
 1. Be sure you are running Java 8
 2. Run `sbt`
@@ -16,8 +16,15 @@ To create a dbuild release,
 Do not try to publish snapshots to Sonatype. Instead, add a custom version
 suffix (such as `-RC1`).
 
-If everything goes well, tag the release and push the tag to GitHub.
-Also update CHANGELOG.md and publish the website (see below).
+If everything goes well, then also:
+
+1. Update CHANGELOG.md
+2. Tag the release
+3. Push the tag to GitHub,
+4. Make a GitHub release from the tag
+5. Run `packageZipTarball`
+6. Attach the resulting `.tgz` and the `.zip` to the GitHub release
+7. Publish the website (see below).
 
 ## Publishing (locally)
 

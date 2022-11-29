@@ -1,11 +1,7 @@
 import Dependencies._
 import RemoteDepHelper._
 
-def MyVersion: String = "0.9.19"
-
-// override to match what Scala 2.12.17 uses
-dependencyOverrides in ThisBuild +=
-  "org.scala-lang.modules" %% "scala-xml" % "2.1.0"
+def MyVersion: String = "0.9.20"
 
 // keep Maven Central happy
 developers in ThisBuild := List(

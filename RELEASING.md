@@ -14,6 +14,9 @@ To create a dbuild release,
 Do not try to publish snapshots to Sonatype. Instead, add a custom version
 suffix (such as `-RC1`).
 
+If everything goes well, tag the release and push the tag to GitHub.
+Also update CHANGELOG.md and publish the website (see below).
+
 ## Publishing (locally)
 
 You can publish a test version locally to any directory of your choice, by using:

@@ -28,7 +28,7 @@ object RewireSpec extends Specification {
              |  check-missing: [false, false, false]
              |  cross-version: standard
              |  space: test
-             |  sbt-version: "0.13.8"
+             |  sbt-version: "0.13.18"
              |  extraction-version: "2.11.1"
              |  projects: [
              |    {

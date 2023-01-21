@@ -15,7 +15,7 @@ get_script_path () {
 declare -r SCRIPT_PATH="$(get_script_path "$BASH_SOURCE")"
 declare -r SCRIPT_DIR="$(dirname $SCRIPT_PATH)"
 
-java \
+java -Xss16M \
   -Dsbt.boot.properties=$SCRIPT_DIR/dbuild.properties \
   -Djline.shutdownhook=true \
   -jar $SCRIPT_DIR/dbuild-launcher.jar \
